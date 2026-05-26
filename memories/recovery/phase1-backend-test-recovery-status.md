@@ -10,7 +10,7 @@ assignment shape, not new feature development.
 
 - Branch: `main`
 - Remote: `origin` -> `https://github.com/bbungjun/AI_mult_modal.git`
-- Latest test-recovery commit before this note: `d3092e5 test: restore prompt enhance api contract`
+- Latest test-recovery commit before this note: `ebd2576 test: restore asset api contract`
 - Working tree was clean before this documentation update.
 
 ## Verified Backend Commands
@@ -26,7 +26,7 @@ python -c "import app.main; print('import ok')"
 
 The latest run before this note had:
 
-- `python -m pytest`: `58 passed`
+- `python -m pytest`: `60 passed`
 - `python -m compileall app`: passed
 - `python -c "import app.main; print('import ok')"`: `import ok`
 
@@ -55,6 +55,11 @@ The backend test suite now includes these recovered mock-only contracts:
   - `GET /api/generations` and `GET /api/generations/{job_id}` response DTOs.
   - terminal delete, non-terminal delete rejection, dependent job protection,
     and terminal dependent detach behavior.
+
+- `test_asset_api.py`
+  - `GET /api/assets/{asset_id}` returns `AssetResponse`.
+  - computed `/files/{local_path}` URL contract.
+  - missing asset returns HTTP 404.
 
 - `test_pipeline_api.py`
   - `POST /api/pipelines` parent T2I plus blocked child I2V creation.
@@ -114,7 +119,6 @@ The backend test suite now includes these recovered mock-only contracts:
 
 ## Known Remaining Gaps
 
-- Explicit tests for `GET /api/assets/{asset_id}` still need to be restored.
 - Direct state-machine tests can still be restored, although handler/runner
   tests already exercise many transitions indirectly.
 - Frontend build/typecheck recovery is still pending.
@@ -123,7 +127,6 @@ The backend test suite now includes these recovered mock-only contracts:
 
 ## Recommended Next Recovery Order
 
-1. Restore `GET /api/assets/{asset_id}` API contract tests.
-2. Add focused state-machine tests if recovered context confirms they existed.
-3. Move to frontend build/typecheck recovery.
-4. Verify Docker Compose config/build once backend and frontend are stable.
+1. Add focused state-machine tests if recovered context confirms they existed.
+2. Move to frontend build/typecheck recovery.
+3. Verify Docker Compose config/build once backend and frontend are stable.
