@@ -354,3 +354,47 @@ edge case 테스트와 최소 parsing 보강을 복구했습니다. 실제 provi
   -> `98 passed`
 
 다음 비용 없는 후보는 T2I multi-image gallery / per-image I2V handoff입니다.
+
+## Follow-up: T2I multi-image gallery / per-image I2V handoff restored
+
+2026-05-27 후속 작업에서 T2I `number_of_images > 1` 결과 표시와 각 image별
+I2V handoff 흐름을 복구했습니다. 실제 Vertex/Imagen/Veo 호출은 하지 않았고,
+실행 중인 Docker Compose mock 환경의 deterministic image bytes만 사용했습니다.
+
+복구한 계약:
+
+- completed T2I job에 image asset이 여러 개 있으면 Job Detail에서 첫 번째
+  asset만 보여주지 않고 gallery/grid로 모두 표시합니다.
+- 각 image card에서 `Start I2V`를 누르면 해당 image asset id를
+  `/generate?mode=i2v&source_asset_id=...`로 전달합니다.
+- `/generate` I2V 진입 화면은 `source_asset_id`의 image asset을 조회해
+  cinema 영역에 source image preview를 다시 표시합니다.
+- source image가 연결되고 motion prompt가 있으면 I2V `Generate` 버튼이
+  활성화됩니다.
+- 단일 image 결과와 video 결과의 기존 preview 흐름은 유지합니다.
+
+검증 결과:
+
+- `cd frontend && npm run lint`
+  -> pass
+- `cd frontend && npm run build`
+  -> pass
+- `cd backend && AI_PROVIDER=mock python -m pytest`
+  -> `98 passed`
+- Docker Compose mock browser smoke:
+  - mock T2I job `092d2907-56e2-49f7-9bdb-0b75c9eeb97a`
+  - API `asset_count=4`
+  - Job Detail에서 `4 Image Results Ready`, Image 1~4, 각 `Start I2V` 확인
+  - Image 2 버튼 클릭 후
+    `/generate?mode=i2v&source_asset_id=da2b17d8-6cf9-4872-a779-2a92d90c22aa`
+    이동 확인
+  - Generate 화면에 `Selected I2V source asset da2b17d8-...` image preview
+    표시 확인
+  - motion prompt 입력 후 I2V `Generate` 버튼 enabled 확인
+
+브라우저 console의 남은 메시지는 개발 모드 React DevTools 안내, React Router v7
+future flag 경고, `/favicon.ico` 404이며 pipeline 실패 신호는 아닙니다.
+
+다음 비용 없는 후보는 Prompt Enhancement/History 같은 frontend flow browser
+smoke 절차를 문서화하거나, cancel endpoint가 실제 최종 제출 범위였는지 근거를
+추가 확인하는 것입니다.

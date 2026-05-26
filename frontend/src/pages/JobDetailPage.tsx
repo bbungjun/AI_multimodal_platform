@@ -94,7 +94,7 @@ export function JobDetailPage() {
   const jobQuery = useJob(jobId);
   const job = jobQuery.data;
   const primaryAsset = job?.assets[0] ?? null;
-  const imageResultAsset = useMemo(() => findCompletedImageAsset(job), [job]);
+  const imageResultAssets = useMemo(() => findCompletedImageAssets(job), [job]);
   const i2vSourceAssetId = getI2VSourcePreviewAssetId(job);
   const i2vSourceQuery = useAsset(i2vSourceAssetId);
 
@@ -125,7 +125,7 @@ export function JobDetailPage() {
       <Panel className="asset-shell" title="Asset Viewer" eyebrow="Result">
         <AssetViewer
           asset={primaryAsset}
-          imageResultAsset={imageResultAsset}
+          imageResultAssets={imageResultAssets}
           i2vSourceAsset={i2vSourceQuery.data ?? null}
           i2vSourceError={i2vSourceQuery.isError}
           i2vSourceLoading={i2vSourceQuery.isLoading}
@@ -184,7 +184,7 @@ function JobLoading({ jobId }: { jobId: string }) {
 
 function AssetViewer({
   asset,
-  imageResultAsset,
+  imageResultAssets,
   i2vSourceAsset,
   i2vSourceError,
   i2vSourceLoading,
@@ -192,7 +192,7 @@ function AssetViewer({
   onStartI2V,
 }: {
   asset: AssetResponse | null;
-  imageResultAsset: AssetResponse | null;
+  imageResultAssets: AssetResponse[];
   i2vSourceAsset: AssetResponse | null;
   i2vSourceError: boolean;
   i2vSourceLoading: boolean;
@@ -250,6 +250,15 @@ function AssetViewer({
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (job.mode === "t2i" && imageResultAssets.length > 1) {
+    return (
+      <T2IImageGallery
+        assets={imageResultAssets}
+        onStartI2V={onStartI2V}
+      />
     );
   }
 
@@ -315,7 +324,7 @@ function AssetViewer({
         )}
       </div>
 
-      {isImage && imageResultAsset && (
+      {isImage && imageResultAssets[0] && (
         <div className="result-next-action">
           <div className="result-next-action__copy">
             <Badge tone="success">
@@ -329,7 +338,7 @@ function AssetViewer({
             </p>
           </div>
           <Button
-            onClick={() => onStartI2V(imageResultAsset.id)}
+            onClick={() => onStartI2V(imageResultAssets[0].id)}
             type="button"
             variant="primary"
           >
@@ -367,6 +376,82 @@ function AssetViewer({
               <strong>{asset.duration_sec}s</strong>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function T2IImageGallery({
+  assets,
+  onStartI2V,
+}: {
+  assets: AssetResponse[];
+  onStartI2V: (assetId: string) => void;
+}) {
+  const totalBytes = assets.reduce((sum, asset) => sum + asset.size_bytes, 0);
+
+  return (
+    <div className="asset-viewer">
+      <div className="asset-result-header">
+        <Badge tone="success">
+          <ImageIcon size={12} />
+          Image results
+        </Badge>
+        <div className="asset-result-header__copy">
+          <h2>{assets.length} Image Results Ready</h2>
+          <p>Each generated image can be used as the source for I2V.</p>
+        </div>
+      </div>
+
+      <div className="asset-gallery-grid">
+        {assets.map((imageAsset, index) => (
+          <div className="asset-gallery-card" key={imageAsset.id}>
+            <div className="asset-gallery-card__stage">
+              <img
+                alt={`Generated image ${index + 1}`}
+                className="asset-gallery-card__image"
+                src={imageAsset.url}
+              />
+            </div>
+            <div className="asset-gallery-card__body">
+              <div className="asset-gallery-card__meta">
+                <strong>Image {index + 1}</strong>
+                <span>
+                  {formatDimensions(imageAsset)} / {formatBytes(imageAsset.size_bytes)}
+                </span>
+              </div>
+              <Button
+                onClick={() => onStartI2V(imageAsset.id)}
+                type="button"
+                variant="primary"
+              >
+                <PipelineIcon size={14} />
+                Start I2V
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="asset-metadata-panel">
+        <div className="asset-metadata-panel__head">
+          <div className="section-label">File details</div>
+          <p>Preview details for the generated image set.</p>
+        </div>
+        <div className="metadata-list asset-metadata">
+          <div>
+            <span>Type</span>
+            <strong>Image set</strong>
+          </div>
+          <div>
+            <span>Count</span>
+            <strong>{assets.length}</strong>
+          </div>
+          <div>
+            <span>Total size</span>
+            <strong>{formatBytes(totalBytes)}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -653,14 +738,13 @@ function formatTimelineMarker({
   return "waiting";
 }
 
-function findCompletedImageAsset(job: JobResponse | undefined): AssetResponse | null {
+function findCompletedImageAssets(job: JobResponse | undefined): AssetResponse[] {
   if (!job || job.state !== "completed") {
-    return null;
+    return [];
   }
 
-  return (
-    job.assets.find((asset) => asset.kind === "image" || asset.mime.startsWith("image/")) ??
-    null
+  return job.assets.filter(
+    (asset) => asset.kind === "image" || asset.mime.startsWith("image/"),
   );
 }
 

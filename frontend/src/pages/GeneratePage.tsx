@@ -7,6 +7,7 @@ import {
   createGeneration,
   createPipeline,
   enhancePrompt,
+  type AssetResponse,
   type CreativityPreset,
   type GenerationCreateRequest,
   type GenerationMode,
@@ -15,6 +16,7 @@ import {
 } from "../api/client";
 import { Badge, Button, Panel, StatusDot } from "../components/ui";
 import { ClockIcon, CpuIcon, FilmIcon, ImageIcon, PipelineIcon, SparkleIcon } from "../components/icons";
+import { useAsset } from "../hooks/useAsset";
 
 type GenerateMode = GenerationMode | "pipeline";
 
@@ -172,6 +174,7 @@ export function GeneratePage() {
       : null;
 
   const sourceAssetId = mode === "i2v" ? querySourceAssetId : null;
+  const sourceAssetQuery = useAsset(sourceAssetId);
   const heroPrompt = prompt.trim();
   const heroTitle =
     heroPrompt && heroPrompt !== defaultPrompt
@@ -337,23 +340,36 @@ export function GeneratePage() {
   return (
     <div className="page-grid page-grid--generate">
       <Panel className="cinema-panel">
-        <div className="cinema-screen">
-          <div className="cinema-screen__content">
-            <Badge tone={mode === "pipeline" ? "warning" : "info"}>
-              <SparkleIcon size={12} />
-              {activeMode.title}
-            </Badge>
-            <h2>{heroTitle}</h2>
-            <p>
-              {mode === "pipeline"
-                ? "Create a parent T2I image and a blocked child I2V job."
-                : enhanceReview
-                  ? "Review the enhanced draft below. It will not change this prompt until accepted."
-                  : usableEnhancementId
-                    ? "The accepted draft is now the generation prompt and will be attached to this job."
-                    : "Choose mode and model, write a prompt, optionally enhance, then generate."}
-            </p>
-          </div>
+        <div
+          className={`cinema-screen${
+            mode === "i2v" && sourceAssetId ? " cinema-screen--source" : ""
+          }`}
+        >
+          {mode === "i2v" && sourceAssetId ? (
+            <SourceImageCinema
+              asset={sourceAssetQuery.data ?? null}
+              heroTitle={heroTitle}
+              isError={sourceAssetQuery.isError}
+              isLoading={sourceAssetQuery.isLoading}
+            />
+          ) : (
+            <div className="cinema-screen__content">
+              <Badge tone={mode === "pipeline" ? "warning" : "info"}>
+                <SparkleIcon size={12} />
+                {activeMode.title}
+              </Badge>
+              <h2>{heroTitle}</h2>
+              <p>
+                {mode === "pipeline"
+                  ? "Create a parent T2I image and a blocked child I2V job."
+                  : enhanceReview
+                    ? "Review the enhanced draft below. It will not change this prompt until accepted."
+                    : usableEnhancementId
+                      ? "The accepted draft is now the generation prompt and will be attached to this job."
+                      : "Choose mode and model, write a prompt, optionally enhance, then generate."}
+              </p>
+            </div>
+          )}
         </div>
       </Panel>
 
@@ -739,6 +755,59 @@ export function GeneratePage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function SourceImageCinema({
+  asset,
+  heroTitle,
+  isError,
+  isLoading,
+}: {
+  asset: AssetResponse | null;
+  heroTitle: string;
+  isError: boolean;
+  isLoading: boolean;
+}) {
+  const isImage = asset
+    ? asset.kind === "image" || asset.mime.startsWith("image/")
+    : false;
+  const imageAsset = isImage && asset ? asset : null;
+  const previewTitle =
+    heroTitle === "What are you imagining?" ? "Animate the selected image" : heroTitle;
+  const badgeTone = imageAsset ? "success" : isError || asset ? "warning" : "info";
+
+  return (
+    <div className="cinema-source">
+      <div className="cinema-source__media">
+        {isLoading ? (
+          <div className="cinema-source__placeholder">Loading source image</div>
+        ) : imageAsset ? (
+          <img alt={`Selected I2V source asset ${imageAsset.id}`} src={imageAsset.url} />
+        ) : isError ? (
+          <div className="cinema-source__placeholder cinema-source__placeholder--warning">
+            Source image unavailable
+          </div>
+        ) : (
+          <div className="cinema-source__placeholder cinema-source__placeholder--warning">
+            Selected source is not an image
+          </div>
+        )}
+      </div>
+
+      <div className="cinema-screen__content cinema-screen__content--source">
+        <Badge tone={badgeTone}>
+          <PipelineIcon size={12} />
+          {imageAsset ? "Source image locked" : "I2V source"}
+        </Badge>
+        <h2>{previewTitle}</h2>
+        <p>
+          {imageAsset
+            ? "This image is connected as the I2V source. Use the motion prompt to describe how it should move."
+            : "The source asset is connected, but the preview could not render an image."}
+        </p>
+      </div>
     </div>
   );
 }
