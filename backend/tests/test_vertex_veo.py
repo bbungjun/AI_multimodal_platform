@@ -9,6 +9,7 @@ from app.services.vertex import veo
 from app.services.vertex.errors import (
     VertexOperationFailedError,
     VertexOutputUnavailableError,
+    VertexSafetyBlockedError,
 )
 
 
@@ -64,6 +65,38 @@ async def test_poll_operation_raises_operation_failed_when_operation_has_error()
         await veo.poll_operation(operation, client=object())
 
     assert exc_info.value.code == "vertex_operation_failed"
+
+
+async def test_poll_operation_maps_safety_operation_error_to_public_code():
+    operation = SimpleNamespace(
+        done=True,
+        error=SimpleNamespace(
+            message="The generation was blocked by the safety filter.",
+        ),
+    )
+
+    with pytest.raises(VertexSafetyBlockedError) as exc_info:
+        await veo.poll_operation(operation, client=object())
+
+    assert exc_info.value.code == "vertex_safety_blocked"
+    assert exc_info.value.public_message == (
+        "Vertex AI blocked the generation for safety reasons."
+    )
+
+
+async def test_poll_operation_maps_filtered_empty_result_to_safety_blocked():
+    operation = SimpleNamespace(
+        done=True,
+        result=SimpleNamespace(
+            generated_videos=[],
+            rai_filtered_reason="SAFETY",
+        ),
+    )
+
+    with pytest.raises(VertexSafetyBlockedError) as exc_info:
+        await veo.poll_operation(operation, client=object())
+
+    assert exc_info.value.code == "vertex_safety_blocked"
 
 
 async def test_poll_operation_raises_timeout_with_operation_name_after_deadline():

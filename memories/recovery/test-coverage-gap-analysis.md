@@ -303,3 +303,29 @@ provider failure classification입니다.
   -> `90 passed`
 
 다음 비용 없는 P0/P1 후보는 Veo provider failure classification입니다.
+
+## Follow-up: Veo provider failure classification restored
+
+2026-05-27 후속 작업에서 Veo provider failure classification 테스트와 최소
+분류 로직을 복구했습니다. 실제 Vertex/Veo 호출은 하지 않았고 fake operation
+객체로만 검증했습니다.
+
+복구한 계약:
+
+- `operation.error`에 safety/filter 신호가 있으면
+  `vertex_operation_failed`가 아니라 `vertex_safety_blocked`로 분류합니다.
+- 완료된 operation이 video bytes를 주지 않더라도 filtered/safety reason이
+  있으면 `vertex_output_unavailable`이 아니라 `vertex_safety_blocked`로
+  분류합니다.
+- T2V handler는 safety blocked provider error를 terminal failed job의
+  public error payload로 저장하고 asset file을 만들지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_vertex_veo.py tests/test_job_handlers.py -q`
+  -> `16 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `93 passed`
+
+다음 비용 없는 후보는 T2I multi-image gallery / per-image I2V handoff 또는
+`/files` range edge case입니다.

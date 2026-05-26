@@ -15,6 +15,7 @@ from app.services.vertex.client import get_vertex_client
 from app.services.vertex.errors import (
     VertexOperationFailedError,
     VertexOutputUnavailableError,
+    VertexSafetyBlockedError,
     map_vertex_error,
 )
 
@@ -109,10 +110,14 @@ async def poll_operation(
 
     error = getattr(current, "error", None)
     if error:
+        if _looks_safety_filtered(error):
+            raise VertexSafetyBlockedError()
         raise VertexOperationFailedError()
 
     video_bytes = _extract_video_bytes(current)
     if not video_bytes:
+        if _looks_safety_filtered(current):
+            raise VertexSafetyBlockedError()
         raise VertexOutputUnavailableError()
     return video_bytes
 
@@ -170,3 +175,50 @@ def _extract_video_bytes(operation: Any) -> bytes | None:
         except ValueError:
             return None
     return None
+
+
+_SAFETY_FIELD_MARKERS = ("safety", "filter", "filtered", "rai", "block")
+_SAFETY_TEXT_MARKERS = ("safety", "filter", "filtered", "rai")
+
+
+def _looks_safety_filtered(value: Any, *, _depth: int = 0) -> bool:
+    if value is None or _depth > 4:
+        return False
+
+    if isinstance(value, str):
+        text = value.lower()
+        return any(marker in text for marker in _SAFETY_TEXT_MARKERS)
+
+    if isinstance(value, bytes):
+        return False
+
+    if isinstance(value, dict):
+        return any(
+            _field_or_value_looks_safety_filtered(key, item, _depth=_depth)
+            for key, item in value.items()
+        )
+
+    if isinstance(value, (list, tuple, set)):
+        return any(
+            _looks_safety_filtered(item, _depth=_depth + 1) for item in value
+        )
+
+    fields = getattr(value, "__dict__", None)
+    if isinstance(fields, dict):
+        return _looks_safety_filtered(fields, _depth=_depth + 1)
+
+    return False
+
+
+def _field_or_value_looks_safety_filtered(
+    key: object,
+    value: Any,
+    *,
+    _depth: int,
+) -> bool:
+    if isinstance(key, str):
+        key_text = key.lower()
+        if any(marker in key_text for marker in _SAFETY_FIELD_MARKERS):
+            return value not in (None, "", False, [], {})
+
+    return _looks_safety_filtered(value, _depth=_depth + 1)
