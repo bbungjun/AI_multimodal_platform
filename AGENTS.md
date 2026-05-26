@@ -1,64 +1,112 @@
 # AI 도구용 복구 작업 컨텍스트
 
 이 워크스페이스는 KRAFTON take-home assignment의 로컬 복구 작업 공간입니다.
-사용 가능한 Git 히스토리나 원격 저장소는 없습니다. 이 디렉터리에 남아 있는
-파일들을 유일한 지속 자료로 보고, 보존된 코드, README, memories, 대화 export를
-근거로 최종 제출했던 프로젝트를 최대한 가깝게 복구합니다.
+목표는 새 기능 개발이 아니라, 현재 남아 있는 코드/문서/대화 export를 근거로
+최종 제출했던 Vertex AI 멀티모달 생성 플랫폼을 최대한 가깝게 복구하는 것입니다.
 
-## 현재 목표
+파일명은 `AGENTS.md`입니다. `AGENT.md`가 따로 없으면 이 파일을 기준으로 작업합니다.
 
-복구 대상 프로젝트는 Vertex AI 기반 AI 멀티모달 콘텐츠 생성 플랫폼입니다.
+## 현재 Git 상태
+
+- Git repo가 새로 초기화되어 있습니다.
+- branch: `main`
+- remote: `origin` -> `https://github.com/bbungjun/AI_mult_modal.git`
+- `main`은 `origin/main`을 tracking합니다.
+- 현재 기준점:
+  - `0777f50 chore: baseline recovered workspace`
+  - `a081bf9 chore: restore project tool layout`
+
+작업 전후에는 반드시 다음을 확인합니다.
+
+```bash
+git status --short --branch
+git diff --cached --name-only
+```
+
+복구 단위가 의미 있게 닫히면 작게 커밋합니다. 이미 GitHub remote가 연결되어 있으므로,
+사용자가 별도로 막지 않는 한 중요한 복구 체크포인트는 push까지 진행해도 됩니다.
+절대 `git reset --hard`, `git checkout -- <path>` 같은 되돌리기 명령으로 사용자 변경을
+지우지 않습니다.
+
+## 현재 복구 상태
+
+완료된 것:
+
+- `.gitignore`, `.gitattributes` 추가
+- 현재 파일 전체 baseline 커밋 및 push
+- 프로젝트 도구 레이아웃 1차 복구
+  - `backend/pyproject.toml`
+  - `backend/Dockerfile`
+  - `frontend/package.json`
+  - `frontend/Dockerfile`
+  - `frontend/index.html`
+  - `frontend/vite.config.ts`
+  - `frontend/tsconfig.json`
+
+현재 가장 큰 blocking issue:
+
+- `backend/app/main.py`는 다음 router를 import하지만 `backend/app/api/`가 비어 있습니다.
+  - `app.api.health`
+  - `app.api.generations`
+  - `app.api.prompts`
+  - `app.api.pipelines`
+  - `app.api.assets`
+  - `app.api.files`
+- Vertex service 경계 파일도 일부 누락된 상태로 보입니다.
+  - `app/services/vertex/errors.py`
+  - `app/services/vertex/imagen.py`
+  - `app/services/vertex/veo.py`
+- `backend/tests/`도 현재 레이아웃에서 아직 복구되지 않았습니다.
+
+다음 1순위 복구 단위는 backend API router 복원입니다.
+
+## 복구 대상 프로젝트
+
+복구 대상은 Vertex AI 기반 AI 멀티모달 콘텐츠 생성 플랫폼입니다.
 
 - Imagen 4 text-to-image
 - Veo 3 text-to-video 및 image-to-video
 - Gemini 2.5 Flash prompt enhancement
-- FastAPI 백엔드, Postgres job 상태 관리, React/Vite 프론트엔드
-
-목표는 새 기능 개발이 아니라 복구입니다. 새 설계나 기능 추가보다 최종 제출 당시
-동작을 되살리는 것을 우선합니다.
+- FastAPI backend, Postgres job 상태 관리
+- React/Vite/TypeScript frontend
+- Docker Compose로 `db`, `backend`, `frontend` 실행
 
 ## 보존된 컨텍스트
 
-- `original_agents.md`: 과제 구현 당시 Codex CLI가 읽던 원래 작업 지침입니다.
-  보존해야 하며 덮어쓰지 않습니다.
-- `README_ORIGINAL.md`: 원래 과제 소개/명세 README입니다. 보존해야 하며
-  덮어쓰지 않습니다.
-- `README.md`: 최종 제출했던 프로젝트 README입니다. 최종 앱의 의도된 기능과
-  실행 방법을 설명하는 우선순위 높은 자료로 취급합니다.
-- `pre_context/krafton_assignment_01.md`부터
-  `pre_context/krafton_assignment_15.md`: 대화 export 및 복구 근거 자료입니다.
-  누락된 코드를 재구성할 때 먼저 검색합니다.
-- `conversation_last_half_export.md`: 후반 작업 인수인계 메모입니다.
-- `memories/`: phase 계획, 아키텍처 메모, troubleshooting 기록입니다.
+다음 파일과 디렉터리는 복구 근거 자료입니다. 삭제하거나 덮어쓰지 않습니다.
+
+- `original_agents.md`: 과제 구현 당시 Codex CLI가 읽던 원래 작업 지침
+- `README_ORIGINAL.md`: 원래 과제 소개/명세 README
+- `README.md`: 최종 제출했던 프로젝트 README
+- `pre_context/INDEX.md`: 긴 export를 찾기 위한 색인
+- `pre_context/summaries/*.md`: export 요약본
+- `pre_context/krafton_assignment_01.md` ~ `15.md`: 원문 대화 export
+- `conversation_last_half_export.md`: 후반 작업 인수인계 메모
+- `memories/`: phase 계획, architecture 메모, troubleshooting 기록
+
+긴 export를 바로 전부 읽지 말고, 먼저 `pre_context/INDEX.md`와 관련 summary를 봅니다.
 
 ## 복구 우선순위
 
-1. 코드 수정 전에 모든 컨텍스트 파일을 보존합니다.
-2. 기대되는 프로젝트 레이아웃을 복구합니다.
-   - `backend/pyproject.toml`
-   - `backend/Dockerfile`
-   - `backend/app/...`
-   - `backend/tests/...`
-   - `frontend/package.json`
-   - `frontend/Dockerfile`
-   - `frontend/index.html`
-   - `frontend/vite.config.ts`
-   - `frontend/src/...`
-3. `backend/app/main.py`가 참조하는 백엔드 API 모듈을 복구합니다.
-   - `app/api/health.py`
-   - `app/api/generations.py`
-   - `app/api/prompts.py`
-   - `app/api/pipelines.py`
-   - `app/api/assets.py`
-   - `app/api/files.py`
-4. 누락된 Vertex 서비스 경계가 있으면 복구합니다.
-   - `app/services/vertex/errors.py`
-   - `app/services/vertex/imagen.py`
-   - `app/services/vertex/veo.py`
-5. 프론트엔드 빌드 가능 상태를 복구하고, 비어 있거나 깨진 주요 페이지 파일을
-   우선 복구합니다.
-6. 앱 import가 정상화된 뒤 mock-only 백엔드 테스트를 복구합니다.
-7. 복구 완료를 말하기 전에 로컬 검증 명령을 실행합니다.
+1. Backend import가 가능한 상태를 만듭니다.
+   - `backend/app/api/*.py`
+   - `backend/app/services/vertex/errors.py`
+   - `backend/app/services/vertex/imagen.py`
+   - `backend/app/services/vertex/veo.py`
+2. API contract를 README와 memories 기준으로 맞춥니다.
+   - `GET /api/health`
+   - `POST /api/prompts/enhance`
+   - `POST /api/generations`
+   - `GET /api/generations`
+   - `GET /api/generations/{job_id}`
+   - `DELETE /api/generations/{job_id}`
+   - `POST /api/pipelines`
+   - `GET /api/pipelines/{parent_job_id}`
+   - `GET /api/assets/{asset_id}`
+   - `GET /files/{job_uuid}/{filename}`
+3. Mock-only backend tests를 복구합니다.
+4. Frontend build를 복구합니다.
+5. Docker Compose config/build 가능 상태를 확인합니다.
 
 ## 핵심 구현 규칙
 
@@ -68,28 +116,27 @@
   `genai.Client(vertexai=True, ...)` 형태를 유지합니다.
 - Veo 결과는 GCS가 아니라 inline video bytes를 `DATA_DIR`에 저장합니다.
 - 모든 job 상태 변경은 `app/state_machine.py:transition(...)`을 거칩니다.
-- asset 파일 쓰기와 삭제는 storage helper를 거칩니다.
+- asset 파일 쓰기, 읽기, 삭제, 스트리밍은 storage helper를 거칩니다.
 - 사용자 입력 filename을 파일 경로에 직접 사용하지 않습니다.
+- Prompt Enhancement는 generation 자동 대체가 아니라 review/edit/accept 가능한 초안입니다.
+- 최종 generation prompt의 source of truth는 사용자가 확인한 generation payload prompt입니다.
 
 ## 안전 규칙
 
 - `pre_context/`, `memories/`, `original_agents.md`, `README_ORIGINAL.md`,
   `README.md`를 삭제하거나 덮어쓰지 않습니다.
-- 큰 파일 이동이나 대규모 rewrite 전에는 백업을 만들거나 기존 파일을 명확한
-  복구용 이름으로 보존합니다.
 - service-account JSON 내용, `.env` secret, API key, private credential을 출력,
   문서화, 커밋하지 않습니다.
 - 자동화 테스트에서 Vertex, Gemini, Imagen, Veo를 실제 호출하지 않습니다.
 - 테스트는 `app/services/vertex/*`와 `app/services/llm/*`를 mock 또는 fake로
   대체해야 합니다.
-- 복구 중 GCS, Redis, Celery, 새 DB, 새 프론트엔드 프레임워크를 도입하지
-  않습니다.
+- 복구 중 GCS, Redis, Celery, 새 DB, 새 frontend framework를 도입하지 않습니다.
 - 대화 export를 그대로 소스 코드로 간주하지 않습니다. 근거로만 사용하고,
   import, 테스트, 빌드로 검증합니다.
 
 ## 검증 체크리스트
 
-현재 복구 단계가 맞다는 것을 증명하는 가장 좁은 명령부터 실행합니다.
+가장 좁은 검증부터 실행합니다.
 
 백엔드:
 
@@ -107,7 +154,7 @@ npm install
 npm run build
 ```
 
-`.env`가 있고 credential이 파일 경로로만 설정된 경우 Docker Compose:
+Docker Compose:
 
 ```bash
 docker compose config
@@ -120,7 +167,7 @@ docker compose up -d --build
 ## 작업 방식
 
 - 변경은 작게 나누고, 한 번에 하나의 경계만 복구합니다.
-- 새로 발명하기보다 현재 남아 있는 코드와 export 근거를 우선합니다.
-- 누락 파일을 재구성할 때는 먼저 `pre_context/`와 `memories/`에서 정확한 경로,
-  함수명, route, schema 이름을 검색합니다.
+- 새로 발명하기보다 현재 남아 있는 코드, README, memories, export 근거를 우선합니다.
+- 누락 파일을 재구성할 때는 먼저 `pre_context/INDEX.md`에서 관련 summary를 찾고,
+  그 다음 원문 export에서 정확한 경로, 함수명, route, schema 이름을 검색합니다.
 - 각 복구 단위가 끝나면 무엇을 복구했고 무엇이 아직 빠져 있는지 요약합니다.
