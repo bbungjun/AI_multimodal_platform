@@ -14,6 +14,7 @@ import type {
 
 export type {
   AssetResponse,
+  AssetKind,
   CreativityPreset,
   GenerationCreateRequest,
   GenerationListParams,
@@ -80,6 +81,12 @@ export async function listGenerations(
 export async function getGeneration(jobId: UUID): Promise<GenerationResponse> {
   const job = await apiRequest<GenerationResponse>(`/api/generations/${jobId}`);
   return resolveJobAssetUrls(job);
+}
+
+export async function deleteGeneration(jobId: UUID): Promise<void> {
+  await apiRequest<void>(`/api/generations/${jobId}`, {
+    method: "DELETE",
+  });
 }
 
 export async function enhancePrompt(

@@ -132,6 +132,7 @@ export type GenerationResponse = JobResponse;
 
 export type GenerationListParams = {
   mode?: GenerationMode;
+  asset_kind?: AssetKind;
   model?: string;
   state?: JobState;
   limit?: number;

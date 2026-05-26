@@ -1435,6 +1435,11 @@ p {
   background: var(--bg-elevated);
 }
 
+.history-row:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
 .history-delete-alert {
   display: flex;
   align-items: center;
@@ -1524,6 +1529,15 @@ p {
   padding: 7px 10px;
 }
 
+.history-delete-button {
+  color: var(--err);
+}
+
+.history-delete-button:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.34);
+  background: rgba(248, 113, 113, 0.08);
+}
+
 .history-actions__empty {
   color: var(--text-faint);
 }
@@ -1587,6 +1601,7 @@ p {
   position: relative;
   width: 82px;
   height: 54px;
+  grid-template-rows: auto auto;
   border-color: rgba(34, 211, 238, 0.38);
   background: #020306;
 }
@@ -1607,6 +1622,11 @@ p {
   background: rgba(2, 3, 6, 0.74);
   color: var(--text-primary);
   padding: 2px 4px;
+}
+
+.history-video-tile__icon {
+  display: inline-flex;
+  color: var(--cyan);
 }
 
 .history-result-thumb--unavailable {

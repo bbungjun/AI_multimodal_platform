@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { type KeyboardEvent, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import {
+  deleteGeneration,
   listGenerations,
+  type AssetKind,
+  type AssetResponse,
   type GenerationListParams,
   type GenerationMode,
   type GenerationResponse,
@@ -13,6 +16,7 @@ import { Badge, Button, Panel, StatusDot } from "../components/ui";
 import { FilmIcon, HistoryIcon, ImageIcon, PipelineIcon } from "../components/icons";
 
 const modeOptions: Array<GenerationMode | "all"> = ["all", "t2i", "t2v", "i2v"];
+const assetKindOptions: Array<AssetKind | "all"> = ["all", "image", "video"];
 const stateOptions: Array<JobState | "all"> = [
   "all",
   "pending",
@@ -29,14 +33,19 @@ const limitOptions = [10, 20, 50, 100];
 
 export function HistoryPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<GenerationMode | "all">("all");
+  const [assetKind, setAssetKind] = useState<AssetKind | "all">("all");
   const [state, setState] = useState<JobState | "all">("all");
   const [model, setModel] = useState("");
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
   const queryParams: GenerationListParams = {
     ...(mode === "all" ? {} : { mode }),
+    ...(assetKind === "all" ? {} : { asset_kind: assetKind }),
     ...(state === "all" ? {} : { state }),
     ...(model.trim() ? { model: model.trim() } : {}),
     limit,
@@ -48,6 +57,23 @@ export function HistoryPage() {
     queryFn: () => listGenerations(queryParams),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteGeneration,
+    onMutate: (jobId) => {
+      setDeletingJobId(jobId);
+      setDeleteError(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["generations"] });
+    },
+    onError: (error) => {
+      setDeleteError(error instanceof Error ? error.message : "Delete failed.");
+    },
+    onSettled: () => {
+      setDeletingJobId(null);
+    },
+  });
+
   const jobs = generations.data ?? [];
   const canGoBack = offset > 0;
   const canGoNext = jobs.length === limit;
@@ -56,11 +82,32 @@ export function HistoryPage() {
   const currentPage = Math.floor(offset / limit) + 1;
   const activeFilterCount =
     (mode === "all" ? 0 : 1) +
+    (assetKind === "all" ? 0 : 1) +
     (state === "all" ? 0 : 1) +
     (model.trim() ? 1 : 0);
 
   function resetOffset() {
     setOffset(0);
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLDivElement>, jobId: string) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      navigate(`/jobs/${jobId}`);
+    }
+  }
+
+  function requestDelete(job: GenerationResponse) {
+    const confirmed = window.confirm(
+      `Delete only job ${shortJobId(job.id)} and its saved asset files? Related parent or child jobs will stay in History. This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    deleteMutation.mutate(job.id);
   }
 
   return (
@@ -84,6 +131,23 @@ export function HistoryPage() {
               {modeOptions.map((option) => (
                 <option key={option} value={option}>
                   {option === "all" ? "All modes" : option.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Asset type</span>
+            <select
+              onChange={(event) => {
+                setAssetKind(event.target.value as AssetKind | "all");
+                resetOffset();
+              }}
+              value={assetKind}
+            >
+              {assetKindOptions.map((option) => (
+                <option key={option} value={option}>
+                  {assetKindLabel(option)}
                 </option>
               ))}
             </select>
@@ -148,6 +212,7 @@ export function HistoryPage() {
           <Badge tone="muted">Page {currentPage}</Badge>
           <Badge tone="muted">{limit} per page</Badge>
           {mode !== "all" && <Badge tone="muted">mode {mode}</Badge>}
+          {assetKind !== "all" && <Badge tone="muted">asset {assetKind}</Badge>}
           {state !== "all" && <Badge tone="muted">state {state}</Badge>}
           {model.trim() && <Badge tone="muted">model {model.trim()}</Badge>}
         </div>
@@ -157,7 +222,7 @@ export function HistoryPage() {
         <div className="history-table-intro">
           <div>
             <div className="section-label">Current view</div>
-            <p>{formatHistorySummary({ jobsLength: jobs.length, mode, state })}</p>
+            <p>{formatHistorySummary({ assetKind, jobsLength: jobs.length, mode, state })}</p>
           </div>
           {generations.isFetching && !generations.isLoading && (
             <Badge tone="info">
@@ -166,6 +231,15 @@ export function HistoryPage() {
             </Badge>
           )}
         </div>
+        {deleteError && (
+          <div className="history-delete-alert" role="alert">
+            <Badge tone="danger">
+              <StatusDot tone="danger" />
+              Delete failed
+            </Badge>
+            <p>{deleteError}</p>
+          </div>
+        )}
 
         {generations.isLoading && (
           <HistoryMessage
@@ -201,13 +275,16 @@ export function HistoryPage() {
               <span>Prompt / job</span>
               <span>Model</span>
               <span>Created</span>
+              <span>Actions</span>
             </div>
             {jobs.map((job) => (
-              <button
+              <div
                 className="table-row history-row history-row-grid"
                 key={job.id}
                 onClick={() => navigate(`/jobs/${job.id}`)}
-                type="button"
+                onKeyDown={(event) => handleRowKeyDown(event, job.id)}
+                role="button"
+                tabIndex={0}
               >
                 <ResultPreview job={job} />
                 <span className="history-mode-state">
@@ -226,7 +303,25 @@ export function HistoryPage() {
                   <small>Created</small>
                   <strong>{formatDateTime(job.created_at)}</strong>
                 </span>
-              </button>
+                <span className="history-actions">
+                  {canDeleteHistoryJob(job) ? (
+                    <Button
+                      className="history-delete-button"
+                      disabled={deleteMutation.isPending}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        requestDelete(job);
+                      }}
+                      type="button"
+                      variant="ghost"
+                    >
+                      {deletingJobId === job.id ? "Deleting" : "Delete"}
+                    </Button>
+                  ) : (
+                    <span className="history-actions__empty">-</span>
+                  )}
+                </span>
+              </div>
             ))}
           </div>
         )}
@@ -325,18 +420,7 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
   }
 
   if (asset.kind === "video" || asset.mime.startsWith("video/")) {
-    return (
-      <span
-        className="history-result-thumb history-result-thumb--video"
-        title={`Video ready · thumbnail unavailable · ${label}`}
-      >
-        <span className="history-video-tile__icon">
-          <FilmIcon size={15} />
-        </span>
-        <strong>Video ready</strong>
-        <small>No thumbnail</small>
-      </span>
-    );
+    return <VideoResultPreview asset={asset} label={label} />;
   }
 
   return (
@@ -346,6 +430,36 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
     >
       <strong>Preview</strong>
       <small>Unavailable</small>
+    </span>
+  );
+}
+
+function VideoResultPreview({ asset, label }: { asset: AssetResponse; label: string }) {
+  const [hasPreviewError, setHasPreviewError] = useState(false);
+
+  return (
+    <span
+      className="history-result-thumb history-result-thumb--video"
+      title={hasPreviewError ? `Video ready · thumbnail unavailable · ${label}` : label}
+    >
+      {hasPreviewError ? (
+        <>
+          <span className="history-video-tile__icon">
+            <FilmIcon size={15} />
+          </span>
+          <strong>Video ready</strong>
+        </>
+      ) : (
+        <video
+          aria-label="Video preview"
+          muted
+          onError={() => setHasPreviewError(true)}
+          playsInline
+          preload="metadata"
+          src={videoPreviewUrl(asset.url)}
+        />
+      )}
+      <small>{hasPreviewError ? "No thumbnail" : "Video"}</small>
     </span>
   );
 }
@@ -411,21 +525,39 @@ function emptyResultCopy(state: JobState): {
 }
 
 function formatHistorySummary({
+  assetKind,
   jobsLength,
   mode,
   state,
 }: {
+  assetKind: AssetKind | "all";
   jobsLength: number;
   mode: GenerationMode | "all";
   state: JobState | "all";
 }): string {
   const modeText = mode === "all" ? "all modes" : mode.toUpperCase();
   const stateText = state === "all" ? "all states" : state;
-  return `${jobsLength} job${jobsLength === 1 ? "" : "s"} shown for ${modeText} and ${stateText}.`;
+  const assetText = assetKind === "all" ? "all result types" : `${assetKind} assets`;
+  return `${jobsLength} job${jobsLength === 1 ? "" : "s"} shown for ${modeText}, ${stateText}, and ${assetText}.`;
 }
 
 function shortJobId(id: string): string {
   return id.slice(0, 8);
+}
+
+function assetKindLabel(option: AssetKind | "all"): string {
+  if (option === "all") {
+    return "All result types";
+  }
+  return option === "image" ? "Images" : "Videos";
+}
+
+function canDeleteHistoryJob(job: GenerationResponse): boolean {
+  return job.state === "completed" || job.state === "failed" || job.state === "cancelled";
+}
+
+function videoPreviewUrl(url: string): string {
+  return url.includes("#") ? url : `${url}#t=0.1`;
 }
 
 function formatDateTime(value: string): string {
