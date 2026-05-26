@@ -26,7 +26,7 @@ $env:AI_PROVIDER='mock'; python -c "import app.main; print('import ok')"
 
 결과:
 
-- `python -m pytest`: `65 passed in 1.85s`
+- `python -m pytest`: 최초 최종 regression 기준 `65 passed in 1.85s`
 - `python -m compileall app`: exit code `0`
 - `python -c "import app.main; print('import ok')"`: `import ok`
 
@@ -88,3 +88,55 @@ docker compose --env-file .env.example ps
 
 다음 인수인계자는 기본적으로 `AI_PROVIDER=mock` 기준 검증만 반복하고, 실제 provider
 검증이 필요할 때는 먼저 비용 승인 여부를 다시 확인해야 합니다.
+
+## Mock Veo Pipeline Follow-Up
+
+Pipeline UI 확인 중 mock mode에서 T2V/I2V job이 `vertex_credentials_invalid`로
+실패하는 문제가 확인되었습니다.
+
+원인:
+
+- `AI_PROVIDER=mock`에서 T2I와 prompt enhancement는 mock provider를 사용했습니다.
+- 그러나 Veo T2V/I2V 경로는 mock branch가 없어서 `get_vertex_client()`로 떨어졌고,
+  dummy credential을 실제 Vertex credential처럼 읽으려다 실패했습니다.
+
+조치:
+
+- `backend/app/services/mock_media.py`에 deterministic mock MP4-like bytes 생성을
+  추가했습니다.
+- `backend/app/services/vertex/veo.py`에 mock `submit_video`,
+  `poll_operation`, `poll_operation_name` 경로를 추가했습니다.
+- `backend/tests/test_mock_provider.py`에 mock T2V/I2V가 Vertex client를 만들지 않는
+  regression test를 추가했습니다.
+
+추가 검증:
+
+```bash
+cd backend
+$env:AI_PROVIDER='mock'; python -m pytest tests/test_mock_provider.py -q
+$env:AI_PROVIDER='mock'; python -m pytest tests/test_mock_provider.py tests/test_job_handlers.py tests/test_pipeline_api.py tests/test_pipeline_link.py -q
+$env:AI_PROVIDER='mock'; python -m pytest
+$env:AI_PROVIDER='mock'; python -m compileall app
+```
+
+결과:
+
+- `tests/test_mock_provider.py -q`: `5 passed`
+- mock provider/job handler/pipeline 묶음: `23 passed`
+- full backend pytest: `67 passed in 1.77s`
+- compileall: exit code `0`
+
+Compose mock API 확인:
+
+- backend container 재시작 후 `http://127.0.0.1:5173/api/health`는
+  `ready=true`, `vertex.status=mock_provider`
+- 새 mock pipeline parent job:
+  `e65c229f-d069-42b4-a89f-3e287e240c4e` -> `completed`, image asset 1개
+- 새 mock pipeline child job:
+  `a51aaa83-6e81-4371-9e48-74ed0dc1c597` -> `completed`, `video/mp4` asset 1개
+
+주의:
+
+- 이 mock video는 실제 Veo 품질 검증물이 아니라 로컬 flow 확인용 deterministic
+  placeholder입니다.
+- 실제 Vertex/Gemini/Imagen/Veo 호출은 여전히 수행하지 않았습니다.

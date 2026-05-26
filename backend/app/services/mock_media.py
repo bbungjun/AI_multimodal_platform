@@ -26,6 +26,35 @@ def generate_mock_pngs(
     ]
 
 
+def generate_mock_mp4(
+    model_id: str,
+    prompt: str,
+    *,
+    aspect_ratio: str,
+    duration_sec: int,
+    image_bytes: bytes | None = None,
+) -> bytes:
+    seed = hashlib.sha256(
+        b"|".join(
+            [
+                model_id.encode("utf-8"),
+                prompt.encode("utf-8"),
+                aspect_ratio.encode("utf-8"),
+                str(duration_sec).encode("ascii"),
+                image_bytes or b"",
+            ]
+        )
+    ).digest()
+    payload = (b"mock-veo-placeholder:" + seed) * max(1, duration_sec)
+    return b"".join(
+        [
+            _box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2mp41"),
+            _box(b"free", b"Vertex Studio mock Veo placeholder"),
+            _box(b"mdat", payload),
+        ]
+    )
+
+
 def _dimensions_for_aspect_ratio(aspect_ratio: str) -> tuple[int, int]:
     if aspect_ratio == "16:9":
         return 640, 360
@@ -73,3 +102,7 @@ def _chunk(kind: bytes, data: bytes) -> bytes:
         + data
         + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
     )
+
+
+def _box(kind: bytes, data: bytes) -> bytes:
+    return struct.pack(">I", len(data) + 8) + kind + data

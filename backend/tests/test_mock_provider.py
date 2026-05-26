@@ -5,6 +5,7 @@ from app.models import GenerationMode
 from app.services.llm import enhancer
 from app.services.vertex import client as vertex_client
 from app.services.vertex import imagen
+from app.services.vertex import veo
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -58,6 +59,47 @@ async def test_mock_prompt_enhancement_returns_draft_without_vertex_client(monke
     assert result.components["provider"] == "mock"
     assert result.target_mode == GenerationMode.T2I
     assert result.target_model == "imagen-4.0-fast-generate-001"
+
+
+async def test_mock_video_provider_returns_mp4_without_vertex_client(monkeypatch):
+    monkeypatch.setattr(veo, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(veo, "get_vertex_client", _fail_vertex_client)
+
+    operation = await veo.submit_video(
+        "veo-3.0-fast-generate-001",
+        "a slow dolly through a rainy alley",
+        aspect_ratio="16:9",
+        duration_sec=4,
+    )
+    video = await veo.poll_operation(operation)
+
+    assert operation.done is True
+    assert str(operation.name).startswith("mock://veo/")
+    assert video[4:8] == b"ftyp"
+
+
+async def test_mock_i2v_provider_uses_source_image_without_vertex_client(monkeypatch):
+    monkeypatch.setattr(veo, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(veo, "get_vertex_client", _fail_vertex_client)
+
+    t2v_operation = await veo.submit_video(
+        "veo-3.0-fast-generate-001",
+        "a slow dolly through a rainy alley",
+        aspect_ratio="16:9",
+        duration_sec=4,
+    )
+    i2v_operation = await veo.submit_video(
+        "veo-3.0-fast-generate-001",
+        "a slow dolly through a rainy alley",
+        aspect_ratio="16:9",
+        duration_sec=4,
+        image_bytes=b"source-image",
+        image_mime="image/png",
+    )
+
+    assert await veo.poll_operation(t2v_operation) != await veo.poll_operation(
+        i2v_operation
+    )
 
 
 def test_mock_vertex_readiness_does_not_require_credentials(monkeypatch):

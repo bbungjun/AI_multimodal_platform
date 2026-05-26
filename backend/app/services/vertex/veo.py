@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import time
+from types import SimpleNamespace
 from typing import Any
 
 from google.genai import types
 
+from app.config import get_settings
+from app.services import mock_media
 from app.services.vertex.client import get_vertex_client
 from app.services.vertex.errors import (
     VertexOperationFailedError,
@@ -31,6 +35,27 @@ async def submit_video(
     image_mime: str | None = None,
     client: Any | None = None,
 ) -> Any:
+    if client is None and get_settings().ai_provider == "mock":
+        video_bytes = mock_media.generate_mock_mp4(
+            model_id,
+            prompt,
+            aspect_ratio=aspect_ratio,
+            duration_sec=duration_sec,
+            image_bytes=image_bytes,
+        )
+        digest = hashlib.sha256(video_bytes).hexdigest()[:16]
+        return SimpleNamespace(
+            name=f"mock://veo/{digest}",
+            done=True,
+            response=SimpleNamespace(
+                generated_videos=[
+                    SimpleNamespace(
+                        video=SimpleNamespace(video_bytes=video_bytes),
+                    )
+                ],
+            ),
+        )
+
     vertex_client = client or get_vertex_client()
     config = types.GenerateVideosConfig(
         aspect_ratio=aspect_ratio,
@@ -61,6 +86,12 @@ async def poll_operation(
     deadline_sec: float = 600.0,
     client: Any | None = None,
 ) -> bytes:
+    if client is None and get_settings().ai_provider == "mock":
+        video_bytes = _extract_video_bytes(operation)
+        if not video_bytes:
+            raise VertexOutputUnavailableError()
+        return video_bytes
+
     vertex_client = client or get_vertex_client()
     current = operation
     deadline = time.monotonic() + deadline_sec
@@ -93,6 +124,14 @@ async def poll_operation_name(
     deadline_sec: float = 600.0,
     client: Any | None = None,
 ) -> bytes:
+    if client is None and get_settings().ai_provider == "mock":
+        return mock_media.generate_mock_mp4(
+            "veo-3.0-fast-generate-001",
+            operation_name,
+            aspect_ratio="16:9",
+            duration_sec=4,
+        )
+
     vertex_client = client or get_vertex_client()
     operation = types.GenerateVideosOperation(name=operation_name)
     try:
