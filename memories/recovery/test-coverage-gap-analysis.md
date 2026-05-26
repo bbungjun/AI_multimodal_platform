@@ -200,6 +200,28 @@ pipeline model validation을 제출 직전 보강 항목으로 기록합니다.
 근거 확인"이 먼저입니다. 증거가 약하면 새 기능으로 간주하고 보류하는 편이
 안전합니다.
 
+2026-05-27 추가 확인 결과, cancel endpoint는 복구 대상에서 제외하는 것이
+맞습니다. 초기 구현 계획과 일부 오래된 phase 메모에는
+`POST /api/generations/{id}/cancel`이 등장하지만, 후반 제출 정합성 문맥에서는
+`cancelled` state만 terminal state로 유지하고 user-facing cancel API/UI는
+구현하지 않는 것으로 정리되어 있습니다.
+
+확인 근거:
+
+- `memories/architecture.md`는 현재 구현 route 목록에서 cancel endpoint를
+  "Not implemented as standalone endpoints"로 분류합니다.
+- `pre_context/krafton_assignment_14.md`에는 "Do not claim there is a
+  user-facing cancel button or cancel API"와 "cancelled state exists, but no
+  cancel action is implemented" 정리 문구가 있습니다.
+- 현재 `README.md` API 표에는 cancel endpoint가 없고, `cancelled`는 state
+  machine terminal state와 deletion 대상 상태로만 설명됩니다.
+- 현재 코드 검색에서도 `backend/app/api/*`에는 cancel route가 없고,
+  frontend는 `cancelled` 표시/삭제 가능 상태만 다룹니다.
+
+결론: `cancelled` state는 유지하되, `POST /api/generations/{id}/cancel`과
+cancel button은 이번 복구에서 구현하지 않습니다. 구현하면 원 제출물 복구가
+아니라 새 기능 추가에 가까우므로 보류합니다.
+
 ### P2. 세부 edge case
 
 아래는 중요하지만 P0보다 뒤로 미룰 수 있는 후보입니다.
