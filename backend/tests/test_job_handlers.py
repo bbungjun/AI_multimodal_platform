@@ -341,3 +341,57 @@ async def test_handle_t2v_resumes_polling_operation_by_name(monkeypatch):
 
     assert session.commit_count == 2
     assert session.rollback_count == 0
+
+
+async def test_handle_t2v_poll_timeout_marks_job_failed_with_operation_name(
+    monkeypatch,
+):
+    job = _t2v_job()
+    session = FakeHandlerSession(job)
+    operation = SimpleNamespace(name="projects/demo/locations/us/operations/veo-timeout")
+    polled_operations: list[object] = []
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    async def submit_video(*_args: object, **_kwargs: object) -> object:
+        return operation
+
+    async def poll_operation(submitted_operation: object) -> bytes:
+        polled_operations.append(submitted_operation)
+        raise handlers.veo.VeoTimeoutError(operation.name)
+
+    def save_bytes(*_args: object, **_kwargs: object) -> str:
+        raise AssertionError("timed out T2V job must not save assets")
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.veo, "submit_video", submit_video)
+    monkeypatch.setattr(handlers.veo, "poll_operation", poll_operation)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+
+    await handlers.handle_t2v(session, job)
+
+    assert job.state == JobState.FAILED
+    assert job.vertex_operation_name == operation.name
+    assert job.vertex_charged is False
+    assert job.attempts == 1
+    assert session.added == []
+    assert [entry["state"] for entry in job.state_history] == [
+        "queued",
+        "generating",
+        "polling",
+        "failed",
+    ]
+    assert job.state_history[-1]["detail"] == {"error": "veo_timeout"}
+    assert job.error == {
+        "code": "veo_timeout",
+        "message": "Veo generation timed out while polling.",
+        "retryable": True,
+        "operation_name": operation.name,
+        "retry_count": 1,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+
+    assert polled_operations == [operation]
+    assert session.commit_count == 5
+    assert session.rollback_count == 1
