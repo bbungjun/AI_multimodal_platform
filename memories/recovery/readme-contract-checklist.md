@@ -29,7 +29,7 @@
 | Text-to-Image, Text-to-Video, Image-to-Video, T2I to I2V Pipeline | 검증됨 | `POST /api/generations`, `POST /api/pipelines`, job handler, mock T2I/T2V/I2V provider, mock pipeline smoke가 있음 | 실제 provider 결과 품질은 live 전용 |
 | Imagen 4 / Veo 3 모델 선택 | 구현됨 | `GeneratePage.tsx` 모델 선택 UI, `generations.py`/`pipelines.py` 모델 family 검증 | 모든 모델 옵션을 브라우저에서 하나씩 누르는 smoke는 필요할 때만 진행 |
 | 생성 옵션: image aspect ratio, image count, video duration, I2V source image | 구현됨 | Pydantic request schema, Generate 화면 옵션, pipeline payload, source asset 검증 | 옵션 조합 전체 permutation smoke는 아직 안 함 |
-| Prompt Enhancement review/edit/accept | 구현됨 | `POST /api/prompts/enhance`, mock enhancer, `EnhanceReviewPanel`, editable draft, keep original, accept draft, components 표시 | 브라우저에서 enhance -> edit -> accept -> submit 흐름은 다음 smoke 후보 |
+| Prompt Enhancement review/edit/accept | 검증됨 | `POST /api/prompts/enhance`, mock enhancer, `EnhanceReviewPanel`, editable draft, keep original, accept draft, components 표시. Browser smoke에서 enhance -> draft edit -> accept -> generation submit with `enhancement_id` 확인 | 실제 Gemini 결과 품질은 live 전용 |
 | Creativity Mode | 구현됨 | `faithful`, `balanced`, `imaginative` 옵션이 있고 `creativity_preset`으로 enhancer에 전달됨 | 실제 Gemini 결과 차이는 live 전용 |
 | Job Detail polling/timeline/request summary/asset preview | 검증됨 | `useJob`이 active job을 2초 polling, `JobDetailPage.tsx`가 timeline/request summary/error/asset viewer를 렌더링함 | 실제 Vertex MP4 video detail playback은 live 전용 |
 | I2V Source Context | 검증됨 | Pipeline detail은 child I2V가 대기/진행 중일 때 source image context를 보여줌. Generate 화면도 `source_asset_id`로 source lock을 표시함. `JobDetailPage.tsx`는 standalone I2V non-completed job에서 `GET /api/assets/{source_asset_id}`로 source image를 조회해 preview로 보여줌 | disposable failed I2V smoke job으로 source image `<img>` 렌더링 확인. 실제 live I2V 진행 중 상태는 비용 때문에 제외 |
@@ -84,6 +84,16 @@ npm run build
   - source asset이 `/files/.../output.png` 이미지로 렌더링됨
   - blocking console error 없음
   - smoke 후 disposable job 삭제 확인
+- Browser Prompt Enhancement smoke에서 확인한 내용:
+  - `Enhance prompt` 클릭 후 `Review Enhanced Prompt` 패널 표시
+  - enhanced draft를 직접 수정한 뒤 `Accept draft` 클릭
+  - accepted prompt가 Request Builder main prompt로 반영됨
+  - `Generate` 제출 후 Job Detail로 이동
+  - 생성 job `07a82dbc-12fe-400c-bcbe-2c2ac7c5aad5`가 `completed` 상태가 됨
+  - API 응답에서 `enhancement_id=bb7509b1-3911-4067-b7de-ba612737d0b7` 연결 확인
+  - 최종 job prompt가 accepted edited prompt와 일치함
+  - image asset 1개 생성 및 `/files/.../output.png` 로드 확인
+  - blocking console error 없음
 
 최근 backend 회귀 검증 근거:
 
@@ -103,9 +113,7 @@ npm run build
 
 추천 순서:
 
-1. Prompt Enhancement를 브라우저에서 no-cost smoke합니다:
-   enhance -> draft edit -> accept -> generation submit with `enhancement_id`.
-2. 삭제 UX 검증이 필요하면 기존 review job을 지우지 말고 disposable mock job을 하나
+1. 삭제 UX 검증이 필요하면 기존 review job을 지우지 말고 disposable mock job을 하나
    만든 뒤 그 job만 삭제합니다.
-3. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
+2. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
    무작정 맞추기보다 빠진 고가치 contract를 찾는 쪽이 더 중요합니다.
