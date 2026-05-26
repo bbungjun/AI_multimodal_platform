@@ -10,8 +10,9 @@ assignment shape, not new feature development.
 
 - Branch: `main`
 - Remote: `origin` -> `https://github.com/bbungjun/AI_mult_modal.git`
-- Latest test-recovery commit before this note: `ebd2576 test: restore asset api contract`
-- Working tree was clean before this documentation update.
+- Latest backend test-recovery commit: `d03f100 test: restore state machine contract`
+- Frontend/compose recovery continued after this note and is summarized in
+  `phase1-recovery-closeout.md`.
 
 ## Verified Backend Commands
 
@@ -24,9 +25,9 @@ python -m compileall app
 python -c "import app.main; print('import ok')"
 ```
 
-The latest run before this note had:
+Latest recovered backend gate:
 
-- `python -m pytest`: `60 passed`
+- `python -m pytest`: `65 passed`
 - `python -m compileall app`: passed
 - `python -c "import app.main; print('import ok')"`: `import ok`
 
@@ -117,16 +118,8 @@ The backend test suite now includes these recovered mock-only contracts:
   printed or committed.
 - Redis, Celery, GCS, and new DB infrastructure were not introduced.
 
-## Known Remaining Gaps
+## Remaining Out Of Scope
 
-- Direct state-machine tests can still be restored, although handler/runner
-  tests already exercise many transitions indirectly.
-- Frontend build/typecheck recovery is still pending.
-- Docker Compose config/build verification is still pending.
 - Real provider smoke tests are intentionally not run during local recovery.
-
-## Recommended Next Recovery Order
-
-1. Add focused state-machine tests if recovered context confirms they existed.
-2. Move to frontend build/typecheck recovery.
-3. Verify Docker Compose config/build once backend and frontend are stable.
+- Final submission consistency review still needs a separate pass across
+  README, memories, compose, API contracts, and runtime instructions.
