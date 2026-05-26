@@ -15,6 +15,7 @@
 - 현재 기준점:
   - `0777f50 chore: baseline recovered workspace`
   - `a081bf9 chore: restore project tool layout`
+  - `2501e61 restore backend api imports`
 
 작업 전후에는 반드시 다음을 확인합니다.
 
@@ -42,23 +43,18 @@ git diff --cached --name-only
   - `frontend/index.html`
   - `frontend/vite.config.ts`
   - `frontend/tsconfig.json`
+- backend import/API skeleton 1차 복구
+  - `backend/app/api/*.py`
+  - `backend/app/services/vertex/errors.py`
+  - `backend/app/services/vertex/imagen.py`
+  - `backend/app/services/vertex/veo.py`
 
 현재 가장 큰 blocking issue:
 
-- `backend/app/main.py`는 다음 router를 import하지만 `backend/app/api/`가 비어 있습니다.
-  - `app.api.health`
-  - `app.api.generations`
-  - `app.api.prompts`
-  - `app.api.pipelines`
-  - `app.api.assets`
-  - `app.api.files`
-- Vertex service 경계 파일도 일부 누락된 상태로 보입니다.
-  - `app/services/vertex/errors.py`
-  - `app/services/vertex/imagen.py`
-  - `app/services/vertex/veo.py`
-- `backend/tests/`도 현재 레이아웃에서 아직 복구되지 않았습니다.
+- `backend/tests/`가 현재 레이아웃에서 아직 복구되지 않았습니다.
+- 비용 없는 개인 로컬 검증을 위해 `AI_PROVIDER=mock` 개발 모드를 추가할 예정입니다.
 
-다음 1순위 복구 단위는 backend API router 복원입니다.
+다음 1순위 복구 단위는 mock-only backend tests 및 로컬 mock provider 경계 복구입니다.
 
 ## 복구 대상 프로젝트
 
@@ -120,6 +116,31 @@ git diff --cached --name-only
 - 사용자 입력 filename을 파일 경로에 직접 사용하지 않습니다.
 - Prompt Enhancement는 generation 자동 대체가 아니라 review/edit/accept 가능한 초안입니다.
 - 최종 generation prompt의 source of truth는 사용자가 확인한 generation payload prompt입니다.
+
+## 비용 없는 로컬 개발/테스트 방침
+
+Vertex AI, Gemini, Imagen, Veo는 비용이 발생할 수 있으므로 개인 로컬 검증에서는
+실제 provider를 호출하지 않는 `AI_PROVIDER=mock` 모드를 둡니다.
+
+- `AI_PROVIDER=vertex`: 최종 제출물의 원래 provider 경로입니다. `google-genai`와
+  `genai.Client(vertexai=True, ...)` 경계를 유지합니다.
+- `AI_PROVIDER=mock`: 개인 로컬 개발/테스트 전용입니다. credential 없이 실행되어야 하며,
+  Vertex/Gemini/Imagen/Veo를 실제 호출하면 안 됩니다.
+- mock provider는 실제 AI 품질을 흉내 내는 것이 아니라 앱 흐름을 검증하기 위한
+  deterministic media bytes를 생성합니다.
+  - T2I mock은 유효한 PNG bytes를 생성하여 storage, asset, `/files/...`, frontend preview
+    흐름을 확인할 수 있게 합니다.
+  - Prompt enhancement mock은 deterministic enhanced prompt와 components를 반환합니다.
+  - T2V/I2V mock은 필요 시 별도 fixture 또는 deterministic placeholder로 처리하되,
+    원본 Veo 경계를 깨지 않습니다.
+- API, DB model, job runner, state machine, storage helper, frontend 흐름은 provider가
+  mock인지 vertex인지 몰라야 합니다. provider 선택은 좁은 service boundary 안에서만
+  처리합니다.
+- `.env` 예시는 credential을 요구하지 않는 local mode와 실제 제출/운영용 Vertex mode를
+  분리해서 설명해야 합니다. secret이나 service-account JSON 내용은 절대 출력하거나
+  커밋하지 않습니다.
+- 자동화 테스트는 기본적으로 `AI_PROVIDER=mock` 또는 monkeypatch/fake provider로 실행하여
+  외부 AI 호출과 비용 발생을 막습니다.
 
 ## 안전 규칙
 
