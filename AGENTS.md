@@ -57,6 +57,7 @@ git diff --cached --name-only
   - `/api/health`는 mock provider readiness와 `ok`/`ready` 분리 contract를 테스트
   - storage/files safety는 Windows 로컬 저장, unsafe path 차단, `/files` streaming/range를 테스트
   - `POST /api/generations`는 T2I job 생성, `auto_enhance` 거절, matching `enhancement_id` 연결을 테스트
+  - `GET /api/generations/{job_id}`와 `GET /api/generations`는 asset DTO 포함 응답과 404를 테스트
 
 현재 가장 큰 blocking issue:
 
