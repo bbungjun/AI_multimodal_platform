@@ -54,6 +54,7 @@ git diff --cached --name-only
   - `AI_PROVIDER=mock`에서 T2I mock PNG 생성
   - `AI_PROVIDER=mock`에서 prompt enhancement mock draft 생성
   - mock provider 테스트는 실제 Vertex client 생성을 금지
+  - `/api/health`는 mock provider readiness와 `ok`/`ready` 분리 contract를 테스트
 
 현재 가장 큰 blocking issue:
 

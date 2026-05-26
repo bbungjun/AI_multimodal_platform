@@ -16,7 +16,7 @@ async def health() -> HealthResponse:
     db_up = await check_db_connection()
     vertex = get_vertex_readiness()
     return HealthResponse(
-        ok=db_up and vertex.ready,
+        ok=db_up,
         ready=db_up and vertex.ready,
         service=get_settings().app_name,
         db="up" if db_up else "down",
