@@ -59,6 +59,7 @@ git diff --cached --name-only
   - `POST /api/generations`는 T2I job 생성, `auto_enhance` 거절, matching `enhancement_id` 연결을 테스트
   - `GET /api/generations/{job_id}`와 `GET /api/generations`는 asset DTO 포함 응답과 404를 테스트
   - `DELETE /api/generations/{job_id}`는 terminal 삭제, non-terminal/active dependent 보호, terminal dependent detach를 테스트
+  - `POST /api/pipelines`와 `GET /api/pipelines/{parent_job_id}`는 parent T2I + blocked/unblocked child I2V contract를 테스트
 
 현재 가장 큰 blocking issue:
 
