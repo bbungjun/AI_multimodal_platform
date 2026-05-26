@@ -245,3 +245,37 @@ classification입니다. 둘 다 비용 없는 fake/mock 테스트로 닫을 수
 
 다음 세션에서는 테스트 개수를 억지로 맞추기보다, 비용 없는 P0 테스트 묶음을
 하나씩 복구해서 confidence를 올리는 방식이 가장 안전합니다.
+
+## Follow-up: rate limiter / retry tests restored
+
+2026-05-27 후속 작업에서 위 P0 후보 중 `rate limiter / retry` 테스트 묶음을
+복구했습니다.
+
+추가된 파일:
+
+- `backend/tests/test_rate_limiter.py`
+- `backend/tests/test_retry.py`
+
+복구한 계약:
+
+- sliding-window limiter capacity, wait/prune, model registry, unknown model
+- Imagen/Veo/Gemini 기본 rate limit 값
+- bounded retry 기본 retryable status code
+- retryable status 후 성공
+- non-retryable 4xx 즉시 실패
+- max attempts 중단
+- exponential backoff cap
+- `retryable=True`, `status_code`, `code`, `status`,
+  `response.status_code` 기반 retry 판단
+- invalid retry config
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_rate_limiter.py tests/test_retry.py -q`
+  -> `19 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `86 passed`
+
+따라서 이 문서의 "P0. Rate limiter / retry 테스트 복구" 항목은 완료된 것으로
+보고, 다음 비용 없는 후보는 generation/pipeline model validation 또는 Veo
+provider failure classification입니다.
