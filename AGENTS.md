@@ -60,6 +60,7 @@ git diff --cached --name-only
   - `GET /api/generations/{job_id}`와 `GET /api/generations`는 asset DTO 포함 응답과 404를 테스트
   - `DELETE /api/generations/{job_id}`는 terminal 삭제, non-terminal/active dependent 보호, terminal dependent detach를 테스트
   - `POST /api/pipelines`와 `GET /api/pipelines/{parent_job_id}`는 parent T2I + blocked/unblocked child I2V contract를 테스트
+  - `pipeline_link`는 completed parent image asset 연결, asset missing/not-image 실패, parent failure cascade를 테스트
 
 현재 가장 큰 blocking issue:
 
