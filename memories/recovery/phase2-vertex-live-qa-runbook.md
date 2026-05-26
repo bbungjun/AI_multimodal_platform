@@ -2,59 +2,63 @@
 
 Date: 2026-05-27
 
-This runbook defines the next manual recovery gate after Phase 1. It is a plan
-for validating the original `AI_PROVIDER=vertex` submission path with real GCP
-credentials, not a record that live QA has already been executed.
+이 문서는 Phase 1 복구 이후, 실제 `AI_PROVIDER=vertex` 경로를 수동으로 검증할 때
+따라갈 절차입니다.
 
-No real Vertex, Gemini, Imagen, or Veo calls were made while creating this
-document.
+중요: 이 문서는 "실제 Vertex live QA를 이미 실행했다"는 기록이 아닙니다.
+이 문서를 작성하면서 Vertex, Gemini, Imagen, Veo 실제 호출은 하지 않았습니다.
 
-## Goal
+## 목적
 
-Verify, only after explicit cost acceptance, that the recovered repository can
-run the submitted Vertex AI provider path end to end:
+비용 발생을 명시적으로 승인한 뒤에만, 복구된 프로젝트가 최종 제출 당시의 실제
+Vertex AI provider 경로로 동작하는지 확인합니다.
 
-- Gemini 2.5 Flash prompt enhancement.
-- Imagen 4 text-to-image generation.
-- Veo 3 text-to-video generation.
-- Veo 3 image-to-video generation from a completed image asset.
-- T2I -> I2V pipeline linking.
+확인 대상:
 
-The local mock path remains the automated regression path. Live provider QA is
-manual because it requires credentials, quota, model access, and paid provider
-requests.
+- Gemini 2.5 Flash prompt enhancement
+- Imagen 4 text-to-image 생성
+- Veo 3 text-to-video 생성
+- 완료된 이미지 asset을 source로 쓰는 Veo 3 image-to-video 생성
+- T2I -> I2V pipeline 연결
 
-## Preconditions
+자동화 테스트와 일반 로컬 검증은 계속 `AI_PROVIDER=mock` 경로를 사용합니다.
+`AI_PROVIDER=vertex` 검증은 credential, quota, 모델 접근 권한, 실제 비용이 필요하므로
+수동 QA로만 다룹니다.
 
-Before any live provider request:
+## 실행 전 조건
 
-- The reviewer explicitly accepts possible Vertex AI cost.
-- The GCP project has billing enabled and Vertex AI access for the selected
-  region.
-- The service account has the permissions needed to call Gemini, Imagen, and
-  Veo through Vertex AI.
-- The service-account JSON file exists outside the repository.
-- `.env` exists only locally and is ignored by git.
-- No service-account JSON content, API key, private credential, or real `.env`
-  value is pasted into docs, terminal notes, commits, or issue comments.
-- The working tree starts clean:
+실제 provider 요청을 보내기 전에 아래 조건을 모두 확인합니다.
+
+- 리뷰어 또는 사용자가 Vertex AI 비용 발생 가능성을 명시적으로 승인했습니다.
+- GCP project에 billing이 켜져 있습니다.
+- 선택한 region에서 Vertex AI, Gemini, Imagen, Veo 접근 권한이 있습니다.
+- service-account JSON 파일이 repo 바깥 경로에 있습니다.
+- `.env`는 로컬에만 있고 git에 commit하지 않습니다.
+- service-account JSON 내용, API key, private credential, 실제 `.env` 값은 문서,
+  터미널 공유 로그, commit, issue comment에 붙여 넣지 않습니다.
+- 작업 시작 전 git 상태가 깨끗합니다.
 
 ```bash
 git status --short --branch
 git diff --cached --name-only
 ```
 
-Expected:
+기대 결과:
 
-- `git status --short --branch` shows `## main...origin/main`.
-- `git diff --cached --name-only` prints nothing.
+- `git status --short --branch`는 `## main...origin/main` 형태입니다.
+- `git diff --cached --name-only`는 아무것도 출력하지 않습니다.
 
-## Environment Setup
+## 환경 변수 준비
 
-Use `.env.example` as the shape reference and create a local `.env` that is not
-committed. Do not put JSON contents in `.env`; only set the host file path.
+`.env.example`을 참고해서 로컬 `.env`를 만듭니다.
 
-Required live-provider values:
+주의:
+
+- service-account JSON 파일 "내용"을 `.env`에 넣지 않습니다.
+- `.env`에는 service-account JSON의 host 절대 경로만 넣습니다.
+- JSON 파일은 repo 바깥에 둡니다.
+
+실제 Vertex mode에 필요한 주요 값:
 
 ```env
 AI_PROVIDER=vertex
@@ -65,43 +69,43 @@ GCP_LOCATION=us-central1
 ENHANCE_MODEL=gemini-2.5-flash
 ```
 
-The current Compose file always mounts
-`GOOGLE_APPLICATION_CREDENTIALS_HOST` read-only to `/secrets/sa.json` in the
-backend container. The host path must be absolute and must point outside this
-repository.
+현재 `docker-compose.yml`은 `GOOGLE_APPLICATION_CREDENTIALS_HOST` 파일을 backend
+container 안의 `/secrets/sa.json`으로 read-only mount합니다.
+따라서 `GOOGLE_APPLICATION_CREDENTIALS_HOST`는 반드시 host machine의 절대 경로여야
+하며, repo 바깥의 JSON 파일을 가리켜야 합니다.
 
-## Config-Only Checks
+## 설정만 확인하는 명령
 
-These commands should not create media or call Imagen/Veo/Gemini:
+아래 명령은 media 생성 요청을 보내지 않아야 합니다.
+즉, Imagen/Veo/Gemini 실제 생성 호출이 아닙니다.
 
 ```bash
 docker compose --env-file .env config --quiet
 docker compose --env-file .env ps
 ```
 
-Expected:
+기대 결과:
 
-- Compose config exits `0`.
-- No stale project containers are running unless a live QA session is already
-  in progress.
+- Compose config 명령이 exit code `0`으로 끝납니다.
+- 이미 live QA 중인 상황이 아니라면, stale project container가 없어야 합니다.
 
-Start the stack only after config is clean:
+config가 깨끗할 때만 stack을 시작합니다.
 
 ```bash
 docker compose --env-file .env up -d --build
 docker compose --env-file .env ps
 ```
 
-Expected:
+기대 결과:
 
-- `db` is healthy.
-- `backend` is reachable on host port `8000`.
-- `frontend` is reachable on host port `5173`.
+- `db`가 healthy입니다.
+- backend가 host port `8000`에서 접근 가능합니다.
+- frontend가 host port `5173`에서 접근 가능합니다.
 
-## Non-Generating Readiness Check
+## Health 확인
 
-Health readiness loads provider configuration and credentials, but should not
-submit a media generation request.
+Health check는 provider 설정과 credential을 읽지만, 이미지/비디오 생성 요청은
+보내지 않아야 합니다.
 
 PowerShell:
 
@@ -110,7 +114,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/health"
 Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/health"
 ```
 
-Expected response shape:
+기대 응답 형태:
 
 ```json
 {
@@ -128,13 +132,16 @@ Expected response shape:
 }
 ```
 
-If `ready` is false, stop before any paid QA request and record only the public
-readiness fields. Do not paste credential paths or JSON contents into notes.
+`ready`가 `false`이면 여기서 멈춥니다.
+그 상태에서는 비용이 발생하는 QA 요청을 보내지 않습니다.
+기록할 때도 `ready`, `status`, `credentials`, `project`, `location` 같은 public field만
+적고, credential 경로나 JSON 내용은 적지 않습니다.
 
-## Poll Helper
+## Job polling helper
 
-The generation endpoints are asynchronous. Use a small polling helper for live
-jobs:
+generation API는 비동기 job 방식입니다.
+job이 `completed`, `failed`, `cancelled` 중 하나가 될 때까지 기다리려면 아래
+PowerShell 함수를 사용합니다.
 
 ```powershell
 function Wait-Generation {
@@ -158,15 +165,17 @@ function Wait-Generation {
 }
 ```
 
-## Paid QA Sequence
+## 비용 발생 가능 QA 순서
 
-Run the smallest useful set first. To control cost, run direct I2V or the
-pipeline flow only if T2I passes. Do not run both direct I2V and pipeline unless
-the reviewer specifically wants both paths proven in the same session.
+아래 단계부터는 실제 Vertex 비용이 발생할 수 있습니다.
+
+비용을 줄이려면 가장 작은 범위부터 실행합니다.
+T2I가 먼저 통과한 뒤에만 I2V 또는 pipeline을 실행합니다.
+같은 세션에서 direct I2V와 pipeline을 둘 다 실행할 필요는 없습니다.
 
 ### 1. Gemini Prompt Enhancement
 
-This request can incur Gemini/Vertex cost.
+이 요청은 Gemini/Vertex 비용이 발생할 수 있습니다.
 
 ```powershell
 $enhanceBody = @{
@@ -185,17 +194,16 @@ $enhancement = Invoke-RestMethod `
 $enhancement
 ```
 
-Expected:
+기대 결과:
 
-- Response includes `id`, `original`, `enhanced`, `components`,
-  `target_mode`, `target_model`, `llm_model`, `creativity_preset`, and
-  `temperature`.
-- `llm_model` is `gemini-2.5-flash`.
-- No generation job is created automatically.
+- 응답에 `id`, `original`, `enhanced`, `components`, `target_mode`,
+  `target_model`, `llm_model`, `creativity_preset`, `temperature`가 있습니다.
+- `llm_model`은 `gemini-2.5-flash`입니다.
+- prompt enhancement만 수행하며 generation job은 자동 생성되지 않습니다.
 
 ### 2. Imagen Text-To-Image
 
-This request can incur Imagen/Vertex cost.
+이 요청은 Imagen/Vertex 비용이 발생할 수 있습니다.
 
 ```powershell
 $t2iBody = @{
@@ -216,15 +224,14 @@ $t2iDone = Wait-Generation -JobId $t2iJob.id -MaxAttempts 60 -DelaySeconds 5
 $t2iDone
 ```
 
-Expected:
+기대 결과:
 
-- Job reaches `completed`.
-- `mode` is `t2i`.
-- `vertex_charged` is `true`.
-- At least one asset exists with `kind=image`, `mime=image/png`, and a
-  `/files/...` URL.
+- job state가 `completed`가 됩니다.
+- `mode`는 `t2i`입니다.
+- `vertex_charged`는 `true`입니다.
+- asset이 최소 1개 있고, `kind=image`, `mime=image/png`, `/files/...` URL을 가집니다.
 
-Optional asset fetch:
+이미지 파일을 받아보고 싶으면:
 
 ```powershell
 $imageUrl = "http://127.0.0.1:5173$($t2iDone.assets[0].url)"
@@ -233,7 +240,7 @@ Invoke-WebRequest -Uri $imageUrl -OutFile "$env:TEMP\vertex-t2i-output.png"
 
 ### 3. Veo Text-To-Video
 
-This request can incur Veo/Vertex cost and can take longer than T2I.
+이 요청은 Veo/Vertex 비용이 발생할 수 있고, T2I보다 오래 걸릴 수 있습니다.
 
 ```powershell
 $t2vBody = @{
@@ -254,18 +261,18 @@ $t2vDone = Wait-Generation -JobId $t2vJob.id -MaxAttempts 180 -DelaySeconds 10
 $t2vDone
 ```
 
-Expected:
+기대 결과:
 
-- Job reaches `completed`, or records a public provider error if Vertex rejects
-  the request.
-- `mode` is `t2v`.
-- Successful jobs include `vertex_operation_name`, `vertex_charged=true`, and a
-  `video/mp4` asset.
+- 정상이라면 job state가 `completed`가 됩니다.
+- Vertex가 요청을 거절하면 app의 public error shape로 실패가 기록됩니다.
+- `mode`는 `t2v`입니다.
+- 성공한 job에는 `vertex_operation_name`, `vertex_charged=true`,
+  `video/mp4` asset이 있습니다.
 
-### 4. Veo Image-To-Video From T2I Asset
+### 4. T2I asset으로 Veo Image-To-Video
 
-This request can incur Veo/Vertex cost. Only run it after the T2I job has a
-usable image asset.
+이 요청은 Veo/Vertex 비용이 발생할 수 있습니다.
+T2I job이 완료되어 usable image asset이 있을 때만 실행합니다.
 
 ```powershell
 $sourceAssetId = $t2iDone.assets[0].id
@@ -289,19 +296,19 @@ $i2vDone = Wait-Generation -JobId $i2vJob.id -MaxAttempts 180 -DelaySeconds 10
 $i2vDone
 ```
 
-Expected:
+기대 결과:
 
-- Job reaches `completed`, or records a public provider error if Vertex rejects
-  the request.
-- `mode` is `i2v`.
-- `source_asset_id` matches the completed T2I image asset.
-- Successful jobs include `vertex_operation_name`, `vertex_charged=true`, and a
-  `video/mp4` asset.
+- 정상이라면 job state가 `completed`가 됩니다.
+- Vertex가 요청을 거절하면 app의 public error shape로 실패가 기록됩니다.
+- `mode`는 `i2v`입니다.
+- `source_asset_id`가 완료된 T2I image asset과 같습니다.
+- 성공한 job에는 `vertex_operation_name`, `vertex_charged=true`,
+  `video/mp4` asset이 있습니다.
 
-### 5. T2I To I2V Pipeline
+### 5. T2I -> I2V Pipeline
 
-This flow can incur both Imagen and Veo cost. It proves parent/child pipeline
-linking against real provider outputs.
+이 flow는 Imagen과 Veo 비용이 모두 발생할 수 있습니다.
+실제 provider output으로 parent/child pipeline 연결을 검증할 때 사용합니다.
 
 ```powershell
 $pipelineBody = @{
@@ -329,71 +336,69 @@ $parentDone
 $childDone
 ```
 
-Expected:
+기대 결과:
 
-- Parent job reaches `completed` with an image asset.
-- Child job starts as blocked, then becomes unblocked after parent image asset
-  linking.
-- Child job uses the parent image asset as `source_asset_id`.
-- Successful child jobs include `vertex_operation_name`, `vertex_charged=true`,
-  and a `video/mp4` asset.
+- parent job이 `completed`가 되고 image asset을 가집니다.
+- child job은 처음에는 blocked 상태였다가 parent image asset 연결 후 unblocked가 됩니다.
+- child job의 `source_asset_id`가 parent image asset을 가리킵니다.
+- 성공한 child job에는 `vertex_operation_name`, `vertex_charged=true`,
+  `video/mp4` asset이 있습니다.
 
-## Frontend Manual Review
+## Frontend 수동 확인
 
-After at least one live job completes, review these pages in the browser:
+live job이 하나 이상 완료되면 브라우저에서 아래 화면을 확인합니다.
 
 - `http://127.0.0.1:5173/generate`
 - `http://127.0.0.1:5173/history`
 - `http://127.0.0.1:5173/jobs/{job_id}`
 
-Expected:
+기대 결과:
 
-- API connection indicator is healthy.
-- History shows live jobs with the correct mode/state/model.
-- Completed image assets render as previews.
-- Completed video assets render through `/files/...` and support preview
-  playback.
-- Job detail shows state history, request parameters, and asset previews.
+- API 연결 상태가 정상으로 보입니다.
+- History에 live job의 mode, state, model이 맞게 표시됩니다.
+- 완료된 image asset preview가 표시됩니다.
+- 완료된 video asset은 `/files/...` 경로로 preview/playback이 됩니다.
+- Job detail 화면에 state history, request parameters, asset preview가 표시됩니다.
 
-## Recording Results
+## 결과 기록 방법
 
-Record sanitized results in a follow-up memo under `memories/recovery/`.
+실제 live QA를 실행했다면, 결과는 `memories/recovery/` 아래 새 메모에 기록합니다.
 
-Use only public, non-secret fields:
+기록해도 되는 것은 public field뿐입니다.
+credential 경로, JSON 내용, API key, private credential, 전체 terminal log는 기록하지
+않습니다.
+
+권장 표:
 
 ```markdown
 | Check | Result | Evidence | Notes |
 |---|---|---|---|
-| Health | pass/fail | `ready=true`, `status=ready` | No secret values |
-| Prompt enhance | pass/fail | enhancement id, model id | No prompt if proprietary |
-| T2I | pass/fail | job id, final state, asset mime | No credential paths |
-| T2V | pass/fail | job id, final state/public error | No raw provider secrets |
-| I2V or pipeline | pass/fail | job ids, final states | No raw provider secrets |
+| Health | pass/fail | `ready=true`, `status=ready` | secret 값 없음 |
+| Prompt enhance | pass/fail | enhancement id, model id | proprietary prompt면 prompt 생략 |
+| T2I | pass/fail | job id, final state, asset mime | credential path 없음 |
+| T2V | pass/fail | job id, final state/public error | provider secret 없음 |
+| I2V or pipeline | pass/fail | job ids, final states | provider secret 없음 |
 ```
 
-Provider errors may be recorded only through the public API error shape:
+provider error는 app이 반환하는 public error shape만 기록합니다.
 
 - `code`
 - `message`
 - `retryable`
 - `status_code`
-- `operation_name`, only when it is already returned by the app response
+- `operation_name`: app response에 이미 들어 있을 때만 기록
 
-Do not record service-account JSON content, API keys, private credentials, or
-full terminal logs that include local secret paths.
+## 종료와 hygiene
 
-## Shutdown And Hygiene
-
-Stop the live QA stack when review is complete:
+검증이 끝나면 live QA stack을 종료합니다.
 
 ```bash
 docker compose --env-file .env down
 ```
 
-Use `down -v` only if deleting the local Postgres and asset volumes is
-intentional.
+`down -v`는 local Postgres volume과 asset volume을 삭제해도 되는 경우에만 사용합니다.
 
-Final hygiene checks:
+마지막으로 repo hygiene을 확인합니다.
 
 ```bash
 git status --short --branch
@@ -401,10 +406,9 @@ git diff --cached --name-only
 git ls-files --others --exclude-standard
 ```
 
-Expected:
+기대 결과:
 
-- No `.env`, service-account JSON, credential JSON, generated media, or secret
-  material is staged.
-- Any follow-up memo contains only sanitized public results.
-- Compose containers are stopped unless a reviewer is still actively using the
-  local stack.
+- `.env`, service-account JSON, credential JSON, generated media, secret
+  material이 staged 상태가 아닙니다.
+- follow-up memo에는 sanitized public result만 들어 있습니다.
+- 리뷰어가 아직 local stack을 사용 중인 경우가 아니라면 Compose container는 꺼져 있습니다.
