@@ -18,6 +18,11 @@
   - `2501e61 restore backend api imports`
   - `c9347f3 docs: document local mock provider mode`
   - `f368bff test: add local mock ai provider`
+  - `d03f100 test: restore state machine contract`
+  - `9aca9ae fix: restore pipeline page module`
+  - `cd34f5a chore: restore compose env hygiene`
+  - `2a4b8c6 docs: record compose smoke status`
+  - `d61c99b docs: close phase1 recovery`
 
 작업 전후에는 반드시 다음을 확인합니다.
 
@@ -61,13 +66,26 @@ git diff --cached --name-only
   - `DELETE /api/generations/{job_id}`는 terminal 삭제, non-terminal/active dependent 보호, terminal dependent detach를 테스트
   - `POST /api/pipelines`와 `GET /api/pipelines/{parent_job_id}`는 parent T2I + blocked/unblocked child I2V contract를 테스트
   - `pipeline_link`는 completed parent image asset 연결, asset missing/not-image 실패, parent failure cascade를 테스트
+- mock-only backend test suite 복구
+  - API, storage, state machine, job runner, job handler, Vertex adapter parsing, prompt enhancer contract 테스트 복구
+  - 최근 Phase 1 closeout 기준 `python -m pytest`는 `65 passed`
+- frontend build/typecheck 복구
+  - `npm run lint`
+  - `npm run build`
+- Docker Compose mock smoke 복구
+  - `AI_PROVIDER=mock`에서 db, backend, frontend, Vite proxy, job runner, storage, `/files` 흐름 확인
+  - 실제 Vertex/Gemini/Imagen/Veo 호출은 수행하지 않음
 
-현재 가장 큰 blocking issue:
+현재 Phase 1 상태:
 
-- `backend/tests/`는 일부만 복구되었습니다. 현재는 mock provider 경계 테스트가 우선 복구된 상태입니다.
-- API contract, state machine, storage, job runner, prompt enhance API, pipeline API 테스트는 아직 넓게 복구되지 않았습니다.
+- Phase 1 backend import/API/test/frontend/compose mock recovery는 closeout 문서로 닫혔습니다.
+- 실제 provider 접근, 실제 Vertex/Gemini/Veo 품질 QA, 최종 제출 문서 정합성은 별도 수동 확인 범위입니다.
 
-다음 1순위 복구 단위는 mock-only backend tests를 API/service contract 단위로 넓히는 것입니다.
+다음 1순위 복구 단위는 최종 제출 정합성 리뷰입니다.
+
+- `README.md`, `AGENTS.md`, `memories/recovery/*`, 실제 backend/frontend 코드의 API/env/provider 설명을 맞춥니다.
+- mock local mode와 real Vertex mode가 명확히 분리되어 있는지 확인합니다.
+- secret, `.env`, service-account JSON, generated runtime asset이 staged/committed 되지 않는지 확인합니다.
 
 ## 복구 대상 프로젝트
 
