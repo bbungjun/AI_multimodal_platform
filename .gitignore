@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Local runtime data
+data/
+data/assets/
+uploads/
+*.log
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+tht-aif-*.json
+*.serviceaccount.json
+*service-account*.json
+*credential*.json
+*credentials*.json
+secrets/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,57 @@
+# Phase 0 skeleton — full configuration finalized in Phase 15.
+# `version:` key omitted intentionally for docker-compose v1+v2 compatibility.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS to /secrets/sa.json}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      GCP_LOCATION: ${GCP_LOCATION:?Set GCP_LOCATION in .env or pass --env-file .env.example}
+      ENHANCE_MODEL: ${ENHANCE_MODEL:?Set ENHANCE_MODEL in .env or pass --env-file .env.example}
+      DATA_DIR: ${DATA_DIR:?Set DATA_DIR in .env or pass --env-file .env.example}
+      JOB_RUNNER_CONCURRENCY: ${JOB_RUNNER_CONCURRENCY:-10}
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST:?Set GOOGLE_APPLICATION_CREDENTIALS_HOST to the host service-account JSON path}:/secrets/sa.json:ro
+      - assets:/data/assets
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-}
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:8000}
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-5173-${E2B_SANDBOX_ID}.e2b.app}
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:
+  assets:
