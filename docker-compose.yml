@@ -23,6 +23,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+      AI_PROVIDER: ${AI_PROVIDER:-vertex}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS to /secrets/sa.json}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       GCP_LOCATION: ${GCP_LOCATION:?Set GCP_LOCATION in .env or pass --env-file .env.example}
