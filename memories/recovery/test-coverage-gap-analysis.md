@@ -329,3 +329,28 @@ provider failure classification입니다.
 
 다음 비용 없는 후보는 T2I multi-image gallery / per-image I2V handoff 또는
 `/files` range edge case입니다.
+
+## Follow-up: `/files` Range edge cases restored
+
+2026-05-27 후속 작업에서 `/files/{job_uuid}/{filename}` Range handling의
+edge case 테스트와 최소 parsing 보강을 복구했습니다. 실제 provider 호출은
+없고, 임시 `DATA_DIR`에 저장한 local fixture bytes만 사용했습니다.
+
+복구한 계약:
+
+- explicit single range: `Range: bytes=2-4` -> `206 Partial Content`
+- open-ended range: `Range: bytes=3-` -> `206 Partial Content`
+- suffix range: `Range: bytes=-2` -> `206 Partial Content`
+- unsatisfiable range: `Range: bytes=99-100` -> `416` with
+  `Content-Range: bytes */{size}`
+- unsupported multiple ranges: `Range: bytes=0-1,3-4` -> `400`
+- unsupported range unit: `Range: items=0-1` -> `400`
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_storage.py -q`
+  -> `10 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `98 passed`
+
+다음 비용 없는 후보는 T2I multi-image gallery / per-image I2V handoff입니다.

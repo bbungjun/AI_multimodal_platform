@@ -24,6 +24,20 @@ class ByteRange:
         return self.end - self.start + 1
 
 
+class RangeRequestError(ValueError):
+    def __init__(
+        self,
+        detail: str,
+        *,
+        status_code: int,
+        include_content_range: bool = False,
+    ) -> None:
+        self.status_code = status_code
+        self.detail = detail
+        self.include_content_range = include_content_range
+        super().__init__(detail)
+
+
 @router.get("/{local_path:path}")
 async def get_file(
     local_path: str,
@@ -49,13 +63,17 @@ async def get_file(
             headers=headers,
         )
 
-    byte_range = _parse_range(range_header, size)
-    if byte_range is None:
-        raise HTTPException(
-            status_code=status.HTTP_416_REQUESTED_RANGE_NOT_SATISFIABLE,
-            detail="Requested byte range is not satisfiable.",
-            headers={"Content-Range": f"bytes */{size}"},
+    try:
+        byte_range = _parse_range(range_header, size)
+    except RangeRequestError as exc:
+        range_headers = (
+            {"Content-Range": f"bytes */{size}"} if exc.include_content_range else None
         )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.detail,
+            headers=range_headers,
+        ) from exc
 
     headers.update(
         {
@@ -71,35 +89,61 @@ async def get_file(
     )
 
 
-def _parse_range(header: str, size: int) -> ByteRange | None:
-    if size < 1 or not header.startswith("bytes="):
-        return None
+def _parse_range(header: str, size: int) -> ByteRange:
+    if size < 1:
+        raise _unsatisfiable_range()
+
+    if not header.startswith("bytes="):
+        raise RangeRequestError(
+            "Unsupported range unit.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
     spec = header.removeprefix("bytes=").strip()
-    if "," in spec or "-" not in spec:
-        return None
+    if "," in spec:
+        raise RangeRequestError(
+            "Only single byte ranges are supported.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    if "-" not in spec:
+        raise _malformed_range()
 
     start_text, end_text = spec.split("-", 1)
     if not start_text and not end_text:
-        return None
+        raise _malformed_range()
 
     try:
         if not start_text:
             suffix_length = int(end_text)
             if suffix_length < 1:
-                return None
+                raise _unsatisfiable_range()
             start = max(0, size - suffix_length)
             end = size - 1
         else:
             start = int(start_text)
             end = int(end_text) if end_text else size - 1
     except ValueError:
-        return None
+        raise _malformed_range() from None
 
     if start < 0 or end < start or start >= size:
-        return None
+        raise _unsatisfiable_range()
 
     return ByteRange(start=start, end=min(end, size - 1))
+
+
+def _malformed_range() -> RangeRequestError:
+    return RangeRequestError(
+        "Malformed Range header.",
+        status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def _unsatisfiable_range() -> RangeRequestError:
+    return RangeRequestError(
+        "Requested byte range is not satisfiable.",
+        status_code=status.HTTP_416_RANGE_NOT_SATISFIABLE,
+        include_content_range=True,
+    )
 
 
 def _iter_file(
