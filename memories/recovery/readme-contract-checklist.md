@@ -36,7 +36,7 @@
 | Result Preview와 image-to-I2V handoff | 구현됨 | `AssetViewer`가 image/video asset을 표시하고, 완료된 image job에는 `Start I2V with this image` 버튼이 있음 | README는 multi-image gallery까지 요구하지 않으므로 별도 gap으로 보지는 않음 |
 | Pipeline parent/child linkage | 검증됨 | parent T2I와 blocked child I2V 생성, parent image asset 준비 후 child unblock, mock pipeline parent/child completed 확인 | 실제 Veo pipeline 품질은 live 전용 |
 | History filters/previews | 검증됨 | mode/state/model/page size/asset type filter가 있고, browser smoke에서 `Asset type -> Videos` 필터와 terminal `Delete` 버튼을 확인함 | mock MP4는 실제 재생 영상이 아니라 `No thumbnail` fallback이 보일 수 있음 |
-| Terminal job deletion과 active dependent 보호 | 구현됨 | backend delete API가 terminal-only, active dependent 차단, terminal dependent detach를 처리하고 테스트가 있음. History delete UI도 복구됨 | 현재 review data 보존을 위해 브라우저에서 실제 삭제 클릭은 하지 않음 |
+| Terminal job deletion과 active dependent 보호 | 검증됨 | backend delete API가 terminal-only, active dependent 차단, terminal dependent detach를 처리하고 테스트가 있음. History delete UI도 복구됨. Browser smoke에서 disposable completed job을 History에서 삭제하고 API 404를 확인함 | 기존 review job은 삭제하지 않음 |
 
 ## README API 표 대조
 
@@ -94,6 +94,14 @@ npm run build
   - 최종 job prompt가 accepted edited prompt와 일치함
   - image asset 1개 생성 및 `/files/.../output.png` 로드 확인
   - blocking console error 없음
+- Browser History Delete smoke에서 확인한 내용:
+  - disposable T2I job `d068f55e-7483-4dd6-aaaf-918bb32f98cf` 생성
+  - job이 `completed`, image asset 1개 상태가 될 때까지 확인
+  - History에서 해당 row의 `Delete` 버튼 표시 확인
+  - 실제 Delete 클릭 후 확인창 승인
+  - History row가 사라짐
+  - `GET /api/generations/d068f55e-7483-4dd6-aaaf-918bb32f98cf`가 `404` 반환
+  - blocking console error 없음
 
 최근 backend 회귀 검증 근거:
 
@@ -113,7 +121,5 @@ npm run build
 
 추천 순서:
 
-1. 삭제 UX 검증이 필요하면 기존 review job을 지우지 말고 disposable mock job을 하나
-   만든 뒤 그 job만 삭제합니다.
-2. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
+1. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
    무작정 맞추기보다 빠진 고가치 contract를 찾는 쪽이 더 중요합니다.
