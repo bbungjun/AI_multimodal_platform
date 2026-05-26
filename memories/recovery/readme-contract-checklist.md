@@ -138,5 +138,6 @@ npm run build
 
 1. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
    무작정 맞추기보다 빠진 고가치 contract를 찾는 쪽이 더 중요합니다.
-2. 추가 비용 없는 후보는 Prompt Enhancement/History browser smoke 절차를 별도
-   runbook으로 분리하거나, 남은 P2 backend edge case 중 우선순위를 다시 정하는 것입니다.
+2. Prompt Enhancement/History/browser smoke 절차는
+   `memories/recovery/frontend-browser-smoke-runbook.md`로 분리했습니다.
+3. 남은 후보는 P2 backend edge case 중 우선순위를 다시 정하는 것입니다.

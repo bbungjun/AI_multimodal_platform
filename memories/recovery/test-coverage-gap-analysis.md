@@ -420,3 +420,17 @@ future flag 경고, `/favicon.ico` 404이며 pipeline 실패 신호는 아닙니
 다음 비용 없는 후보는 Prompt Enhancement/History 같은 frontend flow browser
 smoke 절차를 문서화하거나, cancel endpoint가 실제 최종 제출 범위였는지 근거를
 추가 확인하는 것입니다.
+
+## Follow-up: frontend browser smoke runbook added
+
+2026-05-27 후속 작업에서 Prompt Enhancement, History filter/delete,
+T2I multi-image handoff, Pipeline 흐름을 비용 없이 확인하는 수동 browser smoke
+절차를 `memories/recovery/frontend-browser-smoke-runbook.md`로 분리했습니다.
+
+이 runbook은 새 frontend test framework를 도입하지 않는 복구 규칙을 유지하면서,
+검수자가 `AI_PROVIDER=mock` Compose 환경에서 핵심 사용자 흐름을 재현할 수 있게
+합니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 포함하지 않습니다.
+
+같은 세션에서 cancel endpoint도 추가 확인했으며, 최종 제출 범위에서는
+user-facing cancel API/UI가 아니라 `cancelled` terminal state만 유지하는 것으로
+정리했습니다.
