@@ -34,6 +34,10 @@ def save_bytes(job_id: UUID | str, filename: str, data: bytes) -> str:
     target = job_dir / safe_filename
     _ensure_inside_root(target.resolve(strict=False), root)
 
+    if _use_portable_file_ops():
+        _write_bytes_portable(job_dir, safe_filename, data, root)
+        return f"{job_uuid}/{safe_filename}"
+
     dir_fd: int | None = None
     file_fd: int | None = None
     try:
@@ -77,6 +81,11 @@ def delete_file(local_path: str, *, missing_ok: bool = True) -> None:
     except OSError as exc:
         raise StoragePathError("Could not inspect asset directory") from exc
 
+    if _use_portable_file_ops():
+        _delete_file_portable(job_dir, filename, root, missing_ok=missing_ok)
+        _remove_empty_job_dir(job_dir)
+        return
+
     dir_fd: int | None = None
     try:
         dir_fd = os.open(job_dir, os.O_RDONLY | _DIRECTORY | _NOFOLLOW)
@@ -99,10 +108,7 @@ def delete_file(local_path: str, *, missing_ok: bool = True) -> None:
         if dir_fd is not None:
             os.close(dir_fd)
 
-    try:
-        job_dir.rmdir()
-    except OSError:
-        pass
+    _remove_empty_job_dir(job_dir)
 
 
 def resolve_asset_path(local_path: str) -> Path:
@@ -146,6 +152,69 @@ def _storage_root() -> Path:
     root = get_settings().data_dir
     root.mkdir(mode=0o755, parents=True, exist_ok=True)
     return root.resolve(strict=True)
+
+
+def _use_portable_file_ops() -> bool:
+    return os.name == "nt"
+
+
+def _write_bytes_portable(
+    job_dir: Path,
+    filename: str,
+    data: bytes,
+    root: Path,
+) -> None:
+    target = job_dir / filename
+    _ensure_inside_root(job_dir.resolve(strict=True), root)
+    _ensure_inside_root(target.resolve(strict=False), root)
+
+    try:
+        if target.exists() or target.is_symlink():
+            target_stat = target.lstat()
+            if target.is_symlink() or not stat.S_ISREG(target_stat.st_mode):
+                raise StoragePathError("Asset path is not a regular file")
+        target.write_bytes(data)
+    except StoragePathError:
+        raise
+    except OSError as exc:
+        raise StoragePathError("Could not write asset safely") from exc
+
+
+def _delete_file_portable(
+    job_dir: Path,
+    filename: str,
+    root: Path,
+    *,
+    missing_ok: bool,
+) -> None:
+    target = job_dir / filename
+    try:
+        _ensure_inside_root(target.resolve(strict=True), root)
+        target_stat = target.lstat()
+    except FileNotFoundError:
+        if missing_ok:
+            return
+        raise StoragePathError("Asset path does not exist") from None
+    except OSError as exc:
+        raise StoragePathError("Could not inspect asset path") from exc
+
+    if target.is_symlink() or not stat.S_ISREG(target_stat.st_mode):
+        raise StoragePathError("Asset path is not a regular file")
+
+    try:
+        target.unlink()
+    except FileNotFoundError:
+        if not missing_ok:
+            raise StoragePathError("Asset path does not exist") from None
+    except OSError as exc:
+        raise StoragePathError("Could not delete asset safely") from exc
+
+
+def _remove_empty_job_dir(job_dir: Path) -> None:
+    try:
+        job_dir.rmdir()
+    except OSError:
+        pass
 
 
 def _coerce_job_id(job_id: UUID | str) -> UUID:
