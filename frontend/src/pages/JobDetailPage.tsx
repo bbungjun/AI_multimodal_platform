@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { AssetResponse, JobResponse, JobState, StateHistoryEntry } from "../api/client";
 import { Badge, Button, Panel, RoutePlaceholder, StatusDot } from "../components/ui";
 import { FilmIcon, ImageIcon, PipelineIcon } from "../components/icons";
+import { useAsset } from "../hooks/useAsset";
 import { isTerminalJobState, useJob } from "../hooks/useJob";
 
 const stateSteps: JobState[] = [
@@ -93,7 +94,9 @@ export function JobDetailPage() {
   const jobQuery = useJob(jobId);
   const job = jobQuery.data;
   const primaryAsset = job?.assets[0] ?? null;
-  const imageSourceAsset = useMemo(() => findCompletedImageAsset(job), [job]);
+  const imageResultAsset = useMemo(() => findCompletedImageAsset(job), [job]);
+  const i2vSourceAssetId = getI2VSourcePreviewAssetId(job);
+  const i2vSourceQuery = useAsset(i2vSourceAssetId);
 
   if (!jobId) {
     return (
@@ -122,7 +125,10 @@ export function JobDetailPage() {
       <Panel className="asset-shell" title="Asset Viewer" eyebrow="Result">
         <AssetViewer
           asset={primaryAsset}
-          i2vSourceAsset={imageSourceAsset}
+          imageResultAsset={imageResultAsset}
+          i2vSourceAsset={i2vSourceQuery.data ?? null}
+          i2vSourceError={i2vSourceQuery.isError}
+          i2vSourceLoading={i2vSourceQuery.isLoading}
           job={job}
           onStartI2V={(assetId) => {
             navigate(`/generate?mode=i2v&source_asset_id=${assetId}`);
@@ -178,16 +184,33 @@ function JobLoading({ jobId }: { jobId: string }) {
 
 function AssetViewer({
   asset,
+  imageResultAsset,
   i2vSourceAsset,
+  i2vSourceError,
+  i2vSourceLoading,
   job,
   onStartI2V,
 }: {
   asset: AssetResponse | null;
+  imageResultAsset: AssetResponse | null;
   i2vSourceAsset: AssetResponse | null;
+  i2vSourceError: boolean;
+  i2vSourceLoading: boolean;
   job: JobResponse;
   onStartI2V: (assetId: string) => void;
 }) {
   if (job.state !== "completed") {
+    if (job.mode === "i2v" && job.source_asset_id) {
+      return (
+        <I2VSourcePreview
+          job={job}
+          sourceAsset={i2vSourceAsset}
+          sourceError={i2vSourceError}
+          sourceLoading={i2vSourceLoading}
+        />
+      );
+    }
+
     const failed = job.state === "failed";
     const cancelled = job.state === "cancelled";
 
@@ -292,7 +315,7 @@ function AssetViewer({
         )}
       </div>
 
-      {isImage && i2vSourceAsset && (
+      {isImage && imageResultAsset && (
         <div className="result-next-action">
           <div className="result-next-action__copy">
             <Badge tone="success">
@@ -306,7 +329,7 @@ function AssetViewer({
             </p>
           </div>
           <Button
-            onClick={() => onStartI2V(i2vSourceAsset.id)}
+            onClick={() => onStartI2V(imageResultAsset.id)}
             type="button"
             variant="primary"
           >
@@ -342,6 +365,108 @@ function AssetViewer({
             <div>
               <span>Duration</span>
               <strong>{asset.duration_sec}s</strong>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function I2VSourcePreview({
+  job,
+  sourceAsset,
+  sourceError,
+  sourceLoading,
+}: {
+  job: JobResponse;
+  sourceAsset: AssetResponse | null;
+  sourceError: boolean;
+  sourceLoading: boolean;
+}) {
+  const failed = job.state === "failed";
+  const cancelled = job.state === "cancelled";
+  const tone = failed ? "danger" : cancelled ? "warning" : "info";
+  const sourceIsImage =
+    sourceAsset &&
+    (sourceAsset.kind === "image" || sourceAsset.mime.startsWith("image/"));
+
+  return (
+    <div className="asset-viewer asset-viewer--source">
+      <div className="asset-result-header">
+        <Badge tone={tone}>
+          <PipelineIcon size={12} />
+          Source image context
+        </Badge>
+        <div className="asset-result-header__copy">
+          <h2>{sourcePreviewTitle(job.state)}</h2>
+          <p>
+            This I2V job keeps the source image visible until the video result is
+            available.
+          </p>
+        </div>
+      </div>
+
+      <div className="asset-stage asset-stage--source">
+        {sourceLoading && (
+          <div className="asset-preview">
+            <div>
+              <Badge tone="muted">
+                <StatusDot tone="pending" />
+                Loading source
+              </Badge>
+              <h2>Fetching source image</h2>
+              <p>The locked image asset is being loaded for this I2V request.</p>
+            </div>
+          </div>
+        )}
+        {!sourceLoading && sourceIsImage && (
+          <img
+            alt={`Source asset ${sourceAsset.id}`}
+            className="asset-media"
+            src={sourceAsset.url}
+          />
+        )}
+        {!sourceLoading && (!sourceIsImage || sourceError) && (
+          <div className="asset-preview">
+            <div>
+              <Badge tone={sourceError ? "danger" : "warning"}>
+                {sourceError ? "Source unavailable" : "Source pending"}
+              </Badge>
+              <h2>Source image preview unavailable</h2>
+              <p>
+                The job keeps source asset id {shortId(job.source_asset_id)} in
+                metadata, but the image preview could not be loaded.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="asset-metadata-panel">
+        <div className="asset-metadata-panel__head">
+          <div className="section-label">I2V source</div>
+          <p>Locked source context for this image-to-video request.</p>
+        </div>
+        <div className="metadata-list asset-metadata">
+          <div>
+            <span>Source asset</span>
+            <strong>{shortId(job.source_asset_id)}</strong>
+          </div>
+          <div>
+            <span>Current state</span>
+            <strong>{job.state}</strong>
+          </div>
+          {sourceAsset && (
+            <div>
+              <span>Source type</span>
+              <strong>{formatAssetType(sourceAsset)}</strong>
+            </div>
+          )}
+          {sourceAsset && (
+            <div>
+              <span>Dimensions</span>
+              <strong>{formatDimensions(sourceAsset)}</strong>
             </div>
           )}
         </div>
@@ -537,6 +662,27 @@ function findCompletedImageAsset(job: JobResponse | undefined): AssetResponse | 
     job.assets.find((asset) => asset.kind === "image" || asset.mime.startsWith("image/")) ??
     null
   );
+}
+
+function getI2VSourcePreviewAssetId(job: JobResponse | undefined): string | null {
+  if (!job || job.mode !== "i2v" || !job.source_asset_id || job.state === "completed") {
+    return null;
+  }
+  return job.source_asset_id;
+}
+
+function sourcePreviewTitle(state: JobState): string {
+  if (state === "failed") {
+    return "I2V stopped before a video result";
+  }
+  if (state === "cancelled") {
+    return "I2V was cancelled";
+  }
+  return "I2V source image is locked";
+}
+
+function shortId(value: string | null): string {
+  return value ? value.slice(0, 8) : "unknown";
 }
 
 function formatErrorMessage(error: Record<string, unknown>): string {

@@ -83,6 +83,11 @@ export async function getGeneration(jobId: UUID): Promise<GenerationResponse> {
   return resolveJobAssetUrls(job);
 }
 
+export async function getAsset(assetId: UUID): Promise<AssetResponse> {
+  const asset = await apiRequest<AssetResponse>(`/api/assets/${assetId}`);
+  return resolveAssetUrl(asset);
+}
+
 export async function deleteGeneration(jobId: UUID): Promise<void> {
   await apiRequest<void>(`/api/generations/${jobId}`, {
     method: "DELETE",

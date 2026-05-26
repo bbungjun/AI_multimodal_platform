@@ -1003,6 +1003,13 @@ p {
   padding: 18px;
 }
 
+.asset-stage--source {
+  min-height: 320px;
+  background:
+    linear-gradient(180deg, rgba(52, 211, 153, 0.07), transparent 45%),
+    var(--bg-input);
+}
+
 .asset-media {
   display: block;
   max-width: 100%;

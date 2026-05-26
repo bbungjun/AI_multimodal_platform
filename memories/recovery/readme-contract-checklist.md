@@ -32,7 +32,7 @@
 | Prompt Enhancement review/edit/accept | 구현됨 | `POST /api/prompts/enhance`, mock enhancer, `EnhanceReviewPanel`, editable draft, keep original, accept draft, components 표시 | 브라우저에서 enhance -> edit -> accept -> submit 흐름은 다음 smoke 후보 |
 | Creativity Mode | 구현됨 | `faithful`, `balanced`, `imaginative` 옵션이 있고 `creativity_preset`으로 enhancer에 전달됨 | 실제 Gemini 결과 차이는 live 전용 |
 | Job Detail polling/timeline/request summary/asset preview | 검증됨 | `useJob`이 active job을 2초 polling, `JobDetailPage.tsx`가 timeline/request summary/error/asset viewer를 렌더링함 | 실제 Vertex MP4 video detail playback은 live 전용 |
-| I2V Source Context | 부분 | Pipeline detail은 child I2V가 대기/진행 중일 때 source image context를 보여줌. Generate 화면도 `source_asset_id`로 source lock을 표시함 | standalone I2V Job Detail은 현재 source metadata만 보여주고, 결과 전 source image 자체를 fetch/render하지 않음. 이번 체크에서 찾은 가장 명확한 README gap |
+| I2V Source Context | 검증됨 | Pipeline detail은 child I2V가 대기/진행 중일 때 source image context를 보여줌. Generate 화면도 `source_asset_id`로 source lock을 표시함. `JobDetailPage.tsx`는 standalone I2V non-completed job에서 `GET /api/assets/{source_asset_id}`로 source image를 조회해 preview로 보여줌 | disposable failed I2V smoke job으로 source image `<img>` 렌더링 확인. 실제 live I2V 진행 중 상태는 비용 때문에 제외 |
 | Result Preview와 image-to-I2V handoff | 구현됨 | `AssetViewer`가 image/video asset을 표시하고, 완료된 image job에는 `Start I2V with this image` 버튼이 있음 | README는 multi-image gallery까지 요구하지 않으므로 별도 gap으로 보지는 않음 |
 | Pipeline parent/child linkage | 검증됨 | parent T2I와 blocked child I2V 생성, parent image asset 준비 후 child unblock, mock pipeline parent/child completed 확인 | 실제 Veo pipeline 품질은 live 전용 |
 | History filters/previews | 검증됨 | mode/state/model/page size/asset type filter가 있고, browser smoke에서 `Asset type -> Videos` 필터와 terminal `Delete` 버튼을 확인함 | mock MP4는 실제 재생 영상이 아니라 `No thumbnail` fallback이 보일 수 있음 |
@@ -79,6 +79,11 @@ npm run build
   - `Videos` 선택 시 video asset job만 표시
   - terminal row에 `Delete` 표시
   - blocking console error 없음
+- Browser Job Detail smoke에서 disposable failed I2V job을 만들어 확인한 내용:
+  - standalone I2V Job Detail에 `Source image context` 표시
+  - source asset이 `/files/.../output.png` 이미지로 렌더링됨
+  - blocking console error 없음
+  - smoke 후 disposable job 삭제 확인
 
 최근 backend 회귀 검증 근거:
 
@@ -98,12 +103,9 @@ npm run build
 
 추천 순서:
 
-1. standalone I2V Job Detail에서 결과가 나오기 전 source image preview를 보여주는
-   흐름을 복구하거나, README와 다르게 의도적으로 제외한다고 문서화합니다. 이번
-   체크에서 찾은 유일한 명확한 기능 gap입니다.
-2. Prompt Enhancement를 브라우저에서 no-cost smoke합니다:
+1. Prompt Enhancement를 브라우저에서 no-cost smoke합니다:
    enhance -> draft edit -> accept -> generation submit with `enhancement_id`.
-3. 삭제 UX 검증이 필요하면 기존 review job을 지우지 말고 disposable mock job을 하나
+2. 삭제 UX 검증이 필요하면 기존 review job을 지우지 말고 disposable mock job을 하나
    만든 뒤 그 job만 삭제합니다.
-4. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
+3. 과거 pytest 229개와의 차이는 숫자 자체보다 계약 영역별로 봅니다. 지금은 테스트 수를
    무작정 맞추기보다 빠진 고가치 contract를 찾는 쪽이 더 중요합니다.
