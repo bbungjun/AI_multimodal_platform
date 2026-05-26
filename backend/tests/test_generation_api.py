@@ -209,6 +209,61 @@ async def test_create_generation_rejects_auto_enhance_before_creating_job():
     assert session.commit_count == 0
 
 
+async def test_create_t2i_generation_rejects_veo_model_before_creating_job():
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "a quiet desk lamp",
+            "model": "veo-3.0-fast-generate-001",
+        },
+        session,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Imagen model."
+    assert session.added == []
+    assert session.commit_count == 0
+
+
+async def test_create_t2v_generation_rejects_imagen_model_before_creating_job():
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "t2v",
+            "prompt": "slow camera push toward the desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+        },
+        session,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Veo model."
+    assert session.added == []
+    assert session.commit_count == 0
+
+
+async def test_create_i2v_generation_rejects_imagen_model_before_source_lookup():
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "i2v",
+            "prompt": "animate the desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+            "source_asset_id": str(uuid4()),
+        },
+        session,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Veo model."
+    assert session.added == []
+    assert session.commit_count == 0
+
+
 async def test_create_generation_links_matching_prompt_enhancement():
     enhancement_id = uuid4()
     session = FakeGenerationSession(

@@ -279,3 +279,27 @@ classification입니다. 둘 다 비용 없는 fake/mock 테스트로 닫을 수
 따라서 이 문서의 "P0. Rate limiter / retry 테스트 복구" 항목은 완료된 것으로
 보고, 다음 비용 없는 후보는 generation/pipeline model validation 또는 Veo
 provider failure classification입니다.
+
+## Follow-up: generation / pipeline model validation tests restored
+
+2026-05-27 후속 작업에서 `generation/pipeline model validation` 테스트 묶음을
+복구했습니다. production code 변경은 필요하지 않았고, 현재 API validation
+구현이 README와 최종 요약의 model-family contract를 이미 만족하는 것을
+자동 테스트로 고정했습니다.
+
+추가된 계약:
+
+- `/api/generations` T2I request는 Veo model을 거절합니다.
+- `/api/generations` T2V request는 Imagen model을 거절합니다.
+- `/api/generations` I2V request는 source asset 조회 전에 Imagen model을
+  거절합니다.
+- `/api/pipelines`는 `video_model`에 Imagen model이 들어오면 거절합니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_generation_api.py tests/test_pipeline_api.py -q`
+  -> `19 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `90 passed`
+
+다음 비용 없는 P0/P1 후보는 Veo provider failure classification입니다.

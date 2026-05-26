@@ -184,6 +184,18 @@ async def test_create_pipeline_rejects_unsupported_image_model():
     assert session.commit_count == 0
 
 
+async def test_create_pipeline_rejects_unsupported_video_model():
+    session = FakePipelineSession()
+    payload = _pipeline_payload() | {"video_model": "imagen-4.0-fast-generate-001"}
+
+    response = await _post_pipeline(payload, session)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported Veo model."
+    assert session.added == []
+    assert session.commit_count == 0
+
+
 async def test_get_pipeline_returns_parent_and_child_with_assets():
     parent = _parent_with_asset()
     child = _job(
