@@ -113,6 +113,7 @@ Not proven by Phase 1:
 - Branch: `main`
 - Remote: `origin` -> `https://github.com/bbungjun/AI_mult_modal.git`
 - Pre-summary baseline commit: `ee02155 docs: align phase1 submission guidance`
+- Summary memo commit: `eff941a docs: add phase1 submission summary`
 - Working tree was clean at the start of this memo, with no staged files.
 - Docker Compose mock smoke was completed and `docker compose down` was run
   afterward; no project containers are expected to be running for this handoff.
