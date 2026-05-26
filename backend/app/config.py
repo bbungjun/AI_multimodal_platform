@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://app:changeme@localhost:5432/multimodal"
     data_dir: Path = Path("/data/assets")
     job_runner_concurrency: int = 10
+    ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None
     gcp_location: str = "us-central1"

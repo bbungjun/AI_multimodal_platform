@@ -11,6 +11,7 @@ from typing import Any
 from google.genai import types
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
+from app.config import get_settings
 from app.models import GenerationMode
 from app.prompt_enhancement import (
     DEFAULT_CREATIVITY_PRESET,
@@ -200,6 +201,16 @@ async def enhance_prompt(
     )
     preset = normalize_creativity_preset(creativity_preset)
     temperature = temperature_for_preset(preset)
+    if client is None and get_settings().ai_provider == "mock":
+        return _mock_prompt_enhancement(
+            prompt,
+            target_mode=mode,
+            target_model=target_model,
+            creativity_preset=preset,
+            llm_model=llm_model,
+            temperature=temperature,
+        )
+
     vertex_client = client or get_vertex_client()
     started = time.perf_counter()
 
@@ -263,6 +274,42 @@ async def enhance_prompt(
             "candidates_token_count",
             "output_token_count",
         ),
+    )
+
+
+def _mock_prompt_enhancement(
+    prompt: str,
+    *,
+    target_mode: GenerationMode,
+    target_model: str,
+    creativity_preset: CreativityPreset,
+    llm_model: str,
+    temperature: float,
+) -> PromptEnhancementResult:
+    normalized_prompt = " ".join(prompt.split())
+    enhanced = (
+        f"{normalized_prompt}. Local mock enhancement for {target_mode.value}; "
+        "preserve the original subject, add clear composition, lighting, and "
+        "motion details only as placeholders for development."
+    )
+    return PromptEnhancementResult(
+        original=prompt,
+        enhanced=enhanced,
+        components={
+            "provider": "mock",
+            "subject": normalized_prompt,
+            "mode": target_mode.value,
+            "model": target_model,
+            "creativity_preset": creativity_preset.value,
+        },
+        target_mode=target_mode,
+        target_model=target_model,
+        llm_model=llm_model,
+        latency_ms=0,
+        tokens_in=None,
+        tokens_out=None,
+        creativity_preset=creativity_preset,
+        temperature=temperature,
     )
 
 

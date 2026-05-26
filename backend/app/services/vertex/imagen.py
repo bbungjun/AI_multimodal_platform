@@ -6,6 +6,8 @@ from typing import Any
 
 from google.genai import types
 
+from app.config import get_settings
+from app.services import mock_media
 from app.services.vertex.client import get_vertex_client
 from app.services.vertex.errors import VertexOutputUnavailableError, map_vertex_error
 
@@ -18,6 +20,14 @@ async def generate_image(
     aspect_ratio: str = "1:1",
     client: Any | None = None,
 ) -> list[bytes]:
+    if client is None and get_settings().ai_provider == "mock":
+        return mock_media.generate_mock_pngs(
+            model_id,
+            prompt,
+            number_of_images=number_of_images,
+            aspect_ratio=aspect_ratio,
+        )
+
     vertex_client = client or get_vertex_client()
     config = types.GenerateImagesConfig(
         number_of_images=number_of_images,
