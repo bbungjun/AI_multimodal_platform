@@ -82,6 +82,19 @@ def _source_image_asset() -> Asset:
     )
 
 
+def _source_video_asset() -> Asset:
+    now = utc_now()
+    return Asset(
+        id=uuid4(),
+        job_id=uuid4(),
+        kind=AssetKind.VIDEO,
+        local_path="source-job/source.mp4",
+        mime="video/mp4",
+        size_bytes=12,
+        created_at=now,
+    )
+
+
 def _i2v_job(source_asset_id: object) -> Job:
     now = utc_now()
     return Job(
@@ -320,6 +333,92 @@ async def test_handle_t2v_submits_polls_stores_video_asset(monkeypatch):
 
     assert session.commit_count == 6
     assert session.rollback_count == 0
+
+
+async def test_handle_i2v_fails_when_source_asset_is_missing(monkeypatch):
+    missing_asset_id = uuid4()
+    job = _i2v_job(missing_asset_id)
+    session = FakeHandlerSession(job)
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    def read_bytes(*_args: object, **_kwargs: object) -> bytes:
+        raise AssertionError("missing source asset must not read storage")
+
+    async def submit_video(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("missing source asset must not submit Veo operation")
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.storage, "read_bytes", read_bytes)
+    monkeypatch.setattr(handlers.veo, "submit_video", submit_video)
+
+    await handlers.handle_i2v(session, job)
+
+    assert job.state == JobState.FAILED
+    assert job.vertex_charged is False
+    assert job.attempts == 0
+    assert session.added == []
+    assert [entry["state"] for entry in job.state_history] == [
+        "queued",
+        "generating",
+        "failed",
+    ]
+    assert job.state_history[-1]["detail"] == {
+        "error": "i2v_source_asset_not_found"
+    }
+    assert job.error == {
+        "code": "i2v_source_asset_not_found",
+        "message": "I2V source asset was not found.",
+        "retryable": False,
+        "retry_count": 0,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+    assert session.commit_count == 3
+    assert session.rollback_count == 1
+
+
+async def test_handle_i2v_fails_when_source_asset_is_not_image(monkeypatch):
+    source_asset = _source_video_asset()
+    job = _i2v_job(source_asset.id)
+    session = FakeHandlerSession(job, assets=[source_asset])
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    def read_bytes(*_args: object, **_kwargs: object) -> bytes:
+        raise AssertionError("non-image source asset must not read storage")
+
+    async def submit_video(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("non-image source asset must not submit Veo operation")
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.storage, "read_bytes", read_bytes)
+    monkeypatch.setattr(handlers.veo, "submit_video", submit_video)
+
+    await handlers.handle_i2v(session, job)
+
+    assert job.state == JobState.FAILED
+    assert job.vertex_charged is False
+    assert job.attempts == 0
+    assert session.added == []
+    assert [entry["state"] for entry in job.state_history] == [
+        "queued",
+        "generating",
+        "failed",
+    ]
+    assert job.state_history[-1]["detail"] == {
+        "error": "i2v_source_asset_not_image"
+    }
+    assert job.error == {
+        "code": "i2v_source_asset_not_image",
+        "message": "I2V source asset must be an image.",
+        "retryable": False,
+        "retry_count": 0,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+    assert session.commit_count == 3
+    assert session.rollback_count == 1
 
 
 async def test_handle_t2v_resumes_polling_operation_by_name(monkeypatch):
