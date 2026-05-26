@@ -32,14 +32,20 @@ class FakeGenerationSession:
         *,
         prompt_enhancement: PromptEnhancement | None = None,
         jobs: list[Job] | None = None,
+        scalar_results: list[list[Job]] | None = None,
     ) -> None:
         self.added: list[object] = []
+        self.deleted: list[object] = []
         self.commit_count = 0
         self.prompt_enhancement = prompt_enhancement
         self.jobs = jobs or []
+        self.scalar_results = scalar_results
 
     def add(self, instance: object) -> None:
         self.added.append(instance)
+
+    async def delete(self, instance: object) -> None:
+        self.deleted.append(instance)
 
     async def commit(self) -> None:
         self.commit_count += 1
@@ -57,6 +63,9 @@ class FakeGenerationSession:
         raise AssertionError("Unexpected row fetch during generation create")
 
     async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
+        if self.scalar_results is not None:
+            rows = self.scalar_results.pop(0) if self.scalar_results else []
+            return FakeScalarsResult(rows)
         return FakeScalarsResult(self.jobs)
 
 
@@ -88,6 +97,22 @@ async def _get_generations(path: str, session: FakeGenerationSession):
             base_url="http://test",
         ) as client:
             return await client.get(path)
+    finally:
+        app.dependency_overrides.pop(generations.get_session, None)
+
+
+async def _delete_generation(path: str, session: FakeGenerationSession):
+    async def override_session() -> AsyncIterator[FakeGenerationSession]:
+        yield session
+
+    app.dependency_overrides[generations.get_session] = override_session
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://test",
+        ) as client:
+            return await client.delete(path)
     finally:
         app.dependency_overrides.pop(generations.get_session, None)
 
@@ -270,3 +295,95 @@ async def test_list_generations_returns_jobs_with_asset_dtos():
     assert len(body) == 1
     assert body[0]["id"] == str(job.id)
     assert body[0]["assets"][0]["url"] == f"/files/{job.id}/output.png"
+
+
+async def test_delete_terminal_generation_removes_asset_and_job(monkeypatch):
+    job = _job_with_asset()
+    session = FakeGenerationSession(jobs=[job], scalar_results=[[], []])
+    deleted_paths: list[str] = []
+
+    monkeypatch.setattr(
+        generations.storage,
+        "delete_file",
+        lambda local_path, *, missing_ok: deleted_paths.append(local_path),
+    )
+
+    response = await _delete_generation(f"/api/generations/{job.id}", session)
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert deleted_paths == [f"{job.id}/output.png"]
+    assert session.deleted == [job]
+    assert session.commit_count == 1
+
+
+async def test_delete_generation_rejects_non_terminal_job(monkeypatch):
+    job = _job_with_asset()
+    job.state = JobState.PENDING
+    session = FakeGenerationSession(jobs=[job])
+
+    monkeypatch.setattr(
+        generations.storage,
+        "delete_file",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("non-terminal delete must not touch storage")
+        ),
+    )
+
+    response = await _delete_generation(f"/api/generations/{job.id}", session)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Only terminal jobs can be deleted from History."
+    assert session.deleted == []
+    assert session.commit_count == 0
+
+
+async def test_delete_generation_rejects_active_dependent_job(monkeypatch):
+    parent = _job_with_asset()
+    child = _job_with_asset()
+    child.state = JobState.PENDING
+    child.parent_job_id = parent.id
+    session = FakeGenerationSession(jobs=[parent], scalar_results=[[child], []])
+
+    monkeypatch.setattr(
+        generations.storage,
+        "delete_file",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("blocked delete must not touch storage")
+        ),
+    )
+
+    response = await _delete_generation(f"/api/generations/{parent.id}", session)
+
+    assert response.status_code == 409
+    assert (
+        response.json()["detail"]
+        == "Jobs with active dependent jobs cannot be deleted from History."
+    )
+    assert session.deleted == []
+    assert session.commit_count == 0
+
+
+async def test_delete_generation_detaches_terminal_dependent_job(monkeypatch):
+    parent = _job_with_asset()
+    child = _job_with_asset()
+    child.state = JobState.COMPLETED
+    child.parent_job_id = parent.id
+    child.source_asset_id = parent.assets[0].id
+    session = FakeGenerationSession(jobs=[parent], scalar_results=[[child], [child]])
+    deleted_paths: list[str] = []
+
+    monkeypatch.setattr(
+        generations.storage,
+        "delete_file",
+        lambda local_path, *, missing_ok: deleted_paths.append(local_path),
+    )
+
+    response = await _delete_generation(f"/api/generations/{parent.id}", session)
+
+    assert response.status_code == 204
+    assert deleted_paths == [f"{parent.id}/output.png"]
+    assert child.parent_job_id is None
+    assert child.source_asset_id is None
+    assert session.deleted == [parent]
+    assert session.commit_count == 1
