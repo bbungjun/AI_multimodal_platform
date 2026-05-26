@@ -9,8 +9,9 @@ from app.services.vertex.errors import VertexOutputUnavailableError
 
 
 class FakeHandlerSession:
-    def __init__(self, job: Job) -> None:
+    def __init__(self, job: Job, *, assets: list[Asset] | None = None) -> None:
         self.job = job
+        self.assets_by_id = {asset.id: asset for asset in assets or []}
         self.added: list[object] = []
         self.commit_count = 0
         self.rollback_count = 0
@@ -27,6 +28,8 @@ class FakeHandlerSession:
     async def get(self, model: object, entity_id: object) -> object | None:
         if model is Job and entity_id == self.job.id:
             return self.job
+        if model is Asset:
+            return self.assets_by_id.get(entity_id)
         return None
 
 
@@ -59,6 +62,38 @@ def _t2v_job() -> Job:
         blocked=False,
         attempts=0,
         parameters={"aspect_ratio": "16:9", "duration_sec": 8},
+        state_history=[],
+        vertex_charged=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def _source_image_asset() -> Asset:
+    now = utc_now()
+    return Asset(
+        id=uuid4(),
+        job_id=uuid4(),
+        kind=AssetKind.IMAGE,
+        local_path="source-job/source.png",
+        mime="image/png",
+        size_bytes=12,
+        created_at=now,
+    )
+
+
+def _i2v_job(source_asset_id: object) -> Job:
+    now = utc_now()
+    return Job(
+        id=uuid4(),
+        mode=GenerationMode.I2V,
+        model="veo-3.0-fast-generate-001",
+        state=JobState.PENDING,
+        prompt="Animate this village into a slow cinematic push-in",
+        source_asset_id=source_asset_id,
+        blocked=False,
+        attempts=0,
+        parameters={"aspect_ratio": "9:16", "duration_sec": 6},
         state_history=[],
         vertex_charged=False,
         created_at=now,
@@ -395,3 +430,88 @@ async def test_handle_t2v_poll_timeout_marks_job_failed_with_operation_name(
     assert polled_operations == [operation]
     assert session.commit_count == 5
     assert session.rollback_count == 1
+
+
+async def test_handle_i2v_reads_source_image_submits_polls_stores_video_asset(
+    monkeypatch,
+):
+    source_asset = _source_image_asset()
+    job = _i2v_job(source_asset.id)
+    session = FakeHandlerSession(job, assets=[source_asset])
+    operation = SimpleNamespace(name="projects/demo/locations/us/operations/i2v-123")
+    read_paths: list[str] = []
+    saved_files: list[tuple[object, str, bytes]] = []
+    polled_operations: list[object] = []
+
+    async def acquire_rate_limit(model: str) -> float:
+        assert model == "veo-3.0-fast-generate-001"
+        return 0.75
+
+    def read_bytes(local_path: str) -> bytes:
+        read_paths.append(local_path)
+        return b"source-image"
+
+    async def submit_video(
+        model: str,
+        prompt: str,
+        *,
+        aspect_ratio: str,
+        duration_sec: int,
+        image_bytes: bytes,
+        image_mime: str,
+    ) -> object:
+        assert model == "veo-3.0-fast-generate-001"
+        assert prompt == "Animate this village into a slow cinematic push-in"
+        assert aspect_ratio == "9:16"
+        assert duration_sec == 6
+        assert image_bytes == b"source-image"
+        assert image_mime == "image/png"
+        return operation
+
+    async def poll_operation(submitted_operation: object) -> bytes:
+        polled_operations.append(submitted_operation)
+        return b"i2v-video"
+
+    def save_bytes(job_id: object, filename: str, data: bytes) -> str:
+        saved_files.append((job_id, filename, data))
+        return f"{job_id}/{filename}"
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.storage, "read_bytes", read_bytes)
+    monkeypatch.setattr(handlers.veo, "submit_video", submit_video)
+    monkeypatch.setattr(handlers.veo, "poll_operation", poll_operation)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+
+    await handlers.handle_i2v(session, job)
+
+    assert job.state == JobState.COMPLETED
+    assert job.vertex_operation_name == operation.name
+    assert job.vertex_charged is True
+    assert job.attempts == 1
+    assert job.error is None
+    assert [entry["state"] for entry in job.state_history] == [
+        "queued",
+        "generating",
+        "polling",
+        "downloading",
+        "completed",
+    ]
+    assert job.state_history[0]["detail"] == {"runner": "direct-handler"}
+    assert job.state_history[1]["detail"] == {"rate_limit_wait_sec": 0.75}
+    assert job.state_history[2]["detail"] == {"operation_name": operation.name}
+    assert job.state_history[3]["detail"] == {"size_bytes": 9}
+
+    assert read_paths == ["source-job/source.png"]
+    assert polled_operations == [operation]
+    assert saved_files == [(job.id, "output.mp4", b"i2v-video")]
+    assert len(session.added) == 1
+    asset = session.added[0]
+    assert isinstance(asset, Asset)
+    assert asset.kind == AssetKind.VIDEO
+    assert asset.local_path == f"{job.id}/output.mp4"
+    assert asset.mime == "video/mp4"
+    assert asset.size_bytes == 9
+    assert asset.duration_sec == 6.0
+
+    assert session.commit_count == 6
+    assert session.rollback_count == 0
