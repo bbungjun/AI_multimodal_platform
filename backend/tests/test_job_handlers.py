@@ -285,3 +285,59 @@ async def test_handle_t2v_submits_polls_stores_video_asset(monkeypatch):
 
     assert session.commit_count == 6
     assert session.rollback_count == 0
+
+
+async def test_handle_t2v_resumes_polling_operation_by_name(monkeypatch):
+    job = _t2v_job()
+    job.state = JobState.POLLING
+    job.vertex_operation_name = "projects/demo/locations/us/operations/veo-resume"
+    job.attempts = 1
+    session = FakeHandlerSession(job)
+    saved_files: list[tuple[object, str, bytes]] = []
+    polled_names: list[str] = []
+
+    async def acquire_rate_limit(*_args: object) -> float:
+        raise AssertionError("resumed polling job must not acquire rate limit")
+
+    async def submit_video(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("resumed polling job must not submit a new operation")
+
+    async def poll_operation_name(operation_name: str) -> bytes:
+        polled_names.append(operation_name)
+        return b"resumed-video"
+
+    def save_bytes(job_id: object, filename: str, data: bytes) -> str:
+        saved_files.append((job_id, filename, data))
+        return f"{job_id}/{filename}"
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.veo, "submit_video", submit_video)
+    monkeypatch.setattr(handlers.veo, "poll_operation_name", poll_operation_name)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+
+    await handlers.handle_t2v(session, job)
+
+    assert job.state == JobState.COMPLETED
+    assert job.vertex_operation_name == "projects/demo/locations/us/operations/veo-resume"
+    assert job.vertex_charged is True
+    assert job.attempts == 1
+    assert job.error is None
+    assert [entry["state"] for entry in job.state_history] == [
+        "downloading",
+        "completed",
+    ]
+    assert job.state_history[0]["detail"] == {"size_bytes": 13}
+
+    assert polled_names == ["projects/demo/locations/us/operations/veo-resume"]
+    assert saved_files == [(job.id, "output.mp4", b"resumed-video")]
+    assert len(session.added) == 1
+    asset = session.added[0]
+    assert isinstance(asset, Asset)
+    assert asset.kind == AssetKind.VIDEO
+    assert asset.local_path == f"{job.id}/output.mp4"
+    assert asset.mime == "video/mp4"
+    assert asset.size_bytes == 13
+    assert asset.duration_sec == 8.0
+
+    assert session.commit_count == 2
+    assert session.rollback_count == 0
