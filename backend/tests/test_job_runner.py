@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy.dialects import postgresql
@@ -144,3 +145,50 @@ async def test_handler_failure_marks_job_failed_without_leaking_exception():
         "last_attempt_at": job.error["last_attempt_at"],
     }
     assert job.state_history[-1]["detail"] == {"error": "provider_crashed"}
+
+
+async def test_resume_polling_jobs_reschedules_jobs_with_vertex_operation():
+    job = _job(state=JobState.POLLING)
+    job.vertex_operation_name = "projects/demo/locations/us/operations/123"
+    session = FakeRunnerSession([[job]], [job])
+    handled: list[object] = []
+
+    async def handle(job_id: object) -> None:
+        handled.append(job_id)
+
+    job_runner = runner.InProcessJobRunner(
+        session_factory=lambda: session,
+        handler=handle,
+        concurrency=1,
+        poll_interval=0,
+        shutdown_timeout=0.1,
+    )
+
+    resumed_count = await job_runner.resume_polling_jobs()
+    await job_runner.wait_for_idle(timeout=1)
+
+    assert resumed_count == 1
+    assert handled == [job.id]
+    assert job.state == JobState.POLLING
+    assert session.begin_count == 1
+    assert session.end_count == 1
+
+
+async def test_sweep_orphans_marks_stale_non_terminal_jobs_failed():
+    job = _job(state=JobState.GENERATING)
+    session = FakeRunnerSession([[job]], [job])
+
+    swept_count = await runner._sweep_orphaned_jobs(
+        lambda: session,
+        older_than=timedelta(minutes=5),
+    )
+
+    assert swept_count == 1
+    assert job.state == JobState.FAILED
+    assert job.error == {
+        "code": "orphaned_job",
+        "message": "Job was left in a non-terminal state after runner restart.",
+        "retry_count": 0,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+    assert job.state_history[-1]["detail"] == {"reason": "runner_startup_sweep"}
