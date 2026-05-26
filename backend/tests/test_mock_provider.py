@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.config import Settings
 from app.models import GenerationMode
 from app.services.llm import enhancer
+from app.services.vertex import client as vertex_client
 from app.services.vertex import imagen
 
 
@@ -57,3 +58,16 @@ async def test_mock_prompt_enhancement_returns_draft_without_vertex_client(monke
     assert result.components["provider"] == "mock"
     assert result.target_mode == GenerationMode.T2I
     assert result.target_model == "imagen-4.0-fast-generate-001"
+
+
+def test_mock_vertex_readiness_does_not_require_credentials(monkeypatch):
+    monkeypatch.setattr(vertex_client, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(vertex_client, "get_vertex_client", _fail_vertex_client)
+
+    readiness = vertex_client.get_vertex_readiness()
+
+    assert readiness.ready is True
+    assert readiness.status == "mock_provider"
+    assert readiness.credentials == "not_required"
+    assert readiness.project == "not_required"
+    assert readiness.location == "local"

@@ -55,6 +55,14 @@ def get_vertex_client() -> genai.Client:
 
 def get_vertex_readiness() -> VertexReadiness:
     settings = get_settings()
+    if settings.ai_provider == "mock":
+        return VertexReadiness(
+            ready=True,
+            status="mock_provider",
+            credentials="not_required",
+            project="not_required",
+            location="local",
+        )
 
     try:
         get_vertex_client()
