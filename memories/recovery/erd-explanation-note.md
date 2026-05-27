@@ -254,6 +254,40 @@ state machine, storage helper에서 강제합니다.
 
 면접이나 리뷰에서 짧게 설명해야 하면 아래 순서가 가장 자연스럽습니다.
 
+### 1분 답변
+
+"이 프로젝트의 ERD는 `jobs`를 중심으로 잡았습니다. T2I, T2V, I2V, pipeline 모두
+결국 생성 요청이라는 공통 lifecycle을 가지기 때문에, 별도 테이블로 쪼개기보다
+`jobs.mode`, `jobs.state`, `parameters`, `state_history`로 한 테이블에서 관리합니다.
+생성 결과는 `assets`로 분리했습니다. 한 T2I job이 여러 이미지를 만들 수 있고,
+각 이미지를 다시 I2V source로 넘길 수 있어야 해서 `jobs 1:N assets` 구조가
+필요했습니다. 실제 파일 bytes는 DB에 넣지 않고 `DATA_DIR`에 두고, DB에는
+`local_path`, MIME, 크기, 해상도 같은 metadata만 저장합니다.
+
+Prompt enhancement는 `prompt_enhancements`에 따로 둡니다. Gemini 결과가 바로
+generation prompt를 덮어쓰면 안 되고, 사용자가 검토하고 수락한 경우에만
+`jobs.enhancement_id`로 연결됩니다. Pipeline은 별도 pipeline table 없이
+`jobs.parent_job_id`로 parent T2I와 child I2V를 연결하고, child I2V가 사용할
+image는 `jobs.source_asset_id`로 `assets`를 참조합니다. 삭제 시에는 terminal job만
+삭제하고 active dependent가 있으면 막으며, optional 관계는 `SET NULL`로 detach해서
+History 정리와 실행 중인 작업 보호를 같이 만족시켰습니다."
+
+이 답변에서 꼭 들어가야 하는 키워드는 `jobs 중심`, `assets metadata와 file bytes
+분리`, `prompt enhancement는 review-first draft`, `pipeline은 parent_job_id와
+source_asset_id`, `active dependent 보호`입니다.
+
+### 30초 축약
+
+"핵심은 `jobs`가 생성 요청의 source of truth라는 점입니다. T2I/T2V/I2V는 모두
+job lifecycle이 같아서 `mode`로 구분하고 같은 state machine과 runner가 처리합니다.
+결과물은 `assets`에 metadata만 저장하고 bytes는 `DATA_DIR`에 둡니다. Prompt
+enhancement는 자동 적용이 아니라 사용자가 수락한 draft라서 별도
+`prompt_enhancements`에 저장한 뒤 optional FK로 job에 연결합니다. Pipeline은
+`parent_job_id`와 `source_asset_id`로 parent T2I, child I2V, source image asset을
+표현했습니다."
+
+### 순서형 설명
+
 1. "중심 테이블은 `jobs`입니다. 모든 T2I/T2V/I2V 요청은 job으로 저장되고,
    state machine과 in-process runner가 이 job의 상태를 바꿉니다."
 2. "`assets`는 생성 결과 metadata입니다. 실제 이미지/비디오 bytes는 DB가 아니라
@@ -268,9 +302,36 @@ state machine, storage helper에서 강제합니다.
    dependent는 같이 삭제하지 않고 reference만 detach합니다. 그래서 History 정리는
    가능하지만 실행 중인 I2V의 source image를 깨뜨리지 않습니다."
 
+## 예상 꼬리질문 답변
+
+### 왜 `pipelines` 테이블을 따로 만들지 않았나?
+
+이번 제출 범위의 pipeline은 parent T2I 하나와 child I2V 하나의 연결입니다. 별도
+pipeline table을 만들면 확장성은 생기지만, 현재 범위에서는 job lifecycle, history,
+detail API가 다시 pipeline table과 동기화되어야 합니다. 그래서 `jobs.parent_job_id`
+로 "이 job이 어떤 parent에서 파생됐는지"만 표현하고, 실제 처리 상태는 기존 job
+state machine을 그대로 재사용했습니다.
+
+### 왜 파일 bytes를 DB에 넣지 않았나?
+
+이미지와 비디오는 크기가 커질 수 있고, API는 주로 job 상태와 asset metadata를
+자주 조회합니다. bytes를 DB에 넣으면 history/detail 조회와 binary serving 책임이
+섞입니다. 그래서 DB는 metadata와 관계를 관리하고, 실제 파일은 storage helper가
+검증한 `DATA_DIR/{job_uuid}/{filename}` 경로에서 `/files/...`로 스트리밍합니다.
+
+### `SET NULL`과 `CASCADE`를 나눈 기준은 무엇인가?
+
+`assets.job_id`는 asset이 job의 결과물이므로 job이 삭제되면 asset row도 함께
+사라지는 owned 관계입니다. 반대로 `jobs.enhancement_id`, `jobs.parent_job_id`,
+`jobs.source_asset_id`는 job이 다른 record를 선택적으로 참조하는 linkage입니다.
+참조 대상이 정리될 때 살아남는 terminal job까지 같이 지우지 않고 관계만 끊기 위해
+`SET NULL`로 둡니다. active dependent는 API에서 먼저 차단하므로 실행 중인 I2V 입력이
+사라지는 상황은 막습니다.
+
 ## 근거 파일
 
 - `backend/app/models.py`
+- `backend/tests/test_model_relationships.py`
 - `README.md`
 - `memories/recovery/readme-contract-checklist.md`
 - `memories/recovery/test-coverage-gap-analysis.md`
