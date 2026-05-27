@@ -600,3 +600,41 @@ edge case를 자동 테스트로 고정했습니다. 원래 테스트 파일을 
   -> `15 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `115 passed`
+
+## Follow-up: Prompt Enhancement mode guidance tests restored
+
+2026-05-27 후속 작업에서 Prompt Enhancement의 mode별 guidance와 exemplar
+component 계약을 자동 테스트로 고정했습니다. 원래 테스트 파일을 그대로 복구한 것은
+아니고, 최종 제출 후반부에 정리된 Prompt Enhancement Strategy를 현재
+`test_prompt_enhancer.py` 구조에 맞춰 복구한 것입니다. 실제 Vertex/Gemini 호출은
+없고 fake Gemini client만 사용했습니다.
+
+복구 근거:
+
+- `pre_context/summaries/11-summary.md`는 T2I exemplar component keys를
+  `subject`, `setting`, `composition`, `lighting`, `style`, `mood` 중심으로
+  정리합니다.
+- `pre_context/summaries/11-summary.md`는 Video exemplar component keys를
+  `subject`, `motion`, `camera_work`, `continuity`, `duration`, `sound_cue`
+  중심으로 정리합니다.
+- `pre_context/summaries/11-summary.md`와 `12-summary.md`는 creativity preset과
+  temperature mapping이 `backend/app/prompt_enhancement.py`에 있고,
+  T2I/T2V/I2V guidance split과 sectioned prompt가 `enhancer.py`에 있다고
+  확인합니다.
+- `pre_context/summaries/15-summary.md`는 I2V가 T2V motion guidance에 source
+  image 보존 제약을 추가한다고 정리합니다.
+
+복구한 계약:
+
+- T2I enhancement prompt는 image guidance, T2I exemplar, Balanced strategy,
+  `0.5` temperature를 포함하고 I2V source image 보존 문구를 섞지 않습니다.
+- I2V enhancement prompt는 video guidance, source image fixed-reference 보존
+  제약, Video exemplar, Imaginative strategy, `0.8` temperature를 포함합니다.
+- 사용자 prompt는 delimiter 사이의 data로 전달되어 prompt injection 경계를 유지합니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_prompt_enhancer.py -q`
+  -> `9 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `117 passed`

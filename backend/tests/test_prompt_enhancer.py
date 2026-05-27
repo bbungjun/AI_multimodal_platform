@@ -87,6 +87,102 @@ async def test_enhance_prompt_parses_schema_payload_without_vertex_client():
     assert getattr(call["config"], "temperature") == 0.2
 
 
+async def test_enhance_prompt_builds_t2i_prompt_with_image_component_guidance():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A glass teapot on a linen cloth with soft light.",
+                    "components": {
+                        "subject": "glass teapot",
+                        "lighting": "soft light",
+                    },
+                }
+            )
+        ]
+    )
+
+    await enhancer.enhance_prompt(
+        "glass teapot",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        creativity_preset=CreativityPreset.BALANCED,
+        client=FakeGenerateContentClient(models),
+    )
+
+    call = models.calls[0]
+    prompt = call["contents"][0]
+    assert isinstance(prompt, str)
+    assert getattr(call["config"], "temperature") == 0.5
+    assert "target_mode: t2i" in prompt
+    assert "creativity_preset: balanced" in prompt
+    assert "Creativity strategy: Balanced" in prompt
+    assert "For image generation" in prompt
+    assert "T2I format example" in prompt
+    for component_key in (
+        '"subject"',
+        '"setting"',
+        '"composition"',
+        '"lighting"',
+        '"style"',
+        '"mood"',
+    ):
+        assert component_key in prompt
+    assert "source image as the fixed visual reference" not in prompt
+
+
+async def test_enhance_prompt_builds_i2v_prompt_with_source_preservation_guidance():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "Hands gently lift the plated dish as the camera holds.",
+                    "components": {
+                        "motion": "gentle lift",
+                        "camera_work": "locked-off close shot",
+                    },
+                }
+            )
+        ]
+    )
+
+    await enhancer.enhance_prompt(
+        "move the plated dish gently",
+        target_mode=GenerationMode.I2V,
+        target_model="veo-3.0-fast-generate-001",
+        creativity_preset=CreativityPreset.IMAGINATIVE,
+        client=FakeGenerateContentClient(models),
+    )
+
+    call = models.calls[0]
+    prompt = call["contents"][0]
+    assert isinstance(prompt, str)
+    assert getattr(call["config"], "temperature") == 0.8
+    assert "target_mode: i2v" in prompt
+    assert "target_model: veo-3.0-fast-generate-001" in prompt
+    assert "creativity_preset: imaginative" in prompt
+    assert "Creativity strategy: Imaginative" in prompt
+    assert "For video generation" in prompt
+    assert "source image as the fixed visual reference" in prompt
+    assert "Preserve subject identity" in prompt
+    assert "Do not add a new primary subject" in prompt
+    assert "Video format example" in prompt
+    for component_key in (
+        '"subject"',
+        '"motion"',
+        '"camera_work"',
+        '"continuity"',
+        '"duration"',
+        '"sound_cue"',
+    ):
+        assert component_key in prompt
+    assert (
+        "<<<USER_PROMPT_START>>>\n"
+        "move the plated dish gently\n"
+        "<<<USER_PROMPT_END>>>"
+    ) in prompt
+
+
 async def test_enhance_prompt_retries_malformed_json_text_once():
     models = FakeGenerateContentModels(
         responses=[
