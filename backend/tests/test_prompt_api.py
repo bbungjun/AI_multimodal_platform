@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from uuid import uuid4
 
 import httpx
+import pytest
 
 from app.api import prompts
 from app.main import app
@@ -148,6 +149,66 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
         "retryable": True,
         "status_code": 429,
     }
+    assert session.added == []
+    assert session.commit_count == 0
+    assert session.refresh_count == 0
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_field"),
+    [
+        (
+            {
+                "prompt": "",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+            },
+            "prompt",
+        ),
+        (
+            {
+                "prompt": "a quiet desk lamp",
+                "target_mode": "audio",
+                "target_model": "imagen-4.0-fast-generate-001",
+            },
+            "target_mode",
+        ),
+        (
+            {
+                "prompt": "a quiet desk lamp",
+                "target_mode": "t2i",
+                "target_model": "",
+            },
+            "target_model",
+        ),
+        (
+            {
+                "prompt": "a quiet desk lamp",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+                "creativity_preset": "chaotic",
+            },
+            "creativity_preset",
+        ),
+    ],
+)
+async def test_enhance_prompt_rejects_invalid_request_without_calling_enhancer(
+    monkeypatch,
+    payload,
+    expected_field,
+):
+    session = FakePromptSession()
+
+    async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("invalid prompt enhancement requests must not call Gemini")
+
+    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+
+    response = await _post_prompt_enhance(payload, session)
+
+    assert response.status_code == 422
+    validation_errors = response.json()["detail"]
+    assert any(error["loc"][-1] == expected_field for error in validation_errors)
     assert session.added == []
     assert session.commit_count == 0
     assert session.refresh_count == 0

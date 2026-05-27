@@ -638,3 +638,38 @@ component 계약을 자동 테스트로 고정했습니다. 원래 테스트 파
   -> `9 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `117 passed`
+
+## Follow-up: Prompt API validation failure tests restored
+
+2026-05-27 후속 작업에서 `POST /api/prompts/enhance` request validation 실패
+계약을 자동 테스트로 고정했습니다. 원래 테스트 파일을 그대로 되살린 것은 아니고,
+Phase 9 기록에 남아 있는 `PromptEnhanceRequest` schema validation과 "422,
+enhancer not called" 계약을 현재 `test_prompt_api.py` 구조에 맞춰 복구한
+것입니다. 실제 Vertex/Gemini 호출은 없습니다.
+
+복구 근거:
+
+- `pre_context/summaries/06-summary.md`는 Unit 1에 `PromptEnhanceRequest`와
+  API contract/schema validation 테스트가 추가되었다고 정리합니다.
+- `pre_context/krafton_assignment_06.md`는 실패 케이스로 빈 prompt, invalid
+  mode/model validation, 실패 시 `PromptEnhancement` row 미생성을 명시합니다.
+- 같은 기록은 `/api/prompts/enhance` validation error가 FastAPI/Pydantic
+  `422`이며 enhancer를 호출하지 않는다고 정리합니다.
+- `README.md`는 prompt enhancement request shape를 `prompt`, `target_mode`,
+  `target_model`, `creativity_preset`으로 설명합니다.
+
+복구한 계약:
+
+- 빈 `prompt`는 `422`로 거절되고 enhancer/Gemini 경계로 넘어가지 않습니다.
+- invalid `target_mode`는 `422`로 거절되고 enhancer/Gemini 경계로 넘어가지 않습니다.
+- 빈 `target_model`은 `422`로 거절되고 enhancer/Gemini 경계로 넘어가지 않습니다.
+- invalid `creativity_preset`은 `422`로 거절되고 enhancer/Gemini 경계로 넘어가지 않습니다.
+- 모든 validation 실패 케이스는 `PromptEnhancement` row 저장, commit, refresh를
+  수행하지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_prompt_api.py -q`
+  -> `6 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `121 passed`
