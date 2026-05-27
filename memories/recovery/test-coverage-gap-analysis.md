@@ -912,3 +912,45 @@ Vertex/Gemini/Imagen/Veo 호출은 없습니다.
   -> `29 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `146 passed`
+
+## Follow-up: PromptEnhancement to Job linkage guard tests restored
+
+2026-05-27 후속 작업에서 `prompt_enhancements.id -> jobs.enhancement_id` 관계의
+generation-side 검증 계약을 보강했습니다. 새 기능 개발이 아니라 ERD 설명 노트와
+최종 Prompt Enhancement strategy에 남아 있는 "review/edit/accept 후 선택적으로
+job에 연결"되는 계약을 현재 `test_generation_api.py` 구조에 맞춰 복구한 것입니다.
+실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md`는 prompt enhancement가 generation 요청에 자동 적용되지 않고,
+  사용자가 확인/편집/수락한 뒤 generation payload의 `prompt`와 `enhancement_id`로
+  전달된다고 설명합니다.
+- `pre_context/summaries/06-summary.md`는 Phase 9 Unit 5 후보로 existing
+  `enhancement_id` generation linkage를 남기고, `auto_enhance=True` 자동 실행은
+  계속 차단해야 한다고 정리합니다.
+- `pre_context/summaries/15-summary.md`는 수락된 enhancement가 `enhancement_id`로
+  연결되고, generation API가 target mode/model mismatch를 다시 검증한다고
+  정리합니다.
+- `memories/recovery/erd-explanation-note.md`는 `PromptEnhancement`가 검토 가능한
+  초안이며, job에는 optional FK로만 연결된다고 설명합니다.
+
+복구한 계약:
+
+- 존재하지 않는 `enhancement_id`를 generation 요청에 넣으면 `400`으로 거절하고
+  job row를 만들지 않습니다.
+- `PromptEnhancement.target_mode`가 generation `mode`와 다르면 `400`으로 거절하고
+  job row를 만들지 않습니다.
+- `PromptEnhancement.target_model`이 generation `model`과 다르면 `400`으로 거절하고
+  job row를 만들지 않습니다.
+- matching enhancement만 `Job.enhancement_id`와 `Job.enhanced_prompt`에 연결됩니다.
+
+검증 결과:
+
+- mutation RED: `_get_matching_prompt_enhancement`에서 `target_model` 비교를 임시로
+  제거하면 `test_create_generation_rejects_prompt_enhancement_target_mismatch_without_job`
+  중 model mismatch case가 `201 != 400`으로 실패함을 확인하고 되돌렸습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_generation_api.py -q`
+  -> `32 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `149 passed`

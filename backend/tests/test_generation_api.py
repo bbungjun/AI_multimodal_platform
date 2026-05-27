@@ -466,6 +466,71 @@ async def test_create_generation_links_matching_prompt_enhancement():
     assert job.enhancement_id == enhancement_id
 
 
+async def test_create_generation_rejects_missing_prompt_enhancement_without_job():
+    enhancement_id = uuid4()
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "cinematic quiet desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+            "enhancement_id": str(enhancement_id),
+        },
+        session,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Prompt enhancement was not found."
+    assert session.get_calls == [(PromptEnhancement, enhancement_id)]
+    assert session.added == []
+    assert session.commit_count == 0
+
+
+@pytest.mark.parametrize(
+    ("target_mode", "target_model"),
+    [
+        (GenerationMode.T2V, "imagen-4.0-fast-generate-001"),
+        (GenerationMode.T2I, "imagen-4.0-generate-001"),
+    ],
+)
+async def test_create_generation_rejects_prompt_enhancement_target_mismatch_without_job(
+    target_mode: GenerationMode,
+    target_model: str,
+):
+    enhancement_id = uuid4()
+    session = FakeGenerationSession(
+        prompt_enhancement=PromptEnhancement(
+            id=enhancement_id,
+            original="desk lamp",
+            enhanced="cinematic quiet desk lamp",
+            components={"subject": "desk lamp"},
+            target_mode=target_mode,
+            target_model=target_model,
+            llm_model="gemini-2.5-flash",
+        )
+    )
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "cinematic quiet desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+            "enhancement_id": str(enhancement_id),
+        },
+        session,
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Prompt enhancement target does not match generation request."
+    )
+    assert session.get_calls == [(PromptEnhancement, enhancement_id)]
+    assert session.added == []
+    assert session.commit_count == 0
+
+
 async def test_get_generation_returns_job_with_asset_dto():
     job = _job_with_asset()
     session = FakeGenerationSession(jobs=[job])
