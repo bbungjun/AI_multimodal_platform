@@ -66,9 +66,9 @@ async def get_file(
     try:
         byte_range = _parse_range(range_header, size)
     except RangeRequestError as exc:
-        range_headers = (
-            {"Content-Range": f"bytes */{size}"} if exc.include_content_range else None
-        )
+        range_headers = {"Accept-Ranges": "bytes"}
+        if exc.include_content_range:
+            range_headers["Content-Range"] = f"bytes */{size}"
         raise HTTPException(
             status_code=exc.status_code,
             detail=exc.detail,

@@ -992,3 +992,34 @@ relationship 계약을 자동 테스트로 고정했습니다. 새 기능 개발
   -> `4 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `153 passed`
+
+## Follow-up: `/files` response header detail tests restored
+
+2026-05-27 후속 작업에서 `/files/{job_uuid}/{filename}` streaming response의
+header detail 계약을 조금 더 촘촘하게 고정했습니다. 실제 Vertex/Gemini/Imagen/Veo
+호출은 없고, 임시 `DATA_DIR`에 저장한 local fixture bytes만 사용했습니다.
+
+복구 근거:
+
+- `README.md`는 `/files/{job_uuid}/{filename}`가 검증된 asset streaming을 제공하고,
+  video preview를 위해 single byte range request를 지원한다고 설명합니다.
+- `pre_context/summaries/13-summary.md`는 History video preview를 복구할 때
+  thumbnail 생성보다 `/files` Range support와 frontend `<video>` preview 흐름을
+  먼저 확인하라고 정리합니다.
+- `pre_context/krafton_assignment_15.md`는 저장된 MP4 asset을 `<video>` preview로
+  렌더링하고, `/files`가 byte range를 지원해 전체 다운로드에 의존하지 않도록
+  했다고 설명합니다.
+
+복구한 계약:
+
+- MP4 asset에 대한 partial content 응답은 `206`, `Content-Type: video/mp4`,
+  `Accept-Ranges: bytes`, 정확한 `Content-Length`, `Content-Range`를 함께 반환합니다.
+- unsatisfiable range 응답은 `416`과 `Content-Range: bytes */{size}`를 반환하면서,
+  같은 route가 byte range를 지원한다는 `Accept-Ranges: bytes`도 유지합니다.
+
+검증 결과:
+
+- RED: 416 응답에 `Accept-Ranges`가 없어
+  `test_files_route_returns_416_for_unsatisfiable_byte_range`가 실패함을 확인했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_storage.py -q`
+  -> `11 passed`

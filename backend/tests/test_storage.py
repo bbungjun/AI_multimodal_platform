@@ -88,6 +88,32 @@ async def test_files_route_supports_single_byte_range(monkeypatch, tmp_path):
     assert response.headers["content-range"] == "bytes 2-4/6"
 
 
+async def test_files_route_partial_video_response_includes_preview_headers(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setattr(
+        storage,
+        "get_settings",
+        lambda: _settings_for_data_dir(tmp_path),
+    )
+    local_path = storage.save_bytes(uuid4(), "output.mp4", b"abcdef")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            f"/files/{local_path}",
+            headers={"Range": "bytes=1-3"},
+        )
+
+    assert response.status_code == 206
+    assert response.content == b"bcd"
+    assert response.headers["accept-ranges"] == "bytes"
+    assert response.headers["content-length"] == "3"
+    assert response.headers["content-range"] == "bytes 1-3/6"
+    assert response.headers["content-type"].startswith("video/mp4")
+
+
 async def test_files_route_supports_open_ended_byte_range(monkeypatch, tmp_path):
     monkeypatch.setattr(
         storage,
@@ -149,6 +175,7 @@ async def test_files_route_returns_416_for_unsatisfiable_byte_range(
         )
 
     assert response.status_code == 416
+    assert response.headers["accept-ranges"] == "bytes"
     assert response.headers["content-range"] == "bytes */6"
     assert response.json()["detail"] == "Requested byte range is not satisfiable."
 
