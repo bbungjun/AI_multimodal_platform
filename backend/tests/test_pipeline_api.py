@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
 import httpx
+import pytest
 
 from app.api import pipelines
 from app.main import app
@@ -175,6 +176,45 @@ async def test_create_pipeline_persists_parent_and_blocked_child():
     assert body["child"]["id"] == str(child.id)
     assert body["child"]["parent_job_id"] == str(parent.id)
     assert body["child"]["blocked"] is True
+
+
+async def test_create_pipeline_accepts_max_duration_boundary():
+    session = FakePipelineSession()
+    payload = _pipeline_payload() | {"duration_sec": 8}
+
+    response = await _post_pipeline(payload, session)
+
+    assert response.status_code == 201
+    assert session.commit_count == 1
+    assert len(session.added) == 2
+    parent, child = session.added
+    assert parent.parameters == {"aspect_ratio": "1:1", "number_of_images": 1}
+    assert child.parameters == {"aspect_ratio": "16:9", "duration_sec": 8}
+
+
+@pytest.mark.parametrize(
+    ("payload_overrides", "field"),
+    [
+        ({"duration_sec": 0}, "duration_sec"),
+        ({"duration_sec": 9}, "duration_sec"),
+        ({"image_aspect_ratio": "x"}, "image_aspect_ratio"),
+        ({"image_aspect_ratio": "12345678901234567"}, "image_aspect_ratio"),
+        ({"video_aspect_ratio": "x"}, "video_aspect_ratio"),
+        ({"video_aspect_ratio": "12345678901234567"}, "video_aspect_ratio"),
+    ],
+)
+async def test_create_pipeline_rejects_invalid_option_values_before_jobs(
+    payload_overrides: dict,
+    field: str,
+):
+    session = FakePipelineSession()
+
+    response = await _post_pipeline(_pipeline_payload() | payload_overrides, session)
+
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == field for error in response.json()["detail"])
+    assert session.added == []
+    assert session.commit_count == 0
 
 
 async def test_create_pipeline_rejects_unsupported_image_model():
