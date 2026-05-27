@@ -522,3 +522,28 @@ Vertex/Gemini/Imagen/Veo 호출 없이 fake handler와 fake session만 사용했
 다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리,
 health DB down/provider down 조합, Prompt Enhancement fenced/긴 응답 명시
 테스트입니다.
+
+## Follow-up: Prompt Enhancement JSON hardening tests restored
+
+2026-05-27 후속 작업에서 Gemini prompt enhancement 응답 parser hardening을
+명시적인 자동 테스트로 고정했습니다. production code 변경은 필요하지 않았고,
+fake Gemini response 객체만 사용했습니다.
+
+복구한 계약:
+
+- Gemini가 markdown fenced JSON block 형태로 JSON을 반환해도 retry 없이
+  파싱합니다.
+- Gemini 응답 앞뒤에 설명문이 섞여 있어도 balanced top-level JSON object만
+  추출해 schema validation을 통과시킵니다.
+- 잘린 JSON처럼 보이는 malformed response는 `malformed_json` /
+  `source=text`로 분류하고, diagnostic log에는 `possible_truncated_json=True` 같은
+  safe metadata만 남깁니다.
+- malformed diagnostic log에는 raw response body를 그대로 남기지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_prompt_enhancer.py -q`
+  -> `7 passed`
+
+다음 비용 없는 후보는 health DB down/provider down 조합, delete 중
+파일 누락/DB-파일 불일치 처리입니다.

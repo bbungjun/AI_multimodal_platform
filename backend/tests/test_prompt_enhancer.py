@@ -114,6 +114,82 @@ async def test_enhance_prompt_retries_malformed_json_text_once():
     assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
 
 
+async def test_enhance_prompt_parses_fenced_json_text_without_retry():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                text=(
+                    "```json\n"
+                    "{\n"
+                    '  "enhanced": "A glass teapot on a linen cloth.",\n'
+                    '  "components": {"subject": "glass teapot"}\n'
+                    "}\n"
+                    "```"
+                )
+            )
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "glass teapot",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "A glass teapot on a linen cloth."
+    assert result.components == {"subject": "glass teapot"}
+    assert len(models.calls) == 1
+    assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
+
+
+async def test_enhance_prompt_extracts_json_object_from_explanatory_text():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                text=(
+                    "Here is the enhanced prompt:\n"
+                    '{"enhanced":"A quiet tram crosses a rain-slick street.",'
+                    '"components":{"subject":"quiet tram",'
+                    '"motion":"slow crossing with reflections"}}\n'
+                    "Let me know if you want another version."
+                )
+            )
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "quiet tram in rain",
+        target_mode=GenerationMode.T2V,
+        target_model="veo-3.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "A quiet tram crosses a rain-slick street."
+    assert result.components == {
+        "subject": "quiet tram",
+        "motion": "slow crossing with reflections",
+    }
+    assert len(models.calls) == 1
+
+
+def test_parse_response_payload_logs_truncated_json_safe_diagnostics(caplog):
+    with pytest.raises(enhancer.PromptEnhancementResponseError) as exc_info:
+        enhancer._parse_response_payload(
+            SimpleNamespace(
+                text='{"enhanced":"A clipped response","components":'
+            )
+        )
+
+    assert exc_info.value.reason == "malformed_json"
+    assert exc_info.value.source == "text"
+    assert any(
+        "possible_truncated_json': True" in record.message
+        and "A clipped response" not in record.message
+        for record in caplog.records
+    )
+
+
 async def test_enhance_prompt_rejects_schema_invalid_response():
     models = FakeGenerateContentModels(
         responses=[
