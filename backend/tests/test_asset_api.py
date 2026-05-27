@@ -54,6 +54,23 @@ def _image_asset() -> Asset:
     )
 
 
+def _video_asset() -> Asset:
+    now = utc_now()
+    job_id = uuid4()
+    return Asset(
+        id=uuid4(),
+        job_id=job_id,
+        kind=AssetKind.VIDEO,
+        local_path=f"{job_id}/output.mp4",
+        mime="video/mp4",
+        size_bytes=456,
+        width=1280,
+        height=720,
+        duration_sec=4.0,
+        created_at=now,
+    )
+
+
 async def test_get_asset_returns_asset_dto_with_file_url():
     asset = _image_asset()
     session = FakeAssetSession(asset)
@@ -78,6 +95,30 @@ async def test_get_asset_returns_asset_dto_with_file_url():
     assert session.get_calls == [(Asset, asset.id)]
 
 
+async def test_get_asset_returns_video_metadata_with_file_url():
+    asset = _video_asset()
+    session = FakeAssetSession(asset)
+
+    response = await _get_asset(f"/api/assets/{asset.id}", session)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "id": str(asset.id),
+        "job_id": str(asset.job_id),
+        "kind": "video",
+        "local_path": asset.local_path,
+        "mime": "video/mp4",
+        "size_bytes": 456,
+        "width": 1280,
+        "height": 720,
+        "duration_sec": 4.0,
+        "created_at": asset.created_at.isoformat().replace("+00:00", "Z"),
+        "url": f"/files/{asset.local_path}",
+    }
+    assert session.get_calls == [(Asset, asset.id)]
+
+
 async def test_get_asset_returns_404_for_missing_asset():
     missing_asset_id = uuid4()
     session = FakeAssetSession(None)
@@ -87,3 +128,16 @@ async def test_get_asset_returns_404_for_missing_asset():
     assert response.status_code == 404
     assert response.json()["detail"] == "Asset was not found."
     assert session.get_calls == [(Asset, missing_asset_id)]
+
+
+async def test_get_asset_rejects_malformed_asset_id_before_db_lookup():
+    session = FakeAssetSession(None)
+
+    response = await _get_asset("/api/assets/not-a-uuid", session)
+
+    assert response.status_code == 422
+    assert any(
+        error["loc"][-1] == "asset_id"
+        for error in response.json()["detail"]
+    )
+    assert session.get_calls == []

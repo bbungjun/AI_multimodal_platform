@@ -751,3 +751,45 @@ pipeline child를 조회하는 조건과 stable ordering 계약을 자동 테스
   -> `8 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `128 passed`
+
+## Follow-up: asset API video DTO / validation tests restored
+
+2026-05-27 후속 작업에서 `GET /api/assets/{asset_id}`의 asset metadata DTO와
+path validation 계약을 조금 더 촘촘하게 고정했습니다. 원래 테스트 파일을
+byte-for-byte로 복구한 것은 아니고, README와 pre_context에 남아 있는 asset detail
+endpoint / I2V source preview 계약을 현재 `test_asset_api.py` 구조에 맞춰 복구한
+것입니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md:97`은 `GET /api/assets/{asset_id}`가 asset metadata와 `/files/...`
+  URL을 조회한다고 설명합니다.
+- `pre_context/summaries/09-summary.md:40`은 Asset detail endpoint가 추가됐고,
+  복구 시 job/asset metadata를 안전하게 반환하며 `/files` serving과 일관되는지
+  확인해야 한다고 정리합니다.
+- `pre_context/summaries/13-summary.md:29`는
+  `/generate?mode=i2v&source_asset_id=...` 진입 시 `getAsset(assetId)`로 source
+  asset을 조회한다고 기록합니다.
+- `memories/recovery/readme-contract-checklist.md:36`과 `:54`는 Generate/JobDetail
+  source preview가 `GET /api/assets/{source_asset_id}` / `useAsset` 경로를 사용한다고
+  기록합니다.
+
+복구한 계약:
+
+- video asset도 image asset과 동일하게 `id`, `job_id`, `kind`, `local_path`,
+  `mime`, `size_bytes`, `width`, `height`, `duration_sec`, `created_at`,
+  `/files/{local_path}` URL을 포함한 DTO로 반환됩니다.
+- malformed `asset_id` path 값은 FastAPI/Pydantic `422`로 거절되며 DB asset lookup을
+  실행하지 않습니다.
+- missing UUID 형태의 asset은 기존대로 DB lookup 후 `404 Asset was not found.`를
+  반환합니다.
+
+검증 결과:
+
+- mutation RED: `AssetResponse.url`에서 `/files/` prefix를 임시 제거하면
+  `test_get_asset_returns_video_metadata_with_file_url`이 실패함을 확인한 뒤
+  원복했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_asset_api.py -q`
+  -> `4 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `130 passed`
