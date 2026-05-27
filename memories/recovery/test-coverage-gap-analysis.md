@@ -568,3 +568,35 @@ readiness 분리 계약을 더 넓게 고정했습니다. 실제 DB 장애나 Ve
   -> `4 passed`
 
 다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리입니다.
+
+## Follow-up: delete storage mismatch edge tests restored
+
+2026-05-27 후속 작업에서 `DELETE /api/generations/{job_id}`의 storage/DB 불일치
+edge case를 자동 테스트로 고정했습니다. 원래 테스트 파일을 byte-for-byte로 되살린
+것은 아니고, pre_context에 남아 있는 원 제출 계약을 현재 `test_generation_api.py`
+구조에 맞춰 복구한 것입니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `pre_context/krafton_assignment_13.md`에는 deletion 중 missing asset file은
+  non-fatal로 처리하되 unsafe stored path는 reject한다는 계획이 남아 있습니다.
+- `pre_context/krafton_assignment_13.md`의 당시 변경 요약에는 safe asset file
+  deletion과 unsafe path backend coverage가 기록되어 있습니다.
+- `pre_context/krafton_assignment_14.md` fact-check에는 deletion이
+  `storage.delete_file(asset.local_path, missing_ok=True)`를 호출하고,
+  `StoragePathError`가 발생하면 HTTP 409를 반환하며 job을 삭제하지 않는다고
+  정리되어 있습니다.
+
+복구한 계약:
+
+- DB에는 asset row가 남아 있지만 실제 asset file/job directory가 없어도 terminal
+  job 삭제는 `204 No Content`로 완료되고 job row 삭제가 진행됩니다.
+- DB에 저장된 asset `local_path`가 unsafe하면 API는 `409 Conflict`를 반환하고,
+  job row 삭제와 commit을 수행하지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_generation_api.py -q`
+  -> `15 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `115 passed`

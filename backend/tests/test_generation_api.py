@@ -6,6 +6,7 @@ from uuid import uuid4
 import httpx
 
 from app.api import generations
+from app.config import Settings
 from app.main import app
 from app.models import (
     Asset,
@@ -16,6 +17,7 @@ from app.models import (
     PromptEnhancement,
     utc_now,
 )
+from app.services.vertex import storage as vertex_storage
 
 
 class FakeScalarsResult:
@@ -149,6 +151,10 @@ def _job_with_asset() -> Job:
         )
     ]
     return job
+
+
+def _settings_for_data_dir(tmp_path):
+    return Settings(data_dir=tmp_path)
 
 
 async def test_create_t2i_generation_persists_pending_job_without_vertex_call(monkeypatch):
@@ -370,6 +376,46 @@ async def test_delete_terminal_generation_removes_asset_and_job(monkeypatch):
     assert deleted_paths == [f"{job.id}/output.png"]
     assert session.deleted == [job]
     assert session.commit_count == 1
+
+
+async def test_delete_generation_tolerates_missing_asset_file(monkeypatch, tmp_path):
+    job = _job_with_asset()
+    session = FakeGenerationSession(jobs=[job], scalar_results=[[], []])
+    monkeypatch.setattr(
+        vertex_storage,
+        "get_settings",
+        lambda: _settings_for_data_dir(tmp_path),
+    )
+
+    response = await _delete_generation(f"/api/generations/{job.id}", session)
+
+    assert response.status_code == 204
+    assert session.deleted == [job]
+    assert session.commit_count == 1
+
+
+async def test_delete_generation_rejects_unsafe_asset_path_without_deleting_job(
+    monkeypatch,
+    tmp_path,
+):
+    job = _job_with_asset()
+    job.assets[0].local_path = f"{job.id}/../secret.txt"
+    session = FakeGenerationSession(jobs=[job], scalar_results=[[], []])
+    monkeypatch.setattr(
+        vertex_storage,
+        "get_settings",
+        lambda: _settings_for_data_dir(tmp_path),
+    )
+
+    response = await _delete_generation(f"/api/generations/{job.id}", session)
+
+    assert response.status_code == 409
+    assert (
+        response.json()["detail"]
+        == "Generation asset file path is unsafe; job was not deleted."
+    )
+    assert session.deleted == []
+    assert session.commit_count == 0
 
 
 async def test_delete_generation_rejects_non_terminal_job(monkeypatch):
