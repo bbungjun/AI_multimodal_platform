@@ -469,3 +469,32 @@ fake exception 객체만 사용했습니다.
 다음 비용 없는 후보는 state machine 전체 transition matrix, delete 중
 파일 누락/DB-파일 불일치 처리, job runner semaphore/concurrency, health DB
 down/provider down 조합, Prompt Enhancement fenced/긴 응답 명시 테스트입니다.
+
+## Follow-up: state machine transition matrix tests restored
+
+2026-05-27 후속 작업에서 state machine의 전체 transition matrix를 명시적인
+자동 테스트로 고정했습니다. production code 변경은 필요하지 않았고, 현재
+`app/state_machine.py` 구현이 README와 pre_context에 남아 있는 최종 제출 계약과
+일치함을 확인했습니다.
+
+복구한 계약:
+
+- `pending`은 `enhancing`, `queued`, `failed`, `cancelled`로만 이동합니다.
+- `enhancing`은 `queued`, `failed`, `cancelled`로만 이동합니다.
+- `queued`는 `generating`, `failed`, `cancelled`로만 이동합니다.
+- `generating`은 `polling`, `downloading`, `failed`, `cancelled`로만 이동합니다.
+- `polling`은 Veo polling heartbeat/resume을 위해 `polling` 자기 전이를
+  허용하고, `downloading`, `failed`, `cancelled`로 이동할 수 있습니다.
+- `downloading`은 `completed`, `failed`, `cancelled`로만 이동합니다.
+- `completed`, `failed`, `cancelled`는 terminal state로 모든 outgoing transition을
+  거절하며, 실패한 transition은 job state, `updated_at`, `state_history`를
+  변경하지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_state_machine.py -q`
+  -> `10 passed`
+
+다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리,
+job runner semaphore/concurrency, health DB down/provider down 조합,
+Prompt Enhancement fenced/긴 응답 명시 테스트입니다.

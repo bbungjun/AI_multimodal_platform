@@ -16,6 +16,46 @@ from app.state_machine import (
 )
 
 
+EXPECTED_TRANSITIONS: dict[JobState, set[JobState]] = {
+    JobState.PENDING: {
+        JobState.ENHANCING,
+        JobState.QUEUED,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.ENHANCING: {
+        JobState.QUEUED,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.QUEUED: {
+        JobState.GENERATING,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.GENERATING: {
+        JobState.POLLING,
+        JobState.DOWNLOADING,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.POLLING: {
+        JobState.POLLING,
+        JobState.DOWNLOADING,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.DOWNLOADING: {
+        JobState.COMPLETED,
+        JobState.FAILED,
+        JobState.CANCELLED,
+    },
+    JobState.COMPLETED: set(),
+    JobState.FAILED: set(),
+    JobState.CANCELLED: set(),
+}
+
+
 def _job(*, state: JobState = JobState.PENDING) -> Job:
     now = datetime(2026, 5, 26, 12, 0, tzinfo=timezone.utc)
     return Job(
@@ -106,3 +146,51 @@ def test_terminal_and_non_terminal_state_sets_are_partitioned():
     assert JobState.POLLING in NON_TERMINAL_STATES
     assert TERMINAL_STATES.isdisjoint(NON_TERMINAL_STATES)
     assert TERMINAL_STATES | NON_TERMINAL_STATES == set(JobState)
+
+
+def test_state_machine_allows_only_the_documented_transition_matrix():
+    assert set(EXPECTED_TRANSITIONS) == set(JobState)
+
+    for current_state in JobState:
+        for target_state in JobState:
+            assert can_transition(current_state, target_state) is (
+                target_state in EXPECTED_TRANSITIONS[current_state]
+            ), f"{current_state.value} -> {target_state.value}"
+
+
+@pytest.mark.parametrize("terminal_state", sorted(TERMINAL_STATES, key=lambda s: s.value))
+def test_terminal_states_reject_every_outgoing_transition_without_mutation(
+    terminal_state: JobState,
+):
+    job = _job(state=terminal_state)
+    job.state_history = [{"state": terminal_state.value, "at": "already"}]
+    updated_at = job.updated_at
+
+    for target_state in JobState:
+        with pytest.raises(InvalidTransitionError):
+            transition(job, target_state)
+
+        assert job.state == terminal_state
+        assert job.updated_at == updated_at
+        assert job.state_history == [{"state": terminal_state.value, "at": "already"}]
+
+
+def test_polling_can_record_a_polling_heartbeat_transition():
+    job = _job(state=JobState.POLLING)
+    changed_at = datetime(2026, 5, 26, 12, 10, tzinfo=timezone.utc)
+
+    transition(
+        job,
+        JobState.POLLING,
+        detail={"operation_name": "operations/demo"},
+        at=changed_at,
+    )
+
+    assert job.state == JobState.POLLING
+    assert job.state_history == [
+        {
+            "state": "polling",
+            "at": changed_at.isoformat(),
+            "detail": {"operation_name": "operations/demo"},
+        }
+    ]
