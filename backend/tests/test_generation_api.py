@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from uuid import uuid4
 
 import httpx
+import pytest
 
 from app.api import generations
 from app.config import Settings
@@ -42,6 +43,7 @@ class FakeGenerationSession:
         self.prompt_enhancement = prompt_enhancement
         self.jobs = jobs or []
         self.scalar_results = scalar_results
+        self.scalar_statements: list[object] = []
 
     def add(self, instance: object) -> None:
         self.added.append(instance)
@@ -64,7 +66,9 @@ class FakeGenerationSession:
             return next((job for job in self.jobs if job.id == entity_id), None)
         raise AssertionError("Unexpected row fetch during generation create")
 
-    async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
+    async def scalars(self, *args, **_kwargs) -> FakeScalarsResult:
+        if args:
+            self.scalar_statements.append(args[0])
         if self.scalar_results is not None:
             rows = self.scalar_results.pop(0) if self.scalar_results else []
             return FakeScalarsResult(rows)
@@ -147,6 +151,42 @@ def _job_with_asset() -> Job:
             size_bytes=12,
             width=512,
             height=512,
+            created_at=now,
+        )
+    ]
+    return job
+
+
+def _job_with_video_asset() -> Job:
+    now = utc_now()
+    job_id = uuid4()
+    asset_id = uuid4()
+    job = Job(
+        id=job_id,
+        mode=GenerationMode.T2V,
+        model="veo-3.0-fast-generate-001",
+        state=JobState.FAILED,
+        prompt="slow camera push toward the desk lamp",
+        blocked=False,
+        attempts=2,
+        parameters={"aspect_ratio": "16:9", "duration_sec": 8},
+        state_history=[{"state": "failed", "at": now.isoformat()}],
+        error={"message": "provider rejected request"},
+        vertex_charged=False,
+        created_at=now,
+        updated_at=now,
+    )
+    job.assets = [
+        Asset(
+            id=asset_id,
+            job_id=job_id,
+            kind=AssetKind.VIDEO,
+            local_path=f"{job_id}/output.mp4",
+            mime="video/mp4",
+            size_bytes=42,
+            width=1280,
+            height=720,
+            duration_sec=8.0,
             created_at=now,
         )
     ]
@@ -356,6 +396,72 @@ async def test_list_generations_returns_jobs_with_asset_dtos():
     assert len(body) == 1
     assert body[0]["id"] == str(job.id)
     assert body[0]["assets"][0]["url"] == f"/files/{job.id}/output.png"
+
+
+async def test_list_generations_applies_combined_filters_and_pagination():
+    job = _job_with_video_asset()
+    session = FakeGenerationSession(scalar_results=[[job]])
+
+    response = await _get_generations(
+        "/api/generations"
+        "?mode=t2v"
+        "&asset_kind=video"
+        "&model=veo-3.0-fast-generate-001"
+        "&state=failed"
+        "&limit=2"
+        "&offset=1",
+        session,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["mode"] == "t2v"
+    assert body[0]["state"] == "failed"
+    assert body[0]["model"] == "veo-3.0-fast-generate-001"
+    assert body[0]["assets"][0]["kind"] == "video"
+    assert body[0]["assets"][0]["url"] == f"/files/{job.id}/output.mp4"
+
+    assert len(session.scalar_statements) == 1
+    statement = session.scalar_statements[0]
+    compiled = statement.compile(compile_kwargs={"literal_binds": False})
+    sql = str(compiled)
+    assert "jobs.mode" in sql
+    assert "assets.kind" in sql
+    assert "jobs.model" in sql
+    assert "jobs.state" in sql
+    assert "ORDER BY jobs.created_at DESC" in sql
+    assert "LIMIT" in sql
+    assert "OFFSET" in sql
+    param_values = list(compiled.params.values())
+    assert GenerationMode.T2V in param_values
+    assert AssetKind.VIDEO in param_values
+    assert JobState.FAILED in param_values
+    assert "veo-3.0-fast-generate-001" in param_values
+    assert 2 in param_values
+    assert 1 in param_values
+
+
+@pytest.mark.parametrize(
+    ("query", "field"),
+    [
+        ("asset_kind=audio", "asset_kind"),
+        ("limit=0", "limit"),
+        ("limit=101", "limit"),
+        ("offset=-1", "offset"),
+    ],
+)
+async def test_list_generations_rejects_invalid_query_values_before_db(
+    query: str,
+    field: str,
+):
+    session = FakeGenerationSession()
+
+    response = await _get_generations(f"/api/generations?{query}", session)
+
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == field for error in response.json()["detail"])
+    assert session.scalar_statements == []
 
 
 async def test_delete_terminal_generation_removes_asset_and_job(monkeypatch):
