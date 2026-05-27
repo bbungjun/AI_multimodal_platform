@@ -954,3 +954,41 @@ job에 연결"되는 계약을 현재 `test_generation_api.py` 구조에 맞춰 
   -> `32 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `149 passed`
+
+## Follow-up: ERD SQLAlchemy relationship contract tests restored
+
+2026-05-27 후속 작업에서 ERD 설명에 필요한 SQLAlchemy model-level FK와
+relationship 계약을 자동 테스트로 고정했습니다. 새 기능 개발이 아니라
+`README.md`, ERD 설명 노트, 현재 `backend/app/models.py`에 남아 있는 관계를
+검증 가능하게 만든 것입니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md`는 PostgreSQL tables를 `jobs`, `assets`, `prompt_enhancements`로
+  설명하고, asset metadata는 DB에 저장하고 bytes는 local `DATA_DIR`에 둔다고
+  설명합니다.
+- `memories/recovery/erd-explanation-note.md`는
+  `PromptEnhancement -> Job`, `Job -> Asset`, `Job -> Job`,
+  `Asset -> Job` 관계를 ERD 설명 핵심으로 정리합니다.
+- 현재 `backend/app/models.py`는 optional linkage는 `SET NULL`, job 소유 asset은
+  `CASCADE`/`delete-orphan`으로 표현합니다.
+
+복구한 계약:
+
+- `jobs.enhancement_id`, `jobs.parent_job_id`, `jobs.source_asset_id`는 nullable
+  optional FK이며 삭제 시 `SET NULL`로 detach됩니다.
+- `assets.job_id`는 nullable이 아닌 owned FK이며 job 삭제 시 `CASCADE`됩니다.
+- `Job.assets` relationship은 generated asset row를 소유하고
+  `delete-orphan` cascade를 유지합니다.
+- `Job.enhancement`와 `PromptEnhancement.jobs`는 optional accepted draft linkage의
+  양방향 relationship입니다.
+
+검증 결과:
+
+- mutation RED: `jobs.source_asset_id`의 `ondelete`를 임시로 `CASCADE`로 바꾸면
+  `test_job_optional_foreign_keys_detach_on_parent_deletion`이 실패함을 확인하고
+  되돌렸습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_model_relationships.py -q`
+  -> `4 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `153 passed`
