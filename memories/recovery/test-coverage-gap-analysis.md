@@ -498,3 +498,27 @@ down/provider down 조합, Prompt Enhancement fenced/긴 응답 명시 테스트
 다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리,
 job runner semaphore/concurrency, health DB down/provider down 조합,
 Prompt Enhancement fenced/긴 응답 명시 테스트입니다.
+
+## Follow-up: job runner semaphore/concurrency tests restored
+
+2026-05-27 후속 작업에서 FastAPI in-process job runner의 concurrency 계약을
+자동 테스트로 고정했습니다. production code 변경은 필요하지 않았고, 실제
+Vertex/Gemini/Imagen/Veo 호출 없이 fake handler와 fake session만 사용했습니다.
+
+복구한 계약:
+
+- `poll_once()`는 이미 실행 중인 handler task가 concurrency slot을 모두 점유하고
+  있으면 추가 pending job을 조회/claim하지 않습니다.
+- concurrency가 1인 상태에서 첫 번째 job handler가 진행 중이면 두 번째 pending
+  job은 `pending` 상태로 남습니다.
+- `_run_job()`은 직접 여러 task로 호출되어도 `asyncio.Semaphore`를 통해 실제
+  handler 동시 실행 수를 설정값 이하로 제한합니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_job_runner.py -q`
+  -> `7 passed`
+
+다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리,
+health DB down/provider down 조합, Prompt Enhancement fenced/긴 응답 명시
+테스트입니다.

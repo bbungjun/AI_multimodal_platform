@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from uuid import uuid4
 
@@ -115,6 +116,71 @@ async def test_poll_once_queues_pending_jobs_and_runs_handler():
     assert job.state_history[-1]["detail"] == {"runner": "in-process"}
     assert session.begin_count == 1
     assert session.end_count == 1
+
+
+async def test_poll_once_does_not_claim_more_jobs_when_slots_are_full():
+    first_job = _job()
+    second_job = _job()
+    session = FakeRunnerSession([[first_job], [second_job]], [first_job, second_job])
+    handler_started = asyncio.Event()
+    release_handler = asyncio.Event()
+    handled: list[object] = []
+
+    async def handle(job_id: object) -> None:
+        handled.append(job_id)
+        handler_started.set()
+        await release_handler.wait()
+
+    job_runner = runner.InProcessJobRunner(
+        session_factory=lambda: session,
+        handler=handle,
+        concurrency=1,
+        poll_interval=0,
+        shutdown_timeout=0.1,
+    )
+
+    first_picked_count = await job_runner.poll_once()
+    await asyncio.wait_for(handler_started.wait(), timeout=1)
+    second_picked_count = await job_runner.poll_once()
+
+    release_handler.set()
+    await job_runner.wait_for_idle(timeout=1)
+
+    assert first_picked_count == 1
+    assert second_picked_count == 0
+    assert handled == [first_job.id]
+    assert first_job.state == JobState.QUEUED
+    assert second_job.state == JobState.PENDING
+    assert len(session.statements) == 1
+
+
+async def test_run_job_semaphore_caps_concurrent_handlers():
+    jobs = [_job(state=JobState.QUEUED) for _ in range(3)]
+    session = FakeRunnerSession([], jobs)
+    active_count = 0
+    max_active_count = 0
+
+    async def handle(_job_id: object) -> None:
+        nonlocal active_count, max_active_count
+        active_count += 1
+        max_active_count = max(max_active_count, active_count)
+        try:
+            await asyncio.sleep(0)
+        finally:
+            active_count -= 1
+
+    job_runner = runner.InProcessJobRunner(
+        session_factory=lambda: session,
+        handler=handle,
+        concurrency=2,
+        poll_interval=0,
+        shutdown_timeout=0.1,
+    )
+
+    await asyncio.gather(*(job_runner._run_job(job.id) for job in jobs))
+
+    assert max_active_count == 2
+    assert active_count == 0
 
 
 async def test_handler_failure_marks_job_failed_without_leaking_exception():
