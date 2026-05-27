@@ -712,3 +712,42 @@ README와 pre_context에 남아 있는 최종 제출 계약을 현재 `test_gene
   -> `20 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `126 passed`
+
+## Follow-up: pipeline read child lookup/order tests restored
+
+2026-05-27 후속 작업에서 `GET /api/pipelines/{parent_job_id}` read API가
+pipeline child를 조회하는 조건과 stable ordering 계약을 자동 테스트로 고정했습니다.
+새 기능 개발이 아니라 Phase 10 pipeline read contract와 현재 구현의 정합성을
+테스트로 복구한 것입니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md:96`은 `GET /api/pipelines/{parent_job_id}`가 pipeline parent와
+  연결된 I2V child job의 진행 상태를 조회한다고 설명합니다.
+- `memories/phase/phase10.md:23`은 해당 endpoint가 `{id, parent, child}`를
+  반환한다고 정리합니다.
+- `memories/phase/phase10.md:60`은 어떤 이유로든 child가 여러 개 있으면
+  가장 먼저 생성된 child를 반환하고 fan-out 지원은 Phase 10 범위에서 제외한다고
+  명시합니다.
+- `pre_context/summaries/09-summary.md:29-31`은 pipeline live QA 중
+  `child.parent_job_id`, `source_asset_id`, `/api/pipelines/{parent}` 조회가
+  함께 살아 있어야 pipeline 복구가 맞다는 단서를 남깁니다.
+
+복구한 계약:
+
+- pipeline detail read는 먼저 parent job을 UUID로 조회합니다.
+- child lookup query는 `parent_job_id`와 `mode=i2v` 조건을 함께 사용합니다.
+- child lookup query는 `created_at`, `id` 순서로 정렬해 여러 child row가 있을 때
+  stable하게 첫 번째 child를 선택합니다.
+- malformed `parent_job_id` path 값은 FastAPI/Pydantic `422`로 거절되며 DB
+  parent lookup이나 child scalar query를 실행하지 않습니다.
+
+검증 결과:
+
+- mutation RED: `_get_pipeline_child`의 `ORDER BY jobs.id`를 임시 제거하면
+  `test_get_pipeline_queries_i2v_child_by_parent_with_stable_ordering`이 실패함을
+  확인한 뒤 원복했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_pipeline_api.py -q`
+  -> `8 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `128 passed`

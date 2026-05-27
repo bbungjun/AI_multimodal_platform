@@ -29,6 +29,8 @@ class FakePipelineSession:
         self.commit_count = 0
         self.jobs = {job.id: job for job in jobs or []}
         self.child_rows = child_rows or []
+        self.get_calls: list[tuple[object, UUID]] = []
+        self.scalar_statements: list[object] = []
 
     def add_all(self, instances: list[Job]) -> None:
         self.added.extend(instances)
@@ -38,11 +40,14 @@ class FakePipelineSession:
         self.commit_count += 1
 
     async def get(self, model, entity_id: UUID, **_kwargs) -> Job | None:
+        self.get_calls.append((model, entity_id))
         if model is Job:
             return self.jobs.get(entity_id)
         raise AssertionError("Unexpected model lookup in pipeline test")
 
-    async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
+    async def scalars(self, *args, **_kwargs) -> FakeScalarsResult:
+        if args:
+            self.scalar_statements.append(args[0])
         return FakeScalarsResult(self.child_rows)
 
 
@@ -218,6 +223,50 @@ async def test_get_pipeline_returns_parent_and_child_with_assets():
     assert body["child"]["parent_job_id"] == str(parent.id)
     assert body["child"]["source_asset_id"] == str(parent.assets[0].id)
     assert body["child"]["blocked"] is False
+
+
+async def test_get_pipeline_queries_i2v_child_by_parent_with_stable_ordering():
+    parent = _parent_with_asset()
+    child = _job(
+        mode=GenerationMode.I2V,
+        model="veo-3.0-fast-generate-001",
+        prompt="slow camera push toward the desk lamp",
+        blocked=True,
+        parent_job_id=parent.id,
+    )
+    session = FakePipelineSession(jobs=[parent], child_rows=[child])
+
+    response = await _get_pipeline(f"/api/pipelines/{parent.id}", session)
+
+    assert response.status_code == 200
+    assert response.json()["child"]["id"] == str(child.id)
+    assert session.get_calls == [(Job, parent.id)]
+    assert len(session.scalar_statements) == 1
+
+    compiled = session.scalar_statements[0].compile(
+        compile_kwargs={"literal_binds": False},
+    )
+    sql = str(compiled)
+    assert "jobs.parent_job_id" in sql
+    assert "jobs.mode" in sql
+    assert "ORDER BY jobs.created_at, jobs.id" in sql
+    param_values = list(compiled.params.values())
+    assert parent.id in param_values
+    assert GenerationMode.I2V in param_values
+
+
+async def test_get_pipeline_rejects_invalid_parent_id_before_db_lookup():
+    session = FakePipelineSession()
+
+    response = await _get_pipeline("/api/pipelines/not-a-uuid", session)
+
+    assert response.status_code == 422
+    assert any(
+        error["loc"][-1] == "parent_job_id"
+        for error in response.json()["detail"]
+    )
+    assert session.get_calls == []
+    assert session.scalar_statements == []
 
 
 async def test_get_pipeline_returns_404_for_missing_parent():
