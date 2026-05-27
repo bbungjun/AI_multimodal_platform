@@ -434,3 +434,38 @@ T2I multi-image handoff, Pipeline 흐름을 비용 없이 확인하는 수동 br
 같은 세션에서 cancel endpoint도 추가 확인했으며, 최종 제출 범위에서는
 user-facing cancel API/UI가 아니라 `cancelled` terminal state만 유지하는 것으로
 정리했습니다.
+
+## Follow-up: Vertex auth/permission/quota/transient error mapping restored
+
+2026-05-27 후속 작업에서 Vertex/Gemini provider exception을 public error code로
+분류하는 범위를 보강했습니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 하지 않았고,
+fake exception 객체만 사용했습니다.
+
+복구한 계약:
+
+- HTTP `401` 또는 Google RPC `UNAUTHENTICATED`/code `16`은
+  `vertex_authentication_failed`로 분류합니다.
+- HTTP `403` 또는 Google RPC `PERMISSION_DENIED`/code `7`은
+  `vertex_permission_denied`로 분류합니다.
+- HTTP `429` 또는 Google RPC `RESOURCE_EXHAUSTED`/code `8`은
+  retryable `vertex_rate_limited`로 분류합니다.
+- HTTP `408/5xx` 또는 Google RPC `DEADLINE_EXCEEDED`, `INTERNAL`,
+  `UNAVAILABLE`/code `4/13/14`는 retryable `vertex_transient_error`로
+  분류합니다.
+- Google RPC `INVALID_ARGUMENT`/code `3` 같은 request invalid 계열은
+  `vertex_request_invalid`로 분류합니다.
+- raw provider message, credential path, service-account filename은 public
+  error message에 노출하지 않습니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_vertex_errors.py -q`
+  -> `3 passed`
+- `AI_PROVIDER=mock python -m pytest tests/test_vertex_errors.py tests/test_vertex_imagen.py tests/test_vertex_veo.py tests/test_prompt_enhancer.py -q`
+  -> `18 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `101 passed`
+
+다음 비용 없는 후보는 state machine 전체 transition matrix, delete 중
+파일 누락/DB-파일 불일치 처리, job runner semaphore/concurrency, health DB
+down/provider down 조합, Prompt Enhancement fenced/긴 응답 명시 테스트입니다.

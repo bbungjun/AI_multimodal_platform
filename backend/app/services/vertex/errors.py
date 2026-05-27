@@ -57,15 +57,29 @@ class VertexRateLimitedError(VertexServiceError):
     retryable = True
 
 
+class VertexAuthenticationFailedError(VertexServiceError):
+    code = "vertex_authentication_failed"
+    public_message = "Vertex AI authentication failed."
+
+
+class VertexPermissionDeniedError(VertexServiceError):
+    code = "vertex_permission_denied"
+    public_message = "Vertex AI permission denied."
+
+
 class VertexTransientError(VertexServiceError):
     code = "vertex_transient_error"
     public_message = "Vertex AI service was temporarily unavailable."
     retryable = True
 
 
-class VertexRequestError(VertexServiceError):
-    code = "vertex_request_error"
+class VertexRequestInvalidError(VertexServiceError):
+    code = "vertex_request_invalid"
     public_message = "Vertex AI rejected the request."
+
+
+class VertexRequestError(VertexRequestInvalidError):
+    pass
 
 
 class VertexOperationFailedError(VertexServiceError):
@@ -93,12 +107,26 @@ def map_vertex_error(exc: Exception) -> VertexServiceError:
         return exc
 
     status_code = _extract_status_code(exc)
-    if status_code == 429:
+    status_name = _extract_status_name(exc)
+    if status_code in {401, 16} or status_name in {
+        "UNAUTHENTICATED",
+        "AUTHENTICATION_FAILED",
+    }:
+        return VertexAuthenticationFailedError(status_code=status_code)
+    if status_code in {403, 7} or status_name == "PERMISSION_DENIED":
+        return VertexPermissionDeniedError(status_code=status_code)
+    if status_code in {429, 8} or status_name == "RESOURCE_EXHAUSTED":
         return VertexRateLimitedError(status_code=status_code)
-    if status_code in {408, 500, 502, 503, 504}:
+    if status_code in {408, 500, 502, 503, 504, 4, 13, 14} or status_name in {
+        "DEADLINE_EXCEEDED",
+        "INTERNAL",
+        "UNAVAILABLE",
+    }:
         return VertexTransientError(status_code=status_code)
     if status_code is not None:
-        return VertexRequestError(status_code=status_code)
+        return VertexRequestInvalidError(status_code=status_code)
+    if status_name in {"INVALID_ARGUMENT", "FAILED_PRECONDITION", "OUT_OF_RANGE"}:
+        return VertexRequestInvalidError(status_code=status_code)
 
     return VertexUnknownError()
 
@@ -121,3 +149,28 @@ def _extract_status_code(exc: Exception) -> int | None:
             return value
 
     return None
+
+
+def _extract_status_name(exc: Exception) -> str | None:
+    for attr in ("status", "code"):
+        value = getattr(exc, attr, None)
+        status_name = _normalize_status_name(value)
+        if status_name is not None:
+            return status_name
+
+    error = getattr(exc, "error", None)
+    if isinstance(error, dict):
+        for key in ("status", "code"):
+            status_name = _normalize_status_name(error.get(key))
+            if status_name is not None:
+                return status_name
+
+    return None
+
+
+def _normalize_status_name(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+
+    status_name = value.strip().upper().replace("-", "_").replace(" ", "_")
+    return status_name or None
