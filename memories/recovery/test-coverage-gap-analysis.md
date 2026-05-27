@@ -547,3 +547,24 @@ fake Gemini response 객체만 사용했습니다.
 
 다음 비용 없는 후보는 health DB down/provider down 조합, delete 중
 파일 누락/DB-파일 불일치 처리입니다.
+
+## Follow-up: health DB/provider readiness matrix tests restored
+
+2026-05-27 후속 작업에서 `/api/health`의 DB readiness와 Vertex provider
+readiness 분리 계약을 더 넓게 고정했습니다. 실제 DB 장애나 Vertex 호출은 만들지
+않고, `check_db_connection`과 `get_vertex_readiness`만 fake로 대체했습니다.
+
+복구한 계약:
+
+- health endpoint 자체는 readiness가 false여도 HTTP `200 OK`로 응답합니다.
+- DB가 down이면 provider가 ready여도 `ok=false`, `ready=false`, `db=down`입니다.
+- DB와 provider가 모두 down이면 `ok=false`, `ready=false`, `db=down`이고
+  provider readiness detail은 그대로 응답에 포함됩니다.
+- 전체 `ready`는 `db_up and vertex.ready`이며, `ok`는 DB 연결 상태를 따릅니다.
+
+검증 결과:
+
+- `AI_PROVIDER=mock python -m pytest tests/test_health.py -q`
+  -> `4 passed`
+
+다음 비용 없는 후보는 delete 중 파일 누락/DB-파일 불일치 처리입니다.

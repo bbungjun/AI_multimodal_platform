@@ -13,6 +13,20 @@ async def _db_up() -> bool:
     return True
 
 
+async def _db_down() -> bool:
+    return False
+
+
+def _vertex_ready() -> VertexReadiness:
+    return VertexReadiness(
+        ready=True,
+        status="ready",
+        credentials="available",
+        project="configured",
+        location="us-central1",
+    )
+
+
 def _vertex_not_ready() -> VertexReadiness:
     return VertexReadiness(
         ready=False,
@@ -62,3 +76,39 @@ async def test_health_reports_mock_provider_without_credentials(monkeypatch):
     assert body["ready"] is True
     assert body["vertex"]["status"] == "mock_provider"
     assert body["vertex"]["credentials"] == "not_required"
+
+
+async def test_health_reports_not_ready_when_db_is_down_even_if_vertex_ready(
+    monkeypatch,
+):
+    monkeypatch.setattr(health_api, "check_db_connection", _db_down)
+    monkeypatch.setattr(health_api, "get_vertex_readiness", _vertex_ready)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/health")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert body["ready"] is False
+    assert body["db"] == "down"
+    assert body["vertex"]["ready"] is True
+    assert body["vertex"]["status"] == "ready"
+
+
+async def test_health_reports_not_ready_when_db_and_vertex_are_down(monkeypatch):
+    monkeypatch.setattr(health_api, "check_db_connection", _db_down)
+    monkeypatch.setattr(health_api, "get_vertex_readiness", _vertex_not_ready)
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/health")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert body["ready"] is False
+    assert body["db"] == "down"
+    assert body["vertex"]["ready"] is False
+    assert body["vertex"]["status"] == "vertex_credentials_missing"
