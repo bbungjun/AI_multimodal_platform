@@ -872,3 +872,43 @@ payload 예시와 현재 `PipelineCreateRequest` schema에 남아 있는 제출 
   -> `15 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `145 passed`
+
+## Follow-up: delete source asset dependency guard restored
+
+2026-05-27 후속 작업에서 `DELETE /api/generations/{job_id}`가 target job의
+asset을 `source_asset_id`로 참조하는 active dependent job을 보호하는 계약을
+자동 테스트로 고정했습니다. 기존 missing file/unsafe path 테스트를 중복한 것이
+아니라, ERD에서 `assets.id -> jobs.source_asset_id` 관계를 설명할 때 필요한
+active dependency 보호를 더 명시적으로 복구한 것입니다. 실제
+Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md:81`과 `README.md:94`는 terminal job deletion을 지원하되 active
+  dependent job이 있으면 삭제를 거절한다고 설명합니다.
+- `README.md:50`은 parent T2I image asset이 child I2V의 `source_asset_id`로
+  연결된다고 설명합니다.
+- `pre_context/summaries/13-summary.md:53-54`는 terminal dependent는
+  `parent_job_id`/`source_asset_id`를 detach하고, active dependent가 있으면
+  삭제를 차단한다고 정리합니다.
+- `pre_context/krafton_assignment_14.md:2987-2995`는 deletion이
+  `parent_job_id` 참조와 asset ids를 사용하는 `source_asset_id` 참조를 모두
+  찾고, non-terminal reference가 있으면 409로 막는다고 fact-check합니다.
+
+복구한 계약:
+
+- target job의 asset을 active I2V job이 `source_asset_id`로 참조하고 있으면,
+  target job이 terminal이어도 삭제는 `409 Conflict`로 거절됩니다.
+- 이 경우 asset file 삭제, job row 삭제, commit, dependent reference detach를
+  수행하지 않습니다.
+- `parent_job_id` 없이 `source_asset_id`만 남은 dependent도 보호 대상입니다.
+
+검증 결과:
+
+- mutation RED: `_jobs_referencing_job`에서 `source_asset_id` reference 조회를
+  임시 제거하면 `test_delete_generation_rejects_active_source_asset_dependent_job`가
+  `204 != 409`로 실패함을 확인하고 되돌렸습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_generation_api.py -q`
+  -> `29 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `146 passed`

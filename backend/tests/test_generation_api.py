@@ -689,6 +689,39 @@ async def test_delete_generation_rejects_active_dependent_job(monkeypatch):
     assert session.commit_count == 0
 
 
+async def test_delete_generation_rejects_active_source_asset_dependent_job(
+    monkeypatch,
+):
+    parent = _job_with_asset()
+    child = _job_with_asset()
+    child.mode = GenerationMode.I2V
+    child.model = "veo-3.0-fast-generate-001"
+    child.state = JobState.PENDING
+    child.parent_job_id = None
+    child.source_asset_id = parent.assets[0].id
+    child.assets = []
+    session = FakeGenerationSession(jobs=[parent], scalar_results=[[], [child]])
+    deleted_paths: list[str] = []
+
+    monkeypatch.setattr(
+        generations.storage,
+        "delete_file",
+        lambda local_path, *, missing_ok: deleted_paths.append(local_path),
+    )
+
+    response = await _delete_generation(f"/api/generations/{parent.id}", session)
+
+    assert response.status_code == 409
+    assert (
+        response.json()["detail"]
+        == "Jobs with active dependent jobs cannot be deleted from History."
+    )
+    assert deleted_paths == []
+    assert child.source_asset_id == parent.assets[0].id
+    assert session.deleted == []
+    assert session.commit_count == 0
+
+
 async def test_delete_generation_detaches_terminal_dependent_job(monkeypatch):
     parent = _job_with_asset()
     child = _job_with_asset()
