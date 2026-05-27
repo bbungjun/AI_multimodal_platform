@@ -793,3 +793,43 @@ endpoint / I2V source preview 계약을 현재 `test_asset_api.py` 구조에 맞
   -> `4 passed`
 - `AI_PROVIDER=mock python -m pytest`
   -> `130 passed`
+
+## Follow-up: generation option validation boundary tests restored
+
+2026-05-27 후속 작업에서 `POST /api/generations` request option validation 경계값을
+자동 테스트로 고정했습니다. 새 기능 개발이 아니라 README에 남아 있는 generation
+option contract와 현재 Pydantic schema의 제출 복구 상태를 테스트로 묶은 것입니다.
+실제 Vertex/Gemini/Imagen/Veo 호출은 없습니다.
+
+복구 근거:
+
+- `README.md:73`은 생성 옵션으로 image aspect ratio, image count, video duration,
+  I2V source image 연결을 지원한다고 설명합니다.
+- `README.md:124-137`은 T2I 예시에서 `aspect_ratio`, `number_of_images`를,
+  T2V 예시에서 `aspect_ratio`, `duration_sec`를 request shape로 보여줍니다.
+- `memories/recovery/readme-contract-checklist.md:32`는 생성 옵션이 Pydantic request
+  schema, Generate 화면 옵션, pipeline payload, source asset 검증으로 확인됐다고
+  기록합니다.
+- `memories/recovery/frontend-browser-smoke-runbook.md:162-175`는
+  `number_of_images=4` T2I mock smoke와 4개 image card 표시를 복구 절차로 남깁니다.
+- 현재 `backend/app/schemas.py`는 generation request option을
+  `number_of_images=1..4`, `duration_sec=1..8`, `aspect_ratio` 길이 `3..16`으로
+  제한합니다.
+
+복구한 계약:
+
+- T2I `number_of_images=4`는 유효한 상한값이며 job parameters에 보존됩니다.
+- T2V `duration_sec=8`은 유효한 상한값이며 job parameters에 보존됩니다.
+- T2I `number_of_images=0` 또는 `5`는 `422`로 거절되며 job row를 만들지 않습니다.
+- T2V `duration_sec=0` 또는 `9`는 `422`로 거절되며 job row를 만들지 않습니다.
+- 너무 짧거나 너무 긴 `aspect_ratio`는 `422`로 거절되며 job row를 만들지 않습니다.
+
+검증 결과:
+
+- mutation RED: `T2IRequest.number_of_images` 상한을 임시로 `3`으로 낮추면
+  `test_create_t2i_generation_accepts_max_image_count_boundary`가 실패함을 확인한 뒤
+  원복했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_generation_api.py -q`
+  -> `28 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `138 passed`

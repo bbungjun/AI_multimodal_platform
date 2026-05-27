@@ -44,6 +44,7 @@ class FakeGenerationSession:
         self.jobs = jobs or []
         self.scalar_results = scalar_results
         self.scalar_statements: list[object] = []
+        self.get_calls: list[tuple[object, object]] = []
 
     def add(self, instance: object) -> None:
         self.added.append(instance)
@@ -55,6 +56,7 @@ class FakeGenerationSession:
         self.commit_count += 1
 
     async def get(self, model, entity_id, **_kwargs):
+        self.get_calls.append((model, entity_id))
         if model is PromptEnhancement:
             return (
                 self.prompt_enhancement
@@ -235,6 +237,122 @@ async def test_create_t2i_generation_persists_pending_job_without_vertex_call(mo
     assert job.mode == GenerationMode.T2I
     assert job.state == JobState.PENDING
     assert job.blocked is False
+
+
+async def test_create_t2i_generation_accepts_max_image_count_boundary():
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "a four panel image set",
+            "model": "imagen-4.0-fast-generate-001",
+            "aspect_ratio": "1:1",
+            "number_of_images": 4,
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    assert session.commit_count == 1
+    job = session.added[0]
+    assert isinstance(job, Job)
+    assert job.parameters == {"aspect_ratio": "1:1", "number_of_images": 4}
+
+
+async def test_create_t2v_generation_accepts_max_duration_boundary():
+    session = FakeGenerationSession()
+
+    response = await _post_generation(
+        {
+            "mode": "t2v",
+            "prompt": "slow camera push toward the desk lamp",
+            "model": "veo-3.0-fast-generate-001",
+            "aspect_ratio": "16:9",
+            "duration_sec": 8,
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    assert session.commit_count == 1
+    job = session.added[0]
+    assert isinstance(job, Job)
+    assert job.parameters == {"aspect_ratio": "16:9", "duration_sec": 8}
+
+
+@pytest.mark.parametrize(
+    ("payload", "field"),
+    [
+        (
+            {
+                "mode": "t2i",
+                "prompt": "invalid image count",
+                "model": "imagen-4.0-fast-generate-001",
+                "number_of_images": 0,
+            },
+            "number_of_images",
+        ),
+        (
+            {
+                "mode": "t2i",
+                "prompt": "invalid image count",
+                "model": "imagen-4.0-fast-generate-001",
+                "number_of_images": 5,
+            },
+            "number_of_images",
+        ),
+        (
+            {
+                "mode": "t2v",
+                "prompt": "invalid duration",
+                "model": "veo-3.0-fast-generate-001",
+                "duration_sec": 0,
+            },
+            "duration_sec",
+        ),
+        (
+            {
+                "mode": "t2v",
+                "prompt": "invalid duration",
+                "model": "veo-3.0-fast-generate-001",
+                "duration_sec": 9,
+            },
+            "duration_sec",
+        ),
+        (
+            {
+                "mode": "t2i",
+                "prompt": "invalid aspect ratio",
+                "model": "imagen-4.0-fast-generate-001",
+                "aspect_ratio": "x",
+            },
+            "aspect_ratio",
+        ),
+        (
+            {
+                "mode": "t2v",
+                "prompt": "invalid aspect ratio",
+                "model": "veo-3.0-fast-generate-001",
+                "aspect_ratio": "12345678901234567",
+            },
+            "aspect_ratio",
+        ),
+    ],
+)
+async def test_create_generation_rejects_invalid_option_values_before_job_creation(
+    payload: dict,
+    field: str,
+):
+    session = FakeGenerationSession()
+
+    response = await _post_generation(payload, session)
+
+    assert response.status_code == 422
+    assert any(error["loc"][-1] == field for error in response.json()["detail"])
+    assert session.added == []
+    assert session.commit_count == 0
+    assert session.get_calls == []
 
 
 async def test_create_generation_rejects_auto_enhance_before_creating_job():
