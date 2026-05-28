@@ -1055,3 +1055,42 @@ header detail 계약을 조금 더 촘촘하게 고정했습니다. 실제 Verte
   `swept_count=1`로 실패 처리했습니다.
 - `AI_PROVIDER=mock python -m pytest tests/test_job_runner.py::test_sweep_orphans_preserves_resumable_polling_jobs -q`
   -> `1 passed`
+
+## Follow-up: job runner startup sweep/resume ordering test restored
+
+2026-05-28 후속 작업에서 `InProcessJobRunner.run_forever()`의 startup 순서
+계약을 테스트로 고정했습니다. 새 기능 개발이 아니라 README와 recovery 문서에 남아
+있는 runner 재시작 복구 설명을 현재 코드에 묶어 둔 것입니다. 실제
+Vertex/Gemini/Imagen/Veo 호출은 수행하지 않았고 fake runner subclass만 사용했습니다.
+
+복구 근거:
+
+- `README.md`는 runner 시작 시 오래된 non-terminal job을 1회 recovery sweep으로
+  정리하되, `polling` + `vertex_operation_name` job은 재개 가능하므로 제외한다고
+  설명합니다.
+- `pre_context/summaries/05-summary.md`는 Phase 8 후반 핵심으로 T2V/I2V resume과
+  runner startup orphan sweep을 함께 정리하고, resumable polling job을 resume task로
+  스케줄하는 흐름을 강조합니다.
+- `memories/phase/phase6.md`는 `run_forever()`가 startup 시 orphan sweep을 먼저
+  시도한다고 기록합니다.
+
+복구한 계약:
+
+- `run_forever()`는 startup에서 `sweep_orphans()`를 먼저 호출합니다.
+- 그 다음 `resume_polling_jobs()`를 호출해 저장된 operation name을 가진 Veo polling
+  job을 재개 대상으로 스케줄합니다.
+- 이후 일반 pending job poll loop로 들어갑니다.
+
+검증 결과:
+
+- mutation RED: `run_forever()`에서 `resume_polling_jobs()`를 `sweep_orphans()`보다
+  먼저 호출하도록 임시로 뒤집으면
+  `test_run_forever_sweeps_orphans_before_resuming_polling_jobs`가
+  `['resume', 'sweep', 'poll'] != ['sweep', 'resume', 'poll']`로 실패함을 확인하고
+  원복했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_job_runner.py::test_run_forever_sweeps_orphans_before_resuming_polling_jobs -q`
+  -> `1 passed`
+- `AI_PROVIDER=mock python -m pytest tests/test_job_runner.py -q`
+  -> `9 passed`
+- `AI_PROVIDER=mock python -m pytest`
+  -> `156 passed`

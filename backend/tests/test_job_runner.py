@@ -240,6 +240,38 @@ async def test_resume_polling_jobs_reschedules_jobs_with_vertex_operation():
     assert session.end_count == 1
 
 
+async def test_run_forever_sweeps_orphans_before_resuming_polling_jobs():
+    class RecordingRunner(runner.InProcessJobRunner):
+        def __init__(self) -> None:
+            super().__init__(
+                session_factory=lambda: FakeRunnerSession([], []),
+                handler=lambda _job_id: asyncio.sleep(0),
+                concurrency=1,
+                poll_interval=0,
+                shutdown_timeout=0.1,
+            )
+            self.calls: list[str] = []
+
+        async def sweep_orphans(self) -> int:
+            self.calls.append("sweep")
+            return 0
+
+        async def resume_polling_jobs(self) -> int:
+            self.calls.append("resume")
+            return 0
+
+        async def poll_once(self) -> int:
+            self.calls.append("poll")
+            self._stopping = True
+            return 0
+
+    job_runner = RecordingRunner()
+
+    await job_runner.run_forever()
+
+    assert job_runner.calls == ["sweep", "resume", "poll"]
+
+
 async def test_sweep_orphans_marks_stale_non_terminal_jobs_failed():
     job = _job(state=JobState.GENERATING)
     session = FakeRunnerSession([[job]], [job])
