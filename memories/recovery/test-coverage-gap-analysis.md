@@ -1023,3 +1023,35 @@ header detail 계약을 조금 더 촘촘하게 고정했습니다. 실제 Verte
   `test_files_route_returns_416_for_unsatisfiable_byte_range`가 실패함을 확인했습니다.
 - `AI_PROVIDER=mock python -m pytest tests/test_storage.py -q`
   -> `11 passed`
+
+## Follow-up: job runner orphan sweep polling resume guard restored
+
+2026-05-28 후속 작업에서 FastAPI in-process job runner의 startup recovery edge를
+보강했습니다. 실제 Vertex/Gemini/Imagen/Veo 호출은 없고 fake session/job 객체만
+사용했습니다.
+
+복구 근거:
+
+- `README.md`는 runner 시작 시 오래된 non-terminal job을 `failed`로 정리하되,
+  `polling` 상태이면서 `vertex_operation_name`이 있는 Veo job은 저장된 operation
+  name으로 polling을 재개할 수 있어 sweep 대상에서 제외한다고 설명합니다.
+- `pre_context/summaries/05-summary.md`는 Phase 8 후반 핵심으로 T2V/I2V resume과
+  runner startup orphan sweep을 함께 정리하고, `polling + vertex_operation_name`
+  job을 resume task로 스케줄하는 흐름을 강조합니다.
+- `pre_context/summaries/14-summary.md`도 Veo job은 polling 단계에서 operation
+  name을 저장하고 runner 재시작 시 저장된 operation name으로 재개할 수 있다고
+  정리합니다.
+
+복구한 계약:
+
+- stale non-terminal job은 orphan sweep에서 `failed`로 정리됩니다.
+- 단, `state=polling`이고 `vertex_operation_name`이 있는 job은 resumable Veo job으로
+  간주해 sweep 결과에 포함되더라도 `failed`로 바꾸지 않습니다.
+- 이 보호는 SQL query 조건뿐 아니라 sweep 실행 루프 내부에서도 한 번 더 적용됩니다.
+
+검증 결과:
+
+- RED: fake session이 resumable polling job을 sweep result로 반환하면 기존 구현은
+  `swept_count=1`로 실패 처리했습니다.
+- `AI_PROVIDER=mock python -m pytest tests/test_job_runner.py::test_sweep_orphans_preserves_resumable_polling_jobs -q`
+  -> `1 passed`

@@ -258,3 +258,19 @@ async def test_sweep_orphans_marks_stale_non_terminal_jobs_failed():
         "last_attempt_at": job.error["last_attempt_at"],
     }
     assert job.state_history[-1]["detail"] == {"reason": "runner_startup_sweep"}
+
+
+async def test_sweep_orphans_preserves_resumable_polling_jobs():
+    job = _job(state=JobState.POLLING)
+    job.vertex_operation_name = "projects/demo/locations/us/operations/123"
+    session = FakeRunnerSession([[job]], [job])
+
+    swept_count = await runner._sweep_orphaned_jobs(
+        lambda: session,
+        older_than=timedelta(minutes=5),
+    )
+
+    assert swept_count == 0
+    assert job.state == JobState.POLLING
+    assert job.error is None
+    assert job.state_history == []

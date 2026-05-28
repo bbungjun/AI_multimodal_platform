@@ -321,6 +321,8 @@ async def _sweep_orphaned_jobs(
             for job in result.all():
                 if job.state in TERMINAL_STATES:
                     continue
+                if _is_resumable_polling_job(job):
+                    continue
                 job.error = {
                     "code": "orphaned_job",
                     "message": "Job was left in a non-terminal state after runner restart.",
@@ -336,6 +338,10 @@ async def _sweep_orphaned_jobs(
                 swept += 1
 
     return swept
+
+
+def _is_resumable_polling_job(job: Job) -> bool:
+    return job.state == JobState.POLLING and job.vertex_operation_name is not None
 
 
 async def _mark_job_failed(
