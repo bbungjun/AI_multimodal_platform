@@ -13,6 +13,20 @@ Date: 2026-05-27
 - 검증 시작 전 staged 파일: 없음
 - 검증 시작 전 Compose project container: 없음
 
+## 2026-05-28 Follow-up
+
+이 문서의 원래 regression bundle은 Phase 1/2 closeout 시점의 역사적 기록입니다.
+이후 mock/fake-only 복구가 이어져 backend 계약 테스트가 추가되었습니다. 최신
+문서 정합성 refresh 직전 기준점은 다음과 같습니다.
+
+- 최신 반영 commit: `02909e6 test: restore state history payload contract`
+- 최신 backend full pytest: `AI_PROVIDER=mock python -m pytest` -> `157 passed`
+- 추가로 고정된 계약: rate limiter/retry, Veo failure classification, generation/pipeline
+  model validation, `/files` range/header, T2I multi-image handoff, prompt enhancement
+  linkage, ERD relationship, runner startup sweep/resume ordering, state_history payload
+  detail contract
+- 실제 Vertex/Gemini/Imagen/Veo live QA는 여전히 실행하지 않았습니다.
+
 ## 실행한 명령과 결과
 
 Backend:

@@ -43,7 +43,7 @@ Imagen은 `models.generate_images`로 받은 inline image bytes를 로컬 image 
 
 ### State, Storage, and Pipeline
 
-Job lifecycle은 명시적인 state machine으로 관리합니다. 일반적인 생성 흐름은 `pending -> queued -> generating -> polling/downloading -> completed`이며, `completed`, `failed`, `cancelled`는 terminal state입니다. runner와 handler의 상태 변경은 `transition(...)`을 통해 검증되고 `state_history`에 기록됩니다.
+Job lifecycle은 명시적인 state machine으로 관리합니다. 일반적인 생성 흐름은 `pending -> queued -> generating -> polling/downloading -> completed`이며, `completed`, `failed`, `cancelled`는 terminal state입니다. runner와 handler의 상태 변경은 `transition(...)`을 통해 검증되고 `state_history`에 `{state, at, detail}` 형식으로 기록됩니다. 별도 detail이 없는 전이도 frontend timeline payload shape가 안정적이도록 `detail: null`을 유지합니다.
 
 생성 파일은 `DATA_DIR/{job_uuid}/{filename}` 형태로 저장합니다. 파일 쓰기, 읽기, 삭제, 스트리밍은 storage helper를 거쳐 UUID job directory, filename, `DATA_DIR` containment를 검증합니다. `/files/{job_uuid}/{filename}` route는 검증된 asset 파일만 스트리밍하며, video preview를 위해 single byte-range request를 지원합니다.
 
@@ -275,4 +275,3 @@ npm install
 npm run lint
 npm run build
 ```
-

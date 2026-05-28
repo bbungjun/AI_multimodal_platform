@@ -11,9 +11,13 @@
 - Branch: `main`
 - 이 문서 작성 전 기준 commit: `38a569b fix: restore history frontend parity`
 - 최근 follow-up 반영 기준 commit: `33c7f83 docs: confirm cancel scope`
+- 2026-05-28 문서 정합성 refresh 기준 최신 commit:
+  `02909e6 test: restore state history payload contract`
 - 검증 기준 provider: `AI_PROVIDER=mock`
 - 비용이 발생하는 Vertex/Gemini/Imagen/Veo live QA: 실행하지 않음
-- 이 체크 중 Compose 상태: db/backend/frontend가 mock mode로 실행 중
+- 최초 체크 중 Compose 상태: db/backend/frontend가 mock mode로 실행 중
+- 2026-05-28 refresh에서는 Compose browser smoke를 새로 반복하지 않고, 현재
+  backend/frontend 코드와 최근 mock/fake-only regression 기록을 README 설명과 대조함
 
 ## 판정 기준
 
@@ -119,7 +123,9 @@ npm run build
 
 최근 backend 회귀 검증 근거:
 
-- latest full backend pytest: `98 passed`
+- 2026-05-28 latest full backend pytest: `157 passed`
+- `state_history` entry는 `{state, at, detail}` shape를 유지하며 detail이 없는 전이는
+  `detail: null`로 기록됨
 - latest frontend lint/build: 통과
 - `/files` Range edge, Veo failure classification, model validation, retry/rate limiter
   contract 테스트가 mock/fake-only로 복구됨

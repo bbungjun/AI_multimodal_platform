@@ -69,6 +69,7 @@ git diff --cached --name-only
 - mock-only backend test suite 복구
   - API, storage, state machine, job runner, job handler, Vertex adapter parsing, prompt enhancer contract 테스트 복구
   - 최근 Phase 1 closeout 기준 `python -m pytest`는 `65 passed`
+  - 2026-05-28 follow-up 기준 `AI_PROVIDER=mock python -m pytest`는 `157 passed`
 - frontend build/typecheck 복구
   - `npm run lint`
   - `npm run build`
@@ -79,13 +80,17 @@ git diff --cached --name-only
 현재 Phase 1 상태:
 
 - Phase 1 backend import/API/test/frontend/compose mock recovery는 closeout 문서로 닫혔습니다.
-- 실제 provider 접근, 실제 Vertex/Gemini/Veo 품질 QA, 최종 제출 문서 정합성은 별도 수동 확인 범위입니다.
+- 2026-05-28 follow-up 기준으로 runner startup ordering, orphan sweep resume guard,
+  ERD relationship, `/files` response header, prompt enhancement linkage, state_history
+  payload detail contract까지 mock/fake-only 테스트로 추가 고정했습니다.
+- 실제 provider 접근과 실제 Vertex/Gemini/Veo 품질 QA는 별도 수동 확인 범위입니다.
 
-다음 1순위 복구 단위는 최종 제출 정합성 리뷰입니다.
+현재 최종 제출 정합성 리뷰 기준:
 
 - `README.md`, `AGENTS.md`, `memories/recovery/*`, 실제 backend/frontend 코드의 API/env/provider 설명을 맞춥니다.
 - mock local mode와 real Vertex mode가 명확히 분리되어 있는지 확인합니다.
 - secret, `.env`, service-account JSON, generated runtime asset이 staged/committed 되지 않는지 확인합니다.
+- public 전환은 secret/history 문제를 별도로 처리하기 전까지 보류합니다.
 
 ## 복구 대상 프로젝트
 
