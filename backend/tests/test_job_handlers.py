@@ -117,6 +117,10 @@ def _i2v_job(source_asset_id: object) -> Job:
     )
 
 
+def _assert_history_payload(entry: dict[str, object]) -> None:
+    assert set(entry) == {"state", "at", "detail"}
+
+
 async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     monkeypatch,
 ):
@@ -182,6 +186,9 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     assert job.state_history[0]["detail"] == {"runner": "direct-handler"}
     assert job.state_history[1]["detail"] == {"rate_limit_wait_sec": 0.25}
     assert job.state_history[2]["detail"] == {"image_count": 2}
+    for entry in job.state_history:
+        _assert_history_payload(entry)
+    assert job.state_history[-1]["detail"] is None
 
     assert saved_files == [
         (job.id, "output.png", b"image-one"),
@@ -254,7 +261,6 @@ async def test_handle_t2i_vertex_failure_marks_job_failed_and_cascades(
         "generating",
         "failed",
     ]
-    assert job.state_history[-1]["detail"] == {"error": "vertex_output_unavailable"}
     assert job.error == {
         "code": "vertex_output_unavailable",
         "message": "Vertex AI did not return an output.",
@@ -262,6 +268,11 @@ async def test_handle_t2i_vertex_failure_marks_job_failed_and_cascades(
         "retry_count": 1,
         "last_attempt_at": job.error["last_attempt_at"],
     }
+    for entry in job.state_history:
+        _assert_history_payload(entry)
+    failed_entry = job.state_history[-1]
+    assert failed_entry["at"] == job.error["last_attempt_at"]
+    assert failed_entry["detail"] == {"error": "vertex_output_unavailable"}
     assert cascaded_jobs == [job.id]
     assert session.commit_count == 4
     assert session.rollback_count == 1

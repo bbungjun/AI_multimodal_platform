@@ -210,7 +210,11 @@ async def test_handler_failure_marks_job_failed_without_leaking_exception():
         "retry_count": 0,
         "last_attempt_at": job.error["last_attempt_at"],
     }
-    assert job.state_history[-1]["detail"] == {"error": "provider_crashed"}
+    failed_entry = job.state_history[-1]
+    assert set(failed_entry) == {"state", "at", "detail"}
+    assert failed_entry["state"] == "failed"
+    assert failed_entry["at"] == job.error["last_attempt_at"]
+    assert failed_entry["detail"] == {"error": "provider_crashed"}
 
 
 async def test_resume_polling_jobs_reschedules_jobs_with_vertex_operation():
@@ -289,7 +293,11 @@ async def test_sweep_orphans_marks_stale_non_terminal_jobs_failed():
         "retry_count": 0,
         "last_attempt_at": job.error["last_attempt_at"],
     }
-    assert job.state_history[-1]["detail"] == {"reason": "runner_startup_sweep"}
+    failed_entry = job.state_history[-1]
+    assert set(failed_entry) == {"state", "at", "detail"}
+    assert failed_entry["state"] == "failed"
+    assert failed_entry["at"] == job.error["last_attempt_at"]
+    assert failed_entry["detail"] == {"reason": "runner_startup_sweep"}
 
 
 async def test_sweep_orphans_preserves_resumable_polling_jobs():

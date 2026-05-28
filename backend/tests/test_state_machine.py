@@ -97,6 +97,21 @@ def test_transition_updates_state_timestamp_and_history_detail():
     ]
 
 
+def test_transition_records_null_detail_when_no_detail_is_supplied():
+    job = _job(state=JobState.DOWNLOADING)
+    changed_at = datetime(2026, 5, 26, 12, 8, tzinfo=timezone.utc)
+
+    transition(job, JobState.COMPLETED, at=changed_at)
+
+    assert job.state_history == [
+        {
+            "state": "completed",
+            "at": changed_at.isoformat(),
+            "detail": None,
+        }
+    ]
+
+
 def test_transition_preserves_existing_history_entries():
     job = _job(state=JobState.QUEUED)
     job.state_history = [{"state": "queued", "at": "already"}]

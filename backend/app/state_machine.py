@@ -89,9 +89,8 @@ def transition(
     entry: dict[str, Any] = {
         "state": target.value,
         "at": changed_at.isoformat(),
+        "detail": detail,
     }
-    if detail is not None:
-        entry["detail"] = detail
     history.append(entry)
     job.state_history = history
 
