@@ -67,7 +67,7 @@ export function HistoryPage() {
       await queryClient.invalidateQueries({ queryKey: ["generations"] });
     },
     onError: (error) => {
-      setDeleteError(error instanceof Error ? error.message : "Delete failed.");
+      setDeleteError(error instanceof Error ? error.message : "삭제에 실패했습니다.");
     },
     onSettled: () => {
       setDeletingJobId(null);
@@ -102,7 +102,7 @@ export function HistoryPage() {
 
   function requestDelete(job: GenerationResponse) {
     const confirmed = window.confirm(
-      `Delete only job ${shortJobId(job.id)} and its saved asset files? Related parent or child jobs will stay in History. This cannot be undone.`,
+      `작업 ${shortJobId(job.id)}와 저장된 asset 파일만 삭제할까요? 연결된 parent/child 작업은 기록에 남습니다. 이 작업은 되돌릴 수 없습니다.`,
     );
     if (!confirmed) {
       return;
@@ -112,15 +112,15 @@ export function HistoryPage() {
 
   return (
     <div className="page-stack">
-      <Panel title="History Filters" eyebrow="Saved generations">
+      <Panel title="기록 필터" eyebrow="저장된 생성">
         <p className="panel-copy">
-          Browse submitted generation jobs by mode, state, model, and page size.
-          Selecting a row opens the full job detail view.
+          제출한 생성 작업을 모드, 상태, 모델, 페이지 크기로 살펴봅니다.
+          행을 선택하면 전체 작업 상세 화면이 열립니다.
         </p>
 
         <div className="history-filter-grid">
           <label>
-            <span>Mode</span>
+            <span>모드</span>
             <select
               onChange={(event) => {
                 setMode(event.target.value as GenerationMode | "all");
@@ -130,14 +130,14 @@ export function HistoryPage() {
             >
               {modeOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option === "all" ? "All modes" : option.toUpperCase()}
+                  {option === "all" ? "전체 모드" : option.toUpperCase()}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            <span>Asset type</span>
+            <span>Asset 유형</span>
             <select
               onChange={(event) => {
                 setAssetKind(event.target.value as AssetKind | "all");
@@ -154,7 +154,7 @@ export function HistoryPage() {
           </label>
 
           <label>
-            <span>State</span>
+            <span>상태</span>
             <select
               onChange={(event) => {
                 setState(event.target.value as JobState | "all");
@@ -164,27 +164,27 @@ export function HistoryPage() {
             >
               {stateOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option === "all" ? "All states" : option}
+                  {option === "all" ? "전체 상태" : jobStateLabel(option)}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            <span>Model</span>
+            <span>모델</span>
             <input
               onChange={(event) => {
                 setModel(event.target.value);
                 resetOffset();
               }}
-              placeholder="Filter by model"
+              placeholder="모델로 필터링"
               value={model}
             />
-            <span className="field-hint">Leave blank to include every model.</span>
+            <span className="field-hint">비워두면 모든 모델을 포함합니다.</span>
           </label>
 
           <label>
-            <span>Page size</span>
+            <span>페이지 크기</span>
             <select
               onChange={(event) => {
                 setLimit(Number(event.target.value));
@@ -198,7 +198,7 @@ export function HistoryPage() {
                 </option>
               ))}
             </select>
-            <span className="field-hint">Results per page.</span>
+            <span className="field-hint">페이지당 결과 수입니다.</span>
           </label>
         </div>
 
@@ -206,28 +206,28 @@ export function HistoryPage() {
           <Badge tone="info">
             <HistoryIcon size={12} />
             {activeFilterCount === 0
-              ? "All generations"
-              : `${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}`}
+              ? "전체 생성"
+              : `활성 필터 ${activeFilterCount}개`}
           </Badge>
-          <Badge tone="muted">Page {currentPage}</Badge>
-          <Badge tone="muted">{limit} per page</Badge>
-          {mode !== "all" && <Badge tone="muted">mode {mode}</Badge>}
-          {assetKind !== "all" && <Badge tone="muted">asset {assetKind}</Badge>}
-          {state !== "all" && <Badge tone="muted">state {state}</Badge>}
-          {model.trim() && <Badge tone="muted">model {model.trim()}</Badge>}
+          <Badge tone="muted">{currentPage}페이지</Badge>
+          <Badge tone="muted">페이지당 {limit}개</Badge>
+          {mode !== "all" && <Badge tone="muted">모드 {mode}</Badge>}
+          {assetKind !== "all" && <Badge tone="muted">asset {assetKindLabel(assetKind)}</Badge>}
+          {state !== "all" && <Badge tone="muted">상태 {jobStateLabel(state)}</Badge>}
+          {model.trim() && <Badge tone="muted">모델 {model.trim()}</Badge>}
         </div>
       </Panel>
 
-      <Panel className="history-table-shell" title="Generation History" eyebrow="Saved jobs">
+      <Panel className="history-table-shell" title="생성 기록" eyebrow="저장된 작업">
         <div className="history-table-intro">
           <div>
-            <div className="section-label">Current view</div>
+            <div className="section-label">현재 보기</div>
             <p>{formatHistorySummary({ assetKind, jobsLength: jobs.length, mode, state })}</p>
           </div>
           {generations.isFetching && !generations.isLoading && (
             <Badge tone="info">
               <StatusDot tone="info" />
-              Refreshing
+              새로고침 중
             </Badge>
           )}
         </div>
@@ -235,7 +235,7 @@ export function HistoryPage() {
           <div className="history-delete-alert" role="alert">
             <Badge tone="danger">
               <StatusDot tone="danger" />
-              Delete failed
+              삭제 실패
             </Badge>
             <p>{deleteError}</p>
           </div>
@@ -243,39 +243,39 @@ export function HistoryPage() {
 
         {generations.isLoading && (
           <HistoryMessage
-            label="Loading"
-            title="Loading generation history"
-            message="Fetching the current page of saved jobs."
+            label="로딩 중"
+            title="생성 기록을 불러오는 중"
+            message="저장된 작업의 현재 페이지를 가져오고 있습니다."
           />
         )}
         {generations.isError && (
           <HistoryMessage
-            label="Request failed"
-            title="Unable to load history"
+            label="요청 실패"
+            title="기록을 불러올 수 없습니다"
             tone="danger"
             message={
               generations.error instanceof Error
                 ? generations.error.message
-                : "Request failed."
+                : "요청에 실패했습니다."
             }
           />
         )}
         {!generations.isLoading && !generations.isError && jobs.length === 0 && (
           <HistoryMessage
-            title="No generations found"
-            label="Empty result"
-            message="No jobs match this query. Adjust the filters or create a generation from the Generate workspace."
+            title="생성 기록이 없습니다"
+            label="결과 없음"
+            message="이 조건과 일치하는 작업이 없습니다. 필터를 조정하거나 생성 작업공간에서 새 작업을 만드세요."
           />
         )}
         {!generations.isLoading && !generations.isError && jobs.length > 0 && (
           <div className="table-shell">
             <div className="table-row table-row--head history-row-grid">
-              <span>Result</span>
-              <span>Mode / state</span>
-              <span>Prompt / job</span>
-              <span>Model</span>
-              <span>Created</span>
-              <span>Actions</span>
+              <span>결과</span>
+              <span>모드 / 상태</span>
+              <span>프롬프트 / 작업</span>
+              <span>모델</span>
+              <span>생성일</span>
+              <span>작업</span>
             </div>
             {jobs.map((job) => (
               <div
@@ -293,14 +293,14 @@ export function HistoryPage() {
                 </span>
                 <span className="history-prompt">
                   <strong>{summarizePrompt(job.prompt)}</strong>
-                  <small title={job.id}>Job {shortJobId(job.id)}</small>
+                  <small title={job.id}>작업 {shortJobId(job.id)}</small>
                 </span>
                 <span className="history-model" title={job.model}>
-                  <small>Model</small>
+                  <small>모델</small>
                   <strong>{job.model}</strong>
                 </span>
                 <span className="history-created">
-                  <small>Created</small>
+                  <small>생성일</small>
                   <strong>{formatDateTime(job.created_at)}</strong>
                 </span>
                 <span className="history-actions">
@@ -315,7 +315,7 @@ export function HistoryPage() {
                       type="button"
                       variant="ghost"
                     >
-                      {deletingJobId === job.id ? "Deleting" : "Delete"}
+                      {deletingJobId === job.id ? "삭제 중" : "삭제"}
                     </Button>
                   ) : (
                     <span className="history-actions__empty">-</span>
@@ -334,12 +334,12 @@ export function HistoryPage() {
           type="button"
           variant="secondary"
         >
-          Previous
+          이전
         </Button>
         <span>
           {jobs.length > 0
-            ? `Showing ${visibleStart}-${visibleEnd} · ${jobs.length} loaded`
-            : "No rows on this page"}
+            ? `${visibleStart}-${visibleEnd} 표시 · ${jobs.length}개 로드됨`
+            : "이 페이지에 행이 없습니다"}
         </span>
         <Button
           disabled={!canGoNext || generations.isFetching}
@@ -347,7 +347,7 @@ export function HistoryPage() {
           type="button"
           variant="secondary"
         >
-          Next
+          다음
         </Button>
       </div>
     </div>
@@ -392,7 +392,7 @@ function StateBadge({ state }: { state: JobState }) {
   return (
     <Badge tone={tone}>
       <StatusDot tone={tone} />
-      {state}
+      {jobStateLabel(state)}
     </Badge>
   );
 }
@@ -409,12 +409,12 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
     );
   }
 
-  const label = `${asset.kind} · ${asset.mime}`;
+  const label = `${assetKindLabel(asset.kind)} · ${asset.mime}`;
   if (asset.kind === "image" || asset.mime.startsWith("image/")) {
     return (
       <span className="history-result-thumb history-result-thumb--image" title={label}>
         <img alt="" src={asset.url} />
-        <small>Image</small>
+        <small>이미지</small>
       </span>
     );
   }
@@ -426,10 +426,10 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
   return (
     <span
       className="history-result-thumb history-result-thumb--unavailable"
-      title={`Preview unavailable · ${label}`}
+      title={`Preview 불가 · ${label}`}
     >
       <strong>Preview</strong>
-      <small>Unavailable</small>
+      <small>불가</small>
     </span>
   );
 }
@@ -440,18 +440,18 @@ function VideoResultPreview({ asset, label }: { asset: AssetResponse; label: str
   return (
     <span
       className="history-result-thumb history-result-thumb--video"
-      title={hasPreviewError ? `Video ready · thumbnail unavailable · ${label}` : label}
+      title={hasPreviewError ? `영상 준비됨 · 썸네일 불가 · ${label}` : label}
     >
       {hasPreviewError ? (
         <>
           <span className="history-video-tile__icon">
             <FilmIcon size={15} />
           </span>
-          <strong>Video ready</strong>
+          <strong>영상 준비됨</strong>
         </>
       ) : (
         <video
-          aria-label="Video preview"
+          aria-label="영상 preview"
           muted
           onError={() => setHasPreviewError(true)}
           playsInline
@@ -459,7 +459,7 @@ function VideoResultPreview({ asset, label }: { asset: AssetResponse; label: str
           src={videoPreviewUrl(asset.url)}
         />
       )}
-      <small>{hasPreviewError ? "No thumbnail" : "Video"}</small>
+      <small>{hasPreviewError ? "썸네일 없음" : "영상"}</small>
     </span>
   );
 }
@@ -498,29 +498,29 @@ function emptyResultCopy(state: JobState): {
 } {
   if (state === "completed") {
     return {
-      detail: "completed",
-      label: "No asset",
-      title: "Completed job returned no asset preview.",
+      detail: "완료됨",
+      label: "Asset 없음",
+      title: "완료된 작업이 asset preview를 반환하지 않았습니다.",
     };
   }
   if (state === "failed") {
     return {
-      detail: "failed",
-      label: "No result",
-      title: "Failed jobs do not have a completed asset.",
+      detail: "실패",
+      label: "결과 없음",
+      title: "실패한 작업에는 완료된 asset이 없습니다.",
     };
   }
   if (state === "cancelled") {
     return {
-      detail: "cancelled",
-      label: "Stopped",
-      title: "Cancelled jobs do not have a completed asset.",
+      detail: "취소됨",
+      label: "중단됨",
+      title: "취소된 작업에는 완료된 asset이 없습니다.",
     };
   }
   return {
-    detail: "in progress",
-    label: "Pending",
-    title: "Asset preview will appear after completion.",
+    detail: "진행 중",
+    label: "대기 중",
+    title: "완료 후 asset preview가 표시됩니다.",
   };
 }
 
@@ -535,10 +535,11 @@ function formatHistorySummary({
   mode: GenerationMode | "all";
   state: JobState | "all";
 }): string {
-  const modeText = mode === "all" ? "all modes" : mode.toUpperCase();
-  const stateText = state === "all" ? "all states" : state;
-  const assetText = assetKind === "all" ? "all result types" : `${assetKind} assets`;
-  return `${jobsLength} job${jobsLength === 1 ? "" : "s"} shown for ${modeText}, ${stateText}, and ${assetText}.`;
+  const modeText = mode === "all" ? "전체 모드" : mode.toUpperCase();
+  const stateText = state === "all" ? "전체 상태" : jobStateLabel(state);
+  const assetText =
+    assetKind === "all" ? "전체 결과 유형" : `${assetKindLabel(assetKind)} asset`;
+  return `${modeText}, ${stateText}, ${assetText} 조건으로 ${jobsLength}개 작업이 표시됩니다.`;
 }
 
 function shortJobId(id: string): string {
@@ -547,9 +548,34 @@ function shortJobId(id: string): string {
 
 function assetKindLabel(option: AssetKind | "all"): string {
   if (option === "all") {
-    return "All result types";
+    return "전체 결과 유형";
   }
-  return option === "image" ? "Images" : "Videos";
+  return option === "image" ? "이미지" : "영상";
+}
+
+function jobStateLabel(state: JobState): string {
+  switch (state) {
+    case "pending":
+      return "준비 중";
+    case "enhancing":
+      return "프롬프트 향상 중";
+    case "queued":
+      return "대기열";
+    case "generating":
+      return "생성 중";
+    case "polling":
+      return "결과 확인 중";
+    case "downloading":
+      return "저장 중";
+    case "completed":
+      return "완료";
+    case "failed":
+      return "실패";
+    case "cancelled":
+      return "취소됨";
+    default:
+      return state;
+  }
 }
 
 function canDeleteHistoryJob(job: GenerationResponse): boolean {

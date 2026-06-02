@@ -27,64 +27,64 @@ const stateCopy: Record<
   }
 > = {
   pending: {
-    label: "Preparing request",
-    summary: "The job is accepted and waiting for the runner to pick it up.",
+    label: "요청 준비 중",
+    summary: "작업이 접수되어 runner 처리를 기다리고 있습니다.",
     detail:
-      "The request is saved and waiting for the next available generation slot.",
-    timeline: "Request stored and ready for processing.",
+      "요청이 저장되었고 다음 생성 슬롯을 기다리고 있습니다.",
+    timeline: "요청이 저장되어 처리 준비가 끝났습니다.",
   },
   enhancing: {
-    label: "Improving prompt",
-    summary: "Gemini is preparing the prompt used for generation.",
+    label: "프롬프트 향상 중",
+    summary: "Gemini가 생성에 사용할 프롬프트를 준비하고 있습니다.",
     detail:
-      "Prompt enhancement is running before the image or video model call starts.",
-    timeline: "Prompt enhancement step is active.",
+      "이미지 또는 영상 모델 호출 전에 프롬프트 향상이 실행 중입니다.",
+    timeline: "프롬프트 향상 단계가 진행 중입니다.",
   },
   queued: {
-    label: "Waiting for generation slot",
-    summary: "The job is queued behind current model capacity.",
+    label: "생성 슬롯 대기 중",
+    summary: "현재 모델 처리 용량 때문에 작업이 대기열에 있습니다.",
     detail:
-      "The runner is waiting for an available slot before sending this request to Vertex AI.",
-    timeline: "Queued until model capacity is available.",
+      "Runner가 Vertex AI로 요청을 보내기 전 사용 가능한 슬롯을 기다리고 있습니다.",
+    timeline: "모델 용량이 생길 때까지 대기합니다.",
   },
   generating: {
-    label: "Generating on Vertex AI",
-    summary: "The model request is running.",
+    label: "Vertex AI에서 생성 중",
+    summary: "모델 요청이 실행 중입니다.",
     detail:
-      "Imagen or Veo is creating the output. This is usually the longest part of the job.",
-    timeline: "Model generation is underway.",
+      "Imagen 또는 Veo가 결과를 생성하고 있습니다. 보통 이 단계가 가장 오래 걸립니다.",
+    timeline: "모델 생성이 진행 중입니다.",
   },
   polling: {
-    label: "Waiting for model output",
-    summary: "The service is checking for the completed result.",
+    label: "모델 결과 확인 중",
+    summary: "서비스가 완료된 결과를 확인하고 있습니다.",
     detail:
-      "Long-running video and image operations can take time; this page refreshes automatically while the result is prepared.",
-    timeline: "The result is being prepared.",
+      "오래 걸리는 이미지/영상 작업일 수 있어 결과가 준비되는 동안 이 페이지가 자동으로 새로고침됩니다.",
+    timeline: "결과가 준비되고 있습니다.",
   },
   downloading: {
-    label: "Saving result",
-    summary: "The generated output is being written to local storage.",
+    label: "결과 저장 중",
+    summary: "생성된 결과를 로컬 저장소에 쓰고 있습니다.",
     detail:
-      "The model returned data and the result is being saved so it can be previewed here.",
-    timeline: "Generated output is being saved.",
+      "모델이 데이터를 반환했고, 이 화면에서 preview할 수 있도록 결과를 저장하고 있습니다.",
+    timeline: "생성 결과를 저장하고 있습니다.",
   },
   completed: {
-    label: "Completed",
-    summary: "The job reached a final successful state.",
-    detail: "The generated asset is ready in the Asset Viewer when one was returned.",
-    timeline: "Result is ready.",
+    label: "완료",
+    summary: "작업이 성공적으로 최종 상태에 도달했습니다.",
+    detail: "반환된 asset이 있으면 Asset Viewer에서 확인할 수 있습니다.",
+    timeline: "결과가 준비되었습니다.",
   },
   failed: {
-    label: "Failed",
-    summary: "The job stopped with an error.",
-    detail: "The request returned an error.",
-    timeline: "Terminal failure state.",
+    label: "실패",
+    summary: "작업이 오류로 중단되었습니다.",
+    detail: "요청이 오류를 반환했습니다.",
+    timeline: "최종 실패 상태입니다.",
   },
   cancelled: {
-    label: "Cancelled",
-    summary: "The job was cancelled before completion.",
-    detail: "No further generation work will run for this job.",
-    timeline: "Terminal cancellation state.",
+    label: "취소됨",
+    summary: "작업이 완료 전에 취소되었습니다.",
+    detail: "이 작업에는 더 이상 생성 처리가 실행되지 않습니다.",
+    timeline: "최종 취소 상태입니다.",
   },
 };
 
@@ -100,8 +100,8 @@ export function JobDetailPage() {
 
   if (!jobId) {
     return (
-      <RoutePlaceholder eyebrow="Missing route param" title="Job id is required">
-        Navigate from a submitted generation or history row to inspect a job.
+      <RoutePlaceholder eyebrow="Route 파라미터 없음" title="작업 ID가 필요합니다">
+        제출한 생성 결과나 기록 행에서 이동하면 작업을 확인할 수 있습니다.
       </RoutePlaceholder>
     );
   }
@@ -112,9 +112,9 @@ export function JobDetailPage() {
 
   if (jobQuery.isError || !job) {
     const message =
-      jobQuery.error instanceof Error ? jobQuery.error.message : "Unable to load job.";
+      jobQuery.error instanceof Error ? jobQuery.error.message : "작업을 불러올 수 없습니다.";
     return (
-      <RoutePlaceholder eyebrow="Job request failed" title={jobId}>
+      <RoutePlaceholder eyebrow="작업 요청 실패" title={jobId}>
         {message}
       </RoutePlaceholder>
     );
@@ -122,7 +122,7 @@ export function JobDetailPage() {
 
   return (
     <div className="page-grid page-grid--detail">
-      <Panel className="asset-shell" title="Asset Viewer" eyebrow="Result">
+      <Panel className="asset-shell" title="Asset Viewer" eyebrow="결과">
         <AssetViewer
           asset={primaryAsset}
           imageResultAssets={imageResultAssets}
@@ -137,20 +137,20 @@ export function JobDetailPage() {
       </Panel>
 
       <Panel
-        title="Job State"
-        eyebrow={isTerminalJobState(job.state) ? "Terminal state" : "Live progress"}
+        title="작업 상태"
+        eyebrow={isTerminalJobState(job.state) ? "최종 상태" : "실시간 진행"}
       >
         {!isTerminalJobState(job.state) && <CurrentStepSummary job={job} />}
         <JobStateTimeline history={job.state_history} state={job.state} />
         <JobWaitingContext job={job} />
       </Panel>
 
-      <Panel title="Request Summary" eyebrow={job.mode}>
+      <Panel title="요청 요약" eyebrow={job.mode}>
         <RequestSummary job={job} />
       </Panel>
 
       {job.error && (
-        <Panel title="Error Message" eyebrow="Generation error">
+        <Panel title="오류 메시지" eyebrow="생성 오류">
           <div className="inline-notice inline-notice--danger">
             {formatErrorMessage(job.error)}
           </div>
@@ -163,17 +163,16 @@ export function JobDetailPage() {
 function JobLoading({ jobId }: { jobId: string }) {
   return (
     <div className="page-grid page-grid--detail">
-      <Panel title="Loading Job" eyebrow={jobId}>
+      <Panel title="작업 로딩 중" eyebrow={jobId}>
         <div className="asset-preview">
           <div>
             <Badge tone="muted">
               <StatusDot tone="pending" />
-              Loading
+              로딩 중
             </Badge>
-            <h2>Fetching job state</h2>
+            <h2>작업 상태를 가져오는 중</h2>
             <p>
-              The page refreshes progress automatically until the job reaches a
-              final state.
+              작업이 최종 상태에 도달할 때까지 이 페이지가 진행 상황을 자동으로 새로고침합니다.
             </p>
           </div>
         </div>
@@ -219,19 +218,19 @@ function AssetViewer({
         <div>
           <Badge tone={failed ? "danger" : cancelled ? "warning" : "muted"}>
             <StatusDot tone={failed ? "danger" : cancelled ? "warning" : "pending"} />
-            {job.state}
+            {stateCopy[job.state].label}
           </Badge>
           <h2>
             {failed
-              ? "Generation stopped before a result"
+              ? "결과 생성 전에 작업이 중단되었습니다"
               : cancelled
-                ? "Generation was cancelled"
-                : "Result preview will appear here"}
+                ? "생성이 취소되었습니다"
+                : "결과 preview가 여기에 표시됩니다"}
           </h2>
           <p>
             {failed || cancelled
-              ? "No completed asset is available for this job. Check the job state and error details for the cause."
-              : "Once the result is saved, the completed image or video will render in this viewer."}
+              ? "이 작업에는 완료된 asset이 없습니다. 원인은 작업 상태와 오류 상세를 확인하세요."
+              : "결과가 저장되면 완성된 이미지 또는 영상이 이 viewer에 렌더링됩니다."}
           </p>
         </div>
       </div>
@@ -242,11 +241,11 @@ function AssetViewer({
     return (
       <div className="asset-preview">
         <div>
-          <Badge tone="warning">No asset returned</Badge>
-          <h2>Job completed without a preview</h2>
+          <Badge tone="warning">반환된 asset 없음</Badge>
+          <h2>Preview 없이 작업이 완료되었습니다</h2>
           <p>
-            The job reached completed, but the response did not include an asset
-            to display. The request summary and state history remain available.
+            작업은 완료 상태에 도달했지만 표시할 asset이 응답에 포함되지 않았습니다.
+            요청 요약과 상태 기록은 계속 확인할 수 있습니다.
           </p>
         </div>
       </div>
@@ -277,22 +276,22 @@ function AssetViewer({
           ) : (
             <StatusDot tone="warning" />
           )}
-          {isVideo ? "Video result" : isImage ? "Image result" : "Asset returned"}
+          {isVideo ? "영상 결과" : isImage ? "이미지 결과" : "Asset 반환됨"}
         </Badge>
         <div className="asset-result-header__copy">
           <h2>
             {isVideo
-              ? "Video Result Ready"
+              ? "영상 결과 준비됨"
               : isImage
-                ? "Image Result Ready"
-                : "Asset Returned"}
+                ? "이미지 결과 준비됨"
+                : "Asset 반환됨"}
           </h2>
           <p>
             {isVideo
-              ? "Playback controls are available below."
+              ? "아래에서 재생 컨트롤을 사용할 수 있습니다."
               : isImage
-                ? "The generated image is ready below."
-                : "This result is available, but this viewer can only preview image and video file types."}
+                ? "생성된 이미지가 아래에 준비되었습니다."
+                : "결과는 반환되었지만 이 viewer는 이미지와 영상 파일만 preview할 수 있습니다."}
           </p>
         </div>
       </div>
@@ -300,24 +299,24 @@ function AssetViewer({
       <div className="asset-stage">
         {isImage && (
           <img
-            alt={`Generated asset ${asset.id}`}
+            alt={`생성된 asset ${asset.id}`}
             className="asset-media"
             src={asset.url}
           />
         )}
         {isVideo && (
           <video className="asset-media" controls src={asset.url}>
-            <a href={asset.url}>Open generated video</a>
+            <a href={asset.url}>생성된 영상 열기</a>
           </video>
         )}
         {!isPreviewable && (
           <div className="asset-preview">
             <div>
-              <Badge tone="warning">Preview unavailable</Badge>
-              <h2>This file type cannot be previewed here</h2>
+              <Badge tone="warning">Preview 불가</Badge>
+              <h2>이 파일 유형은 여기서 preview할 수 없습니다</h2>
               <p>
-                The asset was returned as {asset.mime}, which this viewer does not
-                render inline. Metadata is still shown below.
+                이 asset은 {asset.mime} 유형으로 반환되었고, 이 viewer에서는 inline 렌더링할 수 없습니다.
+                Metadata는 아래에 표시됩니다.
               </p>
             </div>
           </div>
@@ -329,12 +328,11 @@ function AssetViewer({
           <div className="result-next-action__copy">
             <Badge tone="success">
               <PipelineIcon size={12} />
-              Next action
+              다음 작업
             </Badge>
-            <strong>Make a video with this image</strong>
+            <strong>이 이미지로 영상 만들기</strong>
             <p>
-              Use this completed image as the locked source for a new
-              image-to-video request.
+              이 완성된 이미지를 새 image-to-video 요청의 고정 소스로 사용합니다.
             </p>
           </div>
           <Button
@@ -343,19 +341,19 @@ function AssetViewer({
             variant="primary"
           >
             <PipelineIcon size={14} />
-            Start I2V with this image
+            이 이미지로 I2V 시작
           </Button>
         </div>
       )}
 
       <div className="asset-metadata-panel">
         <div className="asset-metadata-panel__head">
-          <div className="section-label">File details</div>
-          <p>Preview details for the generated result.</p>
+          <div className="section-label">파일 상세</div>
+          <p>생성 결과의 preview 상세입니다.</p>
         </div>
         <div className="metadata-list asset-metadata">
           <div>
-            <span>Type</span>
+            <span>유형</span>
             <strong>{formatAssetType(asset)}</strong>
           </div>
           <div>
@@ -363,16 +361,16 @@ function AssetViewer({
             <strong>{asset.mime}</strong>
           </div>
           <div>
-            <span>Size</span>
+            <span>크기</span>
             <strong>{formatBytes(asset.size_bytes)}</strong>
           </div>
           <div>
-            <span>Dimensions</span>
+            <span>해상도</span>
             <strong>{formatDimensions(asset)}</strong>
           </div>
           {asset.duration_sec !== null && (
             <div>
-              <span>Duration</span>
+              <span>길이</span>
               <strong>{asset.duration_sec}s</strong>
             </div>
           )}
@@ -396,11 +394,11 @@ function T2IImageGallery({
       <div className="asset-result-header">
         <Badge tone="success">
           <ImageIcon size={12} />
-          Image results
+          이미지 결과
         </Badge>
         <div className="asset-result-header__copy">
-          <h2>{assets.length} Image Results Ready</h2>
-          <p>Each generated image can be used as the source for I2V.</p>
+          <h2>이미지 결과 {assets.length}개 준비됨</h2>
+          <p>각 생성 이미지를 I2V 소스로 사용할 수 있습니다.</p>
         </div>
       </div>
 
@@ -409,14 +407,14 @@ function T2IImageGallery({
           <div className="asset-gallery-card" key={imageAsset.id}>
             <div className="asset-gallery-card__stage">
               <img
-                alt={`Generated image ${index + 1}`}
+                alt={`생성 이미지 ${index + 1}`}
                 className="asset-gallery-card__image"
                 src={imageAsset.url}
               />
             </div>
             <div className="asset-gallery-card__body">
               <div className="asset-gallery-card__meta">
-                <strong>Image {index + 1}</strong>
+                <strong>이미지 {index + 1}</strong>
                 <span>
                   {formatDimensions(imageAsset)} / {formatBytes(imageAsset.size_bytes)}
                 </span>
@@ -427,7 +425,7 @@ function T2IImageGallery({
                 variant="primary"
               >
                 <PipelineIcon size={14} />
-                Start I2V
+                I2V 시작
               </Button>
             </div>
           </div>
@@ -436,20 +434,20 @@ function T2IImageGallery({
 
       <div className="asset-metadata-panel">
         <div className="asset-metadata-panel__head">
-          <div className="section-label">File details</div>
-          <p>Preview details for the generated image set.</p>
+          <div className="section-label">파일 상세</div>
+          <p>생성 이미지 세트의 preview 상세입니다.</p>
         </div>
         <div className="metadata-list asset-metadata">
           <div>
-            <span>Type</span>
-            <strong>Image set</strong>
+            <span>유형</span>
+            <strong>이미지 세트</strong>
           </div>
           <div>
-            <span>Count</span>
+            <span>개수</span>
             <strong>{assets.length}</strong>
           </div>
           <div>
-            <span>Total size</span>
+            <span>총 크기</span>
             <strong>{formatBytes(totalBytes)}</strong>
           </div>
         </div>
@@ -481,13 +479,12 @@ function I2VSourcePreview({
       <div className="asset-result-header">
         <Badge tone={tone}>
           <PipelineIcon size={12} />
-          Source image context
+          소스 이미지 컨텍스트
         </Badge>
         <div className="asset-result-header__copy">
           <h2>{sourcePreviewTitle(job.state)}</h2>
           <p>
-            This I2V job keeps the source image visible until the video result is
-            available.
+            이 I2V 작업은 영상 결과가 준비될 때까지 소스 이미지를 계속 표시합니다.
           </p>
         </div>
       </div>
@@ -498,16 +495,16 @@ function I2VSourcePreview({
             <div>
               <Badge tone="muted">
                 <StatusDot tone="pending" />
-                Loading source
+                소스 로딩 중
               </Badge>
-              <h2>Fetching source image</h2>
-              <p>The locked image asset is being loaded for this I2V request.</p>
+              <h2>소스 이미지를 가져오는 중</h2>
+              <p>이 I2V 요청에 고정된 이미지 asset을 불러오고 있습니다.</p>
             </div>
           </div>
         )}
         {!sourceLoading && sourceIsImage && (
           <img
-            alt={`Source asset ${sourceAsset.id}`}
+            alt={`소스 asset ${sourceAsset.id}`}
             className="asset-media"
             src={sourceAsset.url}
           />
@@ -516,12 +513,12 @@ function I2VSourcePreview({
           <div className="asset-preview">
             <div>
               <Badge tone={sourceError ? "danger" : "warning"}>
-                {sourceError ? "Source unavailable" : "Source pending"}
+                {sourceError ? "소스 불러오기 실패" : "소스 대기 중"}
               </Badge>
-              <h2>Source image preview unavailable</h2>
+              <h2>소스 이미지 preview를 사용할 수 없습니다</h2>
               <p>
-                The job keeps source asset id {shortId(job.source_asset_id)} in
-                metadata, but the image preview could not be loaded.
+                작업 metadata에는 소스 asset ID {shortId(job.source_asset_id)}가 남아 있지만,
+                이미지 preview를 불러오지 못했습니다.
               </p>
             </div>
           </div>
@@ -530,27 +527,27 @@ function I2VSourcePreview({
 
       <div className="asset-metadata-panel">
         <div className="asset-metadata-panel__head">
-          <div className="section-label">I2V source</div>
-          <p>Locked source context for this image-to-video request.</p>
+          <div className="section-label">I2V 소스</div>
+          <p>이 image-to-video 요청에 고정된 소스 컨텍스트입니다.</p>
         </div>
         <div className="metadata-list asset-metadata">
           <div>
-            <span>Source asset</span>
+            <span>소스 asset</span>
             <strong>{shortId(job.source_asset_id)}</strong>
           </div>
           <div>
-            <span>Current state</span>
-            <strong>{job.state}</strong>
+            <span>현재 상태</span>
+            <strong>{stateCopy[job.state].label}</strong>
           </div>
           {sourceAsset && (
             <div>
-              <span>Source type</span>
+              <span>소스 유형</span>
               <strong>{formatAssetType(sourceAsset)}</strong>
             </div>
           )}
           {sourceAsset && (
             <div>
-              <span>Dimensions</span>
+              <span>해상도</span>
               <strong>{formatDimensions(sourceAsset)}</strong>
             </div>
           )}
@@ -573,10 +570,10 @@ function CurrentStepSummary({ job }: { job: JobResponse }) {
       <div className="job-progress-summary__top">
         <Badge tone="info">
           <StatusDot tone="info" />
-          Current step
+          현재 단계
         </Badge>
         <span>
-          Step {activeIndex + 1} of {stateSteps.length}
+          {stateSteps.length}단계 중 {activeIndex + 1}단계
         </span>
       </div>
       <strong>{copy.label}</strong>
@@ -629,7 +626,7 @@ function JobStateTimeline({
             <span>{stateCopy[state].label}</span>
             <p>{stateCopy[state].timeline}</p>
           </div>
-          <small>terminal</small>
+          <small>종료</small>
         </div>
       )}
     </div>
@@ -640,16 +637,16 @@ function JobWaitingContext({ job }: { job: JobResponse }) {
   const terminal = isTerminalJobState(job.state);
 
   return (
-    <div className="job-context-grid" aria-label="Job progress context">
+    <div className="job-context-grid" aria-label="작업 진행 컨텍스트">
       <div className="job-context-card">
-        <span>Current state</span>
+        <span>현재 상태</span>
         <strong>{stateCopy[job.state].summary}</strong>
-        <small>{terminal ? "Final state reached." : "Updates continue while work is active."}</small>
+        <small>{terminal ? "최종 상태에 도달했습니다." : "작업이 진행되는 동안 업데이트가 계속됩니다."}</small>
       </div>
       <div className="job-context-card">
-        <span>Run attempts</span>
+        <span>실행 시도</span>
         <strong>{job.attempts}</strong>
-        <small>Retries appear here if the request needs another attempt.</small>
+        <small>요청에 재시도가 필요하면 여기에 표시됩니다.</small>
       </div>
     </div>
   );
@@ -660,31 +657,31 @@ function RequestSummary({ job }: { job: JobResponse }) {
     <div className="request-summary">
       <div className="metadata-list">
         <div>
-          <span>Mode</span>
+          <span>모드</span>
           <strong>{job.mode}</strong>
         </div>
         <div>
-          <span>Model</span>
+          <span>모델</span>
           <strong>{job.model}</strong>
         </div>
         <div>
-          <span>Created</span>
+          <span>생성일</span>
           <strong>{formatDateTime(job.created_at)}</strong>
         </div>
         <div>
-          <span>Updated</span>
+          <span>수정일</span>
           <strong>{formatDateTime(job.updated_at)}</strong>
         </div>
         {job.enhancement_id && (
           <div>
-            <span>Prompt enhancement</span>
-            <strong>Applied</strong>
+            <span>프롬프트 향상</span>
+            <strong>적용됨</strong>
           </div>
         )}
         {job.source_asset_id && (
           <div>
-            <span>Source image</span>
-            <strong>Connected</strong>
+            <span>소스 이미지</span>
+            <strong>연결됨</strong>
           </div>
         )}
       </div>
@@ -692,7 +689,7 @@ function RequestSummary({ job }: { job: JobResponse }) {
       <div className="prompt-detail">
         <Badge tone="muted">
           <FilmIcon size={12} />
-          Prompt
+          프롬프트
         </Badge>
         <p>{job.prompt}</p>
       </div>
@@ -701,14 +698,14 @@ function RequestSummary({ job }: { job: JobResponse }) {
         <div className="prompt-detail">
           <Badge tone="info">
             <ImageIcon size={12} />
-            Enhanced prompt
+            향상된 프롬프트
           </Badge>
           <p>{job.enhanced_prompt}</p>
         </div>
       )}
 
       <div className="prompt-detail">
-        <Badge tone="muted">Parameters</Badge>
+        <Badge tone="muted">파라미터</Badge>
         <pre>{JSON.stringify(job.parameters, null, 2)}</pre>
       </div>
     </div>
@@ -727,15 +724,15 @@ function formatTimelineMarker({
   step: JobState;
 }): string {
   if (active && state === "completed") {
-    return "complete";
+    return "완료";
   }
   if (active && step === state) {
-    return "current";
+    return "현재";
   }
   if (done) {
-    return "complete";
+    return "완료";
   }
-  return "waiting";
+  return "대기";
 }
 
 function findCompletedImageAssets(job: JobResponse | undefined): AssetResponse[] {
@@ -757,16 +754,16 @@ function getI2VSourcePreviewAssetId(job: JobResponse | undefined): string | null
 
 function sourcePreviewTitle(state: JobState): string {
   if (state === "failed") {
-    return "I2V stopped before a video result";
+    return "영상 결과 전에 I2V가 중단되었습니다";
   }
   if (state === "cancelled") {
-    return "I2V was cancelled";
+    return "I2V가 취소되었습니다";
   }
-  return "I2V source image is locked";
+  return "I2V 소스 이미지가 고정되었습니다";
 }
 
 function shortId(value: string | null): string {
-  return value ? value.slice(0, 8) : "unknown";
+  return value ? value.slice(0, 8) : "알 수 없음";
 }
 
 function formatErrorMessage(error: Record<string, unknown>): string {
@@ -791,10 +788,10 @@ function formatBytes(bytes: number): string {
 
 function formatAssetType(asset: AssetResponse): string {
   if (asset.kind === "image") {
-    return "Image";
+    return "이미지";
   }
   if (asset.kind === "video") {
-    return "Video";
+    return "영상";
   }
   return asset.kind;
 }
@@ -803,7 +800,7 @@ function formatDimensions(asset: AssetResponse): string {
   if (asset.width && asset.height) {
     return `${asset.width} x ${asset.height}`;
   }
-  return "unknown";
+  return "알 수 없음";
 }
 
 function formatDateTime(value: string): string {

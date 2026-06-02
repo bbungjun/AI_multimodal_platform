@@ -51,17 +51,17 @@ const imagenModels: ModelOption[] = [
   {
     id: "imagen-4.0-fast-generate-001",
     label: "Imagen 4 Fast",
-    detail: "fast image generation",
+    detail: "빠른 이미지 생성",
   },
   {
     id: "imagen-4.0-generate-001",
     label: "Imagen 4",
-    detail: "balanced image generation",
+    detail: "균형 잡힌 이미지 생성",
   },
   {
     id: "imagen-4.0-ultra-generate-001",
     label: "Imagen 4 Ultra",
-    detail: "highest fidelity image generation",
+    detail: "최고 품질 이미지 생성",
   },
 ];
 
@@ -69,12 +69,12 @@ const veoModels: ModelOption[] = [
   {
     id: "veo-3.0-fast-generate-001",
     label: "Veo 3 Fast",
-    detail: "fast video generation",
+    detail: "빠른 영상 생성",
   },
   {
     id: "veo-3.0-generate-001",
     label: "Veo 3",
-    detail: "higher quality video generation",
+    detail: "더 높은 품질의 영상 생성",
   },
 ];
 
@@ -82,38 +82,38 @@ const modes: ModeConfig[] = [
   {
     mode: "t2i",
     label: "T2I",
-    title: "Text to image",
-    description: "Create an Imagen job from a text prompt.",
+    title: "텍스트 → 이미지",
+    description: "텍스트 프롬프트로 Imagen 작업을 만듭니다.",
     icon: ImageIcon,
     models: imagenModels,
   },
   {
     mode: "t2v",
     label: "T2V",
-    title: "Text to video",
-    description: "Create a Veo job from a text prompt.",
+    title: "텍스트 → 영상",
+    description: "텍스트 프롬프트로 Veo 작업을 만듭니다.",
     icon: FilmIcon,
     models: veoModels,
   },
   {
     mode: "i2v",
     label: "I2V",
-    title: "Image to video",
-    description: "Animate a completed image result.",
+    title: "이미지 → 영상",
+    description: "완성된 이미지 결과에 움직임을 더합니다.",
     icon: PipelineIcon,
     models: veoModels,
   },
   {
     mode: "pipeline",
     label: "Pipeline",
-    title: "T2I to I2V",
-    description: "Create a parent image job and child I2V job.",
+    title: "T2I → I2V",
+    description: "이미지 parent 작업과 I2V child 작업을 함께 만듭니다.",
     icon: PipelineIcon,
     models: [
       {
         id: "imagen-4.0-fast-generate-001+veo-3.0-fast-generate-001",
         label: "Imagen Fast + Veo Fast",
-        detail: "image first, video next",
+        detail: "이미지 먼저, 영상은 다음",
       },
     ],
   },
@@ -122,9 +122,9 @@ const modes: ModeConfig[] = [
 const aspectOptions = ["1:1", "16:9", "9:16", "4:3"];
 const durationOptions = [4, 6, 8];
 const creativityOptions: CreativityOption[] = [
-  { value: "faithful", label: "Faithful" },
-  { value: "balanced", label: "Balanced" },
-  { value: "imaginative", label: "Imaginative" },
+  { value: "faithful", label: "원본 충실" },
+  { value: "balanced", label: "균형" },
+  { value: "imaginative", label: "상상력" },
 ];
 const defaultCreativityPreset: CreativityPreset = "balanced";
 const defaultPrompt =
@@ -179,7 +179,7 @@ export function GeneratePage() {
   const heroTitle =
     heroPrompt && heroPrompt !== defaultPrompt
       ? heroPrompt
-      : "What are you imagining?";
+      : "무엇을 상상하고 있나요?";
   const pipelineSubmitDisabled =
     mode === "pipeline" && (!prompt.trim() || !pipelineVideoPrompt.trim());
   const submitDisabled =
@@ -212,15 +212,15 @@ export function GeneratePage() {
 
   const submitLabel = useMemo(() => {
     if (mode === "pipeline") {
-      return pipelineMutation.isPending ? "Creating pipeline..." : "Create pipeline";
+      return pipelineMutation.isPending ? "Pipeline 생성 중..." : "Pipeline 생성";
     }
     if (mode === "i2v" && !sourceAssetId) {
-      return "Select image source";
+      return "이미지 소스 선택";
     }
     if (submitMutation.isPending) {
-      return "Creating job...";
+      return "작업 생성 중...";
     }
-    return "Generate";
+    return "생성";
   }, [mode, pipelineMutation.isPending, sourceAssetId, submitMutation.isPending]);
 
   function setMode(nextMode: GenerateMode) {
@@ -361,24 +361,24 @@ export function GeneratePage() {
               <h2>{heroTitle}</h2>
               <p>
                 {mode === "pipeline"
-                  ? "Create a parent T2I image and a blocked child I2V job."
+                  ? "Parent T2I 이미지와 대기 중인 child I2V 작업을 함께 만듭니다."
                   : enhanceReview
-                    ? "Review the enhanced draft below. It will not change this prompt until accepted."
+                    ? "아래 향상 초안을 검토하세요. 수락하기 전까지 현재 프롬프트는 바뀌지 않습니다."
                     : usableEnhancementId
-                      ? "The accepted draft is now the generation prompt and will be attached to this job."
-                      : "Choose mode and model, write a prompt, optionally enhance, then generate."}
+                      ? "수락한 초안이 생성 프롬프트로 반영되었고 이 작업에 연결됩니다."
+                      : "모드와 모델을 고르고 프롬프트를 작성한 뒤, 필요하면 향상 후 생성하세요."}
               </p>
             </div>
           )}
         </div>
       </Panel>
 
-      <Panel title="Request Builder" eyebrow="Generate">
-        <div className="request-flow" aria-label="Generation request flow">
+      <Panel title="요청 구성" eyebrow="생성">
+        <div className="request-flow" aria-label="생성 요청 흐름">
           <div className="request-flow__item">
             <span>1</span>
-            <strong>Mode and model</strong>
-            <small>{activeMode.title} selected</small>
+            <strong>모드와 모델</strong>
+            <small>{activeMode.title} 선택됨</small>
           </div>
           <div
             className={`request-flow__item${
@@ -386,11 +386,11 @@ export function GeneratePage() {
             }`}
           >
             <span>2</span>
-            <strong>Optional enhance</strong>
+            <strong>선택 향상</strong>
             <small>
               {mode === "pipeline"
-                ? "Single-job prompts only"
-                : "Gemini returns a review draft"}
+                ? "단일 작업 프롬프트만 가능"
+                : "Gemini가 검토용 초안을 반환합니다"}
             </small>
           </div>
           <div
@@ -399,23 +399,23 @@ export function GeneratePage() {
             }`}
           >
             <span>3</span>
-            <strong>Review and accept</strong>
+            <strong>검토 후 수락</strong>
             <small>
               {usableEnhancementId
-                ? "Draft accepted into prompt"
+                ? "초안이 프롬프트에 반영됨"
                 : enhanceReview
-                  ? "Editable draft is waiting below"
-                  : "Main prompt stays unchanged"}
+                  ? "편집 가능한 초안이 아래에 대기 중"
+                  : "메인 프롬프트는 그대로 유지"}
             </small>
           </div>
           <div className="request-flow__item">
             <span>4</span>
-            <strong>Generate</strong>
-            <small>Send the visible prompt to the generation queue</small>
+            <strong>생성</strong>
+            <small>화면에 보이는 프롬프트를 생성 큐로 보냅니다</small>
           </div>
         </div>
 
-        <div className="mode-grid" role="list" aria-label="Generation modes">
+        <div className="mode-grid" role="list" aria-label="생성 모드">
           {modes.map((item) => {
             const Icon = item.icon;
             const active = item.mode === mode;
@@ -454,18 +454,18 @@ export function GeneratePage() {
             >
               <Badge tone={sourceAssetId ? "success" : "warning"}>
                 <PipelineIcon size={12} />
-                {sourceAssetId ? "Source image locked" : "Image source needed"}
+                {sourceAssetId ? "소스 이미지 잠김" : "이미지 소스 필요"}
               </Badge>
               <div>
                 <strong>
                   {sourceAssetId
-                    ? "Using the selected image from the previous result"
-                    : "Start from a completed image result"}
+                    ? "이전 결과에서 선택한 이미지를 사용합니다"
+                    : "완성된 이미지 결과에서 시작하세요"}
                 </strong>
                 <p>
                   {sourceAssetId
-                    ? "The image stays connected. Use the prompt below to describe the motion to add."
-                    : "Open a completed image result and choose Start I2V with this image."}
+                    ? "이미지가 계속 연결됩니다. 아래 프롬프트에 추가할 움직임을 설명하세요."
+                    : "완성된 이미지 결과를 열고 이 이미지로 I2V 시작을 선택하세요."}
                 </p>
               </div>
             </div>
@@ -474,41 +474,41 @@ export function GeneratePage() {
           <label>
             <span>
               {mode === "pipeline"
-                ? "Image prompt"
+                ? "이미지 프롬프트"
                 : mode === "i2v"
-                  ? "Motion prompt"
-                  : "Prompt"}
+                  ? "모션 프롬프트"
+                  : "프롬프트"}
             </span>
             <textarea
               onChange={(event) => updatePrompt(event.target.value)}
               placeholder={
                 mode === "pipeline"
-                  ? "Describe the still image the pipeline should generate first."
+                  ? "Pipeline이 먼저 생성할 정지 이미지를 설명하세요."
                   : mode === "i2v"
-                  ? "Describe the motion to add: camera movement, subject action, and pacing."
-                  : "Describe subject, composition, light, motion, and style."
+                  ? "추가할 움직임을 설명하세요: 카메라 이동, 피사체 동작, 속도감."
+                  : "피사체, 구도, 조명, 움직임, 스타일을 설명하세요."
               }
               value={prompt}
             />
             <span className="field-hint">
               {mode === "pipeline"
-                ? "This image prompt starts the parent T2I job."
+                ? "이 이미지 프롬프트가 parent T2I 작업을 시작합니다."
                 : mode === "i2v"
-                  ? "The connected image remains the visual source; this prompt controls how it moves."
-                : "This is the prompt Generate will send. Enhanced drafts only replace it after you accept them."}
+                  ? "연결된 이미지는 시각 소스로 유지되고, 이 프롬프트가 움직임을 제어합니다."
+                : "생성 요청에 전송될 프롬프트입니다. 향상 초안은 수락한 뒤에만 이 내용을 대체합니다."}
             </span>
           </label>
 
           {mode === "pipeline" && (
             <label>
-              <span>Video prompt</span>
+              <span>영상 프롬프트</span>
               <textarea
                 onChange={(event) => setPipelineVideoPrompt(event.target.value)}
-                placeholder="Describe camera motion, subject action, and atmosphere for the child I2V job."
+                placeholder="Child I2V 작업에 사용할 카메라 움직임, 피사체 동작, 분위기를 설명하세요."
                 value={pipelineVideoPrompt}
               />
               <span className="field-hint">
-                This prompt is held for the child I2V job after the image completes.
+                이미지가 완성된 뒤 child I2V 작업에 사용될 프롬프트입니다.
               </span>
             </label>
           )}
@@ -516,7 +516,7 @@ export function GeneratePage() {
           {mode === "pipeline" ? (
             <div className="field-grid field-grid--pipeline">
               <label>
-                Image model
+                이미지 모델
                 <select
                   onChange={(event) => setPipelineImageModel(event.target.value)}
                   value={pipelineImageModel}
@@ -530,7 +530,7 @@ export function GeneratePage() {
               </label>
 
               <label>
-                Video model
+                영상 모델
                 <select
                   onChange={(event) => setPipelineVideoModel(event.target.value)}
                   value={pipelineVideoModel}
@@ -544,7 +544,7 @@ export function GeneratePage() {
               </label>
 
               <label>
-                Image aspect
+                이미지 비율
                 <select
                   onChange={(event) => setPipelineImageAspectRatio(event.target.value)}
                   value={pipelineImageAspectRatio}
@@ -558,7 +558,7 @@ export function GeneratePage() {
               </label>
 
               <label>
-                Video aspect
+                영상 비율
                 <select
                   onChange={(event) => setPipelineVideoAspectRatio(event.target.value)}
                   value={pipelineVideoAspectRatio}
@@ -572,7 +572,7 @@ export function GeneratePage() {
               </label>
 
               <label>
-                Duration
+                길이
                 <select
                   onChange={(event) => setDurationSec(Number(event.target.value))}
                   value={durationSec}
@@ -588,7 +588,7 @@ export function GeneratePage() {
           ) : (
             <div className="field-grid">
               <label>
-                Model
+                모델
                 <select onChange={(event) => setModel(event.target.value)} value={model}>
                   {activeMode.models.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -599,7 +599,7 @@ export function GeneratePage() {
               </label>
 
               <label>
-                Aspect
+                비율
                 <select
                   onChange={(event) => setAspectRatio(event.target.value)}
                   value={aspectRatio}
@@ -614,7 +614,7 @@ export function GeneratePage() {
 
               {mode === "t2i" ? (
                 <label>
-                  Images
+                  이미지 수
                   <select
                     onChange={(event) => setNumberOfImages(Number(event.target.value))}
                     value={numberOfImages}
@@ -628,7 +628,7 @@ export function GeneratePage() {
                 </label>
               ) : (
                 <label>
-                  Duration
+                  길이
                   <select
                     onChange={(event) => setDurationSec(Number(event.target.value))}
                     value={durationSec}
@@ -664,34 +664,31 @@ export function GeneratePage() {
             )}
             <Badge tone="muted">
               <ClockIcon size={12} />
-              {mode === "t2i" ? `${numberOfImages} image` : `${durationSec}s`}
+              {mode === "t2i" ? `${numberOfImages}장` : `${durationSec}s`}
             </Badge>
             {sourceAssetId && (
               <Badge tone="success">
                 <PipelineIcon size={12} />
-                Source image connected
+                소스 이미지 연결됨
               </Badge>
             )}
           </div>
 
           {mode === "pipeline" && (
             <div className="inline-notice">
-              Pipeline creates an image first, then uses that result as the source
-              for a follow-up video.
+              Pipeline은 이미지를 먼저 만들고, 그 결과를 후속 영상의 소스로 사용합니다.
             </div>
           )}
 
           {usableEnhancementId && (
             <div className="inline-notice inline-notice--success">
-              Prompt enhancement accepted. The prompt above is the version that
-              will be generated while these settings remain unchanged.
+              프롬프트 향상을 수락했습니다. 설정을 바꾸지 않는 동안 위 프롬프트가 생성에 사용됩니다.
             </div>
           )}
 
           {enhanceReview && (
             <div className="inline-notice">
-              Enhanced draft is waiting below. Generate still uses the prompt above
-              until you edit and accept that draft into the main prompt.
+              향상 초안이 아래에 대기 중입니다. 초안을 편집하고 수락하기 전까지 생성은 위 프롬프트를 사용합니다.
             </div>
           )}
 
@@ -702,7 +699,7 @@ export function GeneratePage() {
           <div className="enhancer-action-row">
             {mode !== "pipeline" && (
               <label className="enhancer-select">
-                Gemini enhancer creativity
+                Gemini Enhancer 창의성
                 <select
                   onChange={(event) =>
                     setCreativityPreset(event.target.value as CreativityPreset)
@@ -715,7 +712,7 @@ export function GeneratePage() {
                     </option>
                   ))}
                 </select>
-                <span>Prompt enhancement only; generation settings stay unchanged.</span>
+                <span>프롬프트 향상에만 적용되며 생성 설정은 바뀌지 않습니다.</span>
               </label>
             )}
 
@@ -726,7 +723,7 @@ export function GeneratePage() {
                 type="button"
                 variant="secondary"
               >
-                {enhanceMutation.isPending ? "Enhancing..." : "Enhance prompt"}
+                {enhanceMutation.isPending ? "향상 중..." : "프롬프트 향상"}
               </Button>
               <Button
                 disabled={
@@ -775,23 +772,23 @@ function SourceImageCinema({
     : false;
   const imageAsset = isImage && asset ? asset : null;
   const previewTitle =
-    heroTitle === "What are you imagining?" ? "Animate the selected image" : heroTitle;
+    heroTitle === "무엇을 상상하고 있나요?" ? "선택한 이미지에 움직임 더하기" : heroTitle;
   const badgeTone = imageAsset ? "success" : isError || asset ? "warning" : "info";
 
   return (
     <div className="cinema-source">
       <div className="cinema-source__media">
         {isLoading ? (
-          <div className="cinema-source__placeholder">Loading source image</div>
+          <div className="cinema-source__placeholder">소스 이미지 로딩 중</div>
         ) : imageAsset ? (
-          <img alt={`Selected I2V source asset ${imageAsset.id}`} src={imageAsset.url} />
+          <img alt={`선택된 I2V 소스 asset ${imageAsset.id}`} src={imageAsset.url} />
         ) : isError ? (
           <div className="cinema-source__placeholder cinema-source__placeholder--warning">
-            Source image unavailable
+            소스 이미지를 불러올 수 없습니다
           </div>
         ) : (
           <div className="cinema-source__placeholder cinema-source__placeholder--warning">
-            Selected source is not an image
+            선택한 소스가 이미지가 아닙니다
           </div>
         )}
       </div>
@@ -799,13 +796,13 @@ function SourceImageCinema({
       <div className="cinema-screen__content cinema-screen__content--source">
         <Badge tone={badgeTone}>
           <PipelineIcon size={12} />
-          {imageAsset ? "Source image locked" : "I2V source"}
+          {imageAsset ? "소스 이미지 잠김" : "I2V 소스"}
         </Badge>
         <h2>{previewTitle}</h2>
         <p>
           {imageAsset
-            ? "This image is connected as the I2V source. Use the motion prompt to describe how it should move."
-            : "The source asset is connected, but the preview could not render an image."}
+            ? "이 이미지는 I2V 소스로 연결되어 있습니다. 모션 프롬프트에 어떻게 움직일지 설명하세요."
+            : "소스 asset은 연결되었지만 이미지 preview를 렌더링할 수 없습니다."}
         </p>
       </div>
     </div>
@@ -828,22 +825,21 @@ function EnhanceReviewPanel({
   onUseOriginal: () => void;
 }) {
   return (
-    <Panel className="enhance-panel" title="Review Enhanced Prompt" eyebrow="Prompt Enhance">
+    <Panel className="enhance-panel" title="향상된 프롬프트 검토" eyebrow="Prompt Enhance">
       <div className="enhance-panel__top">
         <p className="panel-copy">
-          Gemini produced an editable draft. Accept it to copy the draft into
-          Request Builder before generating.
+          Gemini가 편집 가능한 초안을 만들었습니다. 생성하기 전에 수락하면 요청 구성의 프롬프트로 복사됩니다.
         </p>
 
         <div className="action-row enhance-actions">
           <Button onClick={onDiscard} type="button" variant="ghost">
-            Discard
+            버리기
           </Button>
           <Button onClick={onUseOriginal} type="button" variant="secondary">
-            Keep original
+            원본 유지
           </Button>
           <Button onClick={onAccept} type="button" variant="primary">
-            Accept draft
+            초안 수락
           </Button>
         </div>
       </div>
@@ -851,11 +847,11 @@ function EnhanceReviewPanel({
       <div className="enhance-meta">
         <Badge tone="info">
           <StatusDot tone="info" />
-          Enhanced draft
+          향상 초안
         </Badge>
-        <Badge tone="muted">Target {enhancement.target_mode}</Badge>
+        <Badge tone="muted">대상 {enhancement.target_mode}</Badge>
         <Badge tone="muted">
-          Creativity {formatCreativityPreset(enhancement.creativity_preset)}
+          창의성 {formatCreativityPreset(enhancement.creativity_preset)}
         </Badge>
         {enhancement.latency_ms !== null && (
           <Badge tone="muted">{enhancement.latency_ms}ms</Badge>
@@ -865,20 +861,20 @@ function EnhanceReviewPanel({
       <div className="enhance-grid">
         <div className="enhance-section">
           <div className="enhance-section__head">
-            <div className="section-label">Original prompt</div>
-            <p>Source text used for the enhancement.</p>
+            <div className="section-label">원본 프롬프트</div>
+            <p>향상에 사용한 원본 텍스트입니다.</p>
           </div>
           <div className="prompt-box">{enhancement.original}</div>
         </div>
         <label className="enhance-section">
           <div className="enhance-section__head">
-            <span className="section-label">Enhanced prompt draft</span>
+            <span className="section-label">향상 프롬프트 초안</span>
             <span className="field-hint">
-              Editable draft. Accepting it copies this text into the main prompt.
+              편집 가능한 초안입니다. 수락하면 이 텍스트가 메인 프롬프트로 복사됩니다.
             </span>
           </div>
           <textarea
-            aria-label="Editable enhanced prompt draft"
+            aria-label="편집 가능한 향상 프롬프트 초안"
             onChange={(event) => onChange(event.target.value)}
             value={editableEnhancedPrompt}
           />
@@ -887,8 +883,8 @@ function EnhanceReviewPanel({
 
       <div className="enhance-components">
         <div className="enhance-section__head">
-          <div className="section-label">Components</div>
-          <p>Key creative cues from the enhanced prompt.</p>
+          <div className="section-label">구성 요소</div>
+          <p>향상 프롬프트에서 뽑은 주요 creative cue입니다.</p>
         </div>
         <div className="component-list">
           {Object.entries(enhancement.components).map(([key, value]) => (
@@ -910,7 +906,7 @@ function ApiErrorMessage({ error }: { error: unknown }) {
 
   const message = error instanceof ApiError || error instanceof Error
     ? error.message
-    : "Request failed.";
+    : "요청에 실패했습니다.";
 
   return <div className="inline-notice inline-notice--danger">{message}</div>;
 }
@@ -923,7 +919,7 @@ function formatComponentValue(value: unknown): string {
     return String(value);
   }
   if (value === null || value === undefined) {
-    return "none";
+    return "없음";
   }
   return JSON.stringify(value);
 }

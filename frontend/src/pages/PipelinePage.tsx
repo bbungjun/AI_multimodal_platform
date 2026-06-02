@@ -34,49 +34,49 @@ const stateCopy: Record<
   }
 > = {
   pending: {
-    label: "Preparing request",
-    summary: "The job is stored and waiting for the runner.",
-    timeline: "Request accepted.",
+    label: "요청 준비 중",
+    summary: "작업이 저장되어 runner 처리를 기다리고 있습니다.",
+    timeline: "요청이 접수되었습니다.",
   },
   enhancing: {
-    label: "Improving prompt",
-    summary: "Prompt enhancement is running before generation.",
-    timeline: "Prompt enhancement active.",
+    label: "프롬프트 향상 중",
+    summary: "생성 전에 프롬프트 향상이 실행 중입니다.",
+    timeline: "프롬프트 향상이 진행 중입니다.",
   },
   queued: {
-    label: "Waiting for generation slot",
-    summary: "The runner is waiting for model capacity.",
-    timeline: "Queued for model execution.",
+    label: "생성 슬롯 대기 중",
+    summary: "Runner가 모델 처리 용량을 기다리고 있습니다.",
+    timeline: "모델 실행 대기열에 있습니다.",
   },
   generating: {
-    label: "Generating on Vertex AI",
-    summary: "The model request is active.",
-    timeline: "Model generation underway.",
+    label: "Vertex AI에서 생성 중",
+    summary: "모델 요청이 실행 중입니다.",
+    timeline: "모델 생성이 진행 중입니다.",
   },
   polling: {
-    label: "Waiting for model output",
-    summary: "The service is polling for the completed result.",
-    timeline: "Result is still being prepared.",
+    label: "모델 결과 확인 중",
+    summary: "서비스가 완료된 결과를 polling하고 있습니다.",
+    timeline: "결과가 아직 준비 중입니다.",
   },
   downloading: {
-    label: "Saving result",
-    summary: "The returned bytes are being written to local storage.",
-    timeline: "Output is being saved.",
+    label: "결과 저장 중",
+    summary: "반환된 bytes를 로컬 저장소에 쓰고 있습니다.",
+    timeline: "출력을 저장하고 있습니다.",
   },
   completed: {
-    label: "Completed",
-    summary: "The job reached a successful terminal state.",
-    timeline: "Result is ready.",
+    label: "완료",
+    summary: "작업이 성공적인 최종 상태에 도달했습니다.",
+    timeline: "결과가 준비되었습니다.",
   },
   failed: {
-    label: "Failed",
-    summary: "The job stopped with an error.",
-    timeline: "Terminal failure state.",
+    label: "실패",
+    summary: "작업이 오류로 중단되었습니다.",
+    timeline: "최종 실패 상태입니다.",
   },
   cancelled: {
-    label: "Cancelled",
-    summary: "The job was cancelled before completion.",
-    timeline: "Terminal cancellation state.",
+    label: "취소됨",
+    summary: "작업이 완료 전에 취소되었습니다.",
+    timeline: "최종 취소 상태입니다.",
   },
 };
 
@@ -87,8 +87,8 @@ export function PipelinePage() {
 
   if (!pipelineId) {
     return (
-      <RoutePlaceholder eyebrow="Missing route param" title="Pipeline id is required">
-        Open a pipeline from the generation form or history to inspect both jobs.
+      <RoutePlaceholder eyebrow="Route 파라미터 없음" title="Pipeline ID가 필요합니다">
+        생성 폼이나 기록에서 Pipeline을 열면 두 작업을 함께 확인할 수 있습니다.
       </RoutePlaceholder>
     );
   }
@@ -101,9 +101,9 @@ export function PipelinePage() {
     const message =
       pipelineQuery.error instanceof Error
         ? pipelineQuery.error.message
-        : "Unable to load pipeline.";
+        : "Pipeline을 불러올 수 없습니다.";
     return (
-      <RoutePlaceholder eyebrow="Pipeline request failed" title={pipelineId}>
+      <RoutePlaceholder eyebrow="Pipeline 요청 실패" title={pipelineId}>
         {message}
       </RoutePlaceholder>
     );
@@ -114,7 +114,7 @@ export function PipelinePage() {
 
   return (
     <div className="page-stack">
-      <Panel title="Pipeline Detail" eyebrow={shortId(pipeline.id)}>
+      <Panel title="Pipeline 상세" eyebrow={shortId(pipeline.id)}>
         <PipelineStatusBar pipeline={pipeline} />
         <PipelineLiveSummary activeStage={activeStage} pipeline={pipeline} />
 
@@ -123,8 +123,8 @@ export function PipelinePage() {
             active={activeStage === "parent"}
             icon={<ImageIcon size={18} />}
             job={pipeline.parent}
-            stepLabel="Step 1"
-            title="Imagen image source"
+            stepLabel="1단계"
+            title="Imagen 이미지 소스"
           />
 
           <div aria-hidden="true" className="pipeline-connector">
@@ -136,8 +136,8 @@ export function PipelinePage() {
             icon={<FilmIcon size={18} />}
             job={pipeline.child}
             sourceAsset={sourceAsset}
-            stepLabel="Step 2"
-            title="Veo image-to-video"
+            stepLabel="2단계"
+            title="Veo Image-to-Video"
           />
         </div>
       </Panel>
@@ -148,17 +148,16 @@ export function PipelinePage() {
 function PipelineLoading({ pipelineId }: { pipelineId: string }) {
   return (
     <div className="page-stack">
-      <Panel title="Loading Pipeline" eyebrow={shortId(pipelineId)}>
+      <Panel title="Pipeline 로딩 중" eyebrow={shortId(pipelineId)}>
         <div className="pipeline-live-summary">
           <Badge tone="info">
             <ClockIcon size={12} />
-            Polling
+            Polling 중
           </Badge>
           <div className="pipeline-live-summary__copy">
-            <strong>Fetching parent and child jobs</strong>
+            <strong>Parent와 child 작업을 가져오는 중</strong>
             <p>
-              Pipeline detail refreshes every 2 seconds until both jobs reach a
-              final state.
+              두 작업이 모두 최종 상태에 도달할 때까지 Pipeline 상세가 2초마다 새로고침됩니다.
             </p>
           </div>
         </div>
@@ -176,23 +175,23 @@ function PipelineStatusBar({ pipeline }: { pipeline: PipelineResponse }) {
     <div className="pipeline-status-bar">
       <Badge tone={toneForState(pipeline.parent.state)}>
         <StatusDot tone={dotToneForState(pipeline.parent.state)} />
-        Step 1 {pipeline.parent.state}
+        1단계 {stateCopy[pipeline.parent.state].label}
       </Badge>
       <Badge tone={toneForState(pipeline.child.state)}>
         <StatusDot tone={dotToneForState(pipeline.child.state)} />
-        Step 2 {pipeline.child.state}
+        2단계 {stateCopy[pipeline.child.state].label}
       </Badge>
-      {pipeline.child.blocked && <Badge tone="warning">Waiting for source image</Badge>}
+      {pipeline.child.blocked && <Badge tone="warning">소스 이미지 대기 중</Badge>}
       {pipeline.child.source_asset_id && (
         <Badge tone="success">
           <PipelineIcon size={12} />
-          Source image connected
+          소스 이미지 연결됨
         </Badge>
       )}
       {!terminal && (
         <Badge tone="info">
           <ClockIcon size={12} />
-          Polling every 2s
+          2초마다 polling
         </Badge>
       )}
     </div>
@@ -243,7 +242,7 @@ function PipelineStage({
         <span className="pipeline-stage__icon">{icon}</span>
         <Badge tone={toneForState(job.state)}>
           <StatusDot tone={dotToneForState(job.state)} />
-          {job.state}
+          {stateCopy[job.state].label}
         </Badge>
       </div>
 
@@ -260,43 +259,43 @@ function PipelineStage({
 
       <div className="pipeline-stage__meta">
         <div>
-          <span>Job</span>
+          <span>작업</span>
           <Link to={`/jobs/${job.id}`}>{shortId(job.id)}</Link>
         </div>
         <div>
-          <span>Model</span>
+          <span>모델</span>
           <strong>{job.model}</strong>
         </div>
         <div>
-          <span>Updated</span>
+          <span>수정일</span>
           <strong>{formatDateTime(job.updated_at)}</strong>
         </div>
         <div>
-          <span>Attempts</span>
+          <span>시도</span>
           <strong>{job.attempts}</strong>
         </div>
         {job.source_asset_id && (
           <div>
-            <span>Source asset</span>
+            <span>소스 asset</span>
             <strong>{shortId(job.source_asset_id)}</strong>
           </div>
         )}
         {formatParameter(job, "duration_sec") && (
           <div>
-            <span>Duration</span>
+            <span>길이</span>
             <strong>{formatParameter(job, "duration_sec")}s</strong>
           </div>
         )}
       </div>
 
       <div className="pipeline-stage__prompt">
-        <Badge tone="muted">Prompt</Badge>
+        <Badge tone="muted">프롬프트</Badge>
         <p>{job.prompt}</p>
       </div>
 
       {job.error && (
         <div className="pipeline-stage__prompt">
-          <Badge tone="danger">Error</Badge>
+          <Badge tone="danger">오류</Badge>
           <p>{formatErrorMessage(job.error)}</p>
         </div>
       )}
@@ -334,7 +333,7 @@ function CompactStateTimeline({
               <span>{stateCopy[step].label}</span>
               <p>{stateCopy[step].timeline}</p>
             </div>
-            <small>{historyEntry ? formatDateTime(historyEntry.at) : "waiting"}</small>
+            <small>{historyEntry ? formatDateTime(historyEntry.at) : "대기"}</small>
           </div>
         );
       })}
@@ -345,7 +344,7 @@ function CompactStateTimeline({
             <span>{stateCopy[state].label}</span>
             <p>{stateCopy[state].timeline}</p>
           </div>
-          <small>terminal</small>
+          <small>종료</small>
         </div>
       )}
     </div>
@@ -370,13 +369,13 @@ function PipelineAssetPreview({
         {isImage && <img alt={`Pipeline asset ${asset.id}`} src={asset.url} />}
         {isVideo && (
           <video controls src={asset.url}>
-            <a href={asset.url}>Open generated video</a>
+            <a href={asset.url}>생성된 영상 열기</a>
           </video>
         )}
         {!isImage && !isVideo && (
           <div className="pipeline-asset-preview--empty">
-            <strong>Asset returned</strong>
-            <span>{asset.mime} cannot be previewed inline.</span>
+            <strong>Asset 반환됨</strong>
+            <span>{asset.mime}는 inline preview를 할 수 없습니다.</span>
           </div>
         )}
       </div>
@@ -386,7 +385,7 @@ function PipelineAssetPreview({
   if (job.mode === "i2v" && sourceAsset) {
     return (
       <div className="pipeline-asset-preview">
-        <img alt={`Source asset ${sourceAsset.id}`} src={sourceAsset.url} />
+        <img alt={`소스 asset ${sourceAsset.id}`} src={sourceAsset.url} />
       </div>
     );
   }
@@ -420,102 +419,102 @@ function getPipelineSummary(
 } {
   if (activeStage === "parent") {
     return {
-      badge: "Step 1 of 2",
+      badge: "2단계 중 1단계",
       detail:
-        "The image job is still active. The I2V child remains blocked until an image asset is available.",
-      title: `${stateCopy[pipeline.parent.state].label} for the source image`,
+        "이미지 작업이 아직 진행 중입니다. 이미지 asset이 준비될 때까지 I2V child는 대기합니다.",
+      title: `소스 이미지 ${stateCopy[pipeline.parent.state].label}`,
       tone: "info",
     };
   }
 
   if (pipeline.parent.state === "failed" || pipeline.parent.state === "cancelled") {
     return {
-      badge: "Stopped",
+      badge: "중단됨",
       detail:
-        "The image step ended before a usable source asset was produced, so the child video job cannot continue.",
-      title: "Pipeline stopped at the image step",
+        "사용 가능한 소스 asset이 만들어지기 전에 이미지 단계가 끝나 child 영상 작업을 계속할 수 없습니다.",
+      title: "Pipeline이 이미지 단계에서 중단되었습니다",
       tone: pipeline.parent.state === "failed" ? "danger" : "warning",
     };
   }
 
   if (activeStage === "child") {
     return {
-      badge: "Step 2 of 2",
+      badge: "2단계 중 2단계",
       detail: pipeline.child.blocked
-        ? "The video job is waiting for the completed image asset to be linked."
-        : "The source image is connected and the Veo I2V job is progressing.",
-      title: `${stateCopy[pipeline.child.state].label} for the video result`,
+        ? "영상 작업이 완료된 이미지 asset 연결을 기다리고 있습니다."
+        : "소스 이미지가 연결되었고 Veo I2V 작업이 진행 중입니다.",
+      title: `영상 결과 ${stateCopy[pipeline.child.state].label}`,
       tone: pipeline.child.blocked ? "warning" : "info",
     };
   }
 
   if (pipeline.child.state === "completed") {
     return {
-      badge: "Complete",
-      detail: "Both jobs reached terminal success and the resulting assets are available.",
-      title: "T2I -> I2V pipeline completed",
+      badge: "완료",
+      detail: "두 작업 모두 성공 최종 상태에 도달했고 결과 asset을 사용할 수 있습니다.",
+      title: "T2I → I2V Pipeline 완료",
       tone: "success",
     };
   }
 
   return {
-    badge: "Terminal",
-    detail: "The pipeline reached a terminal state. Check each stage for error details.",
-    title: "Pipeline no longer has active work",
+    badge: "종료",
+    detail: "Pipeline이 최종 상태에 도달했습니다. 각 단계의 오류 상세를 확인하세요.",
+    title: "Pipeline에 더 이상 진행 중인 작업이 없습니다",
     tone: pipeline.child.state === "failed" ? "danger" : "warning",
   };
 }
 
 function getStageProgressTitle(job: JobResponse): string {
   if (job.blocked) {
-    return "Waiting for upstream image";
+    return "상위 이미지 대기 중";
   }
   return stateCopy[job.state].label;
 }
 
 function getStageProgressDetail(job: JobResponse): string {
   if (job.blocked) {
-    return "The child I2V request is saved but will not run until the parent image asset is connected.";
+    return "Child I2V 요청은 저장되었지만 parent 이미지 asset이 연결될 때까지 실행되지 않습니다.";
   }
   if (job.mode === "i2v" && job.source_asset_id && !isTerminalJobState(job.state)) {
-    return "The source image is locked and this video job continues to refresh while Veo prepares output.";
+    return "소스 이미지가 고정되었고 Veo가 출력을 준비하는 동안 이 영상 작업이 계속 새로고침됩니다.";
   }
   return stateCopy[job.state].summary;
 }
 
 function getEmptyPreviewTitle(job: JobResponse): string {
   if (job.blocked) {
-    return "Waiting for Imagen source";
+    return "Imagen 소스 대기 중";
   }
   if (job.state === "failed") {
-    return "No preview after failure";
+    return "실패 후 preview 없음";
   }
   if (job.state === "cancelled") {
-    return "No preview after cancellation";
+    return "취소 후 preview 없음";
   }
   if (job.state === "completed") {
-    return "Completed without asset";
+    return "Asset 없이 완료됨";
   }
-  return "Preview pending";
+  return "Preview 대기 중";
 }
 
 function getEmptyPreviewDetail(job: JobResponse): string {
   if (job.blocked) {
-    return "Step 2 starts after Step 1 produces a valid image asset.";
+    return "1단계가 유효한 이미지 asset을 만든 뒤 2단계가 시작됩니다.";
   }
   if (job.state === "polling") {
-    return "Veo output is still being prepared.";
+    return "Veo 출력이 아직 준비 중입니다.";
   }
   if (job.state === "downloading") {
-    return "The generated output is being saved locally.";
+    return "생성된 출력을 로컬에 저장하고 있습니다.";
   }
   if (job.state === "failed" || job.state === "cancelled") {
-    return "Inspect the stage error or state history for the reason.";
+    return "원인은 단계 오류 또는 상태 기록을 확인하세요.";
   }
   if (job.state === "completed") {
-    return "The backend returned completion without a previewable asset.";
+    return "Backend가 preview 가능한 asset 없이 완료 상태를 반환했습니다.";
   }
-  return "The preview appears here after this stage returns an asset.";
+  return "이 단계가 asset을 반환하면 preview가 여기에 표시됩니다.";
 }
 
 function toneForState(state: JobState): Tone {
