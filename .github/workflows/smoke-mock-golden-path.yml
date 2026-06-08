@@ -1,0 +1,38 @@
+name: Smoke Mock Golden Path
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AI_PROVIDER: mock
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Validate compose config
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Run mock golden path smoke
+        run: python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+
+      - name: Print compose logs
+        if: failure()
+        run: docker compose --env-file .env.example logs db backend
+
+      - name: Clean up compose resources
+        if: always()
+        run: docker compose --env-file .env.example down -v --remove-orphans

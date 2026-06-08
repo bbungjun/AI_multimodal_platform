@@ -50,6 +50,10 @@ those checks local/manual for now, or consider a separate future
 `workflow_dispatch` or nightly workflow if the added runtime cost becomes worth
 it.
 
+For manual golden-path validation, `.github/workflows/smoke-mock-golden-path.yml`
+is available through `workflow_dispatch` only. It runs the mock backend HTTP
+smoke with Compose and is intentionally not part of the default PR/push CI path.
+
 ## Coverage Anchors
 
 Important backend contracts are already protected by focused tests:
