@@ -99,3 +99,16 @@ def test_request_bytes_wraps_remote_disconnected(monkeypatch):
 
     with pytest.raises(module.SmokeError, match="Health request disconnected"):
         client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")
+
+
+def test_request_bytes_wraps_connection_reset(monkeypatch):
+    module = load_smoke_module()
+
+    def reset(*args, **kwargs):
+        raise ConnectionResetError("connection reset by peer")
+
+    monkeypatch.setattr(module, "urlopen", reset)
+    client = module.HttpClient("http://127.0.0.1:8000")
+
+    with pytest.raises(module.SmokeError, match=r"Health request.*reset"):
+        client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")

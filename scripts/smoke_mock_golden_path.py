@@ -404,6 +404,8 @@ class HttpClient:
             raise SmokeError(f"{step_name} request failed: {exc}") from exc
         except RemoteDisconnected as exc:
             raise SmokeError(f"{step_name} request disconnected: {exc}") from exc
+        except ConnectionResetError as exc:
+            raise SmokeError(f"{step_name} request reset: {exc}") from exc
         if expected_status == 206 and status == 200:
             raise SmokeError(
                 f"{step_name} expected HTTP 206 for Range request, got 200. "
