@@ -41,6 +41,22 @@ Expected services:
 - `backend` on `http://127.0.0.1:8000`
 - `frontend` on `http://127.0.0.1:5173`
 
+## Local Quality Gate
+
+Before a handoff, run the mock-only local quality gate from the repository root:
+
+```powershell
+python scripts/verify_local.py
+```
+
+It validates Compose config with `.env.example`, runs backend tests with
+`AI_PROVIDER=mock`, and runs frontend lint and build. Use `--env-file` for a
+non-secret mock env file; the script refuses `.env`.
+
+The script does not read the repository root `.env`. It also refuses to run
+backend tests if `backend/.env` exists, because backend pytest can load that file
+implicitly through application settings.
+
 ## Health
 
 ```powershell

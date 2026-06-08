@@ -13,6 +13,30 @@ $env:AI_PROVIDER = "mock"
 python -m pytest
 ```
 
+## Local Quality Gate
+
+Run the local quality gate from the repository root before handing off a change:
+
+```powershell
+python scripts/verify_local.py
+```
+
+By default, the script uses `.env.example` and runs:
+
+- `docker compose --env-file .env.example config --quiet`
+- backend `python -m pytest` with `AI_PROVIDER=mock`
+- frontend `npm run lint`
+- frontend `npm run build`
+
+The script refuses `--env-file .env`, validates that the selected env file
+exists, and does not print env file values. For focused checks, use
+`--skip-compose`, `--skip-backend`, or `--skip-frontend`.
+
+The quality gate does not read the repository root `.env`. Because backend
+settings can implicitly load `backend/.env` during pytest, the script refuses to
+run backend tests when `backend/.env` exists. Use `--skip-backend` only for
+compose/frontend-focused checks.
+
 ## Coverage Anchors
 
 Important backend contracts are already protected by focused tests:
