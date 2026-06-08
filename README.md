@@ -64,7 +64,8 @@ Mock mode에서는 credential 관련 값을 비워둘 수 있습니다.
 3. stack을 실행합니다.
 
 ```powershell
-docker compose config
+docker compose --env-file .env.example config --quiet
+docker compose config --quiet
 docker compose up -d --build
 ```
 
@@ -162,3 +163,22 @@ docker compose config
 - 자동화 테스트는 mock 또는 fake provider를 사용합니다.
 - Vertex live QA는 명시적이고 수동적이며 비용을 인지한 상태에서만 실행합니다.
 - 현재 private repo의 git history에는 archived legacy context가 남아 있습니다. portfolio/public repo로 공개하려면 clean public history를 따로 만드는 것이 안전합니다.
+
+## Mock Golden-Path Smoke
+
+Run the backend HTTP golden path in mock mode only:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+```
+
+If `db` and `backend` are already running:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
+```
+
+The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, and verifies
+health, prompt enhancement, T2I generation, job state history, PNG asset
+serving, byte-range streaming, and cleanup. In mock mode, `vertex_charged: true`
+only means the mock provider handler completed; it is not real Vertex billing.

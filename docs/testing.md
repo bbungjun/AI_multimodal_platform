@@ -52,11 +52,53 @@ Future work should add stronger UI tests around:
 Docker Compose config should be checked before starting the stack:
 
 ```powershell
-docker compose config
+docker compose --env-file .env.example config --quiet
+docker compose config --quiet
 ```
 
 For no-cost local smoke checks, use mock mode. For live Vertex QA, follow the
 manual runbook and expect provider cost risk.
+
+## Backend HTTP Smoke
+
+Use the mock-only golden-path smoke to verify the backend HTTP contract, internal
+job runner, database persistence, local asset storage, and byte-range file
+streaming without calling Vertex AI, Gemini, Imagen, or Veo.
+
+From the repository root, start only `db` and `backend` through Compose and run
+the smoke:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+```
+
+If the backend is already running in mock mode, run the same flow against its
+base URL:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
+```
+
+The script refuses `--env-file .env`, parses only plain `KEY=VALUE` names from
+the selected env file, requires `AI_PROVIDER=mock`, and passes
+`AI_PROVIDER=mock` to `docker compose` when `--compose` is used.
+
+Expected coverage:
+
+- `GET /api/health` reports `ok`, `ready`, DB up, `mock_provider`, and
+  credentials `not_required`
+- `POST /api/prompts/enhance` creates a mock prompt draft
+- `POST /api/generations` creates a T2I Imagen job using the accepted enhanced
+  prompt
+- `GET /api/generations/{job_id}` reaches `completed` with
+  `queued -> generating -> downloading -> completed` history
+- `GET /api/assets/{asset_id}` returns matching asset metadata
+- `/files/...` returns PNG bytes and supports `Range: bytes=0-7` with HTTP 206
+- `DELETE /api/generations/{job_id}` removes the terminal job and local asset
+
+In mock mode, `vertex_charged: true` means the generation handler completed its
+provider step. It does not indicate real Vertex billing or external provider
+usage.
 
 ## Secret Hygiene
 

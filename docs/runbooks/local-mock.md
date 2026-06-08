@@ -64,8 +64,31 @@ Create a text-to-image job, wait for completion, and verify that the returned
 asset URL streams from `/files/...`. The generated image should be deterministic
 mock PNG bytes.
 
-Do not use this runbook to judge AI output quality. It verifies application
-flow: API, runner, database, storage, and frontend preview.
+The backend golden-path smoke automates this flow from the repository root:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+```
+
+Use this variant when `db` and `backend` are already running:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
+```
+
+The smoke intentionally starts only `db` and `backend` when `--compose` is used.
+It refuses `--env-file .env`, requires `AI_PROVIDER=mock` in the selected env
+file, checks prompt enhancement, T2I job completion, asset metadata, PNG file
+serving, byte-range streaming, and then deletes the generated job unless
+`--keep-job` is passed.
+
+In mock mode, a completed job may report `vertex_charged: true`; this only means
+the mock provider handler finished its generation step. It is not real Vertex
+billing and does not prove any external AI call happened.
+
+Do not use this backend smoke to judge AI output quality or frontend preview
+behavior. It verifies the backend HTTP flow: API, runner, database, storage, and
+file streaming.
 
 ## Stop
 
