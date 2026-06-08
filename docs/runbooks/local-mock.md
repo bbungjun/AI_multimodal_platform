@@ -82,6 +82,25 @@ file, checks prompt enhancement, T2I job completion, asset metadata, PNG file
 serving, byte-range streaming, and then deletes the generated job unless
 `--keep-job` is passed.
 
+The retry smoke covers the failure and retry workflow, including the frontend
+SPA history and job-detail routes:
+
+```powershell
+python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
+```
+
+Use this variant when the full stack is already running:
+
+```powershell
+python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90
+```
+
+It creates a T2I job with the `[[mock-fail:imagen]]` sentinel, waits for the
+source job to fail with no assets and `vertex_charged: false`, calls
+`POST /api/generations/{source_id}/retry`, checks the retry job contract, verifies
+`/jobs/{retry_id}` returns a non-empty SPA response, and deletes the retry job
+before the source job unless `--keep-jobs` is passed.
+
 Backend tests may use the exact prompt sentinel `[[mock-fail:imagen]]` to force a
 deterministic Imagen mock provider failure. Treat it as a test-only failure-path
 trigger for job error contracts, not as part of manual smoke or normal studio

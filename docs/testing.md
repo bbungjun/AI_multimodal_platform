@@ -108,6 +108,43 @@ In mock mode, `vertex_charged: true` means the generation handler completed its
 provider step. It does not indicate real Vertex billing or external provider
 usage.
 
+## Retry HTTP Smoke
+
+Use the mock-only retry smoke to verify the failed-generation retry path across
+the backend API, internal runner, frontend SPA routes, and cleanup behavior.
+
+From the repository root, start the full local mock stack through Compose and run
+the smoke:
+
+```powershell
+python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
+```
+
+If `db`, `backend`, and `frontend` are already running in mock mode, run:
+
+```powershell
+python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90
+```
+
+The retry smoke reuses the golden-path env parsing, backend health checks, and
+HTTP client. It also refuses `--env-file .env`, requires `AI_PROVIDER=mock`, and
+forces `AI_PROVIDER=mock` into `docker compose` when `--compose` is used.
+
+Expected coverage:
+
+- `GET /api/health` reports mock readiness with no credentials required
+- `GET /history` on the frontend returns HTTP 200 with a non-empty SPA body
+- `POST /api/generations` creates a T2I Imagen job with the
+  `[[mock-fail:imagen]]` sentinel
+- the source job reaches `failed` with no assets, `vertex_charged: false`, and
+  `error.code: mock_provider_failure`
+- `POST /api/generations/{source_id}/retry` returns HTTP 201 with a new job id,
+  `retry_of_job_id` set to the source id, and no assets
+- `GET /jobs/{retry_id}` on the frontend returns HTTP 200 with a non-empty SPA
+  body
+- cleanup deletes the retry job first, then the source job, unless `--keep-jobs`
+  is passed
+
 ## Secret Hygiene
 
 Verification should include checks that `.env`, credential files, generated
