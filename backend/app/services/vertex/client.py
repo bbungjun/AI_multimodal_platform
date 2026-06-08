@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Protocol
 
+import google.auth as google_auth
 from google import genai
 from google.auth.exceptions import GoogleAuthError
 from google.oauth2 import service_account
@@ -19,6 +21,10 @@ from app.services.vertex.errors import (
 )
 
 VERTEX_AUTH_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+
+
+class VertexCredentials(Protocol):
+    project_id: str | None
 
 
 @dataclass(frozen=True)
@@ -42,8 +48,8 @@ class VertexReadiness:
 @lru_cache
 def get_vertex_client() -> genai.Client:
     settings = get_settings()
-    credentials = load_service_account_credentials(settings)
-    project_id = resolve_project_id(settings, credentials)
+    credentials, credentials_project_id = load_vertex_credentials(settings)
+    project_id = resolve_project_id(settings, credentials_project_id)
     location = resolve_location(settings)
     return genai.Client(
         vertexai=True,
@@ -80,9 +86,28 @@ def get_vertex_readiness() -> VertexReadiness:
     )
 
 
+def load_vertex_credentials(
+    settings: Settings,
+) -> tuple[object, str | None]:
+    if settings.google_application_credentials is None or _is_cloud_sdk_adc_path(
+        settings.google_application_credentials
+    ):
+        return load_adc_credentials()
+
+    credentials = load_service_account_credentials(settings)
+    return credentials, getattr(credentials, "project_id", None)
+
+
+def load_adc_credentials() -> tuple[object, str | None]:
+    try:
+        return google_auth.default(scopes=[VERTEX_AUTH_SCOPE])
+    except GoogleAuthError as exc:
+        raise VertexCredentialsMissingError() from exc
+
+
 def load_service_account_credentials(
     settings: Settings,
-) -> service_account.Credentials:
+) -> VertexCredentials:
     credentials_path = _resolve_credentials_path(settings.google_application_credentials)
 
     try:
@@ -96,9 +121,9 @@ def load_service_account_credentials(
 
 def resolve_project_id(
     settings: Settings,
-    credentials: service_account.Credentials,
+    credentials_project_id: str | None,
 ) -> str:
-    project_id = settings.gcp_project_id or getattr(credentials, "project_id", None)
+    project_id = settings.gcp_project_id or credentials_project_id
     if not project_id:
         raise VertexProjectMissingError()
     return project_id
@@ -126,6 +151,10 @@ def _resolve_credentials_path(path: Path | None) -> Path:
         raise VertexCredentialsInvalidError()
 
     return resolved
+
+
+def _is_cloud_sdk_adc_path(path: Path) -> bool:
+    return path.name.lower() == "application_default_credentials.json"
 
 
 def _readiness_from_error(
