@@ -25,11 +25,12 @@ def test_ci_workflow_runs_local_verification_script() -> None:
     assert "python scripts/verify_local.py" in workflow_text()
 
 
-def test_ci_workflow_sets_up_python_and_node() -> None:
+def test_ci_workflow_uses_node_24_compatible_actions() -> None:
     text = workflow_text()
 
-    assert "actions/setup-python@v5" in text
-    assert "actions/setup-node@v4" in text
+    assert "actions/checkout@v6" in text
+    assert "actions/setup-python@v6" in text
+    assert "actions/setup-node@v6" in text
 
 
 def test_ci_workflow_installs_backend_and_frontend_dependencies() -> None:
