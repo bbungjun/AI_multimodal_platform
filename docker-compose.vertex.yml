@@ -1,0 +1,8 @@
+# Optional override for AI_PROVIDER=vertex.
+# Use with:
+# docker compose -f docker-compose.yml -f docker-compose.vertex.yml up -d --build
+
+services:
+  backend:
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST:?Set GOOGLE_APPLICATION_CREDENTIALS_HOST to the host credential JSON path}:${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS to the container credential JSON path}:ro
