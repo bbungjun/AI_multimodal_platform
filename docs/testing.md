@@ -29,6 +29,13 @@ Important backend contracts are already protected by focused tests:
 
 These tests are the safety net for repository detox and productionization.
 
+The mock Imagen provider also has a test-only failure sentinel:
+`[[mock-fail:imagen]]`. In `AI_PROVIDER=mock`, and only when no explicit client is
+passed, this prompt fragment raises a deterministic non-retryable provider error
+without constructing a Vertex client. Use it in automated tests to verify failed
+job error serialization, no-asset writes, `vertex_charged: false`, single-attempt
+failure, and pipeline child cascade behavior.
+
 ## Frontend Checks
 
 Frontend verification should keep:

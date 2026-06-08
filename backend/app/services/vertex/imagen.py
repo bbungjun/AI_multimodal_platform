@@ -9,7 +9,19 @@ from google.genai import types
 from app.config import get_settings
 from app.services import mock_media
 from app.services.vertex.client import get_vertex_client
-from app.services.vertex.errors import VertexOutputUnavailableError, map_vertex_error
+from app.services.vertex.errors import (
+    VertexOutputUnavailableError,
+    VertexServiceError,
+    map_vertex_error,
+)
+
+MOCK_FAILURE_SENTINEL = "[[mock-fail:imagen]]"
+
+
+class MockProviderFailureError(VertexServiceError):
+    code = "mock_provider_failure"
+    public_message = "Mock provider failure was requested."
+    retryable = False
 
 
 async def generate_image(
@@ -21,6 +33,8 @@ async def generate_image(
     client: Any | None = None,
 ) -> list[bytes]:
     if client is None and get_settings().ai_provider == "mock":
+        if MOCK_FAILURE_SENTINEL in prompt:
+            raise MockProviderFailureError()
         return mock_media.generate_mock_pngs(
             model_id,
             prompt,

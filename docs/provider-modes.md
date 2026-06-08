@@ -20,6 +20,11 @@ Mock mode:
 
 Use mock mode for normal development, automated tests, and no-cost smoke checks.
 
+For backend tests only, an Imagen prompt containing the exact sentinel
+`[[mock-fail:imagen]]` forces a deterministic mock provider failure. This is a
+test trigger for failed-job contracts and pipeline cascade behavior; it is not a
+normal user workflow.
+
 ## Vertex Mode
 
 `AI_PROVIDER=vertex` is the real provider mode.

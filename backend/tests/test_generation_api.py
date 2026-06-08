@@ -195,6 +195,37 @@ def _job_with_video_asset() -> Job:
     return job
 
 
+def _failed_mock_provider_job() -> Job:
+    now = utc_now()
+    return Job(
+        id=uuid4(),
+        mode=GenerationMode.T2I,
+        model="imagen-4.0-fast-generate-001",
+        state=JobState.FAILED,
+        prompt="a quiet desk lamp [[mock-fail:imagen]]",
+        blocked=False,
+        attempts=1,
+        parameters={"aspect_ratio": "1:1", "number_of_images": 1},
+        state_history=[
+            {
+                "state": "failed",
+                "at": now.isoformat(),
+                "detail": {"error": "mock_provider_failure"},
+            }
+        ],
+        error={
+            "code": "mock_provider_failure",
+            "message": "Mock provider failure was requested.",
+            "retryable": False,
+            "retry_count": 1,
+            "last_attempt_at": now.isoformat(),
+        },
+        vertex_charged=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 def _settings_for_data_dir(tmp_path):
     return Settings(data_dir=tmp_path)
 
@@ -556,6 +587,22 @@ async def test_get_generation_returns_job_with_asset_dto():
             "url": f"/files/{job.id}/output.png",
         }
     ]
+
+
+async def test_get_generation_serializes_failed_job_error_contract():
+    job = _failed_mock_provider_job()
+    session = FakeGenerationSession(jobs=[job])
+
+    response = await _get_generations(f"/api/generations/{job.id}", session)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(job.id)
+    assert body["state"] == "failed"
+    assert body["attempts"] == 1
+    assert body["vertex_charged"] is False
+    assert body["assets"] == []
+    assert body["error"] == job.error
 
 
 async def test_get_generation_returns_404_for_missing_job():

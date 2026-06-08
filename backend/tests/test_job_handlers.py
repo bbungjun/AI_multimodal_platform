@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from uuid import uuid4
 
+from app.config import Settings
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
 from app.services.jobs import handlers
 from app.services.vertex.errors import (
@@ -119,6 +120,14 @@ def _i2v_job(source_asset_id: object) -> Job:
 
 def _assert_history_payload(entry: dict[str, object]) -> None:
     assert set(entry) == {"state", "at", "detail"}
+
+
+def _mock_settings() -> Settings:
+    return Settings(ai_provider="mock")
+
+
+def _fail_vertex_client() -> None:
+    raise AssertionError("mock provider failure sentinel must not create Vertex client")
 
 
 async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
@@ -273,6 +282,72 @@ async def test_handle_t2i_vertex_failure_marks_job_failed_and_cascades(
     failed_entry = job.state_history[-1]
     assert failed_entry["at"] == job.error["last_attempt_at"]
     assert failed_entry["detail"] == {"error": "vertex_output_unavailable"}
+    assert cascaded_jobs == [job.id]
+    assert session.commit_count == 4
+    assert session.rollback_count == 1
+
+
+async def test_handle_t2i_mock_provider_failure_marks_job_failed_and_cascades(
+    monkeypatch,
+):
+    job = _t2i_job()
+    job.prompt = "A cinematic mountain village [[mock-fail:imagen]]"
+    session = FakeHandlerSession(job)
+    cascaded_jobs: list[object] = []
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    def save_bytes(*_args: object, **_kwargs: object) -> str:
+        raise AssertionError("mock provider failure must not save assets")
+
+    async def link_completed_parent(*_args: object) -> None:
+        raise AssertionError("failed T2I job must not link pipeline children")
+
+    async def fail_blocked_children_for_parent(
+        _session: object,
+        failed_job: Job,
+    ) -> None:
+        assert _session is session
+        cascaded_jobs.append(failed_job.id)
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.imagen, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(handlers.imagen, "get_vertex_client", _fail_vertex_client)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+    monkeypatch.setattr(
+        handlers.pipeline_link,
+        "link_completed_parent",
+        link_completed_parent,
+    )
+    monkeypatch.setattr(
+        handlers.pipeline_link,
+        "fail_blocked_children_for_parent",
+        fail_blocked_children_for_parent,
+    )
+
+    await handlers.handle_t2i(session, job)
+
+    assert job.state == JobState.FAILED
+    assert job.vertex_charged is False
+    assert job.attempts == 1
+    assert session.added == []
+    assert [entry["state"] for entry in job.state_history] == [
+        "queued",
+        "generating",
+        "failed",
+    ]
+    assert job.error == {
+        "code": "mock_provider_failure",
+        "message": "Mock provider failure was requested.",
+        "retryable": False,
+        "retry_count": 1,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+    for entry in job.state_history:
+        _assert_history_payload(entry)
+    assert job.state_history[-1]["at"] == job.error["last_attempt_at"]
+    assert job.state_history[-1]["detail"] == {"error": "mock_provider_failure"}
     assert cascaded_jobs == [job.id]
     assert session.commit_count == 4
     assert session.rollback_count == 1

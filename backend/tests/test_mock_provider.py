@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from app.config import Settings
 from app.models import GenerationMode
 from app.services.llm import enhancer
@@ -41,6 +43,25 @@ async def test_mock_image_provider_returns_pngs_without_vertex_client(monkeypatc
     assert all(image.startswith(PNG_SIGNATURE) for image in images)
     assert [_png_size(image) for image in images] == [(640, 360), (640, 360)]
     assert images[0] != images[1]
+
+
+async def test_mock_image_provider_failure_sentinel_raises_without_vertex_client(
+    monkeypatch,
+):
+    monkeypatch.setattr(imagen, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(imagen, "get_vertex_client", _fail_vertex_client)
+
+    with pytest.raises(imagen.MockProviderFailureError) as exc_info:
+        await imagen.generate_image(
+            "imagen-4.0-fast-generate-001",
+            "a quiet desk lamp [[mock-fail:imagen]]",
+            number_of_images=1,
+            aspect_ratio="1:1",
+        )
+
+    assert exc_info.value.code == "mock_provider_failure"
+    assert exc_info.value.public_message == "Mock provider failure was requested."
+    assert exc_info.value.retryable is False
 
 
 async def test_mock_prompt_enhancement_returns_draft_without_vertex_client(monkeypatch):
