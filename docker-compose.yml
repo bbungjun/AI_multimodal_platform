@@ -31,7 +31,7 @@ services:
       DATA_DIR: ${DATA_DIR:?Set DATA_DIR in .env or pass --env-file .env.example}
       JOB_RUNNER_CONCURRENCY: ${JOB_RUNNER_CONCURRENCY:-10}
     volumes:
-      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST:?Set GOOGLE_APPLICATION_CREDENTIALS_HOST to the host service-account JSON path}:/secrets/sa.json:ro
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST:?Set GOOGLE_APPLICATION_CREDENTIALS_HOST to the host credential JSON path}:${GOOGLE_APPLICATION_CREDENTIALS:?Set GOOGLE_APPLICATION_CREDENTIALS to the container credential JSON path}:ro
       - assets:/data/assets
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
