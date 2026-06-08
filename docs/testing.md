@@ -37,6 +37,19 @@ settings can implicitly load `backend/.env` during pytest, the script refuses to
 run backend tests when `backend/.env` exists. Use `--skip-backend` only for
 compose/frontend-focused checks.
 
+## GitHub Actions CI
+
+The default CI workflow runs on pull requests, pushes to `main`, and manual
+dispatch. It uses Python 3.11, Node 20, `AI_PROVIDER=mock`, installs backend and
+frontend dependencies, then runs `python scripts/verify_local.py` from the
+repository root. CI must stay mock-only and must not require provider
+credentials.
+
+Compose smoke up/down is intentionally not part of the default CI path. Keep
+those checks local/manual for now, or consider a separate future
+`workflow_dispatch` or nightly workflow if the added runtime cost becomes worth
+it.
+
 ## Coverage Anchors
 
 Important backend contracts are already protected by focused tests:
@@ -67,7 +80,8 @@ Frontend verification should keep:
 
 ```powershell
 cd frontend
-npm install
+npm ci
+npm run lint
 npm run build
 ```
 
