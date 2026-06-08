@@ -25,6 +25,7 @@ Important backend contracts are already protected by focused tests:
 - prompt enhancement parsing, validation, and retry behavior
 - Vertex adapter parsing and public error mapping with fake clients
 - generation, pipeline, asset, and delete API contracts
+- failed-generation retry API contracts, including I2V source asset validation
 - model relationship behavior and cascade/detach rules
 
 These tests are the safety net for repository detox and productionization.

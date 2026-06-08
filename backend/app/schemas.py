@@ -132,6 +132,7 @@ class JobResponse(BaseModel):
     enhanced_prompt: str | None = None
     enhancement_id: UUID | None = None
     parent_job_id: UUID | None = None
+    retry_of_job_id: UUID | None = None
     source_asset_id: UUID | None = None
     blocked: bool
     vertex_operation_name: str | None = None
@@ -164,6 +165,7 @@ def job_response_from_job(
         enhanced_prompt=job.enhanced_prompt,
         enhancement_id=job.enhancement_id,
         parent_job_id=job.parent_job_id,
+        retry_of_job_id=job.retry_of_job_id,
         source_asset_id=job.source_asset_id,
         blocked=job.blocked,
         vertex_operation_name=job.vertex_operation_name,

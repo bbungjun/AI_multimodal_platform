@@ -14,6 +14,7 @@ def test_job_optional_foreign_keys_detach_on_parent_deletion():
     expected = [
         (Job.__table__.c.enhancement_id, "prompt_enhancements.id"),
         (Job.__table__.c.parent_job_id, "jobs.id"),
+        (Job.__table__.c.retry_of_job_id, "jobs.id"),
         (Job.__table__.c.source_asset_id, "assets.id"),
     ]
 
@@ -23,6 +24,12 @@ def test_job_optional_foreign_keys_detach_on_parent_deletion():
         assert str(foreign_key.column) == target
         assert foreign_key.ondelete == "SET NULL"
         assert column.nullable is True
+
+
+def test_job_retry_of_job_id_has_lookup_index():
+    column = Job.__table__.c.retry_of_job_id
+
+    assert any(column.name in index.columns for index in Job.__table__.indexes)
 
 
 def test_asset_job_foreign_key_cascades_with_owned_job():

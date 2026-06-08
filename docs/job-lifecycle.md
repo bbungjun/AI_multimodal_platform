@@ -23,6 +23,24 @@ pending -> queued -> generating -> polling -> downloading -> completed
 Failure, cancellation, and deletion rules depend on terminal state. Terminal
 jobs can be deleted. Active or dependent jobs are protected.
 
+## Failed Job Retry
+
+`POST /api/generations/{job_id}/retry` is only valid for failed jobs. A retry
+creates a new pending job and links it with `retry_of_job_id`; it never revives
+or mutates the original failed job. The new job copies the user-reviewed
+generation contract (`mode`, `model`, prompts, enhancement link, parent link,
+source asset link, and parameters) while resetting runtime fields such as
+attempts, state history, provider operation name, error, charged status, and
+assets.
+
+For image-to-video retries, the original source asset must still exist and be an
+image. If the asset was detached, deleted, or is not an image, the API returns a
+conflict and does not create a retry job.
+
+Deletion treats active retry jobs as dependencies of their failed source job.
+Terminal retry jobs are detached from `retry_of_job_id` when the original job is
+deleted.
+
 ## Runner
 
 The internal runner:

@@ -59,6 +59,10 @@ calls, persist generated assets, and transition jobs through the state machine.
 Pipelines are modeled as parent/child jobs. A text-to-image parent can unblock
 an image-to-video child once an image asset exists.
 
+Failed-job retries are also modeled as jobs. `retry_of_job_id` links the new
+pending retry job to the failed source while keeping the original failure record
+immutable.
+
 ## Storage Model
 
 Asset metadata lives in Postgres. Binary media is stored under `DATA_DIR` and

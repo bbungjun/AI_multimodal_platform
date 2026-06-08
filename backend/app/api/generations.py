@@ -158,6 +158,73 @@ async def get_generation(
     return job_response_from_job(job, assets=list(job.assets))
 
 
+@router.post(
+    "/{job_id}/retry",
+    response_model=GenerationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def retry_generation(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_session),
+) -> GenerationResponse:
+    source = await session.get(Job, job_id)
+    if source is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Generation job was not found.",
+        )
+    if source.state != JobState.FAILED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only failed generation jobs can be retried.",
+        )
+
+    source_asset_id = source.source_asset_id
+    if source.mode == GenerationMode.I2V:
+        if source_asset_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Retry source asset is no longer available.",
+            )
+        source_asset = await session.get(Asset, source_asset_id)
+        if source_asset is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Retry source asset is no longer available.",
+            )
+        if source_asset.kind != AssetKind.IMAGE:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Retry source asset must be an image.",
+            )
+
+    now = utc_now()
+    retry = Job(
+        id=uuid4(),
+        mode=source.mode,
+        model=source.model,
+        state=JobState.PENDING,
+        prompt=source.prompt,
+        enhanced_prompt=source.enhanced_prompt,
+        enhancement_id=source.enhancement_id,
+        parent_job_id=source.parent_job_id,
+        retry_of_job_id=source.id,
+        source_asset_id=source_asset_id,
+        blocked=False,
+        vertex_operation_name=None,
+        attempts=0,
+        parameters=dict(source.parameters or {}),
+        state_history=[],
+        error=None,
+        vertex_charged=False,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(retry)
+    await session.commit()
+    return job_response_from_job(retry, assets=[])
+
+
 @router.delete(
     "/{job_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -251,11 +318,20 @@ async def _jobs_referencing_job(session: AsyncSession, job: Job) -> list[Job]:
             if reference.id != job.id:
                 references[reference.id] = reference
 
+    for reference in await _retry_jobs(session, job.id):
+        if reference.id != job.id:
+            references[reference.id] = reference
+
     return list(references.values())
 
 
 async def _child_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:
     result = await session.scalars(select(Job).where(Job.parent_job_id == job_id))
+    return list(result.all())
+
+
+async def _retry_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:
+    result = await session.scalars(select(Job).where(Job.retry_of_job_id == job_id))
     return list(result.all())
 
 
@@ -277,5 +353,7 @@ def _detach_deleted_job_references(job: Job, referencing_jobs: list[Job]) -> Non
     for reference in referencing_jobs:
         if reference.parent_job_id == job.id:
             reference.parent_job_id = None
+        if reference.retry_of_job_id == job.id:
+            reference.retry_of_job_id = None
         if reference.source_asset_id in asset_ids:
             reference.source_asset_id = None

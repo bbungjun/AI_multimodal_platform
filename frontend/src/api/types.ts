@@ -115,6 +115,7 @@ export type JobResponse = {
   enhanced_prompt: string | null;
   enhancement_id: UUID | null;
   parent_job_id: UUID | null;
+  retry_of_job_id: UUID | null;
   source_asset_id: UUID | null;
   blocked: boolean;
   vertex_operation_name: string | null;

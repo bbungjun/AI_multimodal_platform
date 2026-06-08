@@ -87,6 +87,15 @@ class Job(Base):
         ForeignKey("jobs.id", ondelete="SET NULL"),
         index=True,
     )
+    retry_of_job_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey(
+            "jobs.id",
+            name="fk_jobs_retry_of_job_id_jobs",
+            ondelete="SET NULL",
+        ),
+        index=True,
+    )
     source_asset_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey(
@@ -132,6 +141,11 @@ class Job(Base):
         "Job",
         remote_side=[id],
         foreign_keys=[parent_job_id],
+    )
+    retry_of_job: Mapped[Job | None] = relationship(
+        "Job",
+        remote_side=[id],
+        foreign_keys=[retry_of_job_id],
     )
     source_asset: Mapped[Asset | None] = relationship(
         "Asset",
