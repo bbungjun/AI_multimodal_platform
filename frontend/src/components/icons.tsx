@@ -72,6 +72,16 @@ export function HistoryIcon(props: IconProps) {
   );
 }
 
+export function RetryIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M21 12a9 9 0 0 1-15.3 6.4" />
+      <path d="M3 12A9 9 0 0 1 18.3 5.6" />
+      <path d="M18 2v4h-4M6 22v-4h4" />
+    </Icon>
+  );
+}
+
 export function CpuIcon(props: IconProps) {
   return (
     <Icon {...props}>

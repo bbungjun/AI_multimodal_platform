@@ -69,6 +69,16 @@ export async function createGeneration(
   return resolveJobAssetUrls(job);
 }
 
+export async function retryGeneration(jobId: UUID): Promise<GenerationResponse> {
+  const job = await apiRequest<GenerationResponse>(
+    `/api/generations/${jobId}/retry`,
+    {
+      method: "POST",
+    },
+  );
+  return resolveJobAssetUrls(job);
+}
+
 export async function listGenerations(
   params: GenerationListParams = {},
 ): Promise<GenerationResponse[]> {

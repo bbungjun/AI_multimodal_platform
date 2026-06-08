@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import {
   deleteGeneration,
   listGenerations,
+  retryGeneration,
   type AssetKind,
   type AssetResponse,
   type GenerationListParams,
@@ -13,7 +14,7 @@ import {
   type JobState,
 } from "../api/client";
 import { Badge, Button, Panel, StatusDot } from "../components/ui";
-import { FilmIcon, HistoryIcon, ImageIcon, PipelineIcon } from "../components/icons";
+import { FilmIcon, HistoryIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
 
 const modeOptions: Array<GenerationMode | "all"> = ["all", "t2i", "t2v", "i2v"];
 const assetKindOptions: Array<AssetKind | "all"> = ["all", "image", "video"];
@@ -42,6 +43,8 @@ export function HistoryPage() {
   const [offset, setOffset] = useState(0);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 
   const queryParams: GenerationListParams = {
     ...(mode === "all" ? {} : { mode }),
@@ -71,6 +74,25 @@ export function HistoryPage() {
     },
     onSettled: () => {
       setDeletingJobId(null);
+    },
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: retryGeneration,
+    onMutate: (jobId) => {
+      setRetryingJobId(jobId);
+      setRetryError(null);
+    },
+    onSuccess: async (newJob) => {
+      queryClient.setQueryData(["job", newJob.id], newJob);
+      await queryClient.invalidateQueries({ queryKey: ["generations"] });
+      navigate(`/jobs/${newJob.id}`);
+    },
+    onError: (error) => {
+      setRetryError(error instanceof Error ? error.message : "Retry failed.");
+    },
+    onSettled: () => {
+      setRetryingJobId(null);
     },
   });
 
@@ -240,6 +262,15 @@ export function HistoryPage() {
             <p>{deleteError}</p>
           </div>
         )}
+        {retryError && (
+          <div className="history-delete-alert" role="alert">
+            <Badge tone="danger">
+              <StatusDot tone="danger" />
+              Retry failed
+            </Badge>
+            <p>{retryError}</p>
+          </div>
+        )}
 
         {generations.isLoading && (
           <HistoryMessage
@@ -294,6 +325,11 @@ export function HistoryPage() {
                 <span className="history-prompt">
                   <strong>{summarizePrompt(job.prompt)}</strong>
                   <small title={job.id}>작업 {shortJobId(job.id)}</small>
+                  {job.retry_of_job_id && (
+                    <span className="history-retry-badge" title={job.retry_of_job_id}>
+                      Retry of {shortJobId(job.retry_of_job_id)}
+                    </span>
+                  )}
                 </span>
                 <span className="history-model" title={job.model}>
                   <small>모델</small>
@@ -304,6 +340,21 @@ export function HistoryPage() {
                   <strong>{formatDateTime(job.created_at)}</strong>
                 </span>
                 <span className="history-actions">
+                  {job.state === "failed" && (
+                    <Button
+                      className="history-retry-button"
+                      disabled={retryMutation.isPending}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        retryMutation.mutate(job.id);
+                      }}
+                      type="button"
+                      variant="ghost"
+                    >
+                      <RetryIcon size={13} />
+                      {retryingJobId === job.id ? "Retrying" : "Retry"}
+                    </Button>
+                  )}
                   {canDeleteHistoryJob(job) ? (
                     <Button
                       className="history-delete-button"

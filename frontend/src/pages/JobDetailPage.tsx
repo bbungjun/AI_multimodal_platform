@@ -1,9 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { AssetResponse, JobResponse, JobState, StateHistoryEntry } from "../api/client";
+import {
+  retryGeneration,
+  type AssetResponse,
+  type JobResponse,
+  type JobState,
+  type StateHistoryEntry,
+} from "../api/client";
 import { Badge, Button, Panel, RoutePlaceholder, StatusDot } from "../components/ui";
-import { FilmIcon, ImageIcon, PipelineIcon } from "../components/icons";
+import { FilmIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
 import { useAsset } from "../hooks/useAsset";
 import { isTerminalJobState, useJob } from "../hooks/useJob";
 
@@ -91,12 +98,28 @@ const stateCopy: Record<
 export function JobDetailPage() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [retryError, setRetryError] = useState<string | null>(null);
   const jobQuery = useJob(jobId);
   const job = jobQuery.data;
   const primaryAsset = job?.assets[0] ?? null;
   const imageResultAssets = useMemo(() => findCompletedImageAssets(job), [job]);
   const i2vSourceAssetId = getI2VSourcePreviewAssetId(job);
   const i2vSourceQuery = useAsset(i2vSourceAssetId);
+  const retryMutation = useMutation({
+    mutationFn: retryGeneration,
+    onMutate: () => {
+      setRetryError(null);
+    },
+    onSuccess: async (newJob) => {
+      queryClient.setQueryData(["job", newJob.id], newJob);
+      await queryClient.invalidateQueries({ queryKey: ["generations"] });
+      navigate(`/jobs/${newJob.id}`);
+    },
+    onError: (error) => {
+      setRetryError(error instanceof Error ? error.message : "Retry failed.");
+    },
+  });
 
   if (!jobId) {
     return (
@@ -143,6 +166,13 @@ export function JobDetailPage() {
         {!isTerminalJobState(job.state) && <CurrentStepSummary job={job} />}
         <JobStateTimeline history={job.state_history} state={job.state} />
         <JobWaitingContext job={job} />
+        {job.state === "failed" && (
+          <RetryJobAction
+            error={retryError}
+            isRetrying={retryMutation.isPending}
+            onRetry={() => retryMutation.mutate(job.id)}
+          />
+        )}
       </Panel>
 
       <Panel title="요청 요약" eyebrow={job.mode}>
@@ -652,6 +682,38 @@ function JobWaitingContext({ job }: { job: JobResponse }) {
   );
 }
 
+function RetryJobAction({
+  error,
+  isRetrying,
+  onRetry,
+}: {
+  error: string | null;
+  isRetrying: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="retry-action">
+      <div className="retry-action__copy">
+        <Badge tone="danger">
+          <StatusDot tone="danger" />
+          Retry
+        </Badge>
+        <strong>Retry this failed generation</strong>
+        <p>Create a new job from the same confirmed generation payload.</p>
+        {error && (
+          <div className="inline-notice inline-notice--danger" role="alert">
+            {error}
+          </div>
+        )}
+      </div>
+      <Button disabled={isRetrying} onClick={onRetry} type="button" variant="primary">
+        <RetryIcon size={14} />
+        {isRetrying ? "Retrying" : "Retry"}
+      </Button>
+    </div>
+  );
+}
+
 function RequestSummary({ job }: { job: JobResponse }) {
   return (
     <div className="request-summary">
@@ -660,6 +722,12 @@ function RequestSummary({ job }: { job: JobResponse }) {
           <span>모드</span>
           <strong>{job.mode}</strong>
         </div>
+        {job.retry_of_job_id && (
+          <div>
+            <span>Retry</span>
+            <strong>Retry of {shortId(job.retry_of_job_id)}</strong>
+          </div>
+        )}
         <div>
           <span>모델</span>
           <strong>{job.model}</strong>

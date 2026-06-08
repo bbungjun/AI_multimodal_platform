@@ -1146,6 +1146,41 @@ p {
   flex: 0 0 auto;
 }
 
+.retry-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius-md);
+  background: rgba(248, 113, 113, 0.08);
+  padding: 12px;
+}
+
+.retry-action__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.retry-action__copy strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.retry-action__copy p {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.retry-action .button {
+  flex: 0 0 auto;
+}
+
 .job-progress-summary {
   border: 1px solid rgba(34, 211, 238, 0.35);
   border-radius: var(--radius-md);
@@ -1429,7 +1464,7 @@ p {
 
 .history-row-grid {
   grid-template-columns:
-    96px 188px minmax(0, 1.5fr) minmax(170px, 0.8fr) 158px 108px;
+    96px 188px minmax(0, 1.5fr) minmax(170px, 0.8fr) 158px minmax(154px, 0.55fr);
 }
 
 .history-row {
@@ -1496,6 +1531,23 @@ p {
   white-space: nowrap;
 }
 
+.history-retry-badge {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  border-radius: var(--radius-sm);
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  padding: 3px 6px;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .history-model,
 .history-created {
   display: flex;
@@ -1528,6 +1580,9 @@ p {
 
 .history-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
   justify-content: flex-end;
 }
 
@@ -1538,6 +1593,15 @@ p {
 
 .history-delete-button {
   color: var(--err);
+}
+
+.history-retry-button {
+  color: var(--cyan);
+}
+
+.history-retry-button:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.34);
+  background: var(--cyan-dim);
 }
 
 .history-delete-button:hover:not(:disabled) {
@@ -2004,6 +2068,10 @@ p {
     grid-template-columns: 1fr;
   }
 
+  .history-actions {
+    justify-content: flex-start;
+  }
+
   .pagination-row {
     align-items: stretch;
     flex-direction: column;
@@ -2038,5 +2106,14 @@ p {
     max-width: calc(100% - 17px);
     margin-left: 17px;
     text-align: left;
+  }
+
+  .retry-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .retry-action .button {
+    width: 100%;
   }
 }

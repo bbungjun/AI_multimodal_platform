@@ -1,6 +1,8 @@
 import {
   deleteGeneration,
+  retryGeneration,
   type AssetKind,
+  type GenerationResponse,
   type GenerationListParams,
   type UUID,
 } from "./client";
@@ -16,9 +18,13 @@ function expectHistoryClientContract() {
   const deleteResult: Promise<void> = deleteGeneration(
     "00000000-0000-0000-0000-000000000000" as UUID,
   );
+  const retryResult: Promise<GenerationResponse> = retryGeneration(
+    "00000000-0000-0000-0000-000000000000" as UUID,
+  );
 
   void historyParams;
   void deleteResult;
+  void retryResult;
 }
 
 void expectHistoryClientContract;
