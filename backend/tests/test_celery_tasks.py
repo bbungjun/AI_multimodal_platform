@@ -1,0 +1,198 @@
+from __future__ import annotations
+
+from uuid import uuid4
+
+from app.models import GenerationMode, Job, JobState, utc_now
+from app.services.jobs import tasks
+
+
+class FakeScalarsResult:
+    def __init__(self, rows: list[Job]) -> None:
+        self.rows = rows
+
+    def first(self) -> Job | None:
+        return self.rows[0] if self.rows else None
+
+
+class FakeBegin:
+    def __init__(self, session: FakeTaskSession) -> None:
+        self.session = session
+
+    async def __aenter__(self) -> FakeBegin:
+        self.session.events.append("begin")
+        return self
+
+    async def __aexit__(self, *_args: object) -> bool:
+        self.session.events.append("end")
+        return False
+
+
+class FakeTaskSession:
+    def __init__(self, job: Job | None) -> None:
+        self.job = job
+        self.events: list[str] = []
+        self.statements: list[object] = []
+
+    async def __aenter__(self) -> FakeTaskSession:
+        self.events.append("session_enter")
+        return self
+
+    async def __aexit__(self, *_args: object) -> bool:
+        self.events.append("session_exit")
+        return False
+
+    def begin(self) -> FakeBegin:
+        return FakeBegin(self)
+
+    async def scalars(self, statement: object) -> FakeScalarsResult:
+        self.statements.append(statement)
+        return FakeScalarsResult([] if self.job is None else [self.job])
+
+
+def _job(*, state: JobState = JobState.PENDING, blocked: bool = False) -> Job:
+    now = utc_now()
+    return Job(
+        id=uuid4(),
+        mode=GenerationMode.T2I,
+        model="imagen-4.0-fast-generate-001",
+        state=state,
+        prompt="A small cabin at sunrise",
+        blocked=blocked,
+        attempts=0,
+        parameters={},
+        state_history=[],
+        error=None,
+        vertex_charged=False,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+async def test_process_job_claims_pending_job_before_handler():
+    job = _job()
+    session = FakeTaskSession(job)
+    handled: list[object] = []
+
+    async def handle(job_id):
+        session.events.append("handler")
+        handled.append(job_id)
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is True
+    assert result.reason == "claimed"
+    assert job.state == JobState.QUEUED
+    assert job.state_history[-1]["detail"] == {"runner": "celery"}
+    assert handled == [job.id]
+    assert session.events == [
+        "session_enter",
+        "begin",
+        "end",
+        "session_exit",
+        "handler",
+    ]
+
+
+async def test_process_job_noops_blocked_job_without_provider_call():
+    job = _job(blocked=True)
+    session = FakeTaskSession(job)
+
+    async def handle(_job_id):
+        raise AssertionError("blocked job must not reach handler")
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is False
+    assert result.reason == "blocked"
+    assert job.state == JobState.PENDING
+    assert job.state_history == []
+    assert job.attempts == 0
+
+
+async def test_process_job_noops_terminal_job():
+    job = _job(state=JobState.COMPLETED)
+    session = FakeTaskSession(job)
+
+    async def handle(_job_id):
+        raise AssertionError("terminal job must not reach handler")
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is False
+    assert result.reason == "terminal"
+    assert job.state == JobState.COMPLETED
+    assert job.state_history == []
+
+
+async def test_process_job_noops_already_queued_duplicate():
+    job = _job(state=JobState.QUEUED)
+    session = FakeTaskSession(job)
+
+    async def handle(_job_id):
+        raise AssertionError("duplicate queued task must not reach handler")
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is False
+    assert result.reason == "not_pending"
+    assert job.state == JobState.QUEUED
+    assert job.state_history == []
+
+
+async def test_process_job_rejects_invalid_job_id_without_provider_call():
+    session = FakeTaskSession(_job())
+
+    async def handle(_job_id):
+        raise AssertionError("invalid job id must not reach handler")
+
+    result = await tasks.process_job_async(
+        "not-a-uuid",
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is False
+    assert result.reason == "invalid_job_id"
+    assert session.events == []
+
+
+def test_process_job_task_closes_db_pool_after_run(monkeypatch):
+    job_id = uuid4()
+    calls: list[tuple[str, object]] = []
+
+    async def fake_process_job_async(payload: str):
+        calls.append(("process", payload))
+        return tasks.ProcessJobResult(
+            job_id=job_id,
+            executed=True,
+            reason="claimed",
+        )
+
+    async def fake_close_db_connection():
+        calls.append(("close_db", None))
+
+    monkeypatch.setattr(tasks, "process_job_async", fake_process_job_async)
+    monkeypatch.setattr(tasks, "close_db_connection", fake_close_db_connection)
+
+    tasks.process_job.run(str(job_id))
+
+    assert calls == [
+        ("process", str(job_id)),
+        ("close_db", None),
+    ]

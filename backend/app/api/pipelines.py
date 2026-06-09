@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,10 +11,12 @@ from sqlalchemy.orm import selectinload
 from app.api.generations import get_session
 from app.models import GenerationMode, Job, JobState, utc_now
 from app.schemas import PipelineCreateRequest, PipelineResponse, job_response_from_job
+from app.services.jobs.enqueue import dispatch_job
 from app.services.rate_limit import DEFAULT_MODEL_LIMITS
 
 
 router = APIRouter(prefix="/api/pipelines", tags=["pipelines"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -74,6 +77,7 @@ async def create_pipeline(
     )
     session.add_all([parent, child])
     await session.commit()
+    await _dispatch_committed_parent(parent.id)
 
     return PipelineResponse(
         id=parent.id,
@@ -111,6 +115,26 @@ async def get_pipeline(
 def _validate_pipeline_model(model: str, *, prefix: str, detail: str) -> None:
     if model not in DEFAULT_MODEL_LIMITS or not model.startswith(prefix):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+async def _dispatch_committed_parent(parent_id: UUID) -> None:
+    reason = "pipeline_parent_created"
+    try:
+        result = await dispatch_job(parent_id, reason=reason)
+    except Exception as exc:
+        logger.warning(
+            "Dispatch failed after committed pipeline parent job %s: %s",
+            parent_id,
+            exc,
+        )
+        return
+
+    if not result.ok:
+        logger.warning(
+            "Dispatch reported failure after committed pipeline parent job %s: %s",
+            parent_id,
+            result.error,
+        )
 
 
 async def _get_pipeline_child(session: AsyncSession, parent_job_id: UUID) -> Job | None:

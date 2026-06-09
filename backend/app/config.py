@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     data_dir: Path = Path("/data/assets")
     job_runner_concurrency: int = 10
     job_runner_auto_start: bool = False
+    job_dispatch_mode: str = "celery"
+    celery_broker_url: str = "redis://redis:6379/0"
+    celery_result_backend: str | None = None
+    celery_task_always_eager: bool = False
+    celery_default_queue: str = "generation"
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None

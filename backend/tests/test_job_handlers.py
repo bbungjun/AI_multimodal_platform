@@ -6,6 +6,8 @@ from uuid import uuid4
 from app.config import Settings
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
 from app.services.jobs import handlers
+from app.services.jobs.enqueue import DispatchResult
+from app.services.jobs.pipeline_link import PipelineLinkResult
 from app.services.vertex.errors import (
     VertexOutputUnavailableError,
     VertexSafetyBlockedError,
@@ -162,6 +164,7 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     async def link_completed_parent(_session: object, linked_job: Job) -> None:
         assert _session is session
         linked_jobs.append(linked_job.id)
+        return PipelineLinkResult(linked=False)
 
     async def fail_blocked_children_for_parent(*_args: object) -> None:
         raise AssertionError("happy path must not fail blocked children")
@@ -217,6 +220,51 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     assert linked_jobs == [job.id]
     assert session.commit_count == 5
     assert session.rollback_count == 0
+
+
+async def test_handle_t2i_dispatches_unblocked_pipeline_child(monkeypatch):
+    job = _t2i_job()
+    child_id = uuid4()
+    session = FakeHandlerSession(job)
+    dispatch_calls: list[tuple[object, str]] = []
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    async def generate_image(*_args: object, **_kwargs: object) -> list[bytes]:
+        return [b"image-one"]
+
+    def save_bytes(job_id: object, filename: str, data: bytes) -> str:
+        return f"{job_id}/{filename}"
+
+    async def link_completed_parent(_session: object, linked_job: Job):
+        assert _session is session
+        assert linked_job.id == job.id
+        return PipelineLinkResult(linked=True, child_id=child_id)
+
+    async def dispatch_job(job_id, *, reason):
+        dispatch_calls.append((job_id, reason))
+        return DispatchResult(
+            job_id=job_id,
+            reason=reason,
+            mode="celery",
+            enqueued=True,
+        )
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.imagen, "generate_image", generate_image)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+    monkeypatch.setattr(
+        handlers.pipeline_link,
+        "link_completed_parent",
+        link_completed_parent,
+    )
+    monkeypatch.setattr(handlers, "dispatch_job", dispatch_job, raising=False)
+
+    await handlers.handle_t2i(session, job)
+
+    assert job.state == JobState.COMPLETED
+    assert dispatch_calls == [(child_id, "pipeline_child_unblocked")]
 
 
 async def test_handle_t2i_vertex_failure_marks_job_failed_and_cascades(

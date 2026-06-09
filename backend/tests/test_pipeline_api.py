@@ -9,6 +9,7 @@ import pytest
 from app.api import pipelines
 from app.main import app
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
+from app.services.jobs.enqueue import DispatchResult
 
 
 class FakeScalarsResult:
@@ -32,6 +33,7 @@ class FakePipelineSession:
         self.child_rows = child_rows or []
         self.get_calls: list[tuple[object, UUID]] = []
         self.scalar_statements: list[object] = []
+        self.events: list[str] = []
 
     def add_all(self, instances: list[Job]) -> None:
         self.added.extend(instances)
@@ -39,6 +41,7 @@ class FakePipelineSession:
 
     async def commit(self) -> None:
         self.commit_count += 1
+        self.events.append("commit")
 
     async def get(self, model, entity_id: UUID, **_kwargs) -> Job | None:
         self.get_calls.append((model, entity_id))
@@ -176,6 +179,34 @@ async def test_create_pipeline_persists_parent_and_blocked_child():
     assert body["child"]["id"] == str(child.id)
     assert body["child"]["parent_job_id"] == str(parent.id)
     assert body["child"]["blocked"] is True
+
+
+async def test_create_pipeline_dispatches_parent_only(monkeypatch):
+    session = FakePipelineSession()
+    dispatch_calls: list[tuple[object, str]] = []
+
+    async def fake_dispatch_job(job_id, *, reason):
+        assert session.events == ["commit"]
+        session.events.append(f"dispatch:{job_id}")
+        dispatch_calls.append((job_id, reason))
+        return DispatchResult(
+            job_id=job_id,
+            reason=reason,
+            mode="celery",
+            enqueued=True,
+        )
+
+    monkeypatch.setattr(pipelines, "dispatch_job", fake_dispatch_job, raising=False)
+
+    response = await _post_pipeline(_pipeline_payload(), session)
+
+    assert response.status_code == 201
+    parent, child = session.added
+    assert dispatch_calls == [(parent.id, "pipeline_parent_created")]
+    assert child.id not in [job_id for job_id, _reason in dispatch_calls]
+    assert child.blocked is True
+    assert child.state == JobState.PENDING
+    assert session.events == ["commit", f"dispatch:{parent.id}"]
 
 
 async def test_create_pipeline_accepts_max_duration_boundary():

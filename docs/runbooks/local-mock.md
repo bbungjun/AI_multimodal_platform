@@ -21,6 +21,8 @@ ENHANCE_MODEL=gemini-2.5-flash
 DATA_DIR=/data/assets
 JOB_RUNNER_CONCURRENCY=10
 JOB_RUNNER_AUTO_START=false
+JOB_DISPATCH_MODE=celery
+CELERY_BROKER_URL=redis://redis:6379/0
 VITE_API_BASE=
 VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -39,9 +41,13 @@ docker compose ps
 Expected services:
 
 - `db` healthy
+- `redis` healthy and used only as the Celery broker
 - `backend` on `http://127.0.0.1:8000`
-- `worker` processing pending jobs with the same database and asset volume
+- `worker` running the Celery `generation` queue with the same database and asset volume
 - `frontend` on `http://127.0.0.1:5173`
+
+Postgres remains the source of truth for user-visible job state. Redis/Celery is
+only the dispatch layer; Celery result state is not used by the API.
 
 ## Local Quality Gate
 
@@ -94,7 +100,7 @@ Use this variant when `db`, `backend`, and `worker` are already running:
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
 ```
 
-The smoke intentionally starts `db`, `backend`, and `worker` when `--compose` is used.
+The smoke intentionally starts `db`, `redis`, `backend`, and `worker` when `--compose` is used.
 It refuses `--env-file .env`, requires `AI_PROVIDER=mock` in the selected env
 file, checks prompt enhancement, T2I job completion, asset metadata, PNG file
 serving, byte-range streaming, and then deletes the generated job unless
@@ -118,6 +124,32 @@ source job to fail with no assets and `vertex_charged: false`, calls
 `POST /api/generations/{source_id}/retry`, checks the retry job contract, verifies
 `/jobs/{retry_id}` returns a non-empty SPA response, and deletes the retry job
 before the source job unless `--keep-jobs` is passed.
+
+## Pending Job Repair
+
+If the API commits a job but dispatch to Redis/Celery fails, the job remains
+`pending` and unmodified. Reenqueue pending unblocked jobs from the repository
+root with process environment variables already set:
+
+```powershell
+python scripts/reenqueue_pending_jobs.py --limit 100
+```
+
+The repair command refuses to run while `.env` files are present in the
+repository root, backend directory, or current working directory. It prints only
+selected/dispatched/failed counts, not prompts, parameters, credentials, or
+asset paths.
+
+The legacy polling worker remains available as a manual fallback:
+
+```powershell
+cd backend
+$env:AI_PROVIDER = "mock"
+python -m app.worker
+```
+
+Do not run the polling worker and the default Celery worker against the same
+local stack unless intentionally performing a controlled repair run.
 
 Backend tests may use the exact prompt sentinel `[[mock-fail:imagen]]` to force a
 deterministic Imagen mock provider failure. Treat it as a test-only failure-path

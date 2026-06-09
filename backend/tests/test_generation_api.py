@@ -19,6 +19,7 @@ from app.models import (
     utc_now,
 )
 from app.services.vertex import storage as vertex_storage
+from app.services.jobs.enqueue import DispatchResult
 
 
 class FakeScalarsResult:
@@ -45,6 +46,7 @@ class FakeGenerationSession:
         self.scalar_results = scalar_results
         self.scalar_statements: list[object] = []
         self.get_calls: list[tuple[object, object]] = []
+        self.events: list[str] = []
 
     def add(self, instance: object) -> None:
         self.added.append(instance)
@@ -54,6 +56,7 @@ class FakeGenerationSession:
 
     async def commit(self) -> None:
         self.commit_count += 1
+        self.events.append("commit")
 
     async def get(self, model, entity_id, **_kwargs):
         self.get_calls.append((model, entity_id))
@@ -313,6 +316,69 @@ async def test_create_t2i_generation_persists_pending_job_without_vertex_call(mo
     assert job.mode == GenerationMode.T2I
     assert job.state == JobState.PENDING
     assert job.blocked is False
+
+
+async def test_create_generation_dispatches_created_job_after_commit(monkeypatch):
+    session = FakeGenerationSession()
+    dispatch_calls: list[tuple[object, str]] = []
+
+    async def fake_dispatch_job(job_id, *, reason):
+        assert session.events == ["commit"]
+        session.events.append("dispatch")
+        dispatch_calls.append((job_id, reason))
+        return DispatchResult(
+            job_id=job_id,
+            reason=reason,
+            mode="celery",
+            enqueued=True,
+        )
+
+    monkeypatch.setattr(generations, "dispatch_job", fake_dispatch_job, raising=False)
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "a quiet desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    job = session.added[0]
+    assert isinstance(job, Job)
+    assert dispatch_calls == [(job.id, "generation_created")]
+    assert session.events == ["commit", "dispatch"]
+
+
+async def test_create_generation_keeps_pending_job_when_dispatch_fails(monkeypatch):
+    session = FakeGenerationSession()
+
+    async def fail_dispatch_job(job_id, *, reason):
+        assert session.events == ["commit"]
+        session.events.append("dispatch_failed")
+        raise RuntimeError("broker unavailable")
+
+    monkeypatch.setattr(generations, "dispatch_job", fail_dispatch_job, raising=False)
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "a quiet desk lamp",
+            "model": "imagen-4.0-fast-generate-001",
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    job = session.added[0]
+    assert isinstance(job, Job)
+    assert job.state == JobState.PENDING
+    assert job.attempts == 0
+    assert job.state_history == []
+    assert job.error is None
+    assert session.commit_count == 1
+    assert session.events == ["commit", "dispatch_failed"]
 
 
 async def test_create_t2i_generation_accepts_max_image_count_boundary():
@@ -695,6 +761,33 @@ async def test_retry_failed_generation_creates_new_pending_job_without_mutating_
     assert retry.error is None
     assert retry.assets == []
     assert session.commit_count == 1
+
+
+async def test_retry_generation_dispatches_retry_job_after_commit(monkeypatch):
+    source = _failed_mock_provider_job()
+    session = FakeGenerationSession(jobs=[source])
+    dispatch_calls: list[tuple[object, str]] = []
+
+    async def fake_dispatch_job(job_id, *, reason):
+        assert session.events == ["commit"]
+        session.events.append("dispatch")
+        dispatch_calls.append((job_id, reason))
+        return DispatchResult(
+            job_id=job_id,
+            reason=reason,
+            mode="celery",
+            enqueued=True,
+        )
+
+    monkeypatch.setattr(generations, "dispatch_job", fake_dispatch_job, raising=False)
+
+    response = await _post_retry(f"/api/generations/{source.id}/retry", session)
+
+    assert response.status_code == 201
+    retry = session.added[0]
+    assert isinstance(retry, Job)
+    assert dispatch_calls == [(retry.id, "generation_retry_created")]
+    assert session.events == ["commit", "dispatch"]
 
 
 async def test_retry_generation_returns_404_for_missing_job():

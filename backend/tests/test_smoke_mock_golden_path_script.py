@@ -115,13 +115,13 @@ def test_request_bytes_wraps_connection_reset(monkeypatch):
         client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")
 
 
-def test_start_compose_includes_worker_and_mock_env(monkeypatch, tmp_path):
+def test_start_compose_includes_redis_worker_and_mock_env(monkeypatch, tmp_path):
     module = load_smoke_module()
     env_file = tmp_path / ".env.example"
     env_file.write_text("AI_PROVIDER=mock\n", encoding="utf-8")
     calls = []
 
-    def fake_run(command, env, text, stdout, stderr, check):
+    def fake_run(command, env, text, stdout, stderr, check, **_kwargs):
         calls.append((command, env))
         return subprocess.CompletedProcess(command, 0, stdout="ok")
 
@@ -130,5 +130,5 @@ def test_start_compose_includes_worker_and_mock_env(monkeypatch, tmp_path):
     module.start_compose(env_file)
 
     command, env = calls[0]
-    assert command[-3:] == ["db", "backend", "worker"]
+    assert command[-4:] == ["db", "redis", "backend", "worker"]
     assert env["AI_PROVIDER"] == "mock"

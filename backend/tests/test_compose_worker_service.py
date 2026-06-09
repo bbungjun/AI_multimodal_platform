@@ -34,19 +34,20 @@ def _environment_line(service_block: str, key: str) -> str:
     raise AssertionError(f"Expected environment key {key!r} in service block.")
 
 
-def test_compose_defines_worker_without_redis_or_celery():
+def test_compose_defines_redis_for_celery_broker():
     compose_text = _compose_text()
 
     assert "\n  worker:\n" in compose_text
-    assert "\n  redis:\n" not in compose_text
-    assert "celery" not in compose_text.lower()
+    assert "\n  redis:\n" in compose_text
+    assert "image: redis:7-alpine" in _service_block(compose_text, "redis")
 
     worker_block = _service_block(compose_text, "worker")
-    assert "command: python -m app.worker" in worker_block
+    assert "command: celery -A app.celery_app worker" in worker_block
+    assert "python -m app.worker" not in worker_block
     assert "stop_grace_period: 45s" in worker_block
 
 
-def test_worker_uses_backend_image_env_and_asset_volume():
+def test_worker_uses_backend_image_env_asset_volume_and_broker():
     compose_text = _compose_text()
     backend_block = _service_block(compose_text, "backend")
     worker_block = _service_block(compose_text, "worker")
@@ -62,6 +63,8 @@ def test_worker_uses_backend_image_env_and_asset_volume():
         "DATA_DIR",
         "JOB_RUNNER_CONCURRENCY",
         "JOB_RUNNER_AUTO_START",
+        "JOB_DISPATCH_MODE",
+        "CELERY_BROKER_URL",
     ]
     for key in shared_env_keys:
         assert _environment_line(worker_block, key) == _environment_line(backend_block, key)
@@ -69,6 +72,21 @@ def test_worker_uses_backend_image_env_and_asset_volume():
     assert _environment_line(backend_block, "JOB_RUNNER_AUTO_START") == (
         'JOB_RUNNER_AUTO_START: "false"'
     )
+    assert _environment_line(backend_block, "JOB_DISPATCH_MODE") == (
+        "JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}"
+    )
+    assert _environment_line(backend_block, "CELERY_BROKER_URL") == (
+        "CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}"
+    )
+
+
+def test_no_celery_result_backend_source_of_truth():
+    compose_text = _compose_text()
+    backend_block = _service_block(compose_text, "backend")
+    worker_block = _service_block(compose_text, "worker")
+
+    assert "CELERY_RESULT_BACKEND" not in backend_block
+    assert "CELERY_RESULT_BACKEND" not in worker_block
 
 
 def test_vertex_compose_mounts_credentials_for_worker_and_backend():

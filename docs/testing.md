@@ -62,6 +62,8 @@ Important backend contracts are already protected by focused tests:
 - state machine transitions and terminal behavior
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume
+- Celery dispatch config, `job_id`-only enqueue, task idempotency, and pending
+  job repair
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, and retry behavior
 - Vertex adapter parsing and public error mapping with fake clients
@@ -103,11 +105,17 @@ Docker Compose config should be checked before starting the stack:
 
 ```powershell
 docker compose --env-file .env.example config --quiet
-docker compose config --quiet
+docker compose --env-file .env.example config --services
 ```
 
 For no-cost local smoke checks, use mock mode. For live Vertex QA, follow the
 manual runbook and expect provider cost risk.
+
+Expected local mock services include `db`, `redis`, `backend`, `worker`, and
+`frontend`. The default `worker` is a Celery worker. The legacy
+`python -m app.worker` polling runner is retained only as a manual fallback and
+should not run concurrently with the default Celery worker in normal local
+smoke.
 
 ## Backend HTTP Smoke
 
@@ -115,7 +123,7 @@ Use the mock-only golden-path smoke to verify the backend HTTP contract, worker
 runner, database persistence, local asset storage, and byte-range file
 streaming without calling Vertex AI, Gemini, Imagen, or Veo.
 
-From the repository root, start `db`, `backend`, and `worker` through Compose and run
+From the repository root, start `db`, `redis`, `backend`, and `worker` through Compose and run
 the smoke:
 
 ```powershell
