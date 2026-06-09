@@ -10,7 +10,9 @@ job state, assets, retries, and provider readiness observable from the product.
 React/Vite frontend
   -> FastAPI backend
     -> PostgreSQL job, asset, prompt, and pipeline records
-    -> Internal asyncio job runner
+    -> Local DATA_DIR file streaming
+Worker process
+  -> InProcessJobRunner polling Postgres
     -> Local DATA_DIR asset storage
     -> Vertex AI through google-genai
 ```
@@ -26,7 +28,8 @@ directly and does not need provider credentials.
 - `app/models.py`: SQLAlchemy models for jobs, assets, prompt enhancements, and
   parent/child relationships.
 - `app/state_machine.py`: the only supported path for job state transitions.
-- `app/services/jobs/*`: in-process job runner, handlers, and pipeline linking.
+- `app/worker.py`: standalone worker bootstrap for local process separation.
+- `app/services/jobs/*`: job runner, handlers, and pipeline linking.
 - `app/services/vertex/*`: provider boundary for credentials, Imagen, Veo,
   retry/rate-limit helpers, storage, and public error mapping.
 - `app/services/llm/enhancer.py`: Gemini-backed prompt enhancement with a mock
@@ -52,8 +55,8 @@ mock or fake providers and must not call paid AI services.
 
 ## Job Model
 
-Generation is job-centric. The API creates durable jobs in Postgres, and an
-internal runner claims pending work with row locks. Handlers perform provider
+Generation is job-centric. The API creates durable jobs in Postgres, and the
+worker process claims pending work with row locks. Handlers perform provider
 calls, persist generated assets, and transition jobs through the state machine.
 
 Pipelines are modeled as parent/child jobs. A text-to-image parent can unblock
@@ -76,6 +79,6 @@ For a personal production app, the next architecture improvements are:
 - explicit local/mock/vertex environment profiles
 - real-provider cost guardrails
 - stronger job observability
-- graceful runner shutdown and polling resume visibility
+- graceful worker shutdown and polling resume visibility
 - first-class frontend Ops Console
 - optional authentication for a private personal deployment

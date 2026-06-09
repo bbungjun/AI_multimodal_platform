@@ -25,17 +25,20 @@ settings = get_settings()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     await init_db_schema()
-    runner_task = asyncio.create_task(job_runner(), name="job-runner")
+    runner_task = None
+    if settings.job_runner_auto_start:
+        runner_task = asyncio.create_task(job_runner(), name="job-runner")
     try:
         yield
     finally:
-        runner_task.cancel()
-        try:
-            await runner_task
-        except asyncio.CancelledError:
-            pass
-        except Exception as exc:
-            logger.warning("Job runner stopped with error during shutdown: %s", exc)
+        if runner_task is not None:
+            runner_task.cancel()
+            try:
+                await runner_task
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                logger.warning("Job runner stopped with error during shutdown: %s", exc)
         await close_db_connection()
 
 

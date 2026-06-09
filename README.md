@@ -17,7 +17,9 @@ CreativeOps Studio는 이미지, 비디오, 이미지 기반 비디오 파이프
 React/Vite frontend
   -> FastAPI backend
     -> PostgreSQL jobs, assets, and prompt records
-    -> Internal asyncio job runner
+    -> Local DATA_DIR file streaming
+Worker process
+  -> InProcessJobRunner polling Postgres
     -> Local DATA_DIR asset storage
     -> Vertex AI through google-genai
 ```
@@ -54,6 +56,7 @@ GCP_LOCATION=us-central1
 ENHANCE_MODEL=gemini-2.5-flash
 DATA_DIR=/data/assets
 JOB_RUNNER_CONCURRENCY=10
+JOB_RUNNER_AUTO_START=false
 VITE_API_BASE=
 VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -172,13 +175,14 @@ Run the backend HTTP golden path in mock mode only:
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db` and `backend` are already running:
+If `db`, `backend`, and `worker` are already running:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
 ```
 
-The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, and verifies
+The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, starts the
+worker service when `--compose` is used, and verifies
 health, prompt enhancement, T2I generation, job state history, PNG asset
 serving, byte-range streaming, and cleanup. In mock mode, `vertex_charged: true`
 only means the mock provider handler completed; it is not real Vertex billing.

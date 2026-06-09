@@ -111,11 +111,11 @@ manual runbook and expect provider cost risk.
 
 ## Backend HTTP Smoke
 
-Use the mock-only golden-path smoke to verify the backend HTTP contract, internal
-job runner, database persistence, local asset storage, and byte-range file
+Use the mock-only golden-path smoke to verify the backend HTTP contract, worker
+runner, database persistence, local asset storage, and byte-range file
 streaming without calling Vertex AI, Gemini, Imagen, or Veo.
 
-From the repository root, start only `db` and `backend` through Compose and run
+From the repository root, start `db`, `backend`, and `worker` through Compose and run
 the smoke:
 
 ```powershell
@@ -153,7 +153,7 @@ usage.
 ## Retry HTTP Smoke
 
 Use the mock-only retry smoke to verify the failed-generation retry path across
-the backend API, internal runner, frontend SPA routes, and cleanup behavior.
+the backend API, worker runner, frontend SPA routes, and cleanup behavior.
 
 From the repository root, start the full local mock stack through Compose and run
 the smoke:
@@ -162,7 +162,7 @@ the smoke:
 python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db`, `backend`, and `frontend` are already running in mock mode, run:
+If `db`, `backend`, `worker`, and `frontend` are already running in mock mode, run:
 
 ```powershell
 python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90

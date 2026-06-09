@@ -29,12 +29,35 @@ services:
       ENHANCE_MODEL: ${ENHANCE_MODEL:?Set ENHANCE_MODEL in .env or pass --env-file .env.example}
       DATA_DIR: ${DATA_DIR:?Set DATA_DIR in .env or pass --env-file .env.example}
       JOB_RUNNER_CONCURRENCY: ${JOB_RUNNER_CONCURRENCY:-10}
+      JOB_RUNNER_AUTO_START: "false"
     volumes:
       - assets:/data/assets
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
     ports:
       - "8000:8000"
+
+  worker:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m app.worker
+    stop_grace_period: 45s
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      GCP_LOCATION: ${GCP_LOCATION:?Set GCP_LOCATION in .env or pass --env-file .env.example}
+      ENHANCE_MODEL: ${ENHANCE_MODEL:?Set ENHANCE_MODEL in .env or pass --env-file .env.example}
+      DATA_DIR: ${DATA_DIR:?Set DATA_DIR in .env or pass --env-file .env.example}
+      JOB_RUNNER_CONCURRENCY: ${JOB_RUNNER_CONCURRENCY:-10}
+      JOB_RUNNER_AUTO_START: "false"
+    volumes:
+      - assets:/data/assets
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
 
   frontend:
     build: ./frontend

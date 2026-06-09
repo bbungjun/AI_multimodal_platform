@@ -17,10 +17,14 @@ Confirm before sending generation requests:
 ## Start Stack
 
 ```powershell
-docker compose config
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.vertex.yml config
+docker compose -f docker-compose.yml -f docker-compose.vertex.yml up -d --build
 docker compose ps
 ```
+
+The vertex override mounts the configured credential file into both `backend`
+and `worker`. Do not print the credential file path if it is sensitive in your
+environment, and never print credential JSON contents.
 
 ## Health
 

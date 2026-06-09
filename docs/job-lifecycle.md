@@ -1,7 +1,7 @@
 # Job Lifecycle
 
 Generation requests are durable jobs. A request returns quickly, then the
-backend runner processes work asynchronously and records state changes.
+worker process runs the job runner asynchronously and records state changes.
 
 ## Core States
 
@@ -43,17 +43,19 @@ deleted.
 
 ## Runner
 
-The internal runner:
+The worker runner:
 
-- starts with the FastAPI app
+- runs in the standalone `python -m app.worker` process in local Compose
 - claims pending jobs with row locks
 - respects concurrency limits
 - dispatches mode-specific handlers
 - records failures with public error codes
 - resumes or sweeps orphaned work on startup
 
-This is appropriate for a personal single-backend deployment. A multi-replica
-deployment would need stronger distributed coordination.
+FastAPI can still gate runner auto-start through `JOB_RUNNER_AUTO_START`, but
+the Phase 1 local default keeps API serving and job execution in separate
+processes. A multi-replica deployment would need stronger distributed
+coordination.
 
 ## Pipelines
 

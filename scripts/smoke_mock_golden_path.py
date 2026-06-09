@@ -90,7 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run mock-only backend golden-path smoke.")
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--env-file", default=".env.example")
-    parser.add_argument("--compose", action="store_true", help="Start db and backend with docker compose.")
+    parser.add_argument(
+        "--compose",
+        action="store_true",
+        help="Start db, backend, and worker with docker compose.",
+    )
     parser.add_argument("--timeout-sec", type=float, default=60)
     parser.add_argument("--poll-interval-sec", type=float, default=1)
     parser.add_argument("--keep-job", action="store_true", help="Skip deleting the created job.")
@@ -224,7 +228,7 @@ def run_smoke(args: argparse.Namespace) -> None:
 
 
 def start_compose(env_file: Path) -> None:
-    step("Compose up db backend")
+    step("Compose up db backend worker")
     command = [
         "docker",
         "compose",
@@ -235,6 +239,7 @@ def start_compose(env_file: Path) -> None:
         "--build",
         "db",
         "backend",
+        "worker",
     ]
     env = os.environ.copy()
     env["AI_PROVIDER"] = "mock"
@@ -248,7 +253,7 @@ def start_compose(env_file: Path) -> None:
     )
     if completed.returncode != 0:
         raise SmokeError(
-            "docker compose failed while starting db/backend:\n"
+            "docker compose failed while starting db/backend/worker:\n"
             + completed.stdout.strip()
         )
 

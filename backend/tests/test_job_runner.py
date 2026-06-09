@@ -276,6 +276,23 @@ async def test_run_forever_sweeps_orphans_before_resuming_polling_jobs():
     assert job_runner.calls == ["sweep", "resume", "poll"]
 
 
+async def test_job_runner_wrapper_runs_in_process_runner_once(monkeypatch):
+    calls: list[str] = []
+
+    class FakeInProcessJobRunner:
+        def __init__(self) -> None:
+            calls.append("construct")
+
+        async def run_forever(self) -> None:
+            calls.append("run_forever")
+
+    monkeypatch.setattr(runner, "InProcessJobRunner", FakeInProcessJobRunner)
+
+    await runner.job_runner()
+
+    assert calls == ["construct", "run_forever"]
+
+
 async def test_sweep_orphans_marks_stale_non_terminal_jobs_failed():
     job = _job(state=JobState.GENERATING)
     session = FakeRunnerSession([[job]], [job])

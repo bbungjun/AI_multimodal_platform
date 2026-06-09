@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--compose",
         action="store_true",
-        help="Start db, backend, and frontend with docker compose.",
+        help="Start db, backend, worker, and frontend with docker compose.",
     )
     parser.add_argument("--timeout-sec", type=float, default=60)
     parser.add_argument("--poll-interval-sec", type=float, default=1)
@@ -197,7 +197,7 @@ def cleanup_jobs(
 
 
 def start_compose(env_file: Path) -> None:
-    step("Compose up db backend frontend")
+    step("Compose up db backend worker frontend")
     command = [
         "docker",
         "compose",
@@ -208,6 +208,7 @@ def start_compose(env_file: Path) -> None:
         "--build",
         "db",
         "backend",
+        "worker",
         "frontend",
     ]
     env = os.environ.copy()
@@ -222,7 +223,7 @@ def start_compose(env_file: Path) -> None:
     )
     if completed.returncode != 0:
         raise SmokeError(
-            "docker compose failed while starting db/backend/frontend:\n"
+            "docker compose failed while starting db/backend/worker/frontend:\n"
             + completed.stdout.strip()
         )
 

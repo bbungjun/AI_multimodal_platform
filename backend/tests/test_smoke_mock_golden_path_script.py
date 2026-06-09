@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from http.client import RemoteDisconnected
 from pathlib import Path
 
@@ -112,3 +113,22 @@ def test_request_bytes_wraps_connection_reset(monkeypatch):
 
     with pytest.raises(module.SmokeError, match=r"Health request.*reset"):
         client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")
+
+
+def test_start_compose_includes_worker_and_mock_env(monkeypatch, tmp_path):
+    module = load_smoke_module()
+    env_file = tmp_path / ".env.example"
+    env_file.write_text("AI_PROVIDER=mock\n", encoding="utf-8")
+    calls = []
+
+    def fake_run(command, env, text, stdout, stderr, check):
+        calls.append((command, env))
+        return subprocess.CompletedProcess(command, 0, stdout="ok")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    module.start_compose(env_file)
+
+    command, env = calls[0]
+    assert command[-3:] == ["db", "backend", "worker"]
+    assert env["AI_PROVIDER"] == "mock"
