@@ -42,6 +42,7 @@ services:
       JOB_RUNNER_AUTO_START: "false"
       JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}
     volumes:
       - assets:/data/assets
       - ./backend/app:/app/app
@@ -56,8 +57,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.celery_app worker --loglevel=info --queues=generation --concurrency=${JOB_RUNNER_CONCURRENCY:-10}
-    stop_grace_period: 45s
+    command: celery -A app.celery_app worker --hostname=worker@%h --loglevel=info --queues=${CELERY_DEFAULT_QUEUE:-generation} --concurrency=${CELERY_WORKER_CONCURRENCY:-10}
+    stop_signal: SIGTERM
+    stop_grace_period: ${CELERY_WORKER_SHUTDOWN_GRACE_SEC:-60}s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping --destination worker@$$HOSTNAME --timeout=$${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5} | grep -q OK"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 20s
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
       AI_PROVIDER: ${AI_PROVIDER:-mock}
@@ -70,6 +78,9 @@ services:
       JOB_RUNNER_AUTO_START: "false"
       JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}
+      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-10}
+      CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC: ${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5}
     volumes:
       - assets:/data/assets
       - ./backend/app:/app/app

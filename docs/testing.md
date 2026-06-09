@@ -64,6 +64,8 @@ Important backend contracts are already protected by focused tests:
 - job runner row locking, concurrency, orphan sweep, and polling resume
 - Celery dispatch config, `job_id`-only enqueue, task idempotency, and pending
   job repair
+- Celery worker Compose healthcheck, explicit queue/concurrency env, and
+  graceful shutdown settings
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, and retry behavior
 - Vertex adapter parsing and public error mapping with fake clients
@@ -112,7 +114,8 @@ For no-cost local smoke checks, use mock mode. For live Vertex QA, follow the
 manual runbook and expect provider cost risk.
 
 Expected local mock services include `db`, `redis`, `backend`, `worker`, and
-`frontend`. The default `worker` is a Celery worker. The legacy
+`frontend`. The default `worker` is a Celery worker and should report healthy
+after its internal Celery ping succeeds. The legacy
 `python -m app.worker` polling runner is retained only as a manual fallback and
 should not run concurrently with the default Celery worker in normal local
 smoke.

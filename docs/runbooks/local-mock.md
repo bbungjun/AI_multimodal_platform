@@ -23,6 +23,10 @@ JOB_RUNNER_CONCURRENCY=10
 JOB_RUNNER_AUTO_START=false
 JOB_DISPATCH_MODE=celery
 CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_DEFAULT_QUEUE=generation
+CELERY_WORKER_CONCURRENCY=10
+CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC=5
+CELERY_WORKER_SHUTDOWN_GRACE_SEC=60
 VITE_API_BASE=
 VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -43,11 +47,15 @@ Expected services:
 - `db` healthy
 - `redis` healthy and used only as the Celery broker
 - `backend` on `http://127.0.0.1:8000`
-- `worker` running the Celery `generation` queue with the same database and asset volume
+- `worker` healthy, running the Celery `generation` queue with the same database and asset volume
 - `frontend` on `http://127.0.0.1:5173`
 
 Postgres remains the source of truth for user-visible job state. Redis/Celery is
 only the dispatch layer; Celery result state is not used by the API.
+
+The default worker has an internal Celery ping healthcheck, a stable
+`worker@%h` hostname, explicit `SIGTERM` stop handling, and a configurable
+Compose grace period through `CELERY_WORKER_SHUTDOWN_GRACE_SEC`.
 
 ## Local Quality Gate
 

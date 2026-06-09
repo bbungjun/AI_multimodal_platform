@@ -20,6 +20,7 @@ celery_app.conf.update(
     task_always_eager=settings.celery_task_always_eager,
     task_default_queue=settings.celery_default_queue,
     task_ignore_result=True,
+    worker_concurrency=settings.celery_worker_concurrency,
     task_serializer="json",
     result_serializer="json",
     accept_content=("json",),

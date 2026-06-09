@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     celery_result_backend: str | None = None
     celery_task_always_eager: bool = False
     celery_default_queue: str = "generation"
+    celery_worker_concurrency: int = 10
+    celery_worker_healthcheck_timeout_sec: int = 5
+    celery_worker_shutdown_grace_sec: int = 60
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None

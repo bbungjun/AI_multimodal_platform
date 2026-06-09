@@ -13,6 +13,9 @@ def test_dispatch_mode_defaults_are_explicit():
     assert settings.celery_result_backend is None
     assert settings.celery_task_always_eager is False
     assert settings.celery_default_queue == "generation"
+    assert settings.celery_worker_concurrency == 10
+    assert settings.celery_worker_healthcheck_timeout_sec == 5
+    assert settings.celery_worker_shutdown_grace_sec == 60
 
 
 def test_celery_app_names_jobs_namespace():
@@ -37,6 +40,7 @@ def test_celery_app_uses_json_and_generation_queue():
     settings = Settings(_env_file=None)
 
     assert celery_app.conf.task_default_queue == settings.celery_default_queue
+    assert celery_app.conf.worker_concurrency == settings.celery_worker_concurrency
     assert celery_app.conf.task_serializer == "json"
     assert celery_app.conf.result_serializer == "json"
     assert celery_app.conf.accept_content == ("json",)
