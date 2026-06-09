@@ -66,6 +66,7 @@ Important backend contracts are already protected by focused tests:
   job repair
 - Celery worker Compose healthcheck, explicit queue/concurrency env, and
   graceful shutdown settings
+- dispatch/repair/task observability fields without mutating job state history
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, and retry behavior
 - Vertex adapter parsing and public error mapping with fake clients
@@ -119,6 +120,26 @@ after its internal Celery ping succeeds. The legacy
 `python -m app.worker` polling runner is retained only as a manual fallback and
 should not run concurrently with the default Celery worker in normal local
 smoke.
+
+## Job Observability
+
+Job `state_history` is reserved for state transitions only. Dispatch attempts,
+Celery task IDs, queue names, repair counts, and duplicate/no-op task reasons
+must not be appended to `state_history` unless a real job state transition
+occurs.
+
+For Phase 2 local operations, observability lives in:
+
+- `DispatchResult`: job id, reason, mode, queue, Celery task id, enqueue status,
+  and error code
+- `RepairResult`: selected/dispatched/failed counts plus individual
+  `DispatchResult` records
+- `ProcessJobResult`: claim/no-op reason, previous state, claimed state, and
+  whether the handler executed
+- structured log fields emitted by dispatch and task claim boundaries
+
+This keeps Postgres job state clean while still making dispatch failures and
+worker no-op decisions diagnosable.
 
 ## Backend HTTP Smoke
 

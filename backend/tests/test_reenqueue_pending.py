@@ -102,6 +102,14 @@ async def test_repair_reenqueues_job_ids_without_payload():
     assert result.selected == 2
     assert result.dispatched == 2
     assert result.failed == 0
+    assert [dispatch.job_id for dispatch in result.dispatch_results] == [
+        jobs[0].id,
+        jobs[1].id,
+    ]
+    assert [dispatch.reason for dispatch in result.dispatch_results] == [
+        "repair_pending",
+        "repair_pending",
+    ]
     assert dispatch_calls == [
         (jobs[0].id, "repair_pending"),
         (jobs[1].id, "repair_pending"),
@@ -136,6 +144,8 @@ async def test_repair_does_not_mark_jobs_failed_on_enqueue_error():
     assert result.selected == 1
     assert result.dispatched == 0
     assert result.failed == 1
+    assert len(result.dispatch_results) == 1
+    assert result.dispatch_results[0].error_code == "broker_unavailable"
     assert job.state == original_state
     assert job.attempts == original_attempts
     assert job.state_history == original_history

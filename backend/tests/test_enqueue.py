@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from types import SimpleNamespace
 from uuid import uuid4
 
 from app.config import Settings
@@ -19,7 +21,7 @@ class FakeTask:
                 "options": options,
             }
         )
-        return object()
+        return SimpleNamespace(id="celery-task-123")
 
 
 class FailingTask:
@@ -60,6 +62,9 @@ async def test_enqueue_process_job_sends_job_id_only():
     assert result.ok is True
     assert result.enqueued is True
     assert result.mode == "celery"
+    assert result.queue == "generation"
+    assert result.task_id == "celery-task-123"
+    assert result.error_code is None
     assert task.calls == [
         {
             "args": (str(job_id),),
@@ -87,6 +92,8 @@ async def test_polling_dispatch_mode_is_noop():
     assert result.ok is True
     assert result.enqueued is False
     assert result.mode == "polling"
+    assert result.queue is None
+    assert result.task_id is None
     assert task.calls == []
 
 
@@ -107,8 +114,35 @@ async def test_enqueue_failure_is_reported_without_mutating_job():
     assert result.ok is False
     assert result.enqueued is False
     assert result.mode == "celery"
+    assert result.queue == "generation"
+    assert result.task_id is None
+    assert result.error_code == "runtime_error"
     assert "broker unavailable" in (result.error or "")
     assert job.state == original_state
     assert job.attempts == original_attempts
     assert job.state_history == original_history
     assert job.error == original_error
+
+
+async def test_dispatch_logs_structured_success_fields(caplog):
+    job_id = uuid4()
+    caplog.set_level(logging.INFO)
+
+    await enqueue.dispatch_job(
+        job_id,
+        reason="generation_created",
+        settings=Settings(_env_file=None, job_dispatch_mode="celery"),
+        process_job_task=FakeTask(),
+    )
+
+    record = next(
+        record
+        for record in caplog.records
+        if record.getMessage() == "Job dispatch completed."
+    )
+    assert record.job_id == str(job_id)
+    assert record.dispatch_reason == "generation_created"
+    assert record.dispatch_mode == "celery"
+    assert record.dispatch_queue == "generation"
+    assert record.celery_task_id == "celery-task-123"
+    assert record.dispatch_status == "enqueued"

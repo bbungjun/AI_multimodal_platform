@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import AsyncSessionLocal
 from app.models import Job, JobState
-from app.services.jobs.enqueue import DispatchResult, dispatch_job
+from app.services.jobs.enqueue import DispatchResult, dispatch_job, exception_code
 
 
 Dispatcher = Callable[[UUID], Awaitable[DispatchResult]]
@@ -23,6 +23,7 @@ class RepairResult:
     selected: int
     dispatched: int
     failed: int
+    dispatch_results: tuple[DispatchResult, ...] = ()
 
 
 async def reenqueue_pending_jobs(
@@ -38,14 +39,41 @@ async def reenqueue_pending_jobs(
 
     dispatched = 0
     failed = 0
+    dispatch_results: list[DispatchResult] = []
     for job in jobs:
         try:
             dispatch_result = await dispatcher(job.id, reason=reason)
         except Exception as exc:
-            logger.warning("Repair dispatch failed for pending job %s: %s", job.id, exc)
+            dispatch_result = DispatchResult(
+                job_id=job.id,
+                reason=reason,
+                mode="unknown",
+                enqueued=False,
+                error=str(exc) or exc.__class__.__name__,
+                error_code=exception_code(exc),
+            )
+            logger.warning(
+                "Repair dispatch failed for pending job %s: %s",
+                job.id,
+                dispatch_result.error,
+            )
             failed += 1
+            dispatch_results.append(dispatch_result)
             continue
 
+        if dispatch_result.error and dispatch_result.error_code is None:
+            dispatch_result = DispatchResult(
+                job_id=dispatch_result.job_id,
+                reason=dispatch_result.reason,
+                mode=dispatch_result.mode,
+                enqueued=dispatch_result.enqueued,
+                queue=dispatch_result.queue,
+                task_id=dispatch_result.task_id,
+                error=dispatch_result.error,
+                error_code=exception_code(dispatch_result.error),
+            )
+
+        dispatch_results.append(dispatch_result)
         if dispatch_result.ok:
             dispatched += 1
         else:
@@ -60,6 +88,7 @@ async def reenqueue_pending_jobs(
         selected=len(jobs),
         dispatched=dispatched,
         failed=failed,
+        dispatch_results=tuple(dispatch_results),
     )
 
 

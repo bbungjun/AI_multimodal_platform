@@ -26,6 +26,8 @@ class ProcessJobResult:
     job_id: UUID | None
     executed: bool
     reason: str
+    previous_state: str | None = None
+    claimed_state: str | None = None
 
 
 @celery_app.task(name="jobs.process_job", ignore_result=True)
@@ -49,43 +51,79 @@ async def process_job_async(
     try:
         parsed_job_id = UUID(job_id)
     except ValueError:
-        logger.warning("Ignoring Celery job task with invalid UUID payload.")
-        return ProcessJobResult(job_id=None, executed=False, reason="invalid_job_id")
+        result = ProcessJobResult(
+            job_id=None,
+            executed=False,
+            reason="invalid_job_id",
+        )
+        _log_process_job_result(result)
+        return result
 
     async with session_factory() as session:
         async with session.begin():
             result = await session.scalars(_claim_job_statement(parsed_job_id))
             job = result.first()
             if job is None:
-                return ProcessJobResult(
+                process_result = ProcessJobResult(
                     job_id=parsed_job_id,
                     executed=False,
                     reason="missing",
                 )
+                _log_process_job_result(process_result)
+                return process_result
+            previous_state = job.state.value
             if job.state in TERMINAL_STATES:
-                return ProcessJobResult(
+                process_result = ProcessJobResult(
                     job_id=parsed_job_id,
                     executed=False,
                     reason="terminal",
+                    previous_state=previous_state,
                 )
+                _log_process_job_result(process_result)
+                return process_result
             if job.blocked:
-                return ProcessJobResult(
+                process_result = ProcessJobResult(
                     job_id=parsed_job_id,
                     executed=False,
                     reason="blocked",
+                    previous_state=previous_state,
                 )
+                _log_process_job_result(process_result)
+                return process_result
             if job.state != JobState.PENDING:
-                return ProcessJobResult(
+                process_result = ProcessJobResult(
                     job_id=parsed_job_id,
                     executed=False,
                     reason="not_pending",
+                    previous_state=previous_state,
                 )
+                _log_process_job_result(process_result)
+                return process_result
 
             transition(job, JobState.QUEUED, detail={"runner": "celery"})
 
     await handler(parsed_job_id)
-    return ProcessJobResult(job_id=parsed_job_id, executed=True, reason="claimed")
+    process_result = ProcessJobResult(
+        job_id=parsed_job_id,
+        executed=True,
+        reason="claimed",
+        previous_state=previous_state,
+        claimed_state=JobState.QUEUED.value,
+    )
+    _log_process_job_result(process_result)
+    return process_result
 
 
 def _claim_job_statement(job_id: UUID) -> Select[tuple[Job]]:
     return select(Job).where(Job.id == job_id).with_for_update(skip_locked=True)
+
+
+def _log_process_job_result(result: ProcessJobResult) -> None:
+    extra = {
+        "job_id": None if result.job_id is None else str(result.job_id),
+        "task_result_reason": result.reason,
+        "previous_state": result.previous_state,
+        "claimed_state": result.claimed_state,
+        "task_executed": result.executed,
+    }
+    logger.info("Celery job task completed.", extra=extra)

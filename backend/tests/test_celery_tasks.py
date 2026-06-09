@@ -85,6 +85,8 @@ async def test_process_job_claims_pending_job_before_handler():
 
     assert result.executed is True
     assert result.reason == "claimed"
+    assert result.previous_state == "pending"
+    assert result.claimed_state == "queued"
     assert job.state == JobState.QUEUED
     assert job.state_history[-1]["detail"] == {"runner": "celery"}
     assert handled == [job.id]
@@ -112,6 +114,8 @@ async def test_process_job_noops_blocked_job_without_provider_call():
 
     assert result.executed is False
     assert result.reason == "blocked"
+    assert result.previous_state == "pending"
+    assert result.claimed_state is None
     assert job.state == JobState.PENDING
     assert job.state_history == []
     assert job.attempts == 0
@@ -132,6 +136,7 @@ async def test_process_job_noops_terminal_job():
 
     assert result.executed is False
     assert result.reason == "terminal"
+    assert result.previous_state == "completed"
     assert job.state == JobState.COMPLETED
     assert job.state_history == []
 
@@ -151,6 +156,7 @@ async def test_process_job_noops_already_queued_duplicate():
 
     assert result.executed is False
     assert result.reason == "not_pending"
+    assert result.previous_state == "queued"
     assert job.state == JobState.QUEUED
     assert job.state_history == []
 
@@ -169,6 +175,8 @@ async def test_process_job_rejects_invalid_job_id_without_provider_call():
 
     assert result.executed is False
     assert result.reason == "invalid_job_id"
+    assert result.previous_state is None
+    assert result.claimed_state is None
     assert session.events == []
 
 
@@ -182,6 +190,8 @@ def test_process_job_task_closes_db_pool_after_run(monkeypatch):
             job_id=job_id,
             executed=True,
             reason="claimed",
+            previous_state="pending",
+            claimed_state="queued",
         )
 
     async def fake_close_db_connection():
@@ -196,3 +206,29 @@ def test_process_job_task_closes_db_pool_after_run(monkeypatch):
         ("process", str(job_id)),
         ("close_db", None),
     ]
+
+
+async def test_process_job_logs_structured_claim_result(caplog):
+    job = _job()
+    session = FakeTaskSession(job)
+    caplog.set_level("INFO")
+
+    async def handle(_job_id):
+        return None
+
+    await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    record = next(
+        record
+        for record in caplog.records
+        if record.getMessage() == "Celery job task completed."
+    )
+    assert record.job_id == str(job.id)
+    assert record.task_result_reason == "claimed"
+    assert record.previous_state == "pending"
+    assert record.claimed_state == "queued"
+    assert record.task_executed is True
