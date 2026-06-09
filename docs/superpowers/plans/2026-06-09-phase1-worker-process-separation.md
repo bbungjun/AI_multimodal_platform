@@ -10,6 +10,36 @@
 
 ---
 
+## Closeout
+
+Status: complete.
+
+Completed in commit: `a88cba9 feat: split api and worker processes`.
+
+The checklist below is preserved as the implementation plan that was executed.
+The resulting implementation split FastAPI API serving from job execution,
+added a standalone `python -m app.worker` process, updated Compose to run a
+`worker` service, and kept Redis/Celery/outbox/queue routing out of Phase 1.
+
+Verification evidence:
+
+- Phase 1 targeted tests: `44 passed`
+- Backend full suite: `235 passed`
+- Frontend lint/build: passed
+- Compose config with `.env.example`: passed
+- Compose services: `db`, `backend`, `frontend`, `worker`
+- Mock golden-path smoke: passed
+- Mock retry smoke: passed
+- `python scripts/verify_local.py`: `VERIFY PASSED`
+
+Remaining Phase 2 decisions:
+
+- Introduce Redis strictly as the Celery broker.
+- Keep Celery task payloads `job_id`-only.
+- Decide whether to add outbox/repair immediately or after minimal enqueue
+  tests.
+- Keep Postgres as the user-visible job source of truth.
+
 ## 기준과 범위
 
 저장소 루트는 `C:\multi_modal`이다. 아래 파일 경로는 모두 이 루트 기준의 exact path이다.

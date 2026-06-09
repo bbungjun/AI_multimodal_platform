@@ -1,12 +1,29 @@
 # Production Worker/Queue Migration Plan
 
-> 이 문서는 아직 승인 전 계획이며, 승인 전 구현하지 않는다.
+> Phase 1 API/worker process separation은 완료됐다. Redis/Celery 기반 Phase 2
+> 이후 작업은 아직 계획 단계이며, 승인 전 구현하지 않는다.
 
 ## 목적
 
-현재 CreativeOps Studio는 FastAPI 애플리케이션 내부에서 asyncio 기반 job runner를 함께 실행한다. 이 구조는 개인 단일 백엔드 배포와 mock mode 검증에는 단순하고 효과적이지만, 실제 Vertex 기반 이미지/비디오 생성 서비스를 운영 수준으로 키우려면 API 요청 처리와 장시간 provider 작업을 더 명확히 분리해야 한다.
+CreativeOps Studio는 Phase 1에서 FastAPI API process와 job worker process를
+분리했다. 이 구조는 mock mode에서 비용 없이 검증되었고, 실제 Vertex 기반
+이미지/비디오 생성 서비스를 운영 수준으로 키우기 위한 첫 번째 runtime 경계를
+만든 상태다.
 
-이 문서는 현재 구조를 보존하면서 Redis/Celery 기반 worker/queue 구조로 단계적으로 이동하기 위한 검토용 계획이다. 목표는 Postgres를 job source of truth로 유지하고, Redis/Celery는 작업 dispatch와 coordination layer로만 사용하는 것이다.
+이 문서는 현재 API/worker 분리 구조를 보존하면서 Redis/Celery 기반
+worker/queue 구조로 단계적으로 이동하기 위한 검토용 계획이다. 목표는
+Postgres를 job source of truth로 유지하고, Redis/Celery는 작업 dispatch와
+coordination layer로만 사용하는 것이다.
+
+## 현재 상태
+
+- 완료: Phase 1 API/worker process separation
+- 완료 커밋: `a88cba9 feat: split api and worker processes`
+- closeout 문서: `docs/phase1-worker-process-separation-closeout.md`
+- 현재 runtime: FastAPI API process는 runner를 기본 auto-start하지 않고,
+  standalone `python -m app.worker` process가 기존 `InProcessJobRunner`를 실행한다.
+- 현재 Compose: `db`, `backend`, `worker`, `frontend`
+- 아직 미도입: Redis, Celery, outbox table, queue routing, broker retry/backoff
 
 ## 현재 결정: Celery 중심 채택 방향
 
@@ -16,9 +33,9 @@
 
 RQ, Arq, 직접 asyncio worker는 비교 검토한 대안으로 남긴다. RQ는 단순하고 러닝커브가 낮지만 복잡한 routing/retry 운영 설명에는 상대적으로 좁다. Arq는 asyncio 친화적이지만 포트폴리오/면접에서 보편적으로 알려진 선택지는 아니다. 직접 asyncio worker는 현재 코드와 이어지기 쉽지만, 프로덕션 queue system을 학습하고 설계했다는 메시지가 약해질 수 있다. 따라서 기본 실행 방향은 Celery 중심으로 잡고, 대안들은 tradeoff 비교 근거로 문서화한다.
 
-## 현재 구조
+## Phase 0 구조 (Phase 1 이전)
 
-현재 요청 흐름은 다음과 같다.
+Phase 1 이전 요청 흐름은 다음과 같았다.
 
 ```text
 React/Vite frontend
@@ -28,7 +45,7 @@ React/Vite frontend
     -> provider/storage boundary
 ```
 
-핵심 특징은 다음과 같다.
+당시 핵심 특징은 다음과 같았다.
 
 - Frontend는 `frontend/src/api/*` 클라이언트를 통해 FastAPI API를 호출한다.
 - FastAPI backend는 generation 요청을 durable job으로 Postgres에 저장한다.
@@ -40,7 +57,33 @@ React/Vite frontend
 - 모든 job 상태 변경은 `backend/app/state_machine.py`의 `transition(...)` 경계를 통해야 한다.
 - orphan sweep과 polling resume도 runner startup에서 수행된다.
 
-이 구조는 `AI_PROVIDER=mock`에서 credential 없이 end-to-end 생성 흐름을 검증하기 좋다. 다만 API process와 provider 작업 process가 같은 lifecycle을 공유하므로, 장시간 video polling, provider quota 제어, worker 재시작, 다중 replica 운영, queue별 확장에는 한계가 있다.
+이 구조는 `AI_PROVIDER=mock`에서 credential 없이 end-to-end 생성 흐름을 검증하기 좋았다. 다만 API process와 provider 작업 process가 같은 lifecycle을 공유하므로, 장시간 video polling, provider quota 제어, worker 재시작, 다중 replica 운영, queue별 확장에는 한계가 있었다.
+
+## Phase 1 현재 구조
+
+현재 요청/실행 흐름은 다음과 같다.
+
+```text
+React/Vite frontend
+  -> FastAPI API process
+    -> Postgres job, asset, prompt, pipeline records
+    -> /api and /files serving
+
+Worker process
+  -> InProcessJobRunner
+    -> Postgres pending job polling and row-lock claim
+    -> state_machine.transition(...)
+    -> provider/storage boundary
+```
+
+핵심 특징은 다음과 같다.
+
+- API process는 job 생성, 상태 조회, asset metadata 조회, `/files` streaming을 담당한다.
+- API process는 `JOB_RUNNER_AUTO_START=false` 기본값으로 runner를 자동 시작하지 않는다.
+- Worker process는 `python -m app.worker`로 실행되며, 기존 `InProcessJobRunner`를 FastAPI lifespan 밖에서 실행한다.
+- Postgres는 계속 job state, payload, prompt enhancement, pipeline relation, asset metadata의 source of truth다.
+- Docker Compose mock stack은 `db`, `backend`, `worker`, `frontend`를 함께 실행한다.
+- Worker는 `SIGTERM`/`SIGINT`를 task cancellation으로 연결하고, `stop_grace_period: 45s` 안에서 runner shutdown과 DB close를 수행하도록 구성됐다.
 
 ## 목표 구조
 
@@ -134,7 +177,7 @@ Queue 구조가 생기면 backlog, queue latency, task runtime, retry count, wor
 
 ### Redis/Celery 운영 복잡도
 
-현재 compose는 `db`, `backend`, `frontend`만 실행한다. Redis와 worker service가 추가되면 local dev, deployment, monitoring, restart policy, broker persistence 정책이 모두 늘어난다.
+현재 compose는 `db`, `backend`, `worker`, `frontend`를 실행한다. Phase 2에서 Redis/Celery와 queue별 worker 설정이 추가되면 local dev, deployment, monitoring, restart policy, broker persistence 정책이 더 늘어난다.
 
 Celery 설정도 단순 dependency 추가로 끝나지 않는다. task naming, queue routing, concurrency, retry policy, shutdown behavior, logging/metrics 방식을 명확히 정해야 한다.
 
@@ -548,13 +591,13 @@ git diff --cached --name-only
 검토 포인트:
 
 - rollout flag를 `JOB_DISPATCH_MODE=internal|worker|celery`처럼 둘지 결정한다.
-- 기존 internal runner fallback을 언제 제거할지 결정한다.
+- 기존 `InProcessJobRunner` 기반 worker fallback을 Celery 안정화 후 언제 제거할지 결정한다.
 - Live Vertex QA 범위와 비용 한도를 승인받는다.
 
 ## 검토 질문
 
 - Celery는 1차 채택 후보로 결정했다. RQ/Arq/직접 asyncio worker는 비교 대안으로 문서에 남기되, 구현 기본 경로는 Celery 중심으로 둔다.
-- Phase 1에서 API/worker process 분리를 실제로 먼저 구현할지, Phase 2의 Celery worker와 함께 구현할지?
+- Phase 1 API/worker process 분리는 완료됐다. Phase 2는 이 baseline 위에 Redis/Celery dispatch를 추가한다.
 - Outbox table은 Phase 2에서 바로 도입할지, enqueue 실패 repair flow로 시작한 뒤 운영 필요가 확인되면 도입할지?
 - Celery broker 장애 시 pending job reenqueue repair를 수동 runbook으로 둘지, 자동 dispatcher/outbox로 확장할지?
 - Queue routing은 처음부터 `prompt`, `imagen`, `veo`로 분리할지, 단일 `generation` queue로 시작한 뒤 분리할지?
@@ -563,7 +606,7 @@ git diff --cached --name-only
 - Celery retry 횟수와 Postgres `attempts`를 어떻게 매핑할지?
 - Celery ack 정책과 worker crash 시 재실행 가능성을 어떤 idempotency guard로 방어할지?
 - Celery result backend는 비활성화할지, debugging 보조 정보로만 제한할지?
-- Local dev 기본값은 API와 worker를 모두 띄우는 compose를 사용할지, backend 단독 실행 시 internal runner fallback을 허용할지?
+- Local dev 기본값은 API와 worker를 모두 띄우는 compose로 확정됐다. Phase 2에서는 Redis/Celery 포함 dev stack 범위를 결정한다.
 - CI smoke 범위는 unit test만 둘지, Redis 포함 compose smoke까지 둘지?
 - Worker metrics는 backend health endpoint에 최소 노출할지, 별도 Ops Console 화면까지 포함할지?
 - Internal asyncio runner는 Celery 안정화 후 제거할지, mock/local fallback으로 유지할지?
@@ -571,7 +614,7 @@ git diff --cached --name-only
 ## 승인 전 원칙
 
 - 이 문서는 구현 지시가 아니라 검토용 계획이다.
-- 승인 전에는 Redis, Celery, docker compose worker service, backend dependency, API contract를 변경하지 않는다.
+- 승인 전에는 Redis, Celery, broker dependency, queue routing, outbox table, API contract를 변경하지 않는다.
 - 모든 구현 phase는 `AI_PROVIDER=mock` 기준 검증을 먼저 통과해야 한다.
 - 실제 Vertex/Gemini/Imagen/Veo 호출은 사용자가 명시적으로 승인한 live QA 상황에서만 수행한다.
 - 민감 파일과 credential 내용은 읽거나 출력하거나 커밋하지 않는다.
