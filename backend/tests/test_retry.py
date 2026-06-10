@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.config import Settings
 from app.services import retry
 
 
@@ -24,6 +25,21 @@ class RecorderSleep:
 
 def test_default_retryable_status_codes_match_submission_contract():
     assert retry.DEFAULT_RETRYABLE_STATUS_CODES == (429, 500, 502, 503, 504, 408)
+
+
+def test_build_retry_policy_uses_settings_override():
+    settings = Settings(
+        _env_file=None,
+        provider_retry_max_attempts=2,
+        provider_retry_base_delay_sec=0.25,
+        provider_retry_max_delay_sec=2.5,
+    )
+
+    assert retry.build_retry_policy(settings) == retry.RetryPolicy(
+        max_attempts=2,
+        base_delay_sec=0.25,
+        max_delay_sec=2.5,
+    )
 
 
 async def test_with_retry_retries_status_code_errors_then_returns_result():

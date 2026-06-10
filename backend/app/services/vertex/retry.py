@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable, Collection
+from dataclasses import dataclass
+from typing import Protocol
 from typing import TypeVar
 
 T = TypeVar("T")
@@ -16,15 +18,42 @@ class RetryConfigError(ValueError):
     pass
 
 
+class RetrySettings(Protocol):
+    provider_retry_max_attempts: int
+    provider_retry_base_delay_sec: float
+    provider_retry_max_delay_sec: float
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    max_attempts: int = 3
+    base_delay_sec: float = 1.0
+    max_delay_sec: float = 20.0
+
+
+def build_retry_policy(settings: RetrySettings) -> RetryPolicy:
+    return RetryPolicy(
+        max_attempts=settings.provider_retry_max_attempts,
+        base_delay_sec=settings.provider_retry_base_delay_sec,
+        max_delay_sec=settings.provider_retry_max_delay_sec,
+    )
+
+
 async def with_retry(
     awaitable_factory: AwaitableFactory[T],
     *,
     max_attempts: int = 3,
     base: float = 1.0,
     max_delay: float = 20.0,
+    policy: RetryPolicy | None = None,
     retryable: Collection[int] = DEFAULT_RETRYABLE_STATUS_CODES,
     sleep: Sleep = asyncio.sleep,
 ) -> T:
+    if policy is not None:
+        max_attempts = policy.max_attempts
+        base = policy.base_delay_sec
+        max_delay = policy.max_delay_sec
+
     if max_attempts < 1:
         raise RetryConfigError("max_attempts must be at least 1")
     if base < 0:

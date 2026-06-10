@@ -74,6 +74,9 @@ def test_worker_uses_backend_image_env_asset_volume_and_broker():
         "RATE_LIMIT_IMAGEN_PER_MIN",
         "RATE_LIMIT_VEO_PER_MIN",
         "RATE_LIMIT_GEMINI_PER_MIN",
+        "PROVIDER_RETRY_MAX_ATTEMPTS",
+        "PROVIDER_RETRY_BASE_DELAY_SEC",
+        "PROVIDER_RETRY_MAX_DELAY_SEC",
     ]
     for key in shared_env_keys:
         assert _environment_line(worker_block, key) == _environment_line(backend_block, key)
@@ -98,6 +101,15 @@ def test_worker_uses_backend_image_env_asset_volume_and_broker():
     )
     assert _environment_line(backend_block, "RATE_LIMIT_GEMINI_PER_MIN") == (
         "RATE_LIMIT_GEMINI_PER_MIN: ${RATE_LIMIT_GEMINI_PER_MIN:-10}"
+    )
+    assert _environment_line(backend_block, "PROVIDER_RETRY_MAX_ATTEMPTS") == (
+        "PROVIDER_RETRY_MAX_ATTEMPTS: ${PROVIDER_RETRY_MAX_ATTEMPTS:-3}"
+    )
+    assert _environment_line(backend_block, "PROVIDER_RETRY_BASE_DELAY_SEC") == (
+        "PROVIDER_RETRY_BASE_DELAY_SEC: ${PROVIDER_RETRY_BASE_DELAY_SEC:-1.0}"
+    )
+    assert _environment_line(backend_block, "PROVIDER_RETRY_MAX_DELAY_SEC") == (
+        "PROVIDER_RETRY_MAX_DELAY_SEC: ${PROVIDER_RETRY_MAX_DELAY_SEC:-20.0}"
     )
 
 

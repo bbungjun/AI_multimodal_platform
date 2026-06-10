@@ -28,6 +28,9 @@ at the end of every meaningful work session.
 - Portfolio/demo safety defaults: `CELERY_WORKER_CONCURRENCY=2`,
   `RATE_LIMIT_GEMINI_PER_MIN=10`, `RATE_LIMIT_IMAGEN_PER_MIN=5`, and
   `RATE_LIMIT_VEO_PER_MIN=1`.
+- Provider retry/backoff defaults: `PROVIDER_RETRY_MAX_ATTEMPTS=3`,
+  `PROVIDER_RETRY_BASE_DELAY_SEC=1.0`, and
+  `PROVIDER_RETRY_MAX_DELAY_SEC=20.0`.
 
 ## Machine Setup Notes
 
@@ -50,7 +53,7 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-06-10, the documentation was aligned with the current
+As of 2026-06-11, the documentation was aligned with the current
 Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 - Updated README architecture and mock-mode env example to include Redis,
@@ -69,6 +72,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Tightened default portfolio/demo safety settings so Gemini, Imagen, and Veo
   request windows are conservative by default and Celery starts with worker
   concurrency `2`. The values remain configurable through `.env`.
+- Started Phase 4B by making provider retry/backoff policy configurable from
+  environment settings. Transient provider failures now use the configured
+  retry policy before the job is marked failed with public error metadata.
 
 ## Next Suggested Work
 
@@ -79,8 +85,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Consider adding a short README link to this handoff file if future agents miss
   it despite the `AGENTS.md` rule.
 - If an older local `.env` already exists, make sure it includes the current
-  rate-limit keys and `CELERY_WORKER_CONCURRENCY=2`; `setup_local.ps1` does not
-  overwrite existing local `.env` files unless `-Force` is used.
+  rate-limit keys, provider retry keys, and `CELERY_WORKER_CONCURRENCY=2`;
+  `setup_local.ps1` does not overwrite existing local `.env` files unless
+  `-Force` is used.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -89,18 +96,19 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest portfolio/demo safety checks:
+Latest Phase 4B retry/backoff checks:
 
 ```powershell
 git diff --check
 git status --short --branch
 $env:AI_PROVIDER='mock'; python -m pytest tests/test_rate_limiter.py tests/test_celery_app.py tests/test_compose_worker_service.py tests/test_generation_api.py tests/test_pipeline_api.py -q
+$env:AI_PROVIDER='mock'; python -m pytest tests/test_retry.py tests/test_celery_app.py tests/test_compose_worker_service.py tests/test_job_handlers.py -q
 python scripts/verify_local.py
 ```
 
 Expected:
 
 - no whitespace errors
-- targeted backend checks pass (`85 passed`)
-- full local quality gate passes (`277 passed`, frontend lint, frontend build)
+- targeted retry/backend checks pass (`37 passed`)
+- full local quality gate passes (`279 passed`, frontend lint, frontend build)
 - only intentional working-tree changes are present

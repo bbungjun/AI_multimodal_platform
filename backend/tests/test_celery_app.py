@@ -19,6 +19,9 @@ def test_dispatch_mode_defaults_are_explicit():
     assert settings.rate_limit_imagen_per_min == 5
     assert settings.rate_limit_veo_per_min == 1
     assert settings.rate_limit_gemini_per_min == 10
+    assert settings.provider_retry_max_attempts == 3
+    assert settings.provider_retry_base_delay_sec == 1.0
+    assert settings.provider_retry_max_delay_sec == 20.0
 
 
 def test_celery_app_names_jobs_namespace():

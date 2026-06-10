@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     rate_limit_imagen_per_min: int = 5
     rate_limit_veo_per_min: int = 1
     rate_limit_gemini_per_min: int = 10
+    provider_retry_max_attempts: int = 3
+    provider_retry_base_delay_sec: float = 1.0
+    provider_retry_max_delay_sec: float = 20.0
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None

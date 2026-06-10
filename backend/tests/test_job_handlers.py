@@ -10,6 +10,7 @@ from app.services.jobs.pipeline_link import PipelineLinkResult
 from app.services.vertex.errors import (
     VertexOutputUnavailableError,
     VertexSafetyBlockedError,
+    VertexTransientError,
 )
 
 
@@ -393,6 +394,64 @@ async def test_handle_t2i_mock_provider_failure_marks_job_failed_and_cascades(
     assert cascaded_jobs == [job.id]
     assert session.commit_count == 4
     assert session.rollback_count == 1
+
+
+async def test_handle_t2i_uses_configured_retry_policy_for_transient_errors(
+    monkeypatch,
+):
+    job = _t2i_job()
+    session = FakeHandlerSession(job)
+    calls: list[object] = []
+    cascaded_jobs: list[object] = []
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    async def generate_image(*_args: object, **_kwargs: object) -> list[bytes]:
+        calls.append(object())
+        raise VertexTransientError()
+
+    async def fail_blocked_children_for_parent(
+        _session: object,
+        failed_job: Job,
+    ) -> None:
+        assert _session is session
+        cascaded_jobs.append(failed_job.id)
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.imagen, "generate_image", generate_image)
+    monkeypatch.setattr(
+        handlers.pipeline_link,
+        "fail_blocked_children_for_parent",
+        fail_blocked_children_for_parent,
+    )
+    monkeypatch.setattr(
+        handlers,
+        "get_settings",
+        lambda: Settings(
+            _env_file=None,
+            provider_retry_max_attempts=2,
+            provider_retry_base_delay_sec=0.0,
+            provider_retry_max_delay_sec=0.0,
+        ),
+        raising=False,
+    )
+
+    await handlers.handle_t2i(session, job)
+
+    assert len(calls) == 2
+    assert job.state == JobState.FAILED
+    assert job.vertex_charged is False
+    assert job.attempts == 2
+    assert job.error == {
+        "code": "vertex_transient_error",
+        "message": "Vertex AI service was temporarily unavailable.",
+        "retryable": True,
+        "retry_count": 2,
+        "last_attempt_at": job.error["last_attempt_at"],
+    }
+    assert job.state_history[-1]["detail"] == {"error": "vertex_transient_error"}
+    assert cascaded_jobs == [job.id]
 
 
 async def test_handle_t2v_submits_polls_stores_video_asset(monkeypatch):

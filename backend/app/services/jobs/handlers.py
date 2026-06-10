@@ -6,12 +6,13 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
 from app.state_machine import TERMINAL_STATES, transition
 from app.services import rate_limit, storage
 from app.services.jobs import pipeline_link
-from app.services.retry import with_retry
+from app.services.retry import build_retry_policy, with_retry
 from app.services.vertex import imagen, veo
 from app.services.vertex.errors import VertexServiceError, map_vertex_error
 
@@ -74,7 +75,8 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
                 job,
                 number_of_images=number_of_images,
                 aspect_ratio=aspect_ratio,
-            )
+            ),
+            policy=build_retry_policy(get_settings()),
         )
 
         job.vertex_charged = True
@@ -300,7 +302,8 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
                     job,
                     aspect_ratio=aspect_ratio,
                     duration_sec=duration_sec,
-                )
+                ),
+                policy=build_retry_policy(get_settings()),
             )
         except VertexServiceError:
             raise
@@ -428,7 +431,8 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
                     duration_sec=duration_sec,
                     image_bytes=source_bytes,
                     image_mime=source_asset.mime,
-                )
+                ),
+                policy=build_retry_policy(get_settings()),
             )
         except VertexServiceError:
             raise
