@@ -49,12 +49,18 @@ class FakeTaskSession:
         return FakeScalarsResult([] if self.job is None else [self.job])
 
 
-def _job(*, state: JobState = JobState.PENDING, blocked: bool = False) -> Job:
+def _job(
+    *,
+    state: JobState = JobState.PENDING,
+    blocked: bool = False,
+    mode: GenerationMode = GenerationMode.T2I,
+    model: str = "imagen-4.0-fast-generate-001",
+) -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
-        mode=GenerationMode.T2I,
-        model="imagen-4.0-fast-generate-001",
+        mode=mode,
+        model=model,
         state=state,
         prompt="A small cabin at sunrise",
         blocked=blocked,
@@ -66,6 +72,63 @@ def _job(*, state: JobState = JobState.PENDING, blocked: bool = False) -> Job:
         created_at=now,
         updated_at=now,
     )
+
+
+async def test_process_job_resumes_polling_job_with_vertex_operation():
+    job = _job(
+        state=JobState.POLLING,
+        mode=GenerationMode.T2V,
+        model="veo-3.0-fast-generate-001",
+    )
+    job.vertex_operation_name = "projects/demo/locations/us/operations/veo-123"
+    session = FakeTaskSession(job)
+    handled: list[object] = []
+
+    async def handle(job_id):
+        session.events.append("handler")
+        handled.append(job_id)
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is True
+    assert result.reason == "resumed_polling"
+    assert result.previous_state == "polling"
+    assert result.claimed_state == "polling"
+    assert job.state == JobState.POLLING
+    assert job.state_history == []
+    assert handled == [job.id]
+    assert session.events == [
+        "session_enter",
+        "begin",
+        "end",
+        "session_exit",
+        "handler",
+    ]
+
+
+async def test_process_job_noops_polling_image_job_even_with_operation_name():
+    job = _job(state=JobState.POLLING)
+    job.vertex_operation_name = "projects/demo/locations/us/operations/invalid-image-op"
+    session = FakeTaskSession(job)
+
+    async def handle(_job_id):
+        raise AssertionError("non-video polling job must not reach handler")
+
+    result = await tasks.process_job_async(
+        str(job.id),
+        session_factory=lambda: session,
+        handler=handle,
+    )
+
+    assert result.executed is False
+    assert result.reason == "not_pending"
+    assert result.previous_state == "polling"
+    assert job.state == JobState.POLLING
+    assert job.state_history == []
 
 
 async def test_process_job_claims_pending_job_before_handler():

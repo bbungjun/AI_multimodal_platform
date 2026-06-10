@@ -63,10 +63,10 @@ Important backend contracts are already protected by focused tests:
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume
 - outbox event payload hygiene, dispatcher retry/failure handling, Celery
-  dispatch config, `job_id`-only enqueue, task idempotency, and pending job
-  repair
+  dispatch config, `job_id`-only enqueue, task idempotency, pending job repair,
+  and Veo polling reenqueue repair
 - Celery worker Compose healthcheck, explicit queue/concurrency env, and
-  graceful shutdown settings
+  long-running task redelivery settings
 - dispatch/repair/task observability fields without mutating job state history
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, and retry behavior
@@ -138,6 +138,8 @@ For Phase 2 local operations, observability lives in:
   per-event result records
 - `RepairResult`: selected/dispatched/failed counts plus individual
   `DispatchResult` records
+- polling repair uses the same `RepairResult` shape for resumable `t2v`/`i2v`
+  jobs with saved Vertex operation names
 - `ProcessJobResult`: claim/no-op reason, previous state, claimed state, and
   whether the handler executed
 - structured log fields emitted by dispatch and task claim boundaries

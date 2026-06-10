@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     celery_worker_concurrency: int = 2
     celery_worker_healthcheck_timeout_sec: int = 5
     celery_worker_shutdown_grace_sec: int = 60
+    celery_task_acks_late: bool = True
+    celery_task_reject_on_worker_lost: bool = True
+    celery_worker_prefetch_multiplier: int = 1
     outbox_dispatcher_batch_size: int = 50
     outbox_dispatcher_poll_interval_sec: float = 1.0
     outbox_dispatcher_max_attempts: int = 10

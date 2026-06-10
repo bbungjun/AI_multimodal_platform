@@ -28,6 +28,9 @@ at the end of every meaningful work session.
 - Portfolio/demo safety defaults: `CELERY_WORKER_CONCURRENCY=2`,
   `RATE_LIMIT_GEMINI_PER_MIN=10`, `RATE_LIMIT_IMAGEN_PER_MIN=5`, and
   `RATE_LIMIT_VEO_PER_MIN=1`.
+- Celery video-task recovery defaults: `CELERY_TASK_ACKS_LATE=true`,
+  `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
+  `CELERY_WORKER_PREFETCH_MULTIPLIER=1`.
 - Provider retry/backoff defaults: `PROVIDER_RETRY_MAX_ATTEMPTS=3`,
   `PROVIDER_RETRY_BASE_DELAY_SEC=1.0`, and
   `PROVIDER_RETRY_MAX_DELAY_SEC=20.0`.
@@ -78,6 +81,10 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Started Phase 4B by making provider retry/backoff policy configurable from
   environment settings. Transient provider failures now use the configured
   retry policy before the job is marked failed with public error metadata.
+- Completed Phase 4C Veo polling resume support. Long-running Celery tasks now
+  use late ack/reject-on-worker-lost/prefetch `1`, redelivered `t2v`/`i2v`
+  polling jobs resume from the saved `vertex_operation_name`, and
+  `scripts/reenqueue_polling_jobs.py` can reenqueue stranded polling jobs.
 - Added Phase 4D dead-letter/repair metadata for retry-exhausted provider
   failures. Failed jobs now keep `dead_letter`, `dead_letter_reason`, and
   `repair_action` in `job.error`, and the detail/history UI surfaces repair
@@ -92,11 +99,10 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   want the full quality gate. Pass `-Force` only when intentionally regenerating
   `.env` from `.env.example`.
 - If an older local `.env` already exists, make sure it includes the current
-  rate-limit keys, provider retry keys, and `CELERY_WORKER_CONCURRENCY=2`;
-  `setup_local.ps1` does not overwrite existing local `.env` files unless
-  `-Force` is used.
-- Phase 4C recommendation: implement Veo polling reschedule/resume for AWS
-  worker restarts before adding more UI.
+  rate-limit keys, provider retry keys, `CELERY_WORKER_CONCURRENCY=2`,
+  `CELERY_TASK_ACKS_LATE=true`, `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
+  `CELERY_WORKER_PREFETCH_MULTIPLIER=1`; `setup_local.ps1` does not overwrite
+  existing local `.env` files unless `-Force` is used.
 - Phase 4D follow-up: decide whether repair operations need an admin-only API
   or whether the existing retry endpoint is enough for the portfolio demo.
 - Phase 4E recommendation: add minimal worker/queue health metrics for AWS
@@ -111,12 +117,11 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest dead-letter/repair UI checks:
+Latest Veo polling resume checks:
 
 ```powershell
 git diff --check
-cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_job_handlers.py -q
-cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_generation_api.py tests/test_smoke_mock_retry_script.py tests/test_retry.py tests/test_job_handlers.py -q
+cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_celery_app.py tests/test_celery_tasks.py tests/test_reenqueue_pending.py tests/test_compose_worker_service.py tests/test_job_handlers.py tests/test_job_runner.py -q
 cd frontend; npm run lint
 cd frontend; npm run build
 python scripts/verify_local.py
@@ -125,8 +130,7 @@ python scripts/verify_local.py
 Expected:
 
 - no whitespace errors
-- job handler tests pass (`12 passed`)
-- related backend regression tests pass (`86 passed`)
+- related backend regression tests pass
 - frontend typecheck and production build pass
 - full local quality gate passes
 - only intentional working-tree changes are present

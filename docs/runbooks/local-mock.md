@@ -33,6 +33,9 @@ PROVIDER_RETRY_MAX_DELAY_SEC=20.0
 CELERY_WORKER_CONCURRENCY=2
 CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC=5
 CELERY_WORKER_SHUTDOWN_GRACE_SEC=60
+CELERY_TASK_ACKS_LATE=true
+CELERY_TASK_REJECT_ON_WORKER_LOST=true
+CELERY_WORKER_PREFETCH_MULTIPLIER=1
 OUTBOX_DISPATCHER_BATCH_SIZE=50
 OUTBOX_DISPATCHER_POLL_INTERVAL_SEC=1.0
 OUTBOX_DISPATCHER_MAX_ATTEMPTS=10
@@ -167,6 +170,26 @@ claim only pending jobs before executing. The command refuses to run while
 `.env` files are present in the repository root, backend directory, or current
 working directory. It prints only selected/dispatched/failed counts, not
 prompts, parameters, credentials, or asset paths.
+
+## Veo Polling Resume
+
+Veo video tasks can sit in `polling` while waiting for a Vertex operation. The
+Celery worker uses late acknowledgements, `reject_on_worker_lost`, and prefetch
+`1` so a worker restart can redeliver the task. Redelivered tasks resume only
+`t2v`/`i2v` jobs that are still `polling` and have a
+`vertex_operation_name`; the handler polls the saved operation name instead of
+submitting a new video request.
+
+If an older task was lost before these settings were active, reenqueue
+resumable polling jobs from the repository root with process environment
+variables already set:
+
+```powershell
+python scripts/reenqueue_polling_jobs.py --limit 100
+```
+
+The polling repair command uses the same `.env` refusal and count-only output
+rules as pending job repair.
 
 The legacy polling worker remains available as a manual fallback:
 

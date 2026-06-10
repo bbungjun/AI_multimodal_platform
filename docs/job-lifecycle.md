@@ -56,6 +56,14 @@ The default local productionization path is:
 - Handlers dispatch mode-specific generation logic, persist assets, and record
   failures with public error codes.
 
+Veo `t2v` and `i2v` jobs save `vertex_operation_name` before entering
+`polling`. Celery uses late acknowledgements and rejects tasks on worker loss,
+so a worker restart can redeliver the same job id. If the redelivered job is
+still `polling` and has a saved operation name, the task resumes polling that
+operation instead of submitting another Veo request. Operators can also run
+`python scripts/reenqueue_polling_jobs.py --limit 100` to reenqueue resumable
+polling jobs that were stranded before redelivery settings were active.
+
 The legacy `python -m app.worker` polling runner remains available only as a
 manual fallback. It should not run concurrently with the default dispatcher and
 Celery worker unless a controlled repair run is being performed.

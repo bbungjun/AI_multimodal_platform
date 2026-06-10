@@ -162,6 +162,15 @@ def test_worker_has_celery_healthcheck_and_operational_env():
     assert _environment_line(worker_block, "CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC") == (
         "CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC: ${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5}"
     )
+    assert _environment_line(worker_block, "CELERY_TASK_ACKS_LATE") == (
+        "CELERY_TASK_ACKS_LATE: ${CELERY_TASK_ACKS_LATE:-true}"
+    )
+    assert _environment_line(worker_block, "CELERY_TASK_REJECT_ON_WORKER_LOST") == (
+        "CELERY_TASK_REJECT_ON_WORKER_LOST: ${CELERY_TASK_REJECT_ON_WORKER_LOST:-true}"
+    )
+    assert _environment_line(worker_block, "CELERY_WORKER_PREFETCH_MULTIPLIER") == (
+        "CELERY_WORKER_PREFETCH_MULTIPLIER: ${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}"
+    )
 
 
 def test_no_celery_result_backend_source_of_truth():

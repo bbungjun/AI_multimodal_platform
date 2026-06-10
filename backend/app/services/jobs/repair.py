@@ -9,7 +9,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import AsyncSessionLocal
-from app.models import Job, JobState
+from app.models import GenerationMode, Job, JobState
 from app.services.jobs.enqueue import DispatchResult, dispatch_job, exception_code
 
 
@@ -33,8 +33,38 @@ async def reenqueue_pending_jobs(
     session_factory: SessionFactory = AsyncSessionLocal,
     dispatcher: Callable[..., Awaitable[DispatchResult]] = dispatch_job,
 ) -> RepairResult:
+    return await _reenqueue_jobs(
+        statement=_pending_unblocked_jobs_statement(limit=limit),
+        reason=reason,
+        session_factory=session_factory,
+        dispatcher=dispatcher,
+    )
+
+
+async def reenqueue_resumable_polling_jobs(
+    *,
+    limit: int = 100,
+    reason: str = "resume_polling",
+    session_factory: SessionFactory = AsyncSessionLocal,
+    dispatcher: Callable[..., Awaitable[DispatchResult]] = dispatch_job,
+) -> RepairResult:
+    return await _reenqueue_jobs(
+        statement=_resumable_polling_jobs_statement(limit=limit),
+        reason=reason,
+        session_factory=session_factory,
+        dispatcher=dispatcher,
+    )
+
+
+async def _reenqueue_jobs(
+    *,
+    statement: Select[tuple[Job]],
+    reason: str,
+    session_factory: SessionFactory,
+    dispatcher: Callable[..., Awaitable[DispatchResult]],
+) -> RepairResult:
     async with session_factory() as session:
-        result = await session.scalars(_pending_unblocked_jobs_statement(limit=limit))
+        result = await session.scalars(statement)
         jobs = list(result.all())
 
     dispatched = 0
@@ -97,5 +127,19 @@ def _pending_unblocked_jobs_statement(*, limit: int) -> Select[tuple[Job]]:
         select(Job)
         .where(Job.state == JobState.PENDING, Job.blocked.is_(False))
         .order_by(Job.created_at)
+        .limit(limit)
+    )
+
+
+def _resumable_polling_jobs_statement(*, limit: int) -> Select[tuple[Job]]:
+    return (
+        select(Job)
+        .where(
+            Job.mode.in_((GenerationMode.T2V, GenerationMode.I2V)),
+            Job.state == JobState.POLLING,
+            Job.vertex_operation_name.is_not(None),
+            Job.blocked.is_(False),
+        )
+        .order_by(Job.updated_at)
         .limit(limit)
     )

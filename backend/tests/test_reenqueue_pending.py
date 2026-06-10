@@ -14,6 +14,9 @@ from app.services.jobs.enqueue import DispatchResult
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "reenqueue_pending_jobs.py"
+POLLING_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[2] / "scripts" / "reenqueue_polling_jobs.py"
+)
 
 
 class FakeScalarsResult:
@@ -78,6 +81,24 @@ def test_repair_selects_pending_unblocked_jobs_only():
     assert "limit 25" in sql
 
 
+def test_repair_selects_resumable_polling_jobs_only():
+    statement = repair._resumable_polling_jobs_statement(limit=25)
+
+    sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    ).lower()
+
+    assert "jobs.state = 'polling'" in sql
+    assert "jobs.mode in ('t2v', 'i2v')" in sql
+    assert "jobs.vertex_operation_name is not null" in sql
+    assert "jobs.blocked is false" in sql
+    assert "order by jobs.updated_at" in sql
+    assert "limit 25" in sql
+
+
 async def test_repair_reenqueues_job_ids_without_payload():
     jobs = [_job(), _job()]
     session = FakeRepairSession(jobs)
@@ -114,6 +135,40 @@ async def test_repair_reenqueues_job_ids_without_payload():
         (jobs[0].id, "repair_pending"),
         (jobs[1].id, "repair_pending"),
     ]
+    sent_repr = repr(dispatch_calls)
+    assert "prompt" not in sent_repr
+    assert "parameters" not in sent_repr
+
+
+async def test_repair_reenqueues_resumable_polling_jobs_without_payload():
+    job = _job(state=JobState.POLLING)
+    job.vertex_operation_name = "projects/demo/locations/us/operations/veo-123"
+    session = FakeRepairSession([job])
+    dispatch_calls: list[tuple[object, str]] = []
+
+    async def dispatch_job(job_id, *, reason):
+        dispatch_calls.append((job_id, reason))
+        return DispatchResult(
+            job_id=job_id,
+            reason=reason,
+            mode="celery",
+            enqueued=True,
+        )
+
+    result = await repair.reenqueue_resumable_polling_jobs(
+        limit=100,
+        session_factory=lambda: session,
+        dispatcher=dispatch_job,
+    )
+
+    assert result.selected == 1
+    assert result.dispatched == 1
+    assert result.failed == 0
+    assert [dispatch.job_id for dispatch in result.dispatch_results] == [job.id]
+    assert [dispatch.reason for dispatch in result.dispatch_results] == [
+        "resume_polling",
+    ]
+    assert dispatch_calls == [(job.id, "resume_polling")]
     sent_repr = repr(dispatch_calls)
     assert "prompt" not in sent_repr
     assert "parameters" not in sent_repr
@@ -161,6 +216,18 @@ def load_cli_module():
     return module
 
 
+def load_polling_cli_module():
+    spec = importlib.util.spec_from_file_location(
+        "reenqueue_polling_jobs",
+        POLLING_SCRIPT_PATH,
+    )
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_reenqueue_cli_refuses_sensitive_dotenv(monkeypatch, tmp_path):
     module = load_cli_module()
     backend_root = tmp_path / "backend"
@@ -190,6 +257,40 @@ def test_reenqueue_cli_prints_counts_without_payload(monkeypatch, capsys):
     assert exit_code == 0
     assert captured.out.strip() == (
         "REENQUEUE COMPLETE selected=2 dispatched=1 failed=1"
+    )
+    assert "prompt" not in captured.out
+    assert "parameters" not in captured.out
+
+
+def test_reenqueue_polling_cli_refuses_sensitive_dotenv(monkeypatch, tmp_path):
+    module = load_polling_cli_module()
+    backend_root = tmp_path / "backend"
+    backend_root.mkdir()
+    (tmp_path / ".env").write_text("AI_PROVIDER=mock\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(module, "BACKEND_ROOT", backend_root)
+
+    with pytest.raises(module.RepairCliError, match="Refusing to run"):
+        module._refuse_sensitive_dotenv()
+
+
+def test_reenqueue_polling_cli_prints_counts_without_payload(monkeypatch, capsys):
+    module = load_polling_cli_module()
+
+    async def fake_run(*, limit: int):
+        assert limit == 5
+        return SimpleNamespace(selected=2, dispatched=1, failed=1)
+
+    monkeypatch.setattr(module, "_refuse_sensitive_dotenv", lambda: None)
+    monkeypatch.setattr(module, "_run", fake_run)
+
+    exit_code = module.main(["--limit", "5"])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert captured.out.strip() == (
+        "REENQUEUE POLLING COMPLETE selected=2 dispatched=1 failed=1"
     )
     assert "prompt" not in captured.out
     assert "parameters" not in captured.out

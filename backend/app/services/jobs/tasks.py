@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.celery_app import celery_app
 from app.db import AsyncSessionLocal, close_db_connection
-from app.models import Job, JobState
+from app.models import GenerationMode, Job, JobState
 from app.services.jobs.handlers import handle as default_handler
 from app.state_machine import TERMINAL_STATES, transition
 
@@ -90,7 +90,15 @@ async def process_job_async(
                 )
                 _log_process_job_result(process_result)
                 return process_result
-            if job.state != JobState.PENDING:
+            if _is_resumable_polling_job(job):
+                process_result = ProcessJobResult(
+                    job_id=parsed_job_id,
+                    executed=True,
+                    reason="resumed_polling",
+                    previous_state=previous_state,
+                    claimed_state=JobState.POLLING.value,
+                )
+            elif job.state != JobState.PENDING:
                 process_result = ProcessJobResult(
                     job_id=parsed_job_id,
                     executed=False,
@@ -99,23 +107,31 @@ async def process_job_async(
                 )
                 _log_process_job_result(process_result)
                 return process_result
-
-            transition(job, JobState.QUEUED, detail={"runner": "celery"})
+            else:
+                transition(job, JobState.QUEUED, detail={"runner": "celery"})
+                process_result = ProcessJobResult(
+                    job_id=parsed_job_id,
+                    executed=True,
+                    reason="claimed",
+                    previous_state=previous_state,
+                    claimed_state=JobState.QUEUED.value,
+                )
 
     await handler(parsed_job_id)
-    process_result = ProcessJobResult(
-        job_id=parsed_job_id,
-        executed=True,
-        reason="claimed",
-        previous_state=previous_state,
-        claimed_state=JobState.QUEUED.value,
-    )
     _log_process_job_result(process_result)
     return process_result
 
 
 def _claim_job_statement(job_id: UUID) -> Select[tuple[Job]]:
     return select(Job).where(Job.id == job_id).with_for_update(skip_locked=True)
+
+
+def _is_resumable_polling_job(job: Job) -> bool:
+    return (
+        job.mode in {GenerationMode.T2V, GenerationMode.I2V}
+        and job.state == JobState.POLLING
+        and bool(job.vertex_operation_name)
+    )
 
 
 def _log_process_job_result(result: ProcessJobResult) -> None:
