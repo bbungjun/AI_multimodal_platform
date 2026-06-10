@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
+from app.models import (
+    Asset,
+    AssetKind,
+    GenerationMode,
+    Job,
+    JobState,
+    OutboxEvent,
+    OutboxEventStatus,
+    utc_now,
+)
+from app.services.jobs import outbox
 from app.services.jobs import pipeline_link
 
 
@@ -18,10 +28,14 @@ class FakePipelineLinkSession:
     def __init__(self, scalar_results: list[list[object]]) -> None:
         self.scalar_results = scalar_results
         self.commit_count = 0
+        self.added: list[object] = []
 
     async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
         rows = self.scalar_results.pop(0) if self.scalar_results else []
         return FakeScalarsResult(rows)
+
+    def add(self, instance: object) -> None:
+        self.added.append(instance)
 
     async def commit(self) -> None:
         self.commit_count += 1
@@ -89,6 +103,36 @@ def _blocked_child(parent: Job) -> Job:
     )
 
 
+def _added_outbox_events(session: FakePipelineLinkSession) -> list[OutboxEvent]:
+    return [
+        instance
+        for instance in session.added
+        if isinstance(instance, OutboxEvent)
+    ]
+
+
+def _assert_child_dispatch_event(
+    session: FakePipelineLinkSession,
+    *,
+    child: Job,
+) -> None:
+    events = _added_outbox_events(session)
+    assert len(events) == 1
+    event = events[0]
+    assert event.status == OutboxEventStatus.PENDING
+    assert event.event_type == outbox.JOB_DISPATCH_REQUESTED
+    assert event.aggregate_type == "job"
+    assert event.aggregate_id == child.id
+    assert event.payload == {
+        "job_id": str(child.id),
+        "reason": "pipeline_child_unblocked",
+    }
+    payload_repr = repr(event.payload)
+    assert "prompt" not in payload_repr
+    assert "parameters" not in payload_repr
+    assert "source_asset_id" not in payload_repr
+
+
 async def test_link_completed_parent_unblocks_child_with_image_asset():
     parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
     child = _blocked_child(parent)
@@ -103,6 +147,7 @@ async def test_link_completed_parent_unblocks_child_with_image_asset():
     assert child.source_asset_id == asset.id
     assert child.blocked is False
     assert child.state == JobState.PENDING
+    _assert_child_dispatch_event(session, child=child)
     assert session.commit_count == 1
 
 

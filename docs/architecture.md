@@ -9,12 +9,14 @@ job state, assets, retries, and provider readiness observable from the product.
 ```text
 React/Vite frontend
   -> FastAPI backend
-    -> PostgreSQL job, asset, prompt, and pipeline records
+    -> PostgreSQL job, asset, prompt, pipeline, and outbox records
     -> Local DATA_DIR file streaming
-Worker process
-  -> InProcessJobRunner polling Postgres
-    -> Local DATA_DIR asset storage
-    -> Vertex AI through google-genai
+Outbox dispatcher process
+  -> publishes job ids from Postgres outbox to Redis/Celery
+Celery worker process
+  -> claims pending jobs from Postgres
+  -> Local DATA_DIR asset storage
+  -> Vertex AI through google-genai
 ```
 
 The backend owns all provider calls. The frontend never talks to Vertex AI
@@ -26,10 +28,12 @@ directly and does not need provider credentials.
   and file streaming.
 - `app/schemas.py`: API DTOs shared by route responses and tests.
 - `app/models.py`: SQLAlchemy models for jobs, assets, prompt enhancements, and
-  parent/child relationships.
+  outbox dispatch events.
 - `app/state_machine.py`: the only supported path for job state transitions.
-- `app/worker.py`: standalone worker bootstrap for local process separation.
-- `app/services/jobs/*`: job runner, handlers, and pipeline linking.
+- `app/celery_app.py`: Celery app configuration for Redis-backed job dispatch.
+- `app/worker.py`: legacy standalone polling worker bootstrap for manual fallback.
+- `app/services/jobs/*`: Celery task wrapper, outbox dispatcher, dispatch
+  adapter, repair helper, handlers, and pipeline linking.
 - `app/services/vertex/*`: provider boundary for credentials, Imagen, Veo,
   retry/rate-limit helpers, storage, and public error mapping.
 - `app/services/llm/enhancer.py`: Gemini-backed prompt enhancement with a mock
@@ -55,8 +59,10 @@ mock or fake providers and must not call paid AI services.
 
 ## Job Model
 
-Generation is job-centric. The API creates durable jobs in Postgres, and the
-worker process claims pending work with row locks. Handlers perform provider
+Generation is job-centric. The API creates durable jobs in Postgres and writes a
+minimal outbox event in the same transaction. The outbox dispatcher publishes
+only the job id and dispatch reason to Celery. The Celery worker then claims the
+pending job with a row lock before running handlers. Handlers perform provider
 calls, persist generated assets, and transition jobs through the state machine.
 
 Pipelines are modeled as parent/child jobs. A text-to-image parent can unblock

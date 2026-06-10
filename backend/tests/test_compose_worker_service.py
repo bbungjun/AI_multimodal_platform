@@ -38,6 +38,7 @@ def test_compose_defines_redis_for_celery_broker():
     compose_text = _compose_text()
 
     assert "\n  worker:\n" in compose_text
+    assert "\n  dispatcher:\n" in compose_text
     assert "\n  redis:\n" in compose_text
     assert "image: redis:7-alpine" in _service_block(compose_text, "redis")
 
@@ -85,6 +86,39 @@ def test_worker_uses_backend_image_env_asset_volume_and_broker():
     )
     assert _environment_line(backend_block, "CELERY_DEFAULT_QUEUE") == (
         "CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}"
+    )
+
+
+def test_dispatcher_uses_backend_image_and_outbox_runtime_env():
+    compose_text = _compose_text()
+    backend_block = _service_block(compose_text, "backend")
+    dispatcher_block = _service_block(compose_text, "dispatcher")
+
+    assert "build: ./backend" in dispatcher_block
+    assert "condition: service_healthy" in dispatcher_block
+    assert "command: python -m app.services.jobs.outbox_dispatcher" in dispatcher_block
+    assert "- ./backend/app:/app/app" in dispatcher_block
+
+    shared_env_keys = [
+        "DATABASE_URL",
+        "JOB_DISPATCH_MODE",
+        "CELERY_BROKER_URL",
+        "CELERY_DEFAULT_QUEUE",
+    ]
+    for key in shared_env_keys:
+        assert _environment_line(dispatcher_block, key) == _environment_line(
+            backend_block,
+            key,
+        )
+
+    assert _environment_line(dispatcher_block, "OUTBOX_DISPATCHER_BATCH_SIZE") == (
+        "OUTBOX_DISPATCHER_BATCH_SIZE: ${OUTBOX_DISPATCHER_BATCH_SIZE:-50}"
+    )
+    assert _environment_line(dispatcher_block, "OUTBOX_DISPATCHER_POLL_INTERVAL_SEC") == (
+        "OUTBOX_DISPATCHER_POLL_INTERVAL_SEC: ${OUTBOX_DISPATCHER_POLL_INTERVAL_SEC:-1.0}"
+    )
+    assert _environment_line(dispatcher_block, "OUTBOX_DISPATCHER_MAX_ATTEMPTS") == (
+        "OUTBOX_DISPATCHER_MAX_ATTEMPTS: ${OUTBOX_DISPATCHER_MAX_ATTEMPTS:-10}"
     )
 
 

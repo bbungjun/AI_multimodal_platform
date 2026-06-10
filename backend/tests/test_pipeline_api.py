@@ -8,8 +8,17 @@ import pytest
 
 from app.api import pipelines
 from app.main import app
-from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
-from app.services.jobs.enqueue import DispatchResult
+from app.models import (
+    Asset,
+    AssetKind,
+    GenerationMode,
+    Job,
+    JobState,
+    OutboxEvent,
+    OutboxEventStatus,
+    utc_now,
+)
+from app.services.jobs import outbox
 
 
 class FakeScalarsResult:
@@ -27,7 +36,7 @@ class FakePipelineSession:
         jobs: list[Job] | None = None,
         child_rows: list[Job] | None = None,
     ) -> None:
-        self.added: list[Job] = []
+        self.added: list[object] = []
         self.commit_count = 0
         self.jobs = {job.id: job for job in jobs or []}
         self.child_rows = child_rows or []
@@ -38,6 +47,12 @@ class FakePipelineSession:
     def add_all(self, instances: list[Job]) -> None:
         self.added.extend(instances)
         self.jobs.update({job.id: job for job in instances})
+        self.events.append("add_jobs")
+
+    def add(self, instance: object) -> None:
+        self.added.append(instance)
+        if isinstance(instance, OutboxEvent):
+            self.events.append("add_outbox")
 
     async def commit(self) -> None:
         self.commit_count += 1
@@ -150,6 +165,42 @@ def _parent_with_asset() -> Job:
     return parent
 
 
+def _added_jobs(session: FakePipelineSession) -> list[Job]:
+    return [instance for instance in session.added if isinstance(instance, Job)]
+
+
+def _added_outbox_events(session: FakePipelineSession) -> list[OutboxEvent]:
+    return [
+        instance
+        for instance in session.added
+        if isinstance(instance, OutboxEvent)
+    ]
+
+
+def _assert_job_dispatch_event(
+    session: FakePipelineSession,
+    *,
+    job: Job,
+    reason: str,
+) -> OutboxEvent:
+    events = _added_outbox_events(session)
+    assert len(events) == 1
+    event = events[0]
+    assert event.status == OutboxEventStatus.PENDING
+    assert event.event_type == outbox.JOB_DISPATCH_REQUESTED
+    assert event.aggregate_type == "job"
+    assert event.aggregate_id == job.id
+    assert event.payload == {
+        "job_id": str(job.id),
+        "reason": reason,
+    }
+    payload_repr = repr(event.payload)
+    assert "prompt" not in payload_repr
+    assert "parameters" not in payload_repr
+    assert "source_asset_id" not in payload_repr
+    return event
+
+
 async def test_create_pipeline_persists_parent_and_blocked_child():
     session = FakePipelineSession()
 
@@ -157,8 +208,9 @@ async def test_create_pipeline_persists_parent_and_blocked_child():
 
     assert response.status_code == 201
     assert session.commit_count == 1
-    assert len(session.added) == 2
-    parent, child = session.added
+    jobs = _added_jobs(session)
+    assert len(jobs) == 2
+    parent, child = jobs
 
     assert parent.mode == GenerationMode.T2I
     assert parent.state == JobState.PENDING
@@ -179,34 +231,27 @@ async def test_create_pipeline_persists_parent_and_blocked_child():
     assert body["child"]["id"] == str(child.id)
     assert body["child"]["parent_job_id"] == str(parent.id)
     assert body["child"]["blocked"] is True
+    _assert_job_dispatch_event(session, job=parent, reason="pipeline_parent_created")
+    assert session.events == ["add_jobs", "add_outbox", "commit"]
 
 
-async def test_create_pipeline_dispatches_parent_only(monkeypatch):
+async def test_create_pipeline_records_parent_outbox_event_only(monkeypatch):
     session = FakePipelineSession()
-    dispatch_calls: list[tuple[object, str]] = []
 
-    async def fake_dispatch_job(job_id, *, reason):
-        assert session.events == ["commit"]
-        session.events.append(f"dispatch:{job_id}")
-        dispatch_calls.append((job_id, reason))
-        return DispatchResult(
-            job_id=job_id,
-            reason=reason,
-            mode="celery",
-            enqueued=True,
-        )
+    async def fail_dispatch_job(*_args, **_kwargs):
+        raise AssertionError("pipeline API must not dispatch directly")
 
-    monkeypatch.setattr(pipelines, "dispatch_job", fake_dispatch_job, raising=False)
+    monkeypatch.setattr(pipelines, "dispatch_job", fail_dispatch_job, raising=False)
 
     response = await _post_pipeline(_pipeline_payload(), session)
 
     assert response.status_code == 201
-    parent, child = session.added
-    assert dispatch_calls == [(parent.id, "pipeline_parent_created")]
-    assert child.id not in [job_id for job_id, _reason in dispatch_calls]
+    parent, child = _added_jobs(session)
+    _assert_job_dispatch_event(session, job=parent, reason="pipeline_parent_created")
+    assert child.id not in [event.aggregate_id for event in _added_outbox_events(session)]
     assert child.blocked is True
     assert child.state == JobState.PENDING
-    assert session.events == ["commit", f"dispatch:{parent.id}"]
+    assert session.events == ["add_jobs", "add_outbox", "commit"]
 
 
 async def test_create_pipeline_accepts_max_duration_boundary():
@@ -217,8 +262,9 @@ async def test_create_pipeline_accepts_max_duration_boundary():
 
     assert response.status_code == 201
     assert session.commit_count == 1
-    assert len(session.added) == 2
-    parent, child = session.added
+    jobs = _added_jobs(session)
+    assert len(jobs) == 2
+    parent, child = jobs
     assert parent.parameters == {"aspect_ratio": "1:1", "number_of_images": 1}
     assert child.parameters == {"aspect_ratio": "16:9", "duration_sec": 8}
 

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.services.jobs.outbox import add_job_dispatch_event
 from app.state_machine import TERMINAL_STATES, transition
 
 
@@ -76,6 +77,7 @@ async def link_completed_parent(
 
     child.source_asset_id = asset.id
     child.blocked = False
+    add_job_dispatch_event(session, child.id, reason="pipeline_child_unblocked")
     await session.commit()
     return PipelineLinkResult(
         linked=True,

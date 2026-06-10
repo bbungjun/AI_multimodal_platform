@@ -175,14 +175,14 @@ Run the backend HTTP golden path in mock mode only:
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db`, `backend`, and `worker` are already running:
+If `db`, `backend`, `dispatcher`, and `worker` are already running:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
 ```
 
 The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, starts the
-worker service when `--compose` is used, and verifies
-health, prompt enhancement, T2I generation, job state history, PNG asset
-serving, byte-range streaming, and cleanup. In mock mode, `vertex_charged: true`
-only means the mock provider handler completed; it is not real Vertex billing.
+dispatcher and worker services when `--compose` is used, and verifies health,
+prompt enhancement, T2I generation, job state history, PNG asset serving,
+byte-range streaming, and cleanup. In mock mode, `vertex_charged: true` only
+means the mock provider handler completed; it is not real Vertex billing.

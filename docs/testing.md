@@ -62,8 +62,9 @@ Important backend contracts are already protected by focused tests:
 - state machine transitions and terminal behavior
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume
-- Celery dispatch config, `job_id`-only enqueue, task idempotency, and pending
-  job repair
+- outbox event payload hygiene, dispatcher retry/failure handling, Celery
+  dispatch config, `job_id`-only enqueue, task idempotency, and pending job
+  repair
 - Celery worker Compose healthcheck, explicit queue/concurrency env, and
   graceful shutdown settings
 - dispatch/repair/task observability fields without mutating job state history
@@ -114,24 +115,27 @@ docker compose --env-file .env.example config --services
 For no-cost local smoke checks, use mock mode. For live Vertex QA, follow the
 manual runbook and expect provider cost risk.
 
-Expected local mock services include `db`, `redis`, `backend`, `worker`, and
-`frontend`. The default `worker` is a Celery worker and should report healthy
-after its internal Celery ping succeeds. The legacy
-`python -m app.worker` polling runner is retained only as a manual fallback and
-should not run concurrently with the default Celery worker in normal local
+Expected local mock services include `db`, `redis`, `backend`, `dispatcher`,
+`worker`, and `frontend`. The `dispatcher` publishes Postgres outbox events to
+Redis/Celery. The default `worker` is a Celery worker and should report healthy
+after its internal Celery ping succeeds. The legacy `python -m app.worker`
+polling runner is retained only as a manual fallback and should not run
+concurrently with the default dispatcher and Celery worker in normal local
 smoke.
 
 ## Job Observability
 
 Job `state_history` is reserved for state transitions only. Dispatch attempts,
-Celery task IDs, queue names, repair counts, and duplicate/no-op task reasons
-must not be appended to `state_history` unless a real job state transition
-occurs.
+Celery task IDs, queue names, outbox attempts, repair counts, and
+duplicate/no-op task reasons must not be appended to `state_history` unless a
+real job state transition occurs.
 
 For Phase 2 local operations, observability lives in:
 
 - `DispatchResult`: job id, reason, mode, queue, Celery task id, enqueue status,
   and error code
+- `OutboxBatchResult`: selected/published/failed/pending counts plus
+  per-event result records
 - `RepairResult`: selected/dispatched/failed counts plus individual
   `DispatchResult` records
 - `ProcessJobResult`: claim/no-op reason, previous state, claimed state, and
@@ -147,8 +151,8 @@ Use the mock-only golden-path smoke to verify the backend HTTP contract, worker
 runner, database persistence, local asset storage, and byte-range file
 streaming without calling Vertex AI, Gemini, Imagen, or Veo.
 
-From the repository root, start `db`, `redis`, `backend`, and `worker` through Compose and run
-the smoke:
+From the repository root, start `db`, `redis`, `backend`, `dispatcher`, and
+`worker` through Compose and run the smoke:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
@@ -194,7 +198,8 @@ the smoke:
 python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db`, `backend`, `worker`, and `frontend` are already running in mock mode, run:
+If `db`, `backend`, `dispatcher`, `worker`, and `frontend` are already running
+in mock mode, run:
 
 ```powershell
 python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90

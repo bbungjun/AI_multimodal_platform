@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
@@ -13,13 +12,12 @@ from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, PromptEnhancement, utc_now
 from app.schemas import GenerationCreate, GenerationResponse, job_response_from_job
 from app.services import storage
-from app.services.jobs.enqueue import dispatch_job
+from app.services.jobs.outbox import add_job_dispatch_event
 from app.services.rate_limit import DEFAULT_MODEL_LIMITS
 from app.state_machine import TERMINAL_STATES
 
 
 router = APIRouter(prefix="/api/generations", tags=["generations"])
-logger = logging.getLogger(__name__)
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
@@ -117,8 +115,8 @@ async def create_generation(
         updated_at=now,
     )
     session.add(job)
+    add_job_dispatch_event(session, job.id, reason="generation_created")
     await session.commit()
-    await _dispatch_committed_job(job.id, reason="generation_created")
     return job_response_from_job(job, assets=[])
 
 
@@ -225,8 +223,8 @@ async def retry_generation(
         updated_at=now,
     )
     session.add(retry)
+    add_job_dispatch_event(session, retry.id, reason="generation_retry_created")
     await session.commit()
-    await _dispatch_committed_job(retry.id, reason="generation_retry_created")
     return job_response_from_job(retry, assets=[])
 
 
@@ -266,27 +264,6 @@ async def delete_generation(
 def _validate_model(model: str, *, prefix: str, detail: str) -> None:
     if model not in DEFAULT_MODEL_LIMITS or not model.startswith(prefix):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
-
-
-async def _dispatch_committed_job(job_id: UUID, *, reason: str) -> None:
-    try:
-        result = await dispatch_job(job_id, reason=reason)
-    except Exception as exc:
-        logger.warning(
-            "Dispatch failed after committed generation job %s for %s: %s",
-            job_id,
-            reason,
-            exc,
-        )
-        return
-
-    if not result.ok:
-        logger.warning(
-            "Dispatch reported failure after committed generation job %s for %s: %s",
-            job_id,
-            reason,
-            result.error,
-        )
 
 
 async def _get_matching_prompt_enhancement(

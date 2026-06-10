@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--compose",
         action="store_true",
-        help="Start db, redis, backend, and worker with docker compose.",
+        help="Start db, redis, backend, dispatcher, and worker with docker compose.",
     )
     parser.add_argument("--timeout-sec", type=float, default=60)
     parser.add_argument("--poll-interval-sec", type=float, default=1)
@@ -228,7 +228,7 @@ def run_smoke(args: argparse.Namespace) -> None:
 
 
 def start_compose(env_file: Path) -> None:
-    step("Compose up db redis backend worker")
+    step("Compose up db redis backend dispatcher worker")
     command = [
         "docker",
         "compose",
@@ -240,6 +240,7 @@ def start_compose(env_file: Path) -> None:
         "db",
         "redis",
         "backend",
+        "dispatcher",
         "worker",
     ]
     env = os.environ.copy()
@@ -256,7 +257,7 @@ def start_compose(env_file: Path) -> None:
     )
     if completed.returncode != 0:
         raise SmokeError(
-            "docker compose failed while starting db/redis/backend/worker:\n"
+            "docker compose failed while starting db/redis/backend/dispatcher/worker:\n"
             + completed.stdout.strip()
         )
 

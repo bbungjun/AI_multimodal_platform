@@ -27,6 +27,9 @@ CELERY_DEFAULT_QUEUE=generation
 CELERY_WORKER_CONCURRENCY=10
 CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC=5
 CELERY_WORKER_SHUTDOWN_GRACE_SEC=60
+OUTBOX_DISPATCHER_BATCH_SIZE=50
+OUTBOX_DISPATCHER_POLL_INTERVAL_SEC=1.0
+OUTBOX_DISPATCHER_MAX_ATTEMPTS=10
 VITE_API_BASE=
 VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -47,11 +50,14 @@ Expected services:
 - `db` healthy
 - `redis` healthy and used only as the Celery broker
 - `backend` on `http://127.0.0.1:8000`
+- `dispatcher` running `python -m app.services.jobs.outbox_dispatcher`
 - `worker` healthy, running the Celery `generation` queue with the same database and asset volume
 - `frontend` on `http://127.0.0.1:5173`
 
 Postgres remains the source of truth for user-visible job state. Redis/Celery is
-only the dispatch layer; Celery result state is not used by the API.
+only the execution dispatch layer; Celery result state is not used by the API.
+The API records job dispatch intent in the Postgres outbox first, then the
+dispatcher publishes job ids to Celery.
 
 The default worker has an internal Celery ping healthcheck, a stable
 `worker@%h` hostname, explicit `SIGTERM` stop handling, and a configurable
@@ -102,13 +108,15 @@ The backend golden-path smoke automates this flow from the repository root:
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-Use this variant when `db`, `backend`, and `worker` are already running:
+Use this variant when `db`, `backend`, `dispatcher`, and `worker` are already
+running:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
 ```
 
-The smoke intentionally starts `db`, `redis`, `backend`, and `worker` when `--compose` is used.
+The smoke intentionally starts `db`, `redis`, `backend`, `dispatcher`, and
+`worker` when `--compose` is used.
 It refuses `--env-file .env`, requires `AI_PROVIDER=mock` in the selected env
 file, checks prompt enhancement, T2I job completion, asset metadata, PNG file
 serving, byte-range streaming, and then deletes the generated job unless
@@ -135,18 +143,24 @@ before the source job unless `--keep-jobs` is passed.
 
 ## Pending Job Repair
 
-If the API commits a job but dispatch to Redis/Celery fails, the job remains
-`pending` and unmodified. Reenqueue pending unblocked jobs from the repository
-root with process environment variables already set:
+If the outbox dispatcher cannot publish to Redis/Celery, the outbox event stays
+`pending` until a later dispatcher attempt. When the max attempt limit is
+reached, the event is marked `failed` while the job remains `pending` and
+unmodified.
+
+As a last-resort operator repair, directly reenqueue pending unblocked jobs from
+the repository root with process environment variables already set:
 
 ```powershell
 python scripts/reenqueue_pending_jobs.py --limit 100
 ```
 
-The repair command refuses to run while `.env` files are present in the
-repository root, backend directory, or current working directory. It prints only
-selected/dispatched/failed counts, not prompts, parameters, credentials, or
-asset paths.
+The repair command bypasses the outbox and sends only job ids through the same
+Celery dispatch adapter. Duplicate dispatch is tolerated because Celery tasks
+claim only pending jobs before executing. The command refuses to run while
+`.env` files are present in the repository root, backend directory, or current
+working directory. It prints only selected/dispatched/failed counts, not
+prompts, parameters, credentials, or asset paths.
 
 The legacy polling worker remains available as a manual fallback:
 
@@ -156,8 +170,8 @@ $env:AI_PROVIDER = "mock"
 python -m app.worker
 ```
 
-Do not run the polling worker and the default Celery worker against the same
-local stack unless intentionally performing a controlled repair run.
+Do not run the polling worker and the default dispatcher/Celery worker against
+the same local stack unless intentionally performing a controlled repair run.
 
 Backend tests may use the exact prompt sentinel `[[mock-fail:imagen]]` to force a
 deterministic Imagen mock provider failure. Treat it as a test-only failure-path

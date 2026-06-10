@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     celery_worker_concurrency: int = 10
     celery_worker_healthcheck_timeout_sec: int = 5
     celery_worker_shutdown_grace_sec: int = 60
+    outbox_dispatcher_batch_size: int = 50
+    outbox_dispatcher_poll_interval_sec: float = 1.0
+    outbox_dispatcher_max_attempts: int = 10
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None

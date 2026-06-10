@@ -6,7 +6,6 @@ from uuid import uuid4
 from app.config import Settings
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
 from app.services.jobs import handlers
-from app.services.jobs.enqueue import DispatchResult
 from app.services.jobs.pipeline_link import PipelineLinkResult
 from app.services.vertex.errors import (
     VertexOutputUnavailableError,
@@ -222,7 +221,7 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     assert session.rollback_count == 0
 
 
-async def test_handle_t2i_dispatches_unblocked_pipeline_child(monkeypatch):
+async def test_handle_t2i_does_not_dispatch_unblocked_pipeline_child_directly(monkeypatch):
     job = _t2i_job()
     child_id = uuid4()
     session = FakeHandlerSession(job)
@@ -244,12 +243,7 @@ async def test_handle_t2i_dispatches_unblocked_pipeline_child(monkeypatch):
 
     async def dispatch_job(job_id, *, reason):
         dispatch_calls.append((job_id, reason))
-        return DispatchResult(
-            job_id=job_id,
-            reason=reason,
-            mode="celery",
-            enqueued=True,
-        )
+        raise AssertionError("handler must not dispatch pipeline child directly")
 
     monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
     monkeypatch.setattr(handlers.imagen, "generate_image", generate_image)
@@ -264,7 +258,7 @@ async def test_handle_t2i_dispatches_unblocked_pipeline_child(monkeypatch):
     await handlers.handle_t2i(session, job)
 
     assert job.state == JobState.COMPLETED
-    assert dispatch_calls == [(child_id, "pipeline_child_unblocked")]
+    assert dispatch_calls == []
 
 
 async def test_handle_t2i_vertex_failure_marks_job_failed_and_cascades(

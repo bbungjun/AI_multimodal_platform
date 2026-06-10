@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +35,12 @@ class AssetKind(StrEnum):
     VIDEO = "video"
 
 
+class OutboxEventStatus(StrEnum):
+    PENDING = "pending"
+    PUBLISHED = "published"
+    FAILED = "failed"
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -56,6 +62,11 @@ job_state_enum = Enum(
 asset_kind_enum = Enum(
     AssetKind,
     name="asset_kind",
+    values_callable=enum_values,
+)
+outbox_event_status_enum = Enum(
+    OutboxEventStatus,
+    name="outbox_event_status",
     values_callable=enum_values,
 )
 
@@ -224,4 +235,50 @@ class PromptEnhancement(Base):
         "Job",
         back_populates="enhancement",
         foreign_keys="Job.enhancement_id",
+    )
+
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox_events"
+    __table_args__ = (
+        Index("ix_outbox_events_status_created_at", "status", "created_at"),
+        Index("ix_outbox_events_event_type_status", "event_type", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    event_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    aggregate_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    aggregate_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
+    status: Mapped[OutboxEventStatus] = mapped_column(
+        outbox_event_status_enum,
+        nullable=False,
+        default=OutboxEventStatus.PENDING,
+        index=True,
+    )
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
     )

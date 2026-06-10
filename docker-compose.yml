@@ -86,6 +86,25 @@ services:
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
 
+  dispatcher:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.services.jobs.outbox_dispatcher
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+      JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}
+      OUTBOX_DISPATCHER_BATCH_SIZE: ${OUTBOX_DISPATCHER_BATCH_SIZE:-50}
+      OUTBOX_DISPATCHER_POLL_INTERVAL_SEC: ${OUTBOX_DISPATCHER_POLL_INTERVAL_SEC:-1.0}
+      OUTBOX_DISPATCHER_MAX_ATTEMPTS: ${OUTBOX_DISPATCHER_MAX_ATTEMPTS:-10}
+    volumes:
+      - ./backend/app:/app/app
+
   frontend:
     build: ./frontend
     depends_on:

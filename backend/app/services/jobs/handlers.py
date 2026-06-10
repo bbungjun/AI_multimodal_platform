@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -11,14 +10,10 @@ from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
 from app.state_machine import TERMINAL_STATES, transition
 from app.services import rate_limit, storage
-from app.services.jobs.enqueue import dispatch_job
 from app.services.jobs import pipeline_link
 from app.services.retry import with_retry
 from app.services.vertex import imagen, veo
 from app.services.vertex.errors import VertexServiceError, map_vertex_error
-
-
-logger = logging.getLogger(__name__)
 
 
 class JobHandlerError(RuntimeError):
@@ -105,9 +100,7 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
 
         transition(job, JobState.COMPLETED)
         await session.commit()
-        link_result = await pipeline_link.link_completed_parent(session, job)
-        if link_result.linked and link_result.child_id is not None:
-            await _dispatch_pipeline_child(link_result.child_id)
+        await pipeline_link.link_completed_parent(session, job)
     except Exception as exc:
         await session.rollback()
         refreshed = await session.get(Job, job.id)
@@ -182,26 +175,6 @@ async def _mark_failed(session: AsyncSession, job: Job, exc: Exception) -> None:
     job.error = error
     transition(job, JobState.FAILED, detail={"error": error["code"]}, at=now)
     await session.commit()
-
-
-async def _dispatch_pipeline_child(child_id: UUID) -> None:
-    reason = "pipeline_child_unblocked"
-    try:
-        result = await dispatch_job(child_id, reason=reason)
-    except Exception as exc:
-        logger.warning(
-            "Dispatch failed after unblocking pipeline child job %s: %s",
-            child_id,
-            exc,
-        )
-        return
-
-    if not result.ok:
-        logger.warning(
-            "Dispatch reported failure after unblocking pipeline child job %s: %s",
-            child_id,
-            result.error,
-        )
 
 
 def _public_error(

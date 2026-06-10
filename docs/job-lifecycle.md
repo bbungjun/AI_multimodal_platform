@@ -1,7 +1,9 @@
 # Job Lifecycle
 
-Generation requests are durable jobs. A request returns quickly, then the
-worker process runs the job runner asynchronously and records state changes.
+Generation requests are durable jobs. A request returns quickly after writing a
+job row and a minimal outbox event in the same database transaction. A separate
+dispatcher publishes that event to Celery, and the worker records state changes
+as it executes the job.
 
 ## Core States
 
@@ -41,21 +43,22 @@ Deletion treats active retry jobs as dependencies of their failed source job.
 Terminal retry jobs are detached from `retry_of_job_id` when the original job is
 deleted.
 
-## Runner
+## Dispatch And Runner
 
-The worker runner:
+The default local productionization path is:
 
-- runs in the standalone `python -m app.worker` process in local Compose
-- claims pending jobs with row locks
-- respects concurrency limits
-- dispatches mode-specific handlers
-- records failures with public error codes
-- resumes or sweeps orphaned work on startup
+- FastAPI creates a pending job and `job.dispatch_requested` outbox event in
+  Postgres.
+- `python -m app.services.jobs.outbox_dispatcher` reads pending outbox events
+  with row locks and publishes only `job_id` plus a dispatch reason to Celery.
+- The Celery worker claims pending, unblocked jobs with row locks before running
+  handlers.
+- Handlers dispatch mode-specific generation logic, persist assets, and record
+  failures with public error codes.
 
-FastAPI can still gate runner auto-start through `JOB_RUNNER_AUTO_START`, but
-the Phase 1 local default keeps API serving and job execution in separate
-processes. A multi-replica deployment would need stronger distributed
-coordination.
+The legacy `python -m app.worker` polling runner remains available only as a
+manual fallback. It should not run concurrently with the default dispatcher and
+Celery worker unless a controlled repair run is being performed.
 
 ## Pipelines
 
