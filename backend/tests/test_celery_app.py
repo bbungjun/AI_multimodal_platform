@@ -13,9 +13,12 @@ def test_dispatch_mode_defaults_are_explicit():
     assert settings.celery_result_backend is None
     assert settings.celery_task_always_eager is False
     assert settings.celery_default_queue == "generation"
-    assert settings.celery_worker_concurrency == 10
+    assert settings.celery_worker_concurrency == 2
     assert settings.celery_worker_healthcheck_timeout_sec == 5
     assert settings.celery_worker_shutdown_grace_sec == 60
+    assert settings.rate_limit_imagen_per_min == 5
+    assert settings.rate_limit_veo_per_min == 1
+    assert settings.rate_limit_gemini_per_min == 10
 
 
 def test_celery_app_names_jobs_namespace():

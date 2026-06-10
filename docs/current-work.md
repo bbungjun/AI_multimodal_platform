@@ -25,6 +25,9 @@ at the end of every meaningful work session.
   publishes `job_id` to Redis/Celery; Celery worker claims jobs from Postgres.
 - Source of truth for user-visible job state: Postgres, not Redis or Celery
   result state.
+- Portfolio/demo safety defaults: `CELERY_WORKER_CONCURRENCY=2`,
+  `RATE_LIMIT_GEMINI_PER_MIN=10`, `RATE_LIMIT_IMAGEN_PER_MIN=5`, and
+  `RATE_LIMIT_VEO_PER_MIN=1`.
 
 ## Machine Setup Notes
 
@@ -63,6 +66,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Added `scripts/setup_local.ps1` so laptop/desktop checkouts can create a local
   `.env` from `.env.example` without overwriting existing local settings, verify
   Compose config, and optionally run the full quality gate with `-RunVerify`.
+- Tightened default portfolio/demo safety settings so Gemini, Imagen, and Veo
+  request windows are conservative by default and Celery starts with worker
+  concurrency `2`. The values remain configurable through `.env`.
 
 ## Next Suggested Work
 
@@ -72,6 +78,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `.env` from `.env.example`.
 - Consider adding a short README link to this handoff file if future agents miss
   it despite the `AGENTS.md` rule.
+- If an older local `.env` already exists, make sure it includes the current
+  rate-limit keys and `CELERY_WORKER_CONCURRENCY=2`; `setup_local.ps1` does not
+  overwrite existing local `.env` files unless `-Force` is used.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -80,18 +89,18 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest documentation-focused checks:
+Latest portfolio/demo safety checks:
 
 ```powershell
 git diff --check
 git status --short --branch
-$env:AI_PROVIDER='mock'; python -m pytest tests/test_setup_local_script.py -q
-.\scripts\setup_local.ps1
+$env:AI_PROVIDER='mock'; python -m pytest tests/test_rate_limiter.py tests/test_celery_app.py tests/test_compose_worker_service.py tests/test_generation_api.py tests/test_pipeline_api.py -q
+python scripts/verify_local.py
 ```
 
 Expected:
 
-- no machine-specific absolute repository path remains in Markdown after a
-  targeted search for the old laptop/desktop checkout paths
 - no whitespace errors
+- targeted backend checks pass (`85 passed`)
+- full local quality gate passes (`277 passed`, frontend lint, frontend build)
 - only intentional working-tree changes are present

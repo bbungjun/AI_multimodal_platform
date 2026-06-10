@@ -6,6 +6,8 @@ from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from app.config import get_settings
+
 Clock = Callable[[], float]
 Sleep = Callable[[float], Awaitable[None]]
 
@@ -23,6 +25,13 @@ class UnknownModelRateLimitError(RateLimitError):
 class RateLimit:
     capacity: int
     window_seconds: float
+
+
+@dataclass(frozen=True)
+class RateLimitSettings:
+    rate_limit_imagen_per_min: int = 5
+    rate_limit_veo_per_min: int = 1
+    rate_limit_gemini_per_min: int = 10
 
 
 class SlidingWindowLimiter:
@@ -84,14 +93,47 @@ class SlidingWindowLimiter:
             self._events.popleft()
 
 
-DEFAULT_MODEL_LIMITS: dict[str, RateLimit] = {
-    "imagen-4.0-fast-generate-001": RateLimit(capacity=75, window_seconds=60.0),
-    "imagen-4.0-generate-001": RateLimit(capacity=75, window_seconds=60.0),
-    "imagen-4.0-ultra-generate-001": RateLimit(capacity=75, window_seconds=60.0),
-    "veo-3.0-fast-generate-001": RateLimit(capacity=10, window_seconds=60.0),
-    "veo-3.0-generate-001": RateLimit(capacity=10, window_seconds=60.0),
-    "gemini-2.5-flash": RateLimit(capacity=60, window_seconds=60.0),
-}
+def build_model_limits(settings: RateLimitSettings) -> dict[str, RateLimit]:
+    return {
+        "imagen-4.0-fast-generate-001": RateLimit(
+            capacity=settings.rate_limit_imagen_per_min,
+            window_seconds=60.0,
+        ),
+        "imagen-4.0-generate-001": RateLimit(
+            capacity=settings.rate_limit_imagen_per_min,
+            window_seconds=60.0,
+        ),
+        "imagen-4.0-ultra-generate-001": RateLimit(
+            capacity=settings.rate_limit_imagen_per_min,
+            window_seconds=60.0,
+        ),
+        "veo-3.0-fast-generate-001": RateLimit(
+            capacity=settings.rate_limit_veo_per_min,
+            window_seconds=60.0,
+        ),
+        "veo-3.0-generate-001": RateLimit(
+            capacity=settings.rate_limit_veo_per_min,
+            window_seconds=60.0,
+        ),
+        "gemini-2.5-flash": RateLimit(
+            capacity=settings.rate_limit_gemini_per_min,
+            window_seconds=60.0,
+        ),
+    }
+
+
+def build_default_model_limits() -> dict[str, RateLimit]:
+    settings = get_settings()
+    return build_model_limits(
+        RateLimitSettings(
+            rate_limit_imagen_per_min=settings.rate_limit_imagen_per_min,
+            rate_limit_veo_per_min=settings.rate_limit_veo_per_min,
+            rate_limit_gemini_per_min=settings.rate_limit_gemini_per_min,
+        )
+    )
+
+
+DEFAULT_MODEL_LIMITS: dict[str, RateLimit] = build_default_model_limits()
 
 LIMITERS: dict[str, SlidingWindowLimiter] = {
     model_id: SlidingWindowLimiter(

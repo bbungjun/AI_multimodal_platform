@@ -43,6 +43,9 @@ services:
       JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}
+      RATE_LIMIT_IMAGEN_PER_MIN: ${RATE_LIMIT_IMAGEN_PER_MIN:-5}
+      RATE_LIMIT_VEO_PER_MIN: ${RATE_LIMIT_VEO_PER_MIN:-1}
+      RATE_LIMIT_GEMINI_PER_MIN: ${RATE_LIMIT_GEMINI_PER_MIN:-10}
     volumes:
       - assets:/data/assets
       - ./backend/app:/app/app
@@ -57,7 +60,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.celery_app worker --hostname=worker@%h --loglevel=info --queues=${CELERY_DEFAULT_QUEUE:-generation} --concurrency=${CELERY_WORKER_CONCURRENCY:-10}
+    command: celery -A app.celery_app worker --hostname=worker@%h --loglevel=info --queues=${CELERY_DEFAULT_QUEUE:-generation} --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
     stop_signal: SIGTERM
     stop_grace_period: ${CELERY_WORKER_SHUTDOWN_GRACE_SEC:-60}s
     healthcheck:
@@ -79,7 +82,10 @@ services:
       JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
       CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}
-      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-10}
+      RATE_LIMIT_IMAGEN_PER_MIN: ${RATE_LIMIT_IMAGEN_PER_MIN:-5}
+      RATE_LIMIT_VEO_PER_MIN: ${RATE_LIMIT_VEO_PER_MIN:-1}
+      RATE_LIMIT_GEMINI_PER_MIN: ${RATE_LIMIT_GEMINI_PER_MIN:-10}
+      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}
       CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC: ${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5}
     volumes:
       - assets:/data/assets

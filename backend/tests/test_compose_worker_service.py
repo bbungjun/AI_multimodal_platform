@@ -46,7 +46,7 @@ def test_compose_defines_redis_for_celery_broker():
     assert "command: celery -A app.celery_app worker" in worker_block
     assert "--hostname=worker@%h" in worker_block
     assert "--queues=${CELERY_DEFAULT_QUEUE:-generation}" in worker_block
-    assert "--concurrency=${CELERY_WORKER_CONCURRENCY:-10}" in worker_block
+    assert "--concurrency=${CELERY_WORKER_CONCURRENCY:-2}" in worker_block
     assert "python -m app.worker" not in worker_block
     assert "stop_signal: SIGTERM" in worker_block
     assert "stop_grace_period: ${CELERY_WORKER_SHUTDOWN_GRACE_SEC:-60}s" in worker_block
@@ -71,6 +71,9 @@ def test_worker_uses_backend_image_env_asset_volume_and_broker():
         "JOB_DISPATCH_MODE",
         "CELERY_BROKER_URL",
         "CELERY_DEFAULT_QUEUE",
+        "RATE_LIMIT_IMAGEN_PER_MIN",
+        "RATE_LIMIT_VEO_PER_MIN",
+        "RATE_LIMIT_GEMINI_PER_MIN",
     ]
     for key in shared_env_keys:
         assert _environment_line(worker_block, key) == _environment_line(backend_block, key)
@@ -86,6 +89,15 @@ def test_worker_uses_backend_image_env_asset_volume_and_broker():
     )
     assert _environment_line(backend_block, "CELERY_DEFAULT_QUEUE") == (
         "CELERY_DEFAULT_QUEUE: ${CELERY_DEFAULT_QUEUE:-generation}"
+    )
+    assert _environment_line(backend_block, "RATE_LIMIT_IMAGEN_PER_MIN") == (
+        "RATE_LIMIT_IMAGEN_PER_MIN: ${RATE_LIMIT_IMAGEN_PER_MIN:-5}"
+    )
+    assert _environment_line(backend_block, "RATE_LIMIT_VEO_PER_MIN") == (
+        "RATE_LIMIT_VEO_PER_MIN: ${RATE_LIMIT_VEO_PER_MIN:-1}"
+    )
+    assert _environment_line(backend_block, "RATE_LIMIT_GEMINI_PER_MIN") == (
+        "RATE_LIMIT_GEMINI_PER_MIN: ${RATE_LIMIT_GEMINI_PER_MIN:-10}"
     )
 
 
@@ -133,7 +145,7 @@ def test_worker_has_celery_healthcheck_and_operational_env():
     assert "--timeout=$${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5}" in worker_block
     assert "grep -q OK" in worker_block
     assert _environment_line(worker_block, "CELERY_WORKER_CONCURRENCY") == (
-        "CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-10}"
+        "CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}"
     )
     assert _environment_line(worker_block, "CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC") == (
         "CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC: ${CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC:-5}"

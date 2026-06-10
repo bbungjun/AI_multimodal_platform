@@ -15,12 +15,15 @@ class Settings(BaseSettings):
     celery_result_backend: str | None = None
     celery_task_always_eager: bool = False
     celery_default_queue: str = "generation"
-    celery_worker_concurrency: int = 10
+    celery_worker_concurrency: int = 2
     celery_worker_healthcheck_timeout_sec: int = 5
     celery_worker_shutdown_grace_sec: int = 60
     outbox_dispatcher_batch_size: int = 50
     outbox_dispatcher_poll_interval_sec: float = 1.0
     outbox_dispatcher_max_attempts: int = 10
+    rate_limit_imagen_per_min: int = 5
+    rate_limit_veo_per_min: int = 1
+    rate_limit_gemini_per_min: int = 10
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
     gcp_project_id: str | None = None

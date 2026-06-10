@@ -83,16 +83,59 @@ async def test_acquire_uses_registered_model_limiter(monkeypatch):
 
 def test_default_model_limit_registry_matches_submission_contract():
     assert rate_limit.DEFAULT_MODEL_LIMITS["imagen-4.0-fast-generate-001"] == (
-        rate_limit.RateLimit(capacity=75, window_seconds=60.0)
+        rate_limit.RateLimit(capacity=5, window_seconds=60.0)
     )
     assert rate_limit.DEFAULT_MODEL_LIMITS["veo-3.0-fast-generate-001"] == (
-        rate_limit.RateLimit(capacity=10, window_seconds=60.0)
+        rate_limit.RateLimit(capacity=1, window_seconds=60.0)
     )
     assert rate_limit.DEFAULT_MODEL_LIMITS["gemini-2.5-flash"] == (
-        rate_limit.RateLimit(capacity=60, window_seconds=60.0)
+        rate_limit.RateLimit(capacity=10, window_seconds=60.0)
     )
-    assert rate_limit.get_limiter("imagen-4.0-generate-001").capacity == 75
-    assert rate_limit.get_limiter("veo-3.0-generate-001").capacity == 10
+    assert rate_limit.get_limiter("imagen-4.0-generate-001").capacity == 5
+    assert rate_limit.get_limiter("veo-3.0-generate-001").capacity == 1
+
+
+def test_build_model_limits_uses_settings_override():
+    settings = rate_limit.RateLimitSettings(
+        rate_limit_imagen_per_min=3,
+        rate_limit_veo_per_min=2,
+        rate_limit_gemini_per_min=7,
+    )
+
+    limits = rate_limit.build_model_limits(settings)
+
+    assert limits["imagen-4.0-fast-generate-001"] == rate_limit.RateLimit(
+        capacity=3,
+        window_seconds=60.0,
+    )
+    assert limits["imagen-4.0-generate-001"].capacity == 3
+    assert limits["veo-3.0-fast-generate-001"] == rate_limit.RateLimit(
+        capacity=2,
+        window_seconds=60.0,
+    )
+    assert limits["veo-3.0-generate-001"].capacity == 2
+    assert limits["gemini-2.5-flash"] == rate_limit.RateLimit(
+        capacity=7,
+        window_seconds=60.0,
+    )
+
+
+def test_build_default_model_limits_uses_runtime_settings(monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv("RATE_LIMIT_IMAGEN_PER_MIN", "4")
+    monkeypatch.setenv("RATE_LIMIT_VEO_PER_MIN", "2")
+    monkeypatch.setenv("RATE_LIMIT_GEMINI_PER_MIN", "8")
+    get_settings.cache_clear()
+
+    try:
+        limits = rate_limit.build_default_model_limits()
+    finally:
+        get_settings.cache_clear()
+
+    assert limits["imagen-4.0-generate-001"].capacity == 4
+    assert limits["veo-3.0-generate-001"].capacity == 2
+    assert limits["gemini-2.5-flash"].capacity == 8
 
 
 def test_get_limiter_rejects_unknown_model_id():
