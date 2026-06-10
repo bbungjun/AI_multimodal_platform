@@ -13,6 +13,7 @@ import { Badge, Button, Panel, RoutePlaceholder, StatusDot } from "../components
 import { FilmIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
 import { useAsset } from "../hooks/useAsset";
 import { isTerminalJobState, useJob } from "../hooks/useJob";
+import { getRepairInfo, type RepairInfo } from "../utils/repair";
 
 const stateSteps: JobState[] = [
   "pending",
@@ -103,6 +104,7 @@ export function JobDetailPage() {
   const jobQuery = useJob(jobId);
   const job = jobQuery.data;
   const primaryAsset = job?.assets[0] ?? null;
+  const repairInfo = getRepairInfo(job?.error ?? null);
   const imageResultAssets = useMemo(() => findCompletedImageAssets(job), [job]);
   const i2vSourceAssetId = getI2VSourcePreviewAssetId(job);
   const i2vSourceQuery = useAsset(i2vSourceAssetId);
@@ -166,11 +168,15 @@ export function JobDetailPage() {
         {!isTerminalJobState(job.state) && <CurrentStepSummary job={job} />}
         <JobStateTimeline history={job.state_history} state={job.state} />
         <JobWaitingContext job={job} />
+        {job.state === "failed" && repairInfo && (
+          <RepairStatus attempts={job.attempts} repairInfo={repairInfo} />
+        )}
         {job.state === "failed" && (
           <RetryJobAction
             error={retryError}
             isRetrying={retryMutation.isPending}
             onRetry={() => retryMutation.mutate(job.id)}
+            repairInfo={repairInfo}
           />
         )}
       </Panel>
@@ -686,20 +692,28 @@ function RetryJobAction({
   error,
   isRetrying,
   onRetry,
+  repairInfo,
 }: {
   error: string | null;
   isRetrying: boolean;
   onRetry: () => void;
+  repairInfo: RepairInfo | null;
 }) {
+  const isRepairRetry = repairInfo?.deadLetter === true;
+
   return (
     <div className="retry-action">
       <div className="retry-action__copy">
-        <Badge tone="danger">
-          <StatusDot tone="danger" />
-          Retry
+        <Badge tone={isRepairRetry ? "warning" : "danger"}>
+          <StatusDot tone={isRepairRetry ? "warning" : "danger"} />
+          {isRepairRetry ? "Manual repair" : "Retry"}
         </Badge>
-        <strong>Retry this failed generation</strong>
-        <p>Create a new job from the same confirmed generation payload.</p>
+        <strong>{isRepairRetry ? "Retry after inspection" : "Retry this failed generation"}</strong>
+        <p>
+          {isRepairRetry
+            ? "Create a fresh job only after checking the failure reason."
+            : "Create a new job from the same confirmed generation payload."}
+        </p>
         {error && (
           <div className="inline-notice inline-notice--danger" role="alert">
             {error}
@@ -708,8 +722,43 @@ function RetryJobAction({
       </div>
       <Button disabled={isRetrying} onClick={onRetry} type="button" variant="primary">
         <RetryIcon size={14} />
-        {isRetrying ? "Retrying" : "Retry"}
+        {isRetrying ? "Retrying" : isRepairRetry ? "Repair retry" : "Retry"}
       </Button>
+    </div>
+  );
+}
+
+function RepairStatus({
+  attempts,
+  repairInfo,
+}: {
+  attempts: number;
+  repairInfo: RepairInfo;
+}) {
+  return (
+    <div className="repair-status">
+      <div className="repair-status__copy">
+        <Badge tone={repairInfo.deadLetter ? "warning" : "danger"}>
+          <StatusDot tone={repairInfo.deadLetter ? "warning" : "danger"} />
+          {repairInfo.badge}
+        </Badge>
+        <strong>{repairInfo.title}</strong>
+        <p>{repairInfo.detail}</p>
+      </div>
+      <div className="repair-status__meta" aria-label="Repair metadata">
+        <span>
+          Reason
+          <strong>{repairInfo.reason ?? "review_required"}</strong>
+        </span>
+        <span>
+          Attempts
+          <strong>{attempts}</strong>
+        </span>
+        <span>
+          Action
+          <strong>{repairInfo.action ?? "inspect"}</strong>
+        </span>
+      </div>
     </div>
   );
 }

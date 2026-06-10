@@ -173,7 +173,13 @@ async def _mark_failed(session: AsyncSession, job: Job, exc: Exception) -> None:
         return
 
     now = datetime.now(timezone.utc)
-    error = _public_error(exc, retry_count=job.attempts, at=now)
+    settings = get_settings()
+    error = _public_error(
+        exc,
+        retry_count=job.attempts,
+        at=now,
+        max_retry_attempts=settings.provider_retry_max_attempts,
+    )
     job.error = error
     transition(job, JobState.FAILED, detail={"error": error["code"]}, at=now)
     await session.commit()
@@ -184,27 +190,38 @@ def _public_error(
     *,
     retry_count: int,
     at: datetime,
+    max_retry_attempts: int,
 ) -> dict[str, object]:
     if isinstance(exc, I2VSourceAssetNotFoundError):
-        return {
+        error = {
             "code": "i2v_source_asset_not_found",
             "message": "I2V source asset was not found.",
             "retryable": False,
             "retry_count": retry_count,
             "last_attempt_at": at.isoformat(),
         }
+        return _with_dead_letter_metadata(
+            error,
+            retry_count=retry_count,
+            max_retry_attempts=max_retry_attempts,
+        )
 
     if isinstance(exc, I2VSourceAssetNotImageError):
-        return {
+        error = {
             "code": "i2v_source_asset_not_image",
             "message": "I2V source asset must be an image.",
             "retryable": False,
             "retry_count": retry_count,
             "last_attempt_at": at.isoformat(),
         }
+        return _with_dead_letter_metadata(
+            error,
+            retry_count=retry_count,
+            max_retry_attempts=max_retry_attempts,
+        )
 
     if isinstance(exc, veo.VeoTimeoutError):
-        return {
+        error = {
             "code": "veo_timeout",
             "message": "Veo generation timed out while polling.",
             "retryable": True,
@@ -212,6 +229,11 @@ def _public_error(
             "retry_count": retry_count,
             "last_attempt_at": at.isoformat(),
         }
+        return _with_dead_letter_metadata(
+            error,
+            retry_count=retry_count,
+            max_retry_attempts=max_retry_attempts,
+        )
 
     if isinstance(exc, VertexServiceError):
         public = exc.to_public_dict()
@@ -224,14 +246,40 @@ def _public_error(
         }
         if public["status_code"] is not None:
             error["status_code"] = public["status_code"]
-        return error
+        return _with_dead_letter_metadata(
+            error,
+            retry_count=retry_count,
+            max_retry_attempts=max_retry_attempts,
+        )
 
-    return {
+    error = {
         "code": _exception_code(exc),
         "message": str(exc) or exc.__class__.__name__,
         "retry_count": retry_count,
         "last_attempt_at": at.isoformat(),
     }
+    return _with_dead_letter_metadata(
+        error,
+        retry_count=retry_count,
+        max_retry_attempts=max_retry_attempts,
+    )
+
+
+def _with_dead_letter_metadata(
+    error: dict[str, object],
+    *,
+    retry_count: int,
+    max_retry_attempts: int,
+) -> dict[str, object]:
+    retry_limit = max(1, int(max_retry_attempts))
+    if error.get("retryable") is True and retry_count >= retry_limit:
+        return {
+            **error,
+            "dead_letter": True,
+            "dead_letter_reason": "retry_exhausted",
+            "repair_action": "manual_retry_or_inspect",
+        }
+    return error
 
 
 def _exception_code(exc: Exception) -> str:

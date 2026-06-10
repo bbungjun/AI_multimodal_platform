@@ -78,6 +78,10 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Started Phase 4B by making provider retry/backoff policy configurable from
   environment settings. Transient provider failures now use the configured
   retry policy before the job is marked failed with public error metadata.
+- Added Phase 4D dead-letter/repair metadata for retry-exhausted provider
+  failures. Failed jobs now keep `dead_letter`, `dead_letter_reason`, and
+  `repair_action` in `job.error`, and the detail/history UI surfaces repair
+  status plus repair-oriented retry copy.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
@@ -93,8 +97,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `-Force` is used.
 - Phase 4C recommendation: implement Veo polling reschedule/resume for AWS
   worker restarts before adding more UI.
-- Phase 4D recommendation: define dead-letter and repair policy for repeatedly
-  failed jobs.
+- Phase 4D follow-up: decide whether repair operations need an admin-only API
+  or whether the existing retry endpoint is enough for the portfolio demo.
 - Phase 4E recommendation: add minimal worker/queue health metrics for AWS
   operations.
 - Phase 5 recommendation: create a concise AWS deployment runbook covering API,
@@ -107,18 +111,22 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest documentation pruning checks:
+Latest dead-letter/repair UI checks:
 
 ```powershell
 git diff --check
-git status --short --branch
-targeted deleted-doc reference search
+cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_job_handlers.py -q
+cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_generation_api.py tests/test_smoke_mock_retry_script.py tests/test_retry.py tests/test_job_handlers.py -q
+cd frontend; npm run lint
+cd frontend; npm run build
 python scripts/verify_local.py
 ```
 
 Expected:
 
 - no whitespace errors
-- deleted historical docs have no remaining references (`rg` prints no matches)
-- full local quality gate passes (`279 passed`, frontend lint, frontend build)
+- job handler tests pass (`12 passed`)
+- related backend regression tests pass (`86 passed`)
+- frontend typecheck and production build pass
+- full local quality gate passes
 - only intentional working-tree changes are present

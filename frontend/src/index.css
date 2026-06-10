@@ -1181,6 +1181,67 @@ p {
   flex: 0 0 auto;
 }
 
+.repair-status {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid rgba(245, 181, 68, 0.34);
+  border-radius: var(--radius-md);
+  background: rgba(245, 181, 68, 0.08);
+  padding: 12px;
+}
+
+.repair-status__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.repair-status__copy strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.repair-status__copy p {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.repair-status__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.repair-status__meta span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid rgba(245, 181, 68, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-faint);
+  padding: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.repair-status__meta strong {
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-transform: none;
+}
+
 .job-progress-summary {
   border: 1px solid rgba(34, 211, 238, 0.35);
   border-radius: var(--radius-md);
@@ -1540,6 +1601,23 @@ p {
   border-radius: var(--radius-sm);
   background: var(--cyan-dim);
   color: var(--cyan);
+  padding: 3px 6px;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.history-repair-badge {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  border: 1px solid rgba(245, 181, 68, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 181, 68, 0.08);
+  color: var(--warn);
   padding: 3px 6px;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
@@ -2115,5 +2193,9 @@ p {
 
   .retry-action .button {
     width: 100%;
+  }
+
+  .repair-status__meta {
+    grid-template-columns: 1fr;
   }
 }

@@ -15,6 +15,7 @@ import {
 } from "../api/client";
 import { Badge, Button, Panel, StatusDot } from "../components/ui";
 import { FilmIcon, HistoryIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
+import { hasRepairSignal } from "../utils/repair";
 
 const modeOptions: Array<GenerationMode | "all"> = ["all", "t2i", "t2v", "i2v"];
 const assetKindOptions: Array<AssetKind | "all"> = ["all", "image", "video"];
@@ -330,6 +331,9 @@ export function HistoryPage() {
                       Retry of {shortJobId(job.retry_of_job_id)}
                     </span>
                   )}
+                  {hasRepairSignal(job) && (
+                    <span className="history-repair-badge">Repair needed</span>
+                  )}
                 </span>
                 <span className="history-model" title={job.model}>
                   <small>모델</small>
@@ -352,7 +356,11 @@ export function HistoryPage() {
                       variant="ghost"
                     >
                       <RetryIcon size={13} />
-                      {retryingJobId === job.id ? "Retrying" : "Retry"}
+                      {retryingJobId === job.id
+                        ? "Retrying"
+                        : hasRepairSignal(job)
+                          ? "Repair retry"
+                          : "Retry"}
                     </Button>
                   )}
                   {canDeleteHistoryJob(job) ? (

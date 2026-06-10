@@ -449,6 +449,9 @@ async def test_handle_t2i_uses_configured_retry_policy_for_transient_errors(
         "retryable": True,
         "retry_count": 2,
         "last_attempt_at": job.error["last_attempt_at"],
+        "dead_letter": True,
+        "dead_letter_reason": "retry_exhausted",
+        "repair_action": "manual_retry_or_inspect",
     }
     assert job.state_history[-1]["detail"] == {"error": "vertex_transient_error"}
     assert cascaded_jobs == [job.id]
