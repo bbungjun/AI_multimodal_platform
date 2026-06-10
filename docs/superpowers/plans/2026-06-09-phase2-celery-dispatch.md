@@ -12,7 +12,7 @@
 
 ## 기준과 범위
 
-저장소 루트는 `C:\multi_modal`이다. 아래 파일 경로는 모두 이 루트 기준이다.
+저장소 루트는 현재 checkout의 repository root이다. 필요하면 `git rev-parse --show-toplevel`로 확인한다. 아래 파일 경로는 모두 이 루트 기준이다.
 
 이 문서는 검토용 구현계획이다. 아직 코드를 구현하지 않는다. 실제 구현 시에도 `.env`, ADC, service-account JSON, API key, private credential 내용을 읽거나 출력하지 않고, 실제 Vertex/Gemini/Imagen/Veo 호출을 하지 않는다.
 

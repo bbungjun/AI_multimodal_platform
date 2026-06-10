@@ -1,33 +1,44 @@
 # Production Worker/Queue Migration Plan
 
-> Phase 1 API/worker process separation은 완료됐다. Redis/Celery 기반 Phase 2
-> 이후 작업은 아직 계획 단계이며, 승인 전 구현하지 않는다.
+> Current note: 이 문서는 worker/queue migration의 역사와 다음 운영 과제를 함께
+> 보존한다. 경로는 현재 checkout의 repository root 기준으로 읽는다. Phase 1
+> API/worker separation, Phase 2 Redis/Celery dispatch, Phase 3 transactional
+> outbox dispatcher가 완료됐다.
 
 ## 목적
 
 CreativeOps Studio는 Phase 1에서 FastAPI API process와 job worker process를
-분리했다. 이 구조는 mock mode에서 비용 없이 검증되었고, 실제 Vertex 기반
-이미지/비디오 생성 서비스를 운영 수준으로 키우기 위한 첫 번째 runtime 경계를
-만든 상태다.
+분리했고, 이후 Redis/Celery dispatch와 transactional outbox dispatcher를
+도입했다. 이 구조는 mock mode에서 비용 없이 검증되었고, 실제 Vertex 기반
+이미지/비디오 생성 서비스를 운영 수준으로 키우기 위한 runtime 경계를 만든 상태다.
 
-이 문서는 현재 API/worker 분리 구조를 보존하면서 Redis/Celery 기반
-worker/queue 구조로 단계적으로 이동하기 위한 검토용 계획이다. 목표는
-Postgres를 job source of truth로 유지하고, Redis/Celery는 작업 dispatch와
-coordination layer로만 사용하는 것이다.
+이 문서는 API/worker 분리에서 Redis/Celery/outbox 구조로 이동한 결정과 남은
+운영 과제를 기록한다. 목표는 Postgres를 job source of truth로 유지하고,
+Redis/Celery는 작업 dispatch와 coordination layer로만 사용하는 것이다.
 
 ## 현재 상태
 
 - 완료: Phase 1 API/worker process separation
-- 완료 커밋: `a88cba9 feat: split api and worker processes`
-- closeout 문서: `docs/phase1-worker-process-separation-closeout.md`
-- 현재 runtime: FastAPI API process는 runner를 기본 auto-start하지 않고,
-  standalone `python -m app.worker` process가 기존 `InProcessJobRunner`를 실행한다.
-- 현재 Compose: `db`, `backend`, `worker`, `frontend`
-- 아직 미도입: Redis, Celery, outbox table, queue routing, broker retry/backoff
+- 완료: Phase 2 Redis/Celery `job_id` dispatch
+- 완료: Phase 2 Celery worker ops hardening
+- 완료: Phase 2 dispatch/task observability
+- 완료: Phase 3 transactional outbox dispatcher
+- closeout 문서:
+  - `docs/phase1-worker-process-separation-closeout.md`
+  - `docs/phase2-celery-dispatch-closeout.md`
+  - `docs/phase2-celery-ops-hardening-closeout.md`
+  - `docs/phase2-job-observability-closeout.md`
+  - `docs/phase3-outbox-dispatcher-closeout.md`
+- 현재 runtime: FastAPI API process가 job과 outbox event를 같은 transaction에
+  저장하고, `python -m app.services.jobs.outbox_dispatcher`가 Redis/Celery로
+  `job_id`를 발행하며, Celery worker가 Postgres에서 최신 job을 claim해 처리한다.
+- 현재 Compose: `db`, `redis`, `backend`, `dispatcher`, `frontend`, `worker`
+- 아직 미도입: provider별 queue routing, Celery retry/backoff/rate-limit,
+  dead-letter 정책, worker metrics/Ops Console
 
 ## 현재 결정: Celery 중심 채택 방향
 
-현재 채택 방향은 Celery를 1차 worker/queue 후보로 두고, 개념 학습과 구현 검증을 병행하는 것이다.
+Celery는 현재 기본 worker/queue dispatch layer로 채택되어 있다.
 
 채용/포트폴리오 관점에서는 단순히 "작동하는 비동기 처리"를 넘어서, 프로덕션 레벨의 worker 분리, broker 기반 dispatch, retry/backoff, queue routing, rate limit, 장애 복구, 중복 실행 방어를 고민했다는 점이 중요하다. Celery는 이 주제를 설명하기에 가장 익숙하고 설득력 있는 선택지이며, 실제 운영 사례와 면접 질문으로 연결하기 쉽다.
 
@@ -59,9 +70,9 @@ React/Vite frontend
 
 이 구조는 `AI_PROVIDER=mock`에서 credential 없이 end-to-end 생성 흐름을 검증하기 좋았다. 다만 API process와 provider 작업 process가 같은 lifecycle을 공유하므로, 장시간 video polling, provider quota 제어, worker 재시작, 다중 replica 운영, queue별 확장에는 한계가 있었다.
 
-## Phase 1 현재 구조
+## Phase 1 구조
 
-현재 요청/실행 흐름은 다음과 같다.
+Phase 1에서 완료했던 중간 구조는 다음과 같았다.
 
 ```text
 React/Vite frontend
@@ -76,33 +87,36 @@ Worker process
     -> provider/storage boundary
 ```
 
-핵심 특징은 다음과 같다.
+핵심 특징은 다음과 같았다.
 
 - API process는 job 생성, 상태 조회, asset metadata 조회, `/files` streaming을 담당한다.
 - API process는 `JOB_RUNNER_AUTO_START=false` 기본값으로 runner를 자동 시작하지 않는다.
 - Worker process는 `python -m app.worker`로 실행되며, 기존 `InProcessJobRunner`를 FastAPI lifespan 밖에서 실행한다.
 - Postgres는 계속 job state, payload, prompt enhancement, pipeline relation, asset metadata의 source of truth다.
-- Docker Compose mock stack은 `db`, `backend`, `worker`, `frontend`를 함께 실행한다.
+- Docker Compose mock stack은 `db`, `backend`, `worker`, `frontend`를 함께 실행했다.
 - Worker는 `SIGTERM`/`SIGINT`를 task cancellation으로 연결하고, `stop_grace_period: 45s` 안에서 runner shutdown과 DB close를 수행하도록 구성됐다.
 
-## 목표 구조
+## 현재 기본 구조
 
-변경 후 목표 구조는 다음과 같다.
+현재 기본 요청/실행 흐름은 다음과 같다.
 
 ```text
 React/Vite frontend
   -> FastAPI API server
-    -> Postgres source of truth
-    -> enqueue adapter
-      -> Redis broker
-        -> Celery worker process
-          -> Postgres job lookup/state transition
-          -> provider/storage boundary
+    -> Postgres jobs, assets, prompt records, and outbox events
+    -> /api and /files serving
+
+Outbox dispatcher process
+  -> publishes job ids from Postgres outbox to Redis/Celery
+
+Celery worker process
+  -> Postgres job lookup/state transition
+  -> provider/storage boundary
 ```
 
 책임 분리는 다음 원칙을 따른다.
 
-- API server는 요청 검증, job 생성, prompt enhancement draft 생성 요청, asset/file serving, status 조회를 담당한다.
+- API server는 요청 검증, job/outbox event 생성, prompt enhancement draft 생성 요청, asset/file serving, status 조회를 담당한다.
 - Worker process는 job 실행, provider 호출, polling resume, asset 저장, failure marking, retry bookkeeping을 담당한다.
 - Postgres는 계속 job source of truth다. Redis/Celery에 들어가는 메시지는 권위 있는 상태가 아니다.
 - Redis broker는 dispatch와 coordination layer다. worker가 어떤 job을 처리해야 하는지 알려주는 transport로만 사용한다.
@@ -177,7 +191,7 @@ Queue 구조가 생기면 backlog, queue latency, task runtime, retry count, wor
 
 ### Redis/Celery 운영 복잡도
 
-현재 compose는 `db`, `backend`, `worker`, `frontend`를 실행한다. Phase 2에서 Redis/Celery와 queue별 worker 설정이 추가되면 local dev, deployment, monitoring, restart policy, broker persistence 정책이 더 늘어난다.
+현재 compose는 `db`, `redis`, `backend`, `dispatcher`, `frontend`, `worker`를 실행한다. Redis/Celery와 dispatcher가 기본 개발 흐름에 들어온 만큼 local dev, deployment, monitoring, restart policy, broker persistence 정책을 계속 관리해야 한다.
 
 Celery 설정도 단순 dependency 추가로 끝나지 않는다. task naming, queue routing, concurrency, retry policy, shutdown behavior, logging/metrics 방식을 명확히 정해야 한다.
 
@@ -596,25 +610,25 @@ git diff --cached --name-only
 
 ## 검토 질문
 
-- Celery는 1차 채택 후보로 결정했다. RQ/Arq/직접 asyncio worker는 비교 대안으로 문서에 남기되, 구현 기본 경로는 Celery 중심으로 둔다.
-- Phase 1 API/worker process 분리는 완료됐다. Phase 2는 이 baseline 위에 Redis/Celery dispatch를 추가한다.
-- Outbox table은 Phase 2에서 바로 도입할지, enqueue 실패 repair flow로 시작한 뒤 운영 필요가 확인되면 도입할지?
-- Celery broker 장애 시 pending job reenqueue repair를 수동 runbook으로 둘지, 자동 dispatcher/outbox로 확장할지?
-- Queue routing은 처음부터 `prompt`, `imagen`, `veo`로 분리할지, 단일 `generation` queue로 시작한 뒤 분리할지?
+- Celery는 기본 worker/queue dispatch layer로 채택했다. RQ/Arq/직접 asyncio worker는 비교 대안으로 문서에 남긴다.
+- Phase 1 API/worker process 분리, Phase 2 Redis/Celery dispatch, Phase 3 outbox dispatcher는 완료됐다.
+- Outbox table은 Phase 3에서 도입했다. 남은 과제는 dispatcher 운영 정책과 실패 관측성을 더 단단히 하는 것이다.
+- Celery broker 장애 시 pending job repair를 현재 runbook/dispatcher 정책으로 충분히 볼지, 추가 자동 복구를 둘지?
+- Queue routing은 현재 단일 `generation` queue에서 시작한다. 다음 단계에서 `prompt`, `imagen`, `veo`로 분리할지?
 - Celery worker별 concurrency, prefetch, rate limit 기본값을 provider/mode별로 어떻게 둘지?
 - Veo polling은 같은 task의 retry/countdown으로 다룰지, 별도 polling task로 분리할지?
 - Celery retry 횟수와 Postgres `attempts`를 어떻게 매핑할지?
 - Celery ack 정책과 worker crash 시 재실행 가능성을 어떤 idempotency guard로 방어할지?
 - Celery result backend는 비활성화할지, debugging 보조 정보로만 제한할지?
-- Local dev 기본값은 API와 worker를 모두 띄우는 compose로 확정됐다. Phase 2에서는 Redis/Celery 포함 dev stack 범위를 결정한다.
+- Local dev 기본값은 `db`, `redis`, `backend`, `dispatcher`, `frontend`, `worker`를 띄우는 compose로 확정됐다.
 - CI smoke 범위는 unit test만 둘지, Redis 포함 compose smoke까지 둘지?
 - Worker metrics는 backend health endpoint에 최소 노출할지, 별도 Ops Console 화면까지 포함할지?
 - Internal asyncio runner는 Celery 안정화 후 제거할지, mock/local fallback으로 유지할지?
 
 ## 승인 전 원칙
 
-- 이 문서는 구현 지시가 아니라 검토용 계획이다.
-- 승인 전에는 Redis, Celery, broker dependency, queue routing, outbox table, API contract를 변경하지 않는다.
+- 이 문서는 구현 지시가 아니라 migration 기록과 다음 검토용 계획이다.
+- 승인 전에는 provider별 queue routing, retry/backoff/rate-limit, dead-letter, worker metrics, API contract를 변경하지 않는다.
 - 모든 구현 phase는 `AI_PROVIDER=mock` 기준 검증을 먼저 통과해야 한다.
 - 실제 Vertex/Gemini/Imagen/Veo 호출은 사용자가 명시적으로 승인한 live QA 상황에서만 수행한다.
 - 민감 파일과 credential 내용은 읽거나 출력하거나 커밋하지 않는다.

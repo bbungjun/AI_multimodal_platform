@@ -108,8 +108,8 @@ The backend golden-path smoke automates this flow from the repository root:
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-Use this variant when `db`, `backend`, `dispatcher`, and `worker` are already
-running:
+Use this variant when `db`, `redis`, `backend`, `dispatcher`, and `worker` are
+already running:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000

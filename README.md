@@ -16,10 +16,12 @@ CreativeOps Studio는 이미지, 비디오, 이미지 기반 비디오 파이프
 ```text
 React/Vite frontend
   -> FastAPI backend
-    -> PostgreSQL jobs, assets, and prompt records
+    -> PostgreSQL jobs, assets, prompt records, and outbox events
     -> Local DATA_DIR file streaming
-Worker process
-  -> InProcessJobRunner polling Postgres
+Outbox dispatcher process
+  -> publishes job ids from Postgres outbox to Redis/Celery
+Celery worker process
+  -> claims pending jobs from Postgres
     -> Local DATA_DIR asset storage
     -> Vertex AI through google-genai
 ```
@@ -32,7 +34,7 @@ Worker process
 - Database: PostgreSQL 16
 - Frontend: Vite, React, TypeScript, TanStack Query
 - AI SDK: `google-genai`
-- Runtime: Docker Compose, local Postgres volume, local asset volume
+- Runtime: Docker Compose, Redis/Celery dispatch, local Postgres volume, local asset volume
 
 ## 빠른 시작: Mock Mode
 
@@ -57,6 +59,15 @@ ENHANCE_MODEL=gemini-2.5-flash
 DATA_DIR=/data/assets
 JOB_RUNNER_CONCURRENCY=10
 JOB_RUNNER_AUTO_START=false
+JOB_DISPATCH_MODE=celery
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_DEFAULT_QUEUE=generation
+CELERY_WORKER_CONCURRENCY=10
+CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC=5
+CELERY_WORKER_SHUTDOWN_GRACE_SEC=60
+OUTBOX_DISPATCHER_BATCH_SIZE=50
+OUTBOX_DISPATCHER_POLL_INTERVAL_SEC=1.0
+OUTBOX_DISPATCHER_MAX_ATTEMPTS=10
 VITE_API_BASE=
 VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -64,15 +75,20 @@ VITE_ALLOWED_HOSTS=localhost,127.0.0.1
 
 Mock mode에서는 credential 관련 값을 비워둘 수 있습니다.
 
-3. stack을 실행합니다.
+3. 로컬 환경을 확인합니다. 이 명령은 `.env`가 없으면 `.env.example`에서 만들고,
+   기존 `.env`는 덮어쓰지 않습니다.
 
 ```powershell
-docker compose --env-file .env.example config --quiet
-docker compose config --quiet
+.\scripts\setup_local.ps1
+```
+
+4. stack을 실행합니다.
+
+```powershell
 docker compose up -d --build
 ```
 
-4. 앱을 엽니다.
+5. 앱을 엽니다.
 
 - Frontend: <http://127.0.0.1:5173>
 - Backend API docs: <http://127.0.0.1:8000/docs>
@@ -175,14 +191,14 @@ Run the backend HTTP golden path in mock mode only:
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db`, `backend`, `dispatcher`, and `worker` are already running:
+If `db`, `redis`, `backend`, `dispatcher`, and `worker` are already running:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
 ```
 
 The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, starts the
-dispatcher and worker services when `--compose` is used, and verifies health,
+redis, dispatcher, and worker services when `--compose` is used, and verifies health,
 prompt enhancement, T2I generation, job state history, PNG asset serving,
 byte-range streaming, and cleanup. In mock mode, `vertex_charged: true` only
 means the mock provider handler completed; it is not real Vertex billing.

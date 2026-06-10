@@ -158,8 +158,8 @@ From the repository root, start `db`, `redis`, `backend`, `dispatcher`, and
 python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If the backend is already running in mock mode, run the same flow against its
-base URL:
+If `db`, `redis`, `backend`, `dispatcher`, and `worker` are already running in
+mock mode, run the same flow against the backend base URL:
 
 ```powershell
 python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
@@ -198,8 +198,8 @@ the smoke:
 python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
 ```
 
-If `db`, `backend`, `dispatcher`, `worker`, and `frontend` are already running
-in mock mode, run:
+If `db`, `redis`, `backend`, `dispatcher`, `worker`, and `frontend` are already
+running in mock mode, run:
 
 ```powershell
 python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90

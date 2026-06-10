@@ -42,7 +42,7 @@ Remaining Phase 2 decisions:
 
 ## 기준과 범위
 
-저장소 루트는 `C:\multi_modal`이다. 아래 파일 경로는 모두 이 루트 기준의 exact path이다.
+저장소 루트는 현재 checkout의 repository root이다. 필요하면 `git rev-parse --show-toplevel`로 확인한다. 아래 파일 경로는 모두 이 루트 기준의 exact path이다.
 
 이 계획은 `docs/production-worker-queue-plan.md`의 Phase 1을 구현 가능한 작은 작업 단위로 쪼갠 검토용 문서이다. 이 문서를 작성하는 단계에서는 코드 구현을 하지 않는다. 실제 구현 시에도 `.env`, ADC, service-account JSON, API key, private credential 내용을 읽거나 출력하지 않고, 실제 Vertex/Gemini/Imagen/Veo 호출을 하지 않는다.
 
