@@ -101,6 +101,7 @@ def test_dispatcher_uses_backend_image_and_outbox_runtime_env():
 
     shared_env_keys = [
         "DATABASE_URL",
+        "AI_PROVIDER",
         "JOB_DISPATCH_MODE",
         "CELERY_BROKER_URL",
         "CELERY_DEFAULT_QUEUE",
