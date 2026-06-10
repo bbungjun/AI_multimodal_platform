@@ -31,6 +31,9 @@ at the end of every meaningful work session.
 - Provider retry/backoff defaults: `PROVIDER_RETRY_MAX_ATTEMPTS=3`,
   `PROVIDER_RETRY_BASE_DELAY_SEC=1.0`, and
   `PROVIDER_RETRY_MAX_DELAY_SEC=20.0`.
+- Documentation loading policy: read this file first, then load only the
+  directly relevant reference doc for the task. Historical phase plans and
+  closeout files were removed to keep agent startup fast.
 
 ## Machine Setup Notes
 
@@ -60,8 +63,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   dispatcher, Celery worker, and outbox settings.
 - Updated `AGENTS.md` to describe the current Compose services and require this
   handoff file.
-- Updated `docs/production-worker-queue-plan.md` so it reads as migration
-  history plus next operational work, not as a stale pre-Phase-2 plan.
+- Removed long historical migration docs after their useful current state was
+  folded into this handoff file and the canonical reference docs.
 - Removed committed machine-specific repository paths from Markdown files.
 - Cleaned smoke-run documentation so already-running service lists include
   Redis alongside `db`, `backend`, `dispatcher`, `worker`, and `frontend` where
@@ -75,6 +78,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Started Phase 4B by making provider retry/backoff policy configurable from
   environment settings. Transient provider failures now use the configured
   retry policy before the job is marked failed with public error metadata.
+- Pruned completed Phase 1-3 implementation plans and closeout documents so
+  agents no longer spend time reading stale migration history.
 
 ## Next Suggested Work
 
@@ -82,12 +87,18 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating
   `.env` from `.env.example`.
-- Consider adding a short README link to this handoff file if future agents miss
-  it despite the `AGENTS.md` rule.
 - If an older local `.env` already exists, make sure it includes the current
   rate-limit keys, provider retry keys, and `CELERY_WORKER_CONCURRENCY=2`;
   `setup_local.ps1` does not overwrite existing local `.env` files unless
   `-Force` is used.
+- Phase 4C recommendation: implement Veo polling reschedule/resume for AWS
+  worker restarts before adding more UI.
+- Phase 4D recommendation: define dead-letter and repair policy for repeatedly
+  failed jobs.
+- Phase 4E recommendation: add minimal worker/queue health metrics for AWS
+  operations.
+- Phase 5 recommendation: create a concise AWS deployment runbook covering API,
+  worker, dispatcher, Postgres, Redis, asset storage, and secrets.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -96,19 +107,18 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest Phase 4B retry/backoff checks:
+Latest documentation pruning checks:
 
 ```powershell
 git diff --check
 git status --short --branch
-$env:AI_PROVIDER='mock'; python -m pytest tests/test_rate_limiter.py tests/test_celery_app.py tests/test_compose_worker_service.py tests/test_generation_api.py tests/test_pipeline_api.py -q
-$env:AI_PROVIDER='mock'; python -m pytest tests/test_retry.py tests/test_celery_app.py tests/test_compose_worker_service.py tests/test_job_handlers.py -q
+targeted deleted-doc reference search
 python scripts/verify_local.py
 ```
 
 Expected:
 
 - no whitespace errors
-- targeted retry/backend checks pass (`37 passed`)
+- deleted historical docs have no remaining references (`rg` prints no matches)
 - full local quality gate passes (`279 passed`, frontend lint, frontend build)
 - only intentional working-tree changes are present
