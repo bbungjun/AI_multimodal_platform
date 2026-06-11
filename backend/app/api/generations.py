@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -128,7 +129,19 @@ async def create_generation(
     )
     session.add(job)
     add_job_dispatch_event(session, job.id, reason="generation_created")
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if (
+            generation_mode == GenerationMode.I2V
+            and i2v_guard.is_active_i2v_unique_violation(exc)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE,
+            ) from exc
+        raise
     return job_response_from_job(job, assets=[])
 
 

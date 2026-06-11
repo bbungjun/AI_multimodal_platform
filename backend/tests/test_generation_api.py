@@ -6,6 +6,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.exc import IntegrityError
 
 from app.api import generations
 from app.config import Settings
@@ -22,6 +23,7 @@ from app.models import (
     utc_now,
 )
 from app.services.jobs import outbox
+from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME
 from app.services.vertex import storage as vertex_storage
 
 
@@ -43,10 +45,12 @@ class FakeGenerationSession:
         prompt_enhancement: PromptEnhancement | None = None,
         jobs: list[Job] | None = None,
         scalar_results: list[list[object]] | None = None,
+        commit_error: Exception | None = None,
     ) -> None:
         self.added: list[object] = []
         self.deleted: list[object] = []
         self.commit_count = 0
+        self.commit_error = commit_error
         self.prompt_enhancement = prompt_enhancement
         self.jobs = jobs or []
         self.scalar_results = scalar_results
@@ -67,6 +71,11 @@ class FakeGenerationSession:
     async def commit(self) -> None:
         self.commit_count += 1
         self.events.append("commit")
+        if self.commit_error is not None:
+            raise self.commit_error
+
+    async def rollback(self) -> None:
+        self.events.append("rollback")
 
     async def get(self, model, entity_id, **_kwargs):
         self.get_calls.append((model, entity_id))
@@ -531,6 +540,39 @@ async def test_create_i2v_generation_locks_source_asset_before_duplicate_check()
     assert "for update" in lock_sql
     assert "from jobs" in active_check_sql
     assert "jobs.mode = 'i2v'" in active_check_sql
+
+
+async def test_create_i2v_generation_maps_unique_index_error_to_conflict():
+    parent = _job_with_asset()
+    source_asset = parent.assets[0]
+    integrity_error = IntegrityError(
+        statement="INSERT INTO jobs ...",
+        params={},
+        orig=Exception(ACTIVE_I2V_UNIQUE_INDEX_NAME),
+    )
+    session = FakeGenerationSession(
+        jobs=[parent],
+        scalar_results=[[source_asset], []],
+        commit_error=integrity_error,
+    )
+
+    response = await _post_generation(
+        {
+            "mode": "i2v",
+            "prompt": "animate the desk lamp",
+            "model": "veo-3.0-fast-generate-001",
+            "aspect_ratio": "16:9",
+            "duration_sec": 4,
+            "source_asset_id": str(source_asset.id),
+        },
+        session,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "An active I2V generation already exists for this source asset."
+    )
+    assert "rollback" in session.events
 
 
 async def test_create_t2i_generation_accepts_max_image_count_boundary():

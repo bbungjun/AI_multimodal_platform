@@ -57,3 +57,15 @@ def active_i2v_job_statement(source_asset_id: UUID) -> Select[tuple[Job]]:
         .order_by(Job.updated_at.desc())
         .limit(1)
     )
+
+
+def is_active_i2v_unique_violation(exc: Exception) -> bool:
+    orig = getattr(exc, "orig", None)
+    diag = getattr(orig, "diag", None)
+    constraint_name = getattr(diag, "constraint_name", None)
+    text = str(exc)
+    return (
+        constraint_name == ACTIVE_I2V_UNIQUE_INDEX_NAME
+        or ACTIVE_I2V_UNIQUE_INDEX_NAME in text
+        or (orig is not None and ACTIVE_I2V_UNIQUE_INDEX_NAME in str(orig))
+    )
