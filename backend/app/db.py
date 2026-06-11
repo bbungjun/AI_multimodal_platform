@@ -21,6 +21,7 @@ async def init_db_schema() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_sync_jobs_retry_of_schema)
+        await conn.run_sync(_sync_jobs_active_i2v_unique_index)
 
 
 def _sync_jobs_retry_of_schema(conn) -> None:
@@ -60,6 +61,31 @@ def _sync_jobs_retry_of_schema(conn) -> None:
                 "ON DELETE SET NULL"
             )
         )
+
+
+def _sync_jobs_active_i2v_unique_index(conn) -> None:
+    from app.services.jobs import i2v_guard
+
+    inspector = inspect(conn)
+    table_names = set(inspector.get_table_names())
+    if "jobs" not in table_names:
+        return
+
+    if conn.dialect.name != "postgresql":
+        return
+
+    indexes = {index["name"] for index in inspector.get_indexes("jobs")}
+    if i2v_guard.ACTIVE_I2V_UNIQUE_INDEX_NAME in indexes:
+        return
+
+    duplicate = conn.execute(text(i2v_guard.ACTIVE_I2V_DUPLICATE_SCAN_SQL)).first()
+    if duplicate is not None:
+        raise RuntimeError(
+            "Cannot create active I2V uniqueness index while duplicate active "
+            "I2V jobs exist."
+        )
+
+    conn.execute(text(i2v_guard.ACTIVE_I2V_UNIQUE_INDEX_SQL))
 
 
 async def check_db_connection() -> bool:

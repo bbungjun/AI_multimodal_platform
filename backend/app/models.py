@@ -5,7 +5,18 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    and_,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -168,6 +179,27 @@ class Job(Base):
         cascade="all, delete-orphan",
         foreign_keys="Asset.job_id",
     )
+
+
+ACTIVE_I2V_INDEX_STATES: tuple[JobState, ...] = (
+    JobState.PENDING,
+    JobState.ENHANCING,
+    JobState.QUEUED,
+    JobState.GENERATING,
+    JobState.POLLING,
+    JobState.DOWNLOADING,
+)
+
+Index(
+    "uq_jobs_active_i2v_source_asset",
+    Job.source_asset_id,
+    unique=True,
+    postgresql_where=and_(
+        Job.mode == GenerationMode.I2V,
+        Job.source_asset_id.is_not(None),
+        Job.state.in_(ACTIVE_I2V_INDEX_STATES),
+    ),
+)
 
 
 class Asset(Base):

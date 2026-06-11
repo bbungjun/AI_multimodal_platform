@@ -55,3 +55,26 @@ def test_active_i2v_states_match_non_terminal_contract():
         JobState.POLLING,
         JobState.DOWNLOADING,
     )
+
+
+def test_duplicate_scan_sql_targets_active_i2v_rows_only():
+    sql = i2v_guard.ACTIVE_I2V_DUPLICATE_SCAN_SQL.lower()
+
+    assert "from jobs" in sql
+    assert "mode = 'i2v'" in sql
+    assert "source_asset_id is not null" in sql
+    assert "state in" in sql
+    assert "group by source_asset_id" in sql
+    assert "having count(*) > 1" in sql
+    assert "limit 1" in sql
+
+
+def test_create_index_sql_is_partial_unique_index():
+    sql = i2v_guard.ACTIVE_I2V_UNIQUE_INDEX_SQL.lower()
+
+    assert "create unique index" in sql
+    assert "uq_jobs_active_i2v_source_asset" in sql
+    assert "on jobs (source_asset_id)" in sql
+    assert "where mode = 'i2v'" in sql
+    assert "state in" in sql
+    assert "completed" not in sql

@@ -19,6 +19,27 @@ ACTIVE_I2V_STATES: tuple[JobState, ...] = (
 ACTIVE_I2V_DUPLICATE_MESSAGE = (
     "An active I2V generation already exists for this source asset."
 )
+ACTIVE_I2V_UNIQUE_INDEX_NAME = "uq_jobs_active_i2v_source_asset"
+ACTIVE_I2V_STATE_SQL = ", ".join(f"'{state.value}'" for state in ACTIVE_I2V_STATES)
+
+ACTIVE_I2V_DUPLICATE_SCAN_SQL = f"""
+SELECT source_asset_id, COUNT(*) AS active_count
+FROM jobs
+WHERE mode = 'i2v'
+  AND source_asset_id IS NOT NULL
+  AND state IN ({ACTIVE_I2V_STATE_SQL})
+GROUP BY source_asset_id
+HAVING COUNT(*) > 1
+LIMIT 1
+"""
+
+ACTIVE_I2V_UNIQUE_INDEX_SQL = f"""
+CREATE UNIQUE INDEX IF NOT EXISTS {ACTIVE_I2V_UNIQUE_INDEX_NAME}
+ON jobs (source_asset_id)
+WHERE mode = 'i2v'
+  AND source_asset_id IS NOT NULL
+  AND state IN ({ACTIVE_I2V_STATE_SQL})
+"""
 
 
 def source_asset_for_update_statement(source_asset_id: UUID) -> Select[tuple[Asset]]:
