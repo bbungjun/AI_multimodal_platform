@@ -89,6 +89,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   failures. Failed jobs now keep `dead_letter`, `dead_letter_reason`, and
   `repair_action` in `job.error`, and the detail/history UI surfaces repair
   status plus repair-oriented retry copy.
+- Hardened I2V duplicate protection with source asset row locking, a Postgres
+  partial unique index for active I2V jobs, and conflict mapping for commit-time
+  uniqueness races.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
