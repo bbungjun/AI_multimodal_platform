@@ -73,6 +73,12 @@ async def create_generation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Source asset must be an image.",
             )
+        active_i2v_job = await _active_i2v_source_asset_job(session, source_asset_id)
+        if active_i2v_job is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An active I2V generation already exists for this source asset.",
+            )
         parent_job_id = source_asset.job_id
         parameters = {
             "aspect_ratio": payload.aspect_ratio,
@@ -326,6 +332,23 @@ async def _jobs_referencing_job(session: AsyncSession, job: Job) -> list[Job]:
             references[reference.id] = reference
 
     return list(references.values())
+
+
+async def _active_i2v_source_asset_job(
+    session: AsyncSession,
+    source_asset_id: UUID,
+) -> Job | None:
+    result = await session.scalars(
+        select(Job)
+        .where(
+            Job.mode == GenerationMode.I2V,
+            Job.source_asset_id == source_asset_id,
+            Job.state.not_in(tuple(TERMINAL_STATES)),
+        )
+        .order_by(Job.updated_at.desc())
+        .limit(1)
+    )
+    return result.first()
 
 
 async def _child_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:

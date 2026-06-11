@@ -84,6 +84,13 @@ pipeline linking attaches that asset to the child and unblocks it. If the parent
 fails, the child should fail or stay protected according to the pipeline
 contract.
 
+When creating an image-to-video job from a source image asset, the API rejects a
+new request if another non-terminal `i2v` job already uses the same
+`source_asset_id`. This prevents repeated clicks or client retries from creating
+multiple active Veo operations for the same confirmed image. Terminal `i2v` jobs
+remain historical records; users can still create a fresh job after the active
+one completes, fails, or is cancelled.
+
 ## State History
 
 Job responses include state history so the frontend can show a meaningful

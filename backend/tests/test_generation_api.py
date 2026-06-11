@@ -28,6 +28,9 @@ class FakeScalarsResult:
     def __init__(self, rows: list[Job]) -> None:
         self.rows = rows
 
+    def first(self) -> Job | None:
+        return self.rows[0] if self.rows else None
+
     def all(self) -> list[Job]:
         return self.rows
 
@@ -411,6 +414,49 @@ async def test_create_generation_does_not_depend_on_broker_availability(monkeypa
     assert session.commit_count == 1
     _assert_job_dispatch_event(session, job=job, reason="generation_created")
     assert session.events == ["add_job", "add_outbox", "commit"]
+
+
+async def test_create_i2v_generation_rejects_active_job_for_same_source_asset():
+    parent = _job_with_asset()
+    source_asset = parent.assets[0]
+    active_i2v = Job(
+        id=uuid4(),
+        mode=GenerationMode.I2V,
+        model="veo-3.0-fast-generate-001",
+        state=JobState.POLLING,
+        prompt="animate the same desk lamp",
+        source_asset_id=source_asset.id,
+        parent_job_id=parent.id,
+        blocked=False,
+        attempts=1,
+        parameters={"aspect_ratio": "16:9", "duration_sec": 4},
+        state_history=[],
+        error=None,
+        vertex_charged=False,
+        created_at=utc_now(),
+        updated_at=utc_now(),
+    )
+    session = FakeGenerationSession(jobs=[parent], scalar_results=[[active_i2v]])
+
+    response = await _post_generation(
+        {
+            "mode": "i2v",
+            "prompt": "animate the desk lamp again",
+            "model": "veo-3.0-fast-generate-001",
+            "aspect_ratio": "16:9",
+            "duration_sec": 4,
+            "source_asset_id": str(source_asset.id),
+        },
+        session,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "An active I2V generation already exists for this source asset."
+    )
+    assert _added_jobs(session) == []
+    assert _added_outbox_events(session) == []
+    assert session.commit_count == 0
 
 
 async def test_create_t2i_generation_accepts_max_image_count_boundary():
