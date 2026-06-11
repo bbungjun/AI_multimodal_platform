@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from app.api import generations
 from app.config import Settings
@@ -25,13 +26,13 @@ from app.services.vertex import storage as vertex_storage
 
 
 class FakeScalarsResult:
-    def __init__(self, rows: list[Job]) -> None:
+    def __init__(self, rows: list[object]) -> None:
         self.rows = rows
 
-    def first(self) -> Job | None:
+    def first(self):
         return self.rows[0] if self.rows else None
 
-    def all(self) -> list[Job]:
+    def all(self) -> list[object]:
         return self.rows
 
 
@@ -41,7 +42,7 @@ class FakeGenerationSession:
         *,
         prompt_enhancement: PromptEnhancement | None = None,
         jobs: list[Job] | None = None,
-        scalar_results: list[list[Job]] | None = None,
+        scalar_results: list[list[object]] | None = None,
     ) -> None:
         self.added: list[object] = []
         self.deleted: list[object] = []
@@ -96,6 +97,38 @@ class FakeGenerationSession:
             rows = self.scalar_results.pop(0) if self.scalar_results else []
             return FakeScalarsResult(rows)
         return FakeScalarsResult(self.jobs)
+
+
+class RoutingScalarGenerationSession(FakeGenerationSession):
+    def __init__(
+        self,
+        *,
+        locked_asset: Asset,
+        active_jobs: list[Job] | None = None,
+    ) -> None:
+        super().__init__(jobs=[])
+        self.locked_asset = locked_asset
+        self.active_jobs = active_jobs or []
+
+    async def get(self, model, entity_id, **kwargs):
+        if model is Asset and entity_id == self.locked_asset.id:
+            return self.locked_asset
+        return await super().get(model, entity_id, **kwargs)
+
+    async def scalars(self, *args, **_kwargs) -> FakeScalarsResult:
+        if args:
+            self.scalar_statements.append(args[0])
+            sql = str(
+                args[0].compile(
+                    dialect=postgresql.dialect(),
+                    compile_kwargs={"literal_binds": True},
+                )
+            ).lower()
+            if "from assets" in sql:
+                return FakeScalarsResult([self.locked_asset])
+            if "from jobs" in sql:
+                return FakeScalarsResult(self.active_jobs)
+        return FakeScalarsResult([])
 
 
 async def _post_generation(payload: dict, session: FakeGenerationSession):
@@ -436,7 +469,10 @@ async def test_create_i2v_generation_rejects_active_job_for_same_source_asset():
         created_at=utc_now(),
         updated_at=utc_now(),
     )
-    session = FakeGenerationSession(jobs=[parent], scalar_results=[[active_i2v]])
+    session = FakeGenerationSession(
+        jobs=[parent],
+        scalar_results=[[source_asset], [active_i2v]],
+    )
 
     response = await _post_generation(
         {
@@ -457,6 +493,44 @@ async def test_create_i2v_generation_rejects_active_job_for_same_source_asset():
     assert _added_jobs(session) == []
     assert _added_outbox_events(session) == []
     assert session.commit_count == 0
+
+
+async def test_create_i2v_generation_locks_source_asset_before_duplicate_check():
+    parent = _job_with_asset()
+    source_asset = parent.assets[0]
+    session = RoutingScalarGenerationSession(locked_asset=source_asset)
+
+    response = await _post_generation(
+        {
+            "mode": "i2v",
+            "prompt": "animate the desk lamp",
+            "model": "veo-3.0-fast-generate-001",
+            "aspect_ratio": "16:9",
+            "duration_sec": 4,
+            "source_asset_id": str(source_asset.id),
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    assert len(session.scalar_statements) >= 2
+    lock_sql = str(
+        session.scalar_statements[0].compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    ).lower()
+    active_check_sql = str(
+        session.scalar_statements[1].compile(
+            dialect=postgresql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    ).lower()
+
+    assert "from assets" in lock_sql
+    assert "for update" in lock_sql
+    assert "from jobs" in active_check_sql
+    assert "jobs.mode = 'i2v'" in active_check_sql
 
 
 async def test_create_t2i_generation_accepts_max_image_count_boundary():

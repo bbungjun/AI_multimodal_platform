@@ -12,6 +12,7 @@ from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, PromptEnhancement, utc_now
 from app.schemas import GenerationCreate, GenerationResponse, job_response_from_job
 from app.services import storage
+from app.services.jobs import i2v_guard
 from app.services.jobs.outbox import add_job_dispatch_event
 from app.services.rate_limit import DEFAULT_MODEL_LIMITS
 from app.state_machine import TERMINAL_STATES
@@ -62,7 +63,10 @@ async def create_generation(
         _validate_model(payload.model, prefix="veo-", detail="Unsupported Veo model.")
         generation_mode = GenerationMode.I2V
         source_asset_id = payload.source_asset_id
-        source_asset = await session.get(Asset, source_asset_id)
+        source_asset_result = await session.scalars(
+            i2v_guard.source_asset_for_update_statement(source_asset_id)
+        )
+        source_asset = source_asset_result.first()
         if source_asset is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -73,11 +77,13 @@ async def create_generation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Source asset must be an image.",
             )
-        active_i2v_job = await _active_i2v_source_asset_job(session, source_asset_id)
-        if active_i2v_job is not None:
+        active_result = await session.scalars(
+            i2v_guard.active_i2v_job_statement(source_asset_id)
+        )
+        if active_result.first() is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An active I2V generation already exists for this source asset.",
+                detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE,
             )
         parent_job_id = source_asset.job_id
         parameters = {
@@ -332,23 +338,6 @@ async def _jobs_referencing_job(session: AsyncSession, job: Job) -> list[Job]:
             references[reference.id] = reference
 
     return list(references.values())
-
-
-async def _active_i2v_source_asset_job(
-    session: AsyncSession,
-    source_asset_id: UUID,
-) -> Job | None:
-    result = await session.scalars(
-        select(Job)
-        .where(
-            Job.mode == GenerationMode.I2V,
-            Job.source_asset_id == source_asset_id,
-            Job.state.not_in(tuple(TERMINAL_STATES)),
-        )
-        .order_by(Job.updated_at.desc())
-        .limit(1)
-    )
-    return result.first()
 
 
 async def _child_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:
