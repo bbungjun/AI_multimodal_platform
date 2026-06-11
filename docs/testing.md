@@ -188,6 +188,33 @@ In mock mode, `vertex_charged: true` means the generation handler completed its
 provider step. It does not indicate real Vertex billing or external provider
 usage.
 
+## I2V Duplicate Guard Smoke
+
+Use the mock-only I2V duplicate guard smoke to verify that repeated or concurrent
+image-to-video requests for the same source image create only one active Veo job.
+
+From the repository root, start `db`, `redis`, `backend`, `dispatcher`, and
+`worker` through Compose and run:
+
+```powershell
+python scripts/smoke_mock_i2v_duplicate_guard.py --compose --env-file .env.example --timeout-sec 90
+```
+
+If those services are already running in mock mode, run:
+
+```powershell
+python scripts/smoke_mock_i2v_duplicate_guard.py --base-url http://127.0.0.1:8000 --timeout-sec 90
+```
+
+Expected coverage:
+
+- a source T2I job completes and returns one image asset
+- two near-simultaneous I2V requests use the same `source_asset_id`
+- one request returns HTTP 201 with a new I2V job id
+- the other request returns HTTP 409 with the duplicate-active-I2V message
+- the created I2V job reaches `completed` and can be cleaned up before deleting
+  the source T2I job
+
 ## Retry HTTP Smoke
 
 Use the mock-only retry smoke to verify the failed-generation retry path across
