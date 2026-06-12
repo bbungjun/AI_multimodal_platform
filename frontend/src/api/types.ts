@@ -18,6 +18,53 @@ export type HealthResponse = {
   vertex: VertexReadinessResponse;
 };
 
+export type OutboxEventStatus = "pending" | "published" | "failed";
+
+export type OpsDispatchResponse = {
+  mode: string;
+  queue: string | null;
+  task_acks_late: boolean;
+  task_reject_on_worker_lost: boolean;
+  worker_prefetch_multiplier: number;
+};
+
+export type OpsJobsResponse = {
+  total: number;
+  active: number;
+  blocked: number;
+  resumable_polling: number;
+  by_state: Record<JobState, number>;
+};
+
+export type OpsOutboxResponse = {
+  total: number;
+  pending: number;
+  published: number;
+  failed: number;
+  by_status: Record<OutboxEventStatus, number>;
+};
+
+export type OpsRecentFailureResponse = {
+  id: UUID;
+  mode: GenerationMode;
+  model: string;
+  code: string | null;
+  message: string | null;
+  retryable: boolean | null;
+  dead_letter: boolean;
+  updated_at: ISODateTime;
+};
+
+export type OpsHealthResponse = {
+  ok: boolean;
+  db: "up" | "down";
+  service: string;
+  dispatch: OpsDispatchResponse;
+  jobs: OpsJobsResponse;
+  outbox: OpsOutboxResponse;
+  recent_failures: OpsRecentFailureResponse[];
+};
+
 export type GenerationMode = "t2i" | "t2v" | "i2v";
 
 export type CreativityPreset = "faithful" | "balanced" | "imaginative";

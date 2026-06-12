@@ -59,6 +59,8 @@ smoke with Compose and is intentionally not part of the default PR/push CI path.
 Important backend contracts are already protected by focused tests:
 
 - health readiness and mock-provider readiness
+- ops metrics API for job state, outbox status, resumable polling, dispatch
+  settings, and recent failure summaries
 - state machine transitions and terminal behavior
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume
@@ -143,6 +145,8 @@ For Phase 2 local operations, observability lives in:
 - `ProcessJobResult`: claim/no-op reason, previous state, claimed state, and
   whether the handler executed
 - structured log fields emitted by dispatch and task claim boundaries
+- `OpsHealthResponse`: DB-backed job/outbox/polling/dispatch/failure summary
+  for deployment triage
 
 This keeps Postgres job state clean while still making dispatch failures and
 worker no-op decisions diagnosable.

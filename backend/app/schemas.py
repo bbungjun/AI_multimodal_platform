@@ -6,7 +6,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.models import (
+    Asset,
+    AssetKind,
+    GenerationMode,
+    Job,
+    JobState,
+    OutboxEventStatus,
+)
 from app.prompt_enhancement import (
     DEFAULT_CREATIVITY_PRESET,
     CreativityPreset,
@@ -52,6 +59,51 @@ class HealthResponse(BaseModel):
     service: str
     db: Literal["up", "down"]
     vertex: VertexReadinessResponse
+
+
+class OpsDispatchResponse(BaseModel):
+    mode: str
+    queue: str | None = None
+    task_acks_late: bool
+    task_reject_on_worker_lost: bool
+    worker_prefetch_multiplier: int
+
+
+class OpsJobsResponse(BaseModel):
+    total: int
+    active: int
+    blocked: int
+    resumable_polling: int
+    by_state: dict[JobState, int]
+
+
+class OpsOutboxResponse(BaseModel):
+    total: int
+    pending: int
+    published: int
+    failed: int
+    by_status: dict[OutboxEventStatus, int]
+
+
+class OpsRecentFailureResponse(BaseModel):
+    id: UUID
+    mode: GenerationMode
+    model: str
+    code: str | None = None
+    message: str | None = None
+    retryable: bool | None = None
+    dead_letter: bool
+    updated_at: datetime
+
+
+class OpsHealthResponse(BaseModel):
+    ok: bool
+    db: Literal["up", "down"]
+    service: str
+    dispatch: OpsDispatchResponse
+    jobs: OpsJobsResponse
+    outbox: OpsOutboxResponse
+    recent_failures: list[OpsRecentFailureResponse] = Field(default_factory=list)
 
 
 class T2IRequest(GenerationRequestBase):

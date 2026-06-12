@@ -93,6 +93,7 @@ implicitly through application settings.
 ```powershell
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/health"
 Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/health"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/ops/health"
 ```
 
 Expected provider status in mock mode:
@@ -104,6 +105,16 @@ Expected provider status in mock mode:
   "credentials": "not_required"
 }
 ```
+
+Expected ops status in mock mode:
+
+- `db: "up"`
+- `dispatch.mode: "celery"`
+- job counts grouped under `jobs.by_state`
+- outbox counts grouped under `outbox.by_status`
+- resumable Veo polling count under `jobs.resumable_polling`
+
+The frontend exposes the same operational summary at `/ops`.
 
 ## Smoke Flow
 

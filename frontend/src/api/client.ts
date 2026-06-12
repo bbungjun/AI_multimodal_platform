@@ -5,6 +5,7 @@ import type {
   GenerationListParams,
   GenerationResponse,
   HealthResponse,
+  OpsHealthResponse,
   PipelineCreateRequest,
   PipelineResponse,
   PromptEnhanceRequest,
@@ -24,6 +25,7 @@ export type {
   I2VRequest,
   JobResponse,
   JobState,
+  OpsHealthResponse,
   PipelineCreateRequest,
   PipelineResponse,
   PromptEnhanceRequest,
@@ -57,6 +59,10 @@ export class ApiError extends Error {
 
 export async function getHealth(): Promise<HealthResponse> {
   return apiRequest<HealthResponse>("/api/health");
+}
+
+export async function getOpsHealth(): Promise<OpsHealthResponse> {
+  return apiRequest<OpsHealthResponse>("/api/ops/health");
 }
 
 export async function createGeneration(

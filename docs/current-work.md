@@ -34,6 +34,9 @@ at the end of every meaningful work session.
 - Provider retry/backoff defaults: `PROVIDER_RETRY_MAX_ATTEMPTS=3`,
   `PROVIDER_RETRY_BASE_DELAY_SEC=1.0`, and
   `PROVIDER_RETRY_MAX_DELAY_SEC=20.0`.
+- Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
+  backed job counts, outbox counts, resumable polling count, dispatch settings,
+  and recent failed jobs.
 - Documentation loading policy: read this file first, then load only the
   directly relevant reference doc for the task. Historical phase plans and
   closeout files were removed to keep agent startup fast.
@@ -59,7 +62,7 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-06-11, the documentation was aligned with the current
+As of 2026-06-12, the documentation was aligned with the current
 Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 - Updated README architecture and mock-mode env example to include Redis,
@@ -92,6 +95,10 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Hardened I2V duplicate protection with source asset row locking, a Postgres
   partial unique index for active I2V jobs, and conflict mapping for commit-time
   uniqueness races.
+- Completed Phase 4E minimal worker/queue health metrics. The backend exposes
+  `/api/ops/health`, the frontend has an `/ops` route, and tests cover job
+  state counts, outbox status counts, resumable polling counts, dispatch
+  recovery settings, and recent failed job summaries.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
@@ -106,12 +113,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `CELERY_TASK_ACKS_LATE=true`, `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
   `CELERY_WORKER_PREFETCH_MULTIPLIER=1`; `setup_local.ps1` does not overwrite
   existing local `.env` files unless `-Force` is used.
-- Phase 4D follow-up: decide whether repair operations need an admin-only API
-  or whether the existing retry endpoint is enough for the portfolio demo.
-- Phase 4E recommendation: add minimal worker/queue health metrics for AWS
-  operations.
 - Phase 5 recommendation: create a concise AWS deployment runbook covering API,
-  worker, dispatcher, Postgres, Redis, asset storage, and secrets.
+  worker, dispatcher, Postgres, Redis, asset storage, secrets, and how to use
+  `/ops` after deployment.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -120,11 +124,11 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest Veo polling resume checks:
+Latest Ops metrics checks:
 
 ```powershell
 git diff --check
-cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_celery_app.py tests/test_celery_tasks.py tests/test_reenqueue_pending.py tests/test_compose_worker_service.py tests/test_job_handlers.py tests/test_job_runner.py -q
+cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_ops_metrics.py tests/test_ops_api.py tests/test_health.py tests/test_celery_app.py tests/test_reenqueue_pending.py -q
 cd frontend; npm run lint
 cd frontend; npm run build
 python scripts/verify_local.py

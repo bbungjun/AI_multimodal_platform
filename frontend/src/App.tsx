@@ -3,21 +3,24 @@ import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from "react-rou
 
 import { getHealth } from "./api/client";
 import { Badge, StatusDot } from "./components/ui";
-import { FilmIcon, HistoryIcon, PipelineIcon, SparkleIcon } from "./components/icons";
+import { CpuIcon, FilmIcon, HistoryIcon, PipelineIcon, SparkleIcon } from "./components/icons";
 import { GeneratePage } from "./pages/GeneratePage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { JobDetailPage } from "./pages/JobDetailPage";
+import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import "./index.css";
 
 const navItems = [
   { to: "/generate", label: "생성", icon: SparkleIcon },
   { to: "/history", label: "기록", icon: HistoryIcon },
+  { to: "/ops", label: "운영", icon: CpuIcon },
 ];
 
 const routeTitles = [
   { prefix: "/jobs/", title: "작업 상세", eyebrow: "작업공간 / 작업" },
   { prefix: "/pipelines/", title: "Pipeline", eyebrow: "작업공간 / Pipeline" },
+  { prefix: "/ops", title: "운영", eyebrow: "작업공간 / 운영" },
   { prefix: "/history", title: "기록", eyebrow: "작업공간 / 기록" },
   { prefix: "/generate", title: "생성", eyebrow: "작업공간 / 생성" },
 ];
@@ -29,6 +32,7 @@ export default function App() {
         <Route index element={<Navigate to="/generate" replace />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="history" element={<HistoryPage />} />
+        <Route path="ops" element={<OpsPage />} />
         <Route path="jobs/:jobId" element={<JobDetailPage />} />
         <Route path="pipelines/:pipelineId" element={<PipelinePage />} />
         <Route path="*" element={<Navigate to="/generate" replace />} />

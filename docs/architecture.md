@@ -34,6 +34,8 @@ directly and does not need provider credentials.
 - `app/worker.py`: legacy standalone polling worker bootstrap for manual fallback.
 - `app/services/jobs/*`: Celery task wrapper, outbox dispatcher, dispatch
   adapter, repair helper, handlers, and pipeline linking.
+- `app/services/ops/*`: DB-backed operational metrics for job state, outbox,
+  resumable polling, and recent failure visibility.
 - `app/services/vertex/*`: provider boundary for credentials, Imagen, Veo,
   retry/rate-limit helpers, storage, and public error mapping.
 - `app/services/llm/enhancer.py`: Gemini-backed prompt enhancement with a mock
@@ -43,7 +45,8 @@ directly and does not need provider credentials.
 
 - `frontend/src/api/*`: API client, DTO types, and compile-time contract checks.
 - `frontend/src/hooks/*`: query hooks for jobs, assets, and pipelines.
-- `frontend/src/pages/*`: generation, history, job detail, and pipeline views.
+- `frontend/src/pages/*`: generation, history, job detail, pipeline, and ops
+  views.
 - `frontend/src/components/*`: reusable UI and icon components.
 
 The next production pass should organize these pages into a clearer product
@@ -72,6 +75,11 @@ Failed-job retries are also modeled as jobs. `retry_of_job_id` links the new
 pending retry job to the failed source while keeping the original failure record
 immutable.
 
+The Ops view reads `/api/ops/health`, which derives operational status from
+Postgres rather than Celery result state. It reports job state counts, outbox
+status counts, resumable Veo polling jobs, worker dispatch settings, and recent
+failed job summaries for deployment triage.
+
 ## Storage Model
 
 Asset metadata lives in Postgres. Binary media is stored under `DATA_DIR` and
@@ -84,7 +92,6 @@ For a personal production app, the next architecture improvements are:
 
 - explicit local/mock/vertex environment profiles
 - real-provider cost guardrails
-- stronger job observability
-- graceful worker shutdown and polling resume visibility
-- first-class frontend Ops Console
+- AWS deployment runbook and environment profile
+- object storage choice for generated media
 - optional authentication for a private personal deployment
