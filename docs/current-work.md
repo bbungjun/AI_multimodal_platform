@@ -37,11 +37,12 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
-- AWS portfolio deployment: the mock-mode stack is deployed in Sydney,
-  `ap-southeast-2`, under AWS account `827913617635`. CloudFront serves the
-  frontend at `https://d3up7fakknt15b.cloudfront.net`, proxies `/api/*` and
-  `/files/*` to the ALB, and all three ECS services are enabled with desired
-  count `1`.
+- AWS portfolio deployment: the live stack is deployed in Sydney,
+  `ap-southeast-2`, under AWS account `827913617635`, and currently runs
+  `AI_PROVIDER=vertex` with GCP project `krafton-vertex-live-3108`. CloudFront
+  serves the frontend at `https://d3up7fakknt15b.cloudfront.net`, proxies
+  `/api/*` and `/files/*` to the ALB, and all three ECS services are enabled
+  with desired count `1`.
 - AWS Terraform: `infra/aws/` contains the Terraform baseline for the deployed
   portfolio stack. The committed defaults keep ECS desired counts at `0`; use
   local ignored tfvars when intentionally enabling the live services.
@@ -127,6 +128,14 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   permissions for ECS, ELBv2, EFS tagging, and ElastiCache. Added the inline
   IAM policy `CreativeOpsPortfolioDeployPolicy` to that user so Terraform can
   manage the deployed stack.
+- Switched the AWS ECS API, worker, and dispatcher services from
+  `AI_PROVIDER=mock` to `AI_PROVIDER=vertex`. The service-account JSON was
+  stored in AWS Secrets Manager as `GOOGLE_APPLICATION_CREDENTIALS_JSON`
+  without printing the secret value, and CloudFront `/api/health` now reports
+  `vertex.status=ready`.
+- Verified a live app-level Gemini prompt enhancement through CloudFront using
+  `gemini-2.5-flash`; the request succeeded with prompt enhancement id
+  `ac755727-42d0-465b-b560-f3a53984b911`.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
@@ -144,11 +153,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Monitor AWS cost while the portfolio stack is live. If the demo is not needed,
   scale ECS desired counts back to `0` or destroy the stack intentionally with
   Terraform.
-- Safe AWS Vertex credential injection is now implemented through
-  `GOOGLE_APPLICATION_CREDENTIALS_JSON` from Secrets Manager. Next, add the real
-  service-account JSON value to the existing AWS secret, apply with
-  `AI_PROVIDER=vertex`, and run the smallest Gemini smoke test before any
-  Imagen/Veo request.
+- AWS Vertex mode is live. Keep using the smallest Gemini smoke checks first,
+  and only test Imagen/Veo when quota and cost risk are acceptable.
 - Optional polish before showing the portfolio: custom domain plus ACM
   certificate, CloudFront HTTPS alias, and a small deployment script that
   repeats build, ECR push, S3 sync, invalidation, and service update.
@@ -170,26 +176,20 @@ Latest Vertex API smoke:
 # Result: HTTP 200 from generateContent
 ```
 
-Latest AWS deployment checks:
+Latest AWS Vertex deployment checks:
 
 ```powershell
-cd infra/aws; terraform init -reconfigure "-backend-config=backend.hcl"
-cd infra/aws; terraform fmt -recursive -check
-cd infra/aws; terraform validate
-$cfDomain = terraform output -raw cloudfront_domain_name
-$tfvars = Join-Path $env:TEMP "creativeops-all-services.tfvars.json"
-@{
-  container_image = "827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
-  api_desired_count = 1
-  worker_desired_count = 1
-  dispatcher_desired_count = 1
-  cors_origins = @("https://$cfDomain")
-} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $tfvars -Encoding ascii
-terraform plan -input=false "-var-file=$tfvars"
-aws ecr describe-images --repository-name creativeops-portfolio-backend --image-ids imageTag=portfolio --region ap-southeast-2
+# 2026-06-13, AWS account 827913617635, ap-southeast-2
+# Backend image: creativeops-portfolio-backend:portfolio
+# Digest: sha256:dfe98b5f780986f5756f921d55250e26a3269f450e03a8917c37ea4313c391e5
+# ECS task definitions: api/worker/dispatcher revision 3, desired 1/running 1
 Invoke-RestMethod -Uri "https://d3up7fakknt15b.cloudfront.net/api/health"
 Invoke-RestMethod -Uri "https://d3up7fakknt15b.cloudfront.net/api/ops/health"
 aws ecs describe-services --cluster creativeops-portfolio --services creativeops-portfolio-api creativeops-portfolio-worker creativeops-portfolio-dispatcher --region ap-southeast-2
+Invoke-RestMethod -Method Post `
+  -Uri "https://d3up7fakknt15b.cloudfront.net/api/prompts/enhance" `
+  -ContentType "application/json" `
+  -Body '{"prompt":"small blue cup on desk","target_mode":"t2i","target_model":"imagen-4.0-fast-generate-001","creativity_preset":"faithful"}'
 git diff --check
 python scripts/verify_local.py
 ```
@@ -197,9 +197,9 @@ python scripts/verify_local.py
 Expected:
 
 - no whitespace errors
-- Terraform configuration validates
-- Terraform can refresh/plan against the deployed stack
 - ECR has the `portfolio` image tag
 - CloudFront root and API health checks return success
+- CloudFront `/api/health` reports `vertex.status=ready`
+- Prompt enhancement returns a Gemini result through the deployed API
 - ECS API, worker, and dispatcher are all running
 - full local quality gate passes when local dependencies are available

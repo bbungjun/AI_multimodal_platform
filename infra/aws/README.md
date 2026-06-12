@@ -2,7 +2,8 @@
 
 이 디렉터리는 CreativeOps Studio의 AWS 포트폴리오 배포용 Terraform
 stack입니다. 2026-06-13 기준 Sydney `ap-southeast-2`에 첫 mock-mode
-배포가 완료되어 있습니다.
+배포를 완료했고, 현재 live stack은 `AI_PROVIDER=vertex`로 전환되어
+있습니다.
 
 ## 현재 구현 범위
 
@@ -71,7 +72,8 @@ dispatcher_desired_count = 1
 
 - `terraform apply`는 RDS, ElastiCache, EFS, ALB, CloudFront 등 비용이
   발생하는 리소스를 생성합니다.
-- 첫 배포는 `ai_provider = "mock"`으로 진행합니다.
+- 첫 배포는 `ai_provider = "mock"`으로 진행했고, 현재 live stack은
+  `ai_provider = "vertex"`입니다.
 - Vertex credential JSON은 Terraform 변수로 넣지 않습니다. Vertex 전환 시
   `gcp_credentials_json_secret_arn`에 값을 넣고, `ai_provider = "vertex"`로
   apply하면 ECS task가 `GOOGLE_APPLICATION_CREDENTIALS_JSON` secret을
