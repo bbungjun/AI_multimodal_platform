@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+import pytest
+
 from app.config import Settings
+from app.services.vertex.errors import VertexCredentialsInvalidError
 from app.services.vertex import client as vertex_client
 
 
@@ -149,3 +153,75 @@ def test_vertex_client_treats_cloud_sdk_adc_file_path_as_adc(
     assert default_calls == [{"scopes": [vertex_client.VERTEX_AUTH_SCOPE]}]
     assert client.kwargs["credentials"] is fake_credentials
     assert client.kwargs["project"] == "adc-project"
+
+
+def test_vertex_client_uses_credentials_json_when_configured(monkeypatch):
+    fake_credentials = type("FakeCredentials", (), {"project_id": "json-project"})()
+    from_info_calls: list[dict[str, object]] = []
+
+    def fail_default(*, scopes: list[str]) -> tuple[object, str]:
+        raise AssertionError("ADC should not be used with credentials JSON")
+
+    def fail_from_file(path: str, **kwargs: object) -> object:
+        raise AssertionError(f"credentials file should not be read: {path}")
+
+    def fake_from_info(info: dict[str, object], **kwargs: object) -> object:
+        from_info_calls.append({"info": info, **kwargs})
+        return fake_credentials
+
+    credentials_info = {
+        "type": "service_account",
+        "project_id": "json-project",
+        "client_email": "vertex@example.iam.gserviceaccount.com",
+        "private_key": "-----BEGIN PRIVATE KEY-----\\nfake\\n-----END PRIVATE KEY-----\\n",
+    }
+    settings = Settings(
+        google_application_credentials_json=json.dumps(credentials_info),
+        google_application_credentials=None,
+        gcp_project_id=None,
+        gcp_location="australia-southeast1",
+    )
+
+    vertex_client.get_vertex_client.cache_clear()
+    monkeypatch.setattr(vertex_client, "get_settings", lambda: settings)
+    monkeypatch.setattr(vertex_client.google_auth, "default", fail_default)
+    monkeypatch.setattr(
+        vertex_client.service_account.Credentials,
+        "from_service_account_file",
+        fail_from_file,
+    )
+    monkeypatch.setattr(
+        vertex_client.service_account.Credentials,
+        "from_service_account_info",
+        fake_from_info,
+    )
+    monkeypatch.setattr(vertex_client.genai, "Client", FakeGenaiClient)
+
+    try:
+        client = vertex_client.get_vertex_client()
+    finally:
+        vertex_client.get_vertex_client.cache_clear()
+
+    assert isinstance(client, FakeGenaiClient)
+    assert from_info_calls == [
+        {
+            "info": credentials_info,
+            "scopes": [vertex_client.VERTEX_AUTH_SCOPE],
+        }
+    ]
+    assert client.kwargs == {
+        "vertexai": True,
+        "credentials": fake_credentials,
+        "project": "json-project",
+        "location": "australia-southeast1",
+    }
+
+
+def test_credentials_json_must_be_valid_json():
+    settings = Settings(
+        google_application_credentials_json="{not-json",
+        google_application_credentials=None,
+    )
+
+    with pytest.raises(VertexCredentialsInvalidError):
+        vertex_client.load_vertex_credentials(settings)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -89,6 +90,10 @@ def get_vertex_readiness() -> VertexReadiness:
 def load_vertex_credentials(
     settings: Settings,
 ) -> tuple[object, str | None]:
+    if settings.google_application_credentials_json:
+        credentials = load_service_account_credentials_json(settings)
+        return credentials, getattr(credentials, "project_id", None)
+
     if settings.google_application_credentials is None or _is_cloud_sdk_adc_path(
         settings.google_application_credentials
     ):
@@ -116,6 +121,22 @@ def load_service_account_credentials(
             scopes=[VERTEX_AUTH_SCOPE],
         )
     except (GoogleAuthError, OSError, ValueError) as exc:
+        raise VertexCredentialsInvalidError() from exc
+
+
+def load_service_account_credentials_json(
+    settings: Settings,
+) -> VertexCredentials:
+    if settings.google_application_credentials_json is None:
+        raise VertexCredentialsMissingError()
+
+    try:
+        credentials_info = json.loads(settings.google_application_credentials_json)
+        return service_account.Credentials.from_service_account_info(
+            credentials_info,
+            scopes=[VERTEX_AUTH_SCOPE],
+        )
+    except (GoogleAuthError, TypeError, ValueError) as exc:
         raise VertexCredentialsInvalidError() from exc
 
 

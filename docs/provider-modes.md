@@ -33,7 +33,8 @@ Vertex mode:
 
 - uses the `google-genai` SDK only
 - constructs a shared `genai.Client(vertexai=True, ...)`
-- supports ADC or an explicitly mounted credential file
+- supports ADC, an explicitly mounted credential file, or
+  `GOOGLE_APPLICATION_CREDENTIALS_JSON` injected by a secret manager
 - requires `GCP_PROJECT_ID` and `GCP_LOCATION`
 - may create billable Gemini, Imagen, or Veo requests
 
@@ -48,6 +49,9 @@ Do not commit credentials, `.env`, API keys, or service-account JSON files.
 For local host execution, ADC can be created with Google Cloud tooling and used
 by `google-auth`. For Docker execution, mount the host credential file into a
 container path and set `GOOGLE_APPLICATION_CREDENTIALS` to that container path.
+For AWS ECS execution, store the service-account JSON in Secrets Manager and
+inject it as `GOOGLE_APPLICATION_CREDENTIALS_JSON`; do not put the JSON into
+Terraform variables or committed `.env` files.
 
 The app should treat credential contents as opaque. It only needs the runtime
 credential object, project id, and location.

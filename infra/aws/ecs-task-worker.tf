@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "worker" {
           { name = "CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC", value = "5" }
         ]
       )
-      secrets = local.database_url_secret
+      secrets = local.backend_common_secrets
 
       mountPoints = [
         {

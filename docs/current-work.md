@@ -144,9 +144,11 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 - Monitor AWS cost while the portfolio stack is live. If the demo is not needed,
   scale ECS desired counts back to `0` or destroy the stack intentionally with
   Terraform.
-- Next AWS hardening: add a safe Vertex credential strategy that does not put
-  service-account JSON into Terraform state, then switch from `AI_PROVIDER=mock`
-  to Vertex only when quota/cost controls are ready.
+- Safe AWS Vertex credential injection is now implemented through
+  `GOOGLE_APPLICATION_CREDENTIALS_JSON` from Secrets Manager. Next, add the real
+  service-account JSON value to the existing AWS secret, apply with
+  `AI_PROVIDER=vertex`, and run the smallest Gemini smoke test before any
+  Imagen/Veo request.
 - Optional polish before showing the portfolio: custom domain plus ACM
   certificate, CloudFront HTTPS alias, and a small deployment script that
   repeats build, ECR push, S3 sync, invalidation, and service update.
@@ -157,6 +159,16 @@ python scripts/verify_local.py
 ```
 
 ## Verification Log
+
+Latest Vertex API smoke:
+
+```powershell
+# 2026-06-13, local gcloud token only; no credential value was printed.
+# Project: krafton-vertex-live-3108
+# Location: us-central1
+# Model: gemini-2.5-flash
+# Result: HTTP 200 from generateContent
+```
 
 Latest AWS deployment checks:
 

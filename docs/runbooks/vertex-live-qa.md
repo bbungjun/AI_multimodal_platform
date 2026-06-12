@@ -49,6 +49,27 @@ Expected provider readiness:
 
 If readiness is false, stop here and fix configuration before generation.
 
+## AWS ECS Vertex Mode
+
+The AWS deployment reads service-account JSON from Secrets Manager as
+`GOOGLE_APPLICATION_CREDENTIALS_JSON`. Never put this JSON into Terraform
+variables, command output, logs, or committed files.
+
+From `infra/aws`, fetch the existing secret ARN and write the local credential
+file directly to Secrets Manager without printing it:
+
+```powershell
+$gcpSecretArn = terraform output -raw gcp_credentials_json_secret_arn
+$credentialPath = $env:GOOGLE_APPLICATION_CREDENTIALS_HOST
+aws secretsmanager put-secret-value `
+  --region ap-southeast-2 `
+  --secret-id $gcpSecretArn `
+  --secret-string (Get-Content -LiteralPath $credentialPath -Raw)
+```
+
+Then apply the stack with `ai_provider = "vertex"`, a valid `gcp_project_id`,
+and the selected `gcp_location`. Keep desired counts at `1` only while testing.
+
 ## Manual QA Order
 
 Run the smallest useful live checks first:

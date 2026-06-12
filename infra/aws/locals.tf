@@ -46,4 +46,16 @@ locals {
       valueFrom = aws_secretsmanager_secret.database_url.arn
     }
   ]
+
+  vertex_credentials_secret = [
+    {
+      name      = "GOOGLE_APPLICATION_CREDENTIALS_JSON"
+      valueFrom = aws_secretsmanager_secret.gcp_credentials_json.arn
+    }
+  ]
+
+  backend_common_secrets = concat(
+    local.database_url_secret,
+    var.ai_provider == "vertex" ? local.vertex_credentials_secret : []
+  )
 }

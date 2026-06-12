@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     provider_retry_max_delay_sec: float = 20.0
     ai_provider: str = "vertex"
     google_application_credentials: Path | None = None
+    google_application_credentials_json: str | None = None
     gcp_project_id: str | None = None
     gcp_location: str = "us-central1"
     cors_origins: list[str] = [

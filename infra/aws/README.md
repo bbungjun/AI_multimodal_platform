@@ -72,7 +72,10 @@ dispatcher_desired_count = 1
 - `terraform apply`는 RDS, ElastiCache, EFS, ALB, CloudFront 등 비용이
   발생하는 리소스를 생성합니다.
 - 첫 배포는 `ai_provider = "mock"`으로 진행합니다.
-- Vertex credential JSON은 Terraform 변수로 넣지 않습니다.
+- Vertex credential JSON은 Terraform 변수로 넣지 않습니다. Vertex 전환 시
+  `gcp_credentials_json_secret_arn`에 값을 넣고, `ai_provider = "vertex"`로
+  apply하면 ECS task가 `GOOGLE_APPLICATION_CREDENTIALS_JSON` secret을
+  주입받습니다.
 - 현재 live endpoint는 `https://d3up7fakknt15b.cloudfront.net`입니다.
 - live service를 계속 켜둘 때는 ECS API/worker/dispatcher desired count가
   각각 `1`이므로 비용을 확인하세요. 데모가 필요 없으면 local tfvars로

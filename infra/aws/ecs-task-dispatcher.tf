@@ -27,7 +27,7 @@ resource "aws_ecs_task_definition" "dispatcher" {
           { name = "OUTBOX_DISPATCHER_MAX_ATTEMPTS", value = "10" }
         ]
       )
-      secrets = local.database_url_secret
+      secrets = local.backend_common_secrets
 
       logConfiguration = {
         logDriver = "awslogs"

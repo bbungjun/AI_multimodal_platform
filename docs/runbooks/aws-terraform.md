@@ -305,11 +305,13 @@ Vertex 실사용을 켜려면 service-account JSON을 안전하게 다루는 전
 필요합니다. Terraform variable에 JSON을 넣으면 state에 남을 수 있으므로
 금지합니다.
 
-권장 다음 작업:
+구현된 AWS 전략:
 
 - `GOOGLE_APPLICATION_CREDENTIALS_JSON`을 Secrets Manager에서 주입
-- 컨테이너 entrypoint가 런타임에 임시 파일로 기록
-- `GOOGLE_APPLICATION_CREDENTIALS`를 그 파일 경로로 설정
+- backend가 런타임에 해당 JSON 문자열을 직접 읽어 service-account
+  credential 객체를 생성
+- `ai_provider = "vertex"`일 때만 ECS task definition에 GCP credential
+  secret을 연결
 
 더 좋은 장기 방향은 AWS와 GCP 간 Workload Identity Federation입니다.
 

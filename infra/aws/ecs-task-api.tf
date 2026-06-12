@@ -42,7 +42,7 @@ resource "aws_ecs_task_definition" "api" {
       ]
 
       environment = local.backend_common_environment
-      secrets     = local.database_url_secret
+      secrets     = local.backend_common_secrets
 
       mountPoints = [
         {

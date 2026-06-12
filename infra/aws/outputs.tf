@@ -30,6 +30,10 @@ output "database_url_secret_arn" {
   value = aws_secretsmanager_secret.database_url.arn
 }
 
+output "gcp_credentials_json_secret_arn" {
+  value = aws_secretsmanager_secret.gcp_credentials_json.arn
+}
+
 output "rds_endpoint" {
   value = aws_db_instance.main.address
 }
