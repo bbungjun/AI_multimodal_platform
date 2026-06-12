@@ -24,24 +24,29 @@ resource "aws_cloudfront_distribution" "app" {
   price_class         = var.frontend_price_class
 
   origin {
-    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id                = "frontend-s3"
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+    domain_name                 = aws_s3_bucket.frontend.bucket_regional_domain_name
+    origin_id                   = "frontend-s3"
+    origin_access_control_id    = aws_cloudfront_origin_access_control.frontend.id
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 0
 
-    s3_origin_config {
-      origin_access_identity = ""
-    }
   }
 
   origin {
-    domain_name = aws_lb.app.dns_name
-    origin_id   = "api-alb"
+    domain_name                 = aws_lb.app.dns_name
+    origin_id                   = "api-alb"
+    connection_attempts         = 3
+    connection_timeout          = 10
+    response_completion_timeout = 0
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      http_port                = 80
+      https_port               = 443
+      origin_keepalive_timeout = 5
+      origin_protocol_policy   = "http-only"
+      origin_read_timeout      = 30
+      origin_ssl_protocols     = ["TLSv1.2"]
     }
   }
 

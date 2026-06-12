@@ -1,13 +1,15 @@
 # AWS Terraform 배포 계획
 
-> 상태: 계획 문서입니다. 아래의 사전 작업을 처리하기 전에는 실제
-> `terraform apply`를 실행하지 않습니다.
+> 상태: 2026-06-13 기준 첫 mock-mode AWS 배포를 완료했습니다.
+> 활성 리전은 Sydney `ap-southeast-2`이고, CloudFront 배포 주소는
+> `https://d3up7fakknt15b.cloudfront.net`입니다.
 
 > 구현 상태: `infra/aws/` Terraform skeleton이 추가되었고
 > `terraform init -backend=false`, `terraform fmt -recursive`,
 > `terraform validate`, no-apply `terraform plan -refresh=false`까지
-> 통과했습니다. 현재 plan은 53개 리소스 생성을 제안합니다. 실제 AWS
-> 리소스 생성은 아직 하지 않았습니다.
+> 통과했습니다. 이후 S3 remote backend로 전환했고, RDS/ElastiCache/EFS,
+> ALB, ECS API/worker/dispatcher, S3/CloudFront frontend, ECR, CloudWatch
+> Logs, Secrets Manager 기반 배포를 실제 생성했습니다.
 
 ## 목표
 
@@ -641,11 +643,16 @@ python scripts/verify_local.py
 
 ## 다음 작업
 
-1. `infra/aws/` Terraform skeleton 생성
-2. `AI_PROVIDER=mock` 기준으로 `terraform validate` 통과
-3. ECR push 및 ECS mock 배포 smoke test
-4. `/api/health`, `/api/ops/health`, `/ops` 확인
-5. Vertex credential 전략 구현 후 `AI_PROVIDER=vertex` 전환
+1. AWS 비용을 모니터링합니다. 데모가 필요 없을 때는 ECS desired count를
+   `0`으로 내리거나 Terraform으로 stack을 의도적으로 제거합니다.
+2. Vertex credential 전략을 구현합니다. 서비스 계정 JSON을 Terraform
+   state에 넣지 않는 방식이 필요합니다.
+3. quota/cost control을 확인한 뒤 `AI_PROVIDER=vertex` 전환을 별도 단계로
+   진행합니다.
+4. 포트폴리오 공개 전에 custom domain, ACM certificate, CloudFront alias를
+   추가할지 결정합니다.
+5. 반복 배포용 스크립트로 backend build/ECR push, frontend S3 sync,
+   CloudFront invalidation, ECS service update를 자동화합니다.
 
 ## 참고 문서
 

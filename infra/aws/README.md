@@ -1,7 +1,8 @@
 # AWS Terraform 구현 메모
 
 이 디렉터리는 CreativeOps Studio의 AWS 포트폴리오 배포용 Terraform
-skeleton입니다.
+stack입니다. 2026-06-13 기준 Sydney `ap-southeast-2`에 첫 mock-mode
+배포가 완료되어 있습니다.
 
 ## 현재 구현 범위
 
@@ -72,3 +73,7 @@ dispatcher_desired_count = 1
   발생하는 리소스를 생성합니다.
 - 첫 배포는 `ai_provider = "mock"`으로 진행합니다.
 - Vertex credential JSON은 Terraform 변수로 넣지 않습니다.
+- 현재 live endpoint는 `https://d3up7fakknt15b.cloudfront.net`입니다.
+- live service를 계속 켜둘 때는 ECS API/worker/dispatcher desired count가
+  각각 `1`이므로 비용을 확인하세요. 데모가 필요 없으면 local tfvars로
+  desired count를 `0`으로 낮춘 뒤 apply합니다.

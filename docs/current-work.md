@@ -37,14 +37,14 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
-- AWS deployment direction: `docs/runbooks/aws-terraform.md` defines the first
-  portfolio deployment target as CloudFront/S3 frontend, ALB plus ECS Fargate
-  API/worker/dispatcher, RDS Postgres, ElastiCache Redis, EFS asset storage,
-  Secrets Manager, CloudWatch Logs, and ECR.
-- AWS Terraform skeleton: `infra/aws/` contains a validated Terraform baseline
-  for the mock-mode portfolio stack. It defaults ECS desired counts to `0` so
-  the database URL secret can be populated after RDS creates its managed
-  password. The active AWS target region is Sydney, `ap-southeast-2`.
+- AWS portfolio deployment: the mock-mode stack is deployed in Sydney,
+  `ap-southeast-2`, under AWS account `827913617635`. CloudFront serves the
+  frontend at `https://d3up7fakknt15b.cloudfront.net`, proxies `/api/*` and
+  `/files/*` to the ALB, and all three ECS services are enabled with desired
+  count `1`.
+- AWS Terraform: `infra/aws/` contains the Terraform baseline for the deployed
+  portfolio stack. The committed defaults keep ECS desired counts at `0`; use
+  local ignored tfvars when intentionally enabling the live services.
 - Documentation loading policy: read this file first, then load only the
   directly relevant reference doc for the task. Historical phase plans and
   closeout files were removed to keep agent startup fast.
@@ -114,6 +114,19 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   verified it with `terraform init -backend=false`, `terraform fmt -recursive`,
   `terraform validate`, and a no-apply `terraform plan -refresh=false` using
   AWS account `827913617635`. The plan currently proposes 53 resources.
+- Completed the first AWS mock deployment in Sydney (`ap-southeast-2`). The run
+  created the Terraform S3 backend bucket, initialized remote state, applied the
+  infrastructure, populated the `DATABASE_URL` secret from the RDS managed
+  secret, built and pushed the backend image to ECR, uploaded the Vite frontend
+  to S3, and invalidated CloudFront.
+- Enabled the ECS API, worker, and dispatcher services at desired count `1`.
+  Verified CloudFront root `200`, `/api/health` with `ok: true` and DB `up`,
+  `/api/ops/health` with job/outbox counts, CloudFront status `Deployed`, and
+  ECS services `Desired 1 / Running 1 / Pending 0`.
+- During the first AWS apply, the IAM user `de-ai-21` was missing deployment
+  permissions for ECS, ELBv2, EFS tagging, and ElastiCache. Added the inline
+  IAM policy `CreativeOpsPortfolioDeployPolicy` to that user so Terraform can
+  manage the deployed stack.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
@@ -128,14 +141,15 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `CELERY_TASK_ACKS_LATE=true`, `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
   `CELERY_WORKER_PREFETCH_MULTIPLIER=1`; `setup_local.ps1` does not overwrite
   existing local `.env` files unless `-Force` is used.
-- Phase 5C recommendation: decide whether to run the first AWS apply. This will
-  create billable resources including RDS, ElastiCache, EFS, ALB, CloudFront,
-  and ECS support resources.
-- If applying, first create the S3 Terraform state bucket, initialize with
-  `infra/aws/backend.hcl`, push the backend image to ECR, then apply with ECS
-  desired counts still at `0`.
-- Before real Vertex mode on AWS, add a safe provider credential strategy that
-  does not put service-account JSON into Terraform state.
+- Monitor AWS cost while the portfolio stack is live. If the demo is not needed,
+  scale ECS desired counts back to `0` or destroy the stack intentionally with
+  Terraform.
+- Next AWS hardening: add a safe Vertex credential strategy that does not put
+  service-account JSON into Terraform state, then switch from `AI_PROVIDER=mock`
+  to Vertex only when quota/cost controls are ready.
+- Optional polish before showing the portfolio: custom domain plus ACM
+  certificate, CloudFront HTTPS alias, and a small deployment script that
+  repeats build, ECR push, S3 sync, invalidation, and service update.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -144,13 +158,26 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest AWS Terraform planning checks:
+Latest AWS deployment checks:
 
 ```powershell
-cd infra/aws; terraform init -backend=false
-cd infra/aws; terraform fmt -recursive
+cd infra/aws; terraform init -reconfigure "-backend-config=backend.hcl"
+cd infra/aws; terraform fmt -recursive -check
 cd infra/aws; terraform validate
-cd infra/aws; terraform plan -refresh=false -input=false -var "container_image=827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
+$cfDomain = terraform output -raw cloudfront_domain_name
+$tfvars = Join-Path $env:TEMP "creativeops-all-services.tfvars.json"
+@{
+  container_image = "827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
+  api_desired_count = 1
+  worker_desired_count = 1
+  dispatcher_desired_count = 1
+  cors_origins = @("https://$cfDomain")
+} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $tfvars -Encoding ascii
+terraform plan -input=false "-var-file=$tfvars"
+aws ecr describe-images --repository-name creativeops-portfolio-backend --image-ids imageTag=portfolio --region ap-southeast-2
+Invoke-RestMethod -Uri "https://d3up7fakknt15b.cloudfront.net/api/health"
+Invoke-RestMethod -Uri "https://d3up7fakknt15b.cloudfront.net/api/ops/health"
+aws ecs describe-services --cluster creativeops-portfolio --services creativeops-portfolio-api creativeops-portfolio-worker creativeops-portfolio-dispatcher --region ap-southeast-2
 git diff --check
 python scripts/verify_local.py
 ```
@@ -159,5 +186,8 @@ Expected:
 
 - no whitespace errors
 - Terraform configuration validates
-- no-apply Terraform plan completes
-- full local quality gate passes
+- Terraform can refresh/plan against the deployed stack
+- ECR has the `portfolio` image tag
+- CloudFront root and API health checks return success
+- ECS API, worker, and dispatcher are all running
+- full local quality gate passes when local dependencies are available
