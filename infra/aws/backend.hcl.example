@@ -1,0 +1,5 @@
+bucket       = "creativeops-terraform-state-ACCOUNT_ID"
+key          = "creativeops/portfolio/terraform.tfstate"
+region       = "ap-northeast-2"
+encrypt      = true
+use_lockfile = true

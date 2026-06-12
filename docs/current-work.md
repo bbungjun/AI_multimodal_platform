@@ -37,6 +37,14 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
+- AWS deployment direction: `docs/runbooks/aws-terraform.md` defines the first
+  portfolio deployment target as CloudFront/S3 frontend, ALB plus ECS Fargate
+  API/worker/dispatcher, RDS Postgres, ElastiCache Redis, EFS asset storage,
+  Secrets Manager, CloudWatch Logs, and ECR.
+- AWS Terraform skeleton: `infra/aws/` contains a validated Terraform baseline
+  for the mock-mode portfolio stack. It defaults ECS desired counts to `0` so
+  the database URL secret can be populated after RDS creates its managed
+  password.
 - Documentation loading policy: read this file first, then load only the
   directly relevant reference doc for the task. Historical phase plans and
   closeout files were removed to keep agent startup fast.
@@ -99,6 +107,13 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `/api/ops/health`, the frontend has an `/ops` route, and tests cover job
   state counts, outbox status counts, resumable polling counts, dispatch
   recovery settings, and recent failed job summaries.
+- Drafted the Phase 5A AWS Terraform deployment runbook. It captures the target
+  AWS architecture, Terraform file layout, ECS environment contract, preflight
+  blockers, deployment commands, and smoke checks.
+- Implemented the Phase 5B AWS Terraform skeleton under `infra/aws/` and
+  verified it with `terraform init -backend=false`, `terraform fmt -recursive`,
+  `terraform validate`, and a no-apply `terraform plan -refresh=false` using
+  AWS account `827913617635`. The plan currently proposes 53 resources.
 - Pruned completed Phase 1-3 implementation plans and closeout documents so
   agents no longer spend time reading stale migration history.
 
@@ -113,9 +128,14 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `CELERY_TASK_ACKS_LATE=true`, `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
   `CELERY_WORKER_PREFETCH_MULTIPLIER=1`; `setup_local.ps1` does not overwrite
   existing local `.env` files unless `-Force` is used.
-- Phase 5 recommendation: create a concise AWS deployment runbook covering API,
-  worker, dispatcher, Postgres, Redis, asset storage, secrets, and how to use
-  `/ops` after deployment.
+- Phase 5C recommendation: decide whether to run the first AWS apply. This will
+  create billable resources including RDS, ElastiCache, EFS, ALB, CloudFront,
+  and ECS support resources.
+- If applying, first create the S3 Terraform state bucket, initialize with
+  `infra/aws/backend.hcl`, push the backend image to ECR, then apply with ECS
+  desired counts still at `0`.
+- Before real Vertex mode on AWS, add a safe provider credential strategy that
+  does not put service-account JSON into Terraform state.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -124,20 +144,20 @@ python scripts/verify_local.py
 
 ## Verification Log
 
-Latest Ops metrics checks:
+Latest AWS Terraform planning checks:
 
 ```powershell
+cd infra/aws; terraform init -backend=false
+cd infra/aws; terraform fmt -recursive
+cd infra/aws; terraform validate
+cd infra/aws; terraform plan -refresh=false -input=false -var "container_image=827913617635.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
 git diff --check
-cd backend; $env:AI_PROVIDER='mock'; python -m pytest tests/test_ops_metrics.py tests/test_ops_api.py tests/test_health.py tests/test_celery_app.py tests/test_reenqueue_pending.py -q
-cd frontend; npm run lint
-cd frontend; npm run build
 python scripts/verify_local.py
 ```
 
 Expected:
 
 - no whitespace errors
-- related backend regression tests pass
-- frontend typecheck and production build pass
+- Terraform configuration validates
+- no-apply Terraform plan completes
 - full local quality gate passes
-- only intentional working-tree changes are present
