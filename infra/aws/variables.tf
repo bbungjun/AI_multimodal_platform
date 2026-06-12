@@ -10,7 +10,7 @@ variable "environment" {
 
 variable "aws_region" {
   type    = string
-  default = "ap-northeast-2"
+  default = "ap-southeast-2"
 }
 
 variable "container_image" {

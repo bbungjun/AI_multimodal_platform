@@ -44,7 +44,7 @@ at the end of every meaningful work session.
 - AWS Terraform skeleton: `infra/aws/` contains a validated Terraform baseline
   for the mock-mode portfolio stack. It defaults ECS desired counts to `0` so
   the database URL secret can be populated after RDS creates its managed
-  password.
+  password. The active AWS target region is Sydney, `ap-southeast-2`.
 - Documentation loading policy: read this file first, then load only the
   directly relevant reference doc for the task. Historical phase plans and
   closeout files were removed to keep agent startup fast.
@@ -150,7 +150,7 @@ Latest AWS Terraform planning checks:
 cd infra/aws; terraform init -backend=false
 cd infra/aws; terraform fmt -recursive
 cd infra/aws; terraform validate
-cd infra/aws; terraform plan -refresh=false -input=false -var "container_image=827913617635.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
+cd infra/aws; terraform plan -refresh=false -input=false -var "container_image=827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio"
 git diff --check
 python scripts/verify_local.py
 ```

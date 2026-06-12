@@ -171,7 +171,7 @@ ECS가 backend 컨테이너 이미지를 pull하려면 AWS 안에 이미지 저�
 
 포트폴리오용 첫 배포는 다음 기준으로 갑니다.
 
-- Region: `ap-northeast-2`
+- Region: `ap-southeast-2` 시드니
 - Provider mode: `AI_PROVIDER=mock`
 - ECS API desired count: `1`
 - ECS worker desired count: `1`
@@ -378,7 +378,7 @@ terraform {
   backend "s3" {
     bucket       = "creativeops-terraform-state-ACCOUNT_ID"
     key          = "creativeops/portfolio/terraform.tfstate"
-    region       = "ap-northeast-2"
+    region       = "ap-southeast-2"
     encrypt      = true
     use_lockfile = true
   }
@@ -411,7 +411,7 @@ variable "environment" {
 
 variable "aws_region" {
   type    = string
-  default = "ap-northeast-2"
+  default = "ap-southeast-2"
 }
 
 variable "container_image" {
@@ -575,7 +575,7 @@ python -m app.services.jobs.outbox_dispatcher
 ### 1. Terraform state bucket 생성
 
 ```powershell
-aws s3 mb s3://creativeops-terraform-state-ACCOUNT_ID --region ap-northeast-2
+aws s3 mb s3://creativeops-terraform-state-ACCOUNT_ID --region ap-southeast-2
 aws s3api put-bucket-versioning --bucket creativeops-terraform-state-ACCOUNT_ID --versioning-configuration Status=Enabled
 ```
 
@@ -586,10 +586,10 @@ aws s3api put-bucket-versioning --bucket creativeops-terraform-state-ACCOUNT_ID 
 ### 3. backend image build/push
 
 ```powershell
-aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com
+aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com
 docker build -t creativeops-backend:portfolio ./backend
-docker tag creativeops-backend:portfolio ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-backend:portfolio
-docker push ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-backend:portfolio
+docker tag creativeops-backend:portfolio ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-backend:portfolio
+docker push ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-backend:portfolio
 ```
 
 ### 4. Terraform plan/apply
@@ -599,8 +599,8 @@ cd infra/aws
 terraform init
 terraform fmt -check
 terraform validate
-terraform plan -var "container_image=ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-backend:portfolio"
-terraform apply -var "container_image=ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/creativeops-backend:portfolio"
+terraform plan -var "container_image=ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-backend:portfolio"
+terraform apply -var "container_image=ACCOUNT_ID.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-backend:portfolio"
 ```
 
 ### 5. frontend build/upload
