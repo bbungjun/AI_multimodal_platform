@@ -82,6 +82,23 @@ async def test_mock_prompt_enhancement_returns_draft_without_vertex_client(monke
     assert result.target_model == "imagen-4.0-fast-generate-001"
 
 
+async def test_mock_prompt_enhancement_preserves_korean_language(monkeypatch):
+    monkeypatch.setattr(enhancer, "get_settings", _mock_settings, raising=False)
+    monkeypatch.setattr(enhancer, "get_vertex_client", _fail_vertex_client)
+
+    result = await enhancer.enhance_prompt(
+        "비 내리는 서울 골목",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        creativity_preset="faithful",
+    )
+
+    assert result.original == "비 내리는 서울 골목"
+    assert "비 내리는 서울 골목" in result.enhanced
+    assert "로컬 mock 향상" in result.enhanced
+    assert "Local mock enhancement" not in result.enhanced
+
+
 async def test_mock_video_provider_returns_mp4_without_vertex_client(monkeypatch):
     monkeypatch.setattr(veo, "get_settings", _mock_settings, raising=False)
     monkeypatch.setattr(veo, "get_vertex_client", _fail_vertex_client)

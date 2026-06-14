@@ -71,6 +71,29 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-06-14, the local frontend UI was aligned with the CreativeOps
+Studio direction while keeping backend/API contracts unchanged:
+
+- Switched the local Docker runtime back from Vertex live QA to the default
+  mock provider. Local `.env` has `AI_PROVIDER=mock` and empty Google
+  credential mount variables. `docker compose up -d --force-recreate backend
+  worker dispatcher` was run without `docker-compose.vertex.yml`.
+- Verified local `/api/health` through the Vite proxy reports
+  `vertex.status=mock_provider`, and backend no longer has the `/secrets/sa.json`
+  mount.
+- Added AGENTS guidance clarifying that mock and Vertex modes use the same
+  backend/worker image; Vertex live QA requires the
+  `docker-compose.vertex.yml` override for credential mounting.
+- Updated `/generate` to the CreativeOps screenshot-style workspace with
+  sidebar/topbar, mode tabs, cinema stage, and bottom composer.
+- Updated `/history`, `/ops`, `/jobs/:jobId`, and `/pipelines/:pipelineId`
+  with CreativeOps-style hero/status surfaces and darker production dashboard
+  panels while preserving existing React Query hooks and API payloads.
+- Fresh verification passed: `npm run lint`, `npm run build`, protected
+  backend/API diff guard, `/api/health`, `/api/ops/health`, and browser checks
+  for `/history`, `/ops`, and a real `/jobs/:jobId` route. Browser console only
+  showed React Router future warnings during the clean route check.
+
 As of 2026-06-12, the documentation was aligned with the current
 Redis/Celery/outbox runtime and the shared multi-machine workflow:
 

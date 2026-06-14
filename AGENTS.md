@@ -70,6 +70,34 @@ git diff --cached --name-only
 Provider 선택은 좁은 service boundary 안에서 처리합니다. API, DB model, job services,
 state machine, storage helper, frontend는 가능한 한 provider 종류를 몰라야 합니다.
 
+## Docker Compose 실행 모드
+
+mock용 이미지와 Vertex용 이미지를 따로 빌드하지 않습니다. 같은 backend/worker 이미지를
+사용하고, 실행 시점의 env와 compose override로 provider를 선택합니다.
+
+Mock 로컬 개발/기본 검증:
+
+```powershell
+# .env 기준 AI_PROVIDER=mock이어야 합니다.
+docker compose up -d --build
+```
+
+Vertex 실제 API QA:
+
+```powershell
+# .env 기준 AI_PROVIDER=vertex, GOOGLE_APPLICATION_CREDENTIALS,
+# GOOGLE_APPLICATION_CREDENTIALS_HOST가 설정되어 있어야 합니다.
+docker compose -f docker-compose.yml -f docker-compose.vertex.yml up -d --build
+```
+
+주의:
+
+- `.env`가 `AI_PROVIDER=vertex`인데 `docker-compose.vertex.yml` 없이 실행하면
+  credential mount가 빠져 Vertex readiness가 실패할 수 있습니다.
+- `.env`가 `AI_PROVIDER=mock`이면 `docker-compose.vertex.yml`을 붙이지 않습니다.
+- 실제 Vertex 모드는 Imagen/Veo/Gemini 호출 비용이 발생할 수 있으므로 QA 목적이
+  분명할 때만 사용합니다.
+
 ## 아키텍처 규칙
 
 - Backend는 FastAPI, SQLAlchemy, Postgres를 기준으로 둡니다.

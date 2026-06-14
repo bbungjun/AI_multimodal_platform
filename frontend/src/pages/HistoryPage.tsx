@@ -15,6 +15,15 @@ import {
 } from "../api/client";
 import { Badge, Button, Panel, StatusDot } from "../components/ui";
 import { FilmIcon, HistoryIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
+import { MODE_COPY } from "../ui/copy";
+import {
+  formatAssetKind,
+  formatDateTime,
+  formatGenerationMode,
+  formatJobState,
+  shortId,
+  toJobSummaryViewModel,
+} from "../ui/viewModels";
 import { hasRepairSignal } from "../utils/repair";
 
 const modeOptions: Array<GenerationMode | "all"> = ["all", "t2i", "t2v", "i2v"];
@@ -90,7 +99,7 @@ export function HistoryPage() {
       navigate(`/jobs/${newJob.id}`);
     },
     onError: (error) => {
-      setRetryError(error instanceof Error ? error.message : "Retry failed.");
+      setRetryError(error instanceof Error ? error.message : "재시도에 실패했습니다.");
     },
     onSettled: () => {
       setRetryingJobId(null);
@@ -125,7 +134,7 @@ export function HistoryPage() {
 
   function requestDelete(job: GenerationResponse) {
     const confirmed = window.confirm(
-      `작업 ${shortJobId(job.id)}와 저장된 asset 파일만 삭제할까요? 연결된 parent/child 작업은 기록에 남습니다. 이 작업은 되돌릴 수 없습니다.`,
+      `작업 ${shortId(job.id)}와 저장된 결과 파일만 삭제할까요? 연결된 상위/하위 작업은 기록에 남습니다. 이 작업은 되돌릴 수 없습니다.`,
     );
     if (!confirmed) {
       return;
@@ -134,8 +143,36 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="page-stack">
-      <Panel title="기록 필터" eyebrow="저장된 생성">
+    <div className="creative-page creative-page--history">
+      <section className="creative-page-hero">
+        <div className="creative-page-hero__copy">
+          <Badge tone="info">
+            <HistoryIcon size={12} />
+            Library
+          </Badge>
+          <h1>생성 기록</h1>
+          <p>
+            완료, 실패, 진행 중인 작업을 빠르게 스캔하고 결과 미리보기에서 상세 화면으로
+            이어집니다.
+          </p>
+        </div>
+        <div className="creative-page-hero__metrics" aria-label="기록 요약">
+          <div className="creative-metric">
+            <span>현재 보기</span>
+            <strong>{jobs.length}</strong>
+          </div>
+          <div className="creative-metric">
+            <span>필터</span>
+            <strong>{activeFilterCount}</strong>
+          </div>
+          <div className="creative-metric">
+            <span>페이지</span>
+            <strong>{currentPage}</strong>
+          </div>
+        </div>
+      </section>
+
+      <Panel className="creative-panel history-filter-panel" title="기록 필터" eyebrow="저장된 생성">
         <p className="panel-copy">
           제출한 생성 작업을 모드, 상태, 모델, 페이지 크기로 살펴봅니다.
           행을 선택하면 전체 작업 상세 화면이 열립니다.
@@ -153,14 +190,14 @@ export function HistoryPage() {
             >
               {modeOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option === "all" ? "전체 모드" : option.toUpperCase()}
+                  {option === "all" ? "전체 모드" : formatGenerationMode(option)}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            <span>Asset 유형</span>
+            <span>결과 유형</span>
             <select
               onChange={(event) => {
                 setAssetKind(event.target.value as AssetKind | "all");
@@ -170,7 +207,7 @@ export function HistoryPage() {
             >
               {assetKindOptions.map((option) => (
                 <option key={option} value={option}>
-                  {assetKindLabel(option)}
+                  {formatAssetKind(option)}
                 </option>
               ))}
             </select>
@@ -187,7 +224,7 @@ export function HistoryPage() {
             >
               {stateOptions.map((option) => (
                 <option key={option} value={option}>
-                  {option === "all" ? "전체 상태" : jobStateLabel(option)}
+                  {option === "all" ? "전체 상태" : formatJobState(option)}
                 </option>
               ))}
             </select>
@@ -234,14 +271,14 @@ export function HistoryPage() {
           </Badge>
           <Badge tone="muted">{currentPage}페이지</Badge>
           <Badge tone="muted">페이지당 {limit}개</Badge>
-          {mode !== "all" && <Badge tone="muted">모드 {mode}</Badge>}
-          {assetKind !== "all" && <Badge tone="muted">asset {assetKindLabel(assetKind)}</Badge>}
-          {state !== "all" && <Badge tone="muted">상태 {jobStateLabel(state)}</Badge>}
+          {mode !== "all" && <Badge tone="muted">모드 {formatGenerationMode(mode)}</Badge>}
+          {assetKind !== "all" && <Badge tone="muted">결과 {formatAssetKind(assetKind)}</Badge>}
+          {state !== "all" && <Badge tone="muted">상태 {formatJobState(state)}</Badge>}
           {model.trim() && <Badge tone="muted">모델 {model.trim()}</Badge>}
         </div>
       </Panel>
 
-      <Panel className="history-table-shell" title="생성 기록" eyebrow="저장된 작업">
+      <Panel className="creative-panel history-table-shell" title="생성 기록" eyebrow="저장된 작업">
         <div className="history-table-intro">
           <div>
             <div className="section-label">현재 보기</div>
@@ -267,7 +304,7 @@ export function HistoryPage() {
           <div className="history-delete-alert" role="alert">
             <Badge tone="danger">
               <StatusDot tone="danger" />
-              Retry failed
+              재시도 실패
             </Badge>
             <p>{retryError}</p>
           </div>
@@ -309,79 +346,84 @@ export function HistoryPage() {
               <span>생성일</span>
               <span>작업</span>
             </div>
-            {jobs.map((job) => (
-              <div
-                className="table-row history-row history-row-grid"
-                key={job.id}
-                onClick={() => navigate(`/jobs/${job.id}`)}
-                onKeyDown={(event) => handleRowKeyDown(event, job.id)}
-                role="button"
-                tabIndex={0}
-              >
-                <ResultPreview job={job} />
-                <span className="history-mode-state">
-                  <ModeBadge mode={job.mode} />
-                  <StateBadge state={job.state} />
-                </span>
-                <span className="history-prompt">
-                  <strong>{summarizePrompt(job.prompt)}</strong>
-                  <small title={job.id}>작업 {shortJobId(job.id)}</small>
-                  {job.retry_of_job_id && (
-                    <span className="history-retry-badge" title={job.retry_of_job_id}>
-                      Retry of {shortJobId(job.retry_of_job_id)}
-                    </span>
-                  )}
-                  {hasRepairSignal(job) && (
-                    <span className="history-repair-badge">Repair needed</span>
-                  )}
-                </span>
-                <span className="history-model" title={job.model}>
-                  <small>모델</small>
-                  <strong>{job.model}</strong>
-                </span>
-                <span className="history-created">
-                  <small>생성일</small>
-                  <strong>{formatDateTime(job.created_at)}</strong>
-                </span>
-                <span className="history-actions">
-                  {job.state === "failed" && (
-                    <Button
-                      className="history-retry-button"
-                      disabled={retryMutation.isPending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        retryMutation.mutate(job.id);
-                      }}
-                      type="button"
-                      variant="ghost"
-                    >
-                      <RetryIcon size={13} />
-                      {retryingJobId === job.id
-                        ? "Retrying"
-                        : hasRepairSignal(job)
-                          ? "Repair retry"
-                          : "Retry"}
-                    </Button>
-                  )}
-                  {canDeleteHistoryJob(job) ? (
-                    <Button
-                      className="history-delete-button"
-                      disabled={deleteMutation.isPending}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        requestDelete(job);
-                      }}
-                      type="button"
-                      variant="ghost"
-                    >
-                      {deletingJobId === job.id ? "삭제 중" : "삭제"}
-                    </Button>
-                  ) : (
-                    <span className="history-actions__empty">-</span>
-                  )}
-                </span>
-              </div>
-            ))}
+            {jobs.map((job) => {
+              const jobView = toJobSummaryViewModel(job);
+              const repairRequired = hasRepairSignal(job);
+
+              return (
+                <div
+                  className="table-row history-row history-row-grid"
+                  key={job.id}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  onKeyDown={(event) => handleRowKeyDown(event, job.id)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <ResultPreview job={job} />
+                  <span className="history-mode-state">
+                    <ModeBadge mode={jobView.mode} />
+                    <StateBadge state={jobView.state} />
+                  </span>
+                  <span className="history-prompt">
+                    <strong>{summarizePrompt(jobView.prompt)}</strong>
+                    <small title={jobView.id}>작업 {jobView.shortId}</small>
+                    {job.retry_of_job_id && (
+                      <span className="history-retry-badge" title={job.retry_of_job_id}>
+                        재시도 원본 {shortId(job.retry_of_job_id)}
+                      </span>
+                    )}
+                    {repairRequired && (
+                      <span className="history-repair-badge">수동 복구 필요</span>
+                    )}
+                  </span>
+                  <span className="history-model" title={job.model}>
+                    <small>모델</small>
+                    <strong>{job.model}</strong>
+                  </span>
+                  <span className="history-created">
+                    <small>생성일</small>
+                    <strong>{jobView.createdAt}</strong>
+                  </span>
+                  <span className="history-actions">
+                    {jobView.canRetry && job.state === "failed" && (
+                      <Button
+                        className="history-retry-button"
+                        disabled={retryMutation.isPending}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          retryMutation.mutate(job.id);
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        <RetryIcon size={13} />
+                        {retryingJobId === job.id
+                          ? "재시도 중"
+                          : repairRequired
+                            ? "복구 재시도"
+                            : "재시도"}
+                      </Button>
+                    )}
+                    {canDeleteHistoryJob(job) ? (
+                      <Button
+                        className="history-delete-button"
+                        disabled={deleteMutation.isPending}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          requestDelete(job);
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        {deletingJobId === job.id ? "삭제 중" : "삭제"}
+                      </Button>
+                    ) : (
+                      <span className="history-actions__empty">-</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </Panel>
@@ -441,7 +483,7 @@ function ModeBadge({ mode }: { mode: GenerationMode }) {
   return (
     <Badge tone={mode === "i2v" ? "warning" : "info"}>
       <Icon size={12} />
-      {mode.toUpperCase()}
+      {MODE_COPY[mode].short}
     </Badge>
   );
 }
@@ -451,7 +493,7 @@ function StateBadge({ state }: { state: JobState }) {
   return (
     <Badge tone={tone}>
       <StatusDot tone={tone} />
-      {jobStateLabel(state)}
+      {formatJobState(state)}
     </Badge>
   );
 }
@@ -468,7 +510,7 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
     );
   }
 
-  const label = `${assetKindLabel(asset.kind)} · ${asset.mime}`;
+  const label = `${formatAssetKind(asset.kind)} · ${asset.mime}`;
   if (asset.kind === "image" || asset.mime.startsWith("image/")) {
     return (
       <span className="history-result-thumb history-result-thumb--image" title={label}>
@@ -485,9 +527,9 @@ function ResultPreview({ job }: { job: GenerationResponse }) {
   return (
     <span
       className="history-result-thumb history-result-thumb--unavailable"
-      title={`Preview 불가 · ${label}`}
+      title={`미리보기 불가 · ${label}`}
     >
-      <strong>Preview</strong>
+      <strong>미리보기</strong>
       <small>불가</small>
     </span>
   );
@@ -558,8 +600,8 @@ function emptyResultCopy(state: JobState): {
   if (state === "completed") {
     return {
       detail: "완료됨",
-      label: "Asset 없음",
-      title: "완료된 작업이 asset preview를 반환하지 않았습니다.",
+      label: "결과 없음",
+      title: "완료된 작업이 결과 미리보기를 반환하지 않았습니다.",
     };
   }
   if (state === "failed") {
@@ -579,7 +621,7 @@ function emptyResultCopy(state: JobState): {
   return {
     detail: "진행 중",
     label: "대기 중",
-    title: "완료 후 asset preview가 표시됩니다.",
+    title: "완료 후 결과 미리보기가 표시됩니다.",
   };
 }
 
@@ -594,47 +636,11 @@ function formatHistorySummary({
   mode: GenerationMode | "all";
   state: JobState | "all";
 }): string {
-  const modeText = mode === "all" ? "전체 모드" : mode.toUpperCase();
-  const stateText = state === "all" ? "전체 상태" : jobStateLabel(state);
+  const modeText = mode === "all" ? "전체 모드" : formatGenerationMode(mode);
+  const stateText = state === "all" ? "전체 상태" : formatJobState(state);
   const assetText =
-    assetKind === "all" ? "전체 결과 유형" : `${assetKindLabel(assetKind)} asset`;
+    assetKind === "all" ? "전체 결과 유형" : `${formatAssetKind(assetKind)} 결과`;
   return `${modeText}, ${stateText}, ${assetText} 조건으로 ${jobsLength}개 작업이 표시됩니다.`;
-}
-
-function shortJobId(id: string): string {
-  return id.slice(0, 8);
-}
-
-function assetKindLabel(option: AssetKind | "all"): string {
-  if (option === "all") {
-    return "전체 결과 유형";
-  }
-  return option === "image" ? "이미지" : "영상";
-}
-
-function jobStateLabel(state: JobState): string {
-  switch (state) {
-    case "pending":
-      return "준비 중";
-    case "enhancing":
-      return "프롬프트 향상 중";
-    case "queued":
-      return "대기열";
-    case "generating":
-      return "생성 중";
-    case "polling":
-      return "결과 확인 중";
-    case "downloading":
-      return "저장 중";
-    case "completed":
-      return "완료";
-    case "failed":
-      return "실패";
-    case "cancelled":
-      return "취소됨";
-    default:
-      return state;
-  }
 }
 
 function canDeleteHistoryJob(job: GenerationResponse): boolean {
@@ -643,11 +649,4 @@ function canDeleteHistoryJob(job: GenerationResponse): boolean {
 
 function videoPreviewUrl(url: string): string {
   return url.includes("#") ? url : `${url}#t=0.1`;
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }

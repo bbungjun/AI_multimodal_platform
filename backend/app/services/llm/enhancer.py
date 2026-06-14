@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from google.genai import types
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -31,6 +31,9 @@ JSON_FENCE_RE = re.compile(
     r"```[ \t]*(?:json)?[ \t]*(?:\r?\n)?(?P<body>.*?)```",
     re.IGNORECASE | re.DOTALL,
 )
+HANGUL_RE = re.compile(r"[\u3131-\u318e\uac00-\ud7a3]")
+LATIN_RE = re.compile(r"[A-Za-z]")
+PromptLanguage = Literal["ko", "en", "unknown"]
 IMAGE_MODE_GUIDANCE = (
     "For image generation, strengthen spatial detail, subject/background "
     "separation, lighting, style, composition, lens, and camera framing."
@@ -83,6 +86,22 @@ T2I_FORMAT_EXEMPLAR = (
     "  }\n"
     "}"
 )
+T2I_KOREAN_FORMAT_EXEMPLAR = (
+    "한국어 형식 예시:\n"
+    "{\n"
+    '  "enhanced": "작은 도자기 컵이 무광 회색 테이블 위에 놓여 있고, '
+    "왼쪽 창문에서 들어오는 부드러운 빛이 컵의 고르지 않은 가장자리와 "
+    '옆의 접힌 면 냅킨을 은은하게 비춥니다.",\n'
+    '  "components": {\n'
+    '    "subject": "고르지 않은 가장자리를 가진 작은 도자기 컵",\n'
+    '    "setting": "접힌 면 냅킨이 놓인 무광 회색 테이블",\n'
+    '    "composition": "컵을 화면 왼쪽에 배치하고 오른쪽에 여백을 둔 구성",\n'
+    '    "lighting": "왼쪽 창문에서 들어오는 부드러운 빛과 낮은 테이블 그림자",\n'
+    '    "style": "도자기 질감이 보이는 자연스러운 제품 사진",\n'
+    '    "mood": "차분하고 손으로 만든 듯한 분위기"\n'
+    "  }\n"
+    "}"
+)
 VIDEO_FORMAT_EXEMPLAR = (
     'Video format example:\n'
     "{\n"
@@ -99,6 +118,21 @@ VIDEO_FORMAT_EXEMPLAR = (
     '    "duration": "6 seconds",\n'
     '    "sound_cue": "when relevant: soft water lapping; omit if no sound '
     'is requested or implied"\n'
+    "  }\n"
+    "}"
+)
+VIDEO_KOREAN_FORMAT_EXEMPLAR = (
+    "한국어 형식 예시:\n"
+    "{\n"
+    '  "enhanced": "작은 종이배가 잔잔한 연못 위를 6초 동안 천천히 떠가고, '
+    '뱃머리가 몇 도 정도 돌아가며 작은 물결이 바깥으로 퍼집니다.",\n'
+    '  "components": {\n'
+    '    "subject": "잔잔한 연못 위의 작은 종이배",\n'
+    '    "motion": "천천히 떠가며 뱃머리가 살짝 돌아가고 물결이 퍼지는 움직임",\n'
+    '    "camera_work": "수면 높이에서 고정된 미디엄 샷",\n'
+    '    "continuity": "같은 종이배와 연못 표면, 이동 방향을 끝까지 유지",\n'
+    '    "duration": "6초",\n'
+    '    "sound_cue": "관련 있을 때만: 잔잔한 물소리, 요청이나 암시가 없으면 생략"\n'
     "  }\n"
     "}"
 )
@@ -201,6 +235,7 @@ async def enhance_prompt(
     )
     preset = normalize_creativity_preset(creativity_preset)
     temperature = temperature_for_preset(preset)
+    prompt_language = _detect_prompt_language(prompt)
     if client is None and get_settings().ai_provider == "mock":
         return _mock_prompt_enhancement(
             prompt,
@@ -209,6 +244,7 @@ async def enhance_prompt(
             creativity_preset=preset,
             llm_model=llm_model,
             temperature=temperature,
+            prompt_language=prompt_language,
         )
 
     vertex_client = client or get_vertex_client()
@@ -222,7 +258,9 @@ async def enhance_prompt(
         target_model=target_model,
         creativity_preset=preset,
         temperature=temperature,
+        prompt_language=prompt_language,
         strict_json_retry=False,
+        language_retry=False,
     )
 
     try:
@@ -247,7 +285,34 @@ async def enhance_prompt(
             target_model=target_model,
             creativity_preset=preset,
             temperature=temperature,
+            prompt_language=prompt_language,
             strict_json_retry=True,
+            language_retry=False,
+        )
+        payload = _parse_response_payload(retry_response)
+        response = retry_response
+
+    if _should_retry_language_mismatch(payload, prompt_language):
+        logger.warning(
+            (
+                "Retrying prompt enhancement after language mismatch: "
+                "target_mode=%s target_model=%s expected_language=%s"
+            ),
+            mode.value,
+            target_model,
+            prompt_language,
+        )
+        retry_response = await _generate_prompt_enhancement(
+            vertex_client,
+            llm_model=llm_model,
+            prompt=prompt,
+            target_mode=mode,
+            target_model=target_model,
+            creativity_preset=preset,
+            temperature=temperature,
+            prompt_language=prompt_language,
+            strict_json_retry=False,
+            language_retry=True,
         )
         payload = _parse_response_payload(retry_response)
         response = retry_response
@@ -285,13 +350,20 @@ def _mock_prompt_enhancement(
     creativity_preset: CreativityPreset,
     llm_model: str,
     temperature: float,
+    prompt_language: PromptLanguage,
 ) -> PromptEnhancementResult:
     normalized_prompt = " ".join(prompt.split())
-    enhanced = (
-        f"{normalized_prompt}. Local mock enhancement for {target_mode.value}; "
-        "preserve the original subject, add clear composition, lighting, and "
-        "motion details only as placeholders for development."
-    )
+    if prompt_language == "ko":
+        enhanced = (
+            f"{normalized_prompt}. 로컬 mock 향상: 원래 피사체를 유지하고, "
+            "구도와 조명, 움직임 정보를 개발용 자리표시자로 보강합니다."
+        )
+    else:
+        enhanced = (
+            f"{normalized_prompt}. Local mock enhancement for {target_mode.value}; "
+            "preserve the original subject, add clear composition, lighting, and "
+            "motion details only as placeholders for development."
+        )
     return PromptEnhancementResult(
         original=prompt,
         enhanced=enhanced,
@@ -322,7 +394,9 @@ async def _generate_prompt_enhancement(
     target_model: str,
     creativity_preset: CreativityPreset,
     temperature: float,
+    prompt_language: PromptLanguage,
     strict_json_retry: bool,
+    language_retry: bool,
 ) -> Any:
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
@@ -341,7 +415,9 @@ async def _generate_prompt_enhancement(
                     target_mode=target_mode,
                     target_model=target_model,
                     creativity_preset=creativity_preset,
+                    prompt_language=prompt_language,
                     strict_json_retry=strict_json_retry,
+                    language_retry=language_retry,
                 )
             ],
             config=config,
@@ -362,9 +438,12 @@ def _build_prompt(
     target_mode: GenerationMode,
     target_model: str,
     creativity_preset: CreativityPreset,
+    prompt_language: PromptLanguage,
     strict_json_retry: bool = False,
+    language_retry: bool = False,
 ) -> str:
     mode_guidance = _mode_guidance_for(target_mode)
+    language_guidance = _language_guidance_for(prompt_language)
     sections = [
         (
             "## PERSONA\n"
@@ -386,6 +465,7 @@ def _build_prompt(
             "prompt for the selected generation mode.\n"
             "- Apply the creativity strategy as the only source of "
             "creative latitude.\n"
+            f"- {language_guidance}\n"
             f"- {ANTI_GENERIC_VOCABULARY_GUIDANCE}\n"
             "- For video outputs, include a sound_cue component only when "
             "relevant; if the USER PROMPT does not mention or imply "
@@ -408,6 +488,7 @@ def _build_prompt(
             f"target_mode: {target_mode.value}\n"
             f"target_model: {target_model}\n"
             f"creativity_preset: {creativity_preset.value}\n"
+            f"source_language: {prompt_language}\n"
             f"{strategy_for_preset(creativity_preset)}\n"
             f"{mode_guidance}"
         ),
@@ -431,12 +512,23 @@ def _build_prompt(
             )
         )
 
+    if language_retry:
+        sections.append(
+            (
+                "## LANGUAGE RETRY\n"
+                "The previous response did not preserve the requested "
+                "language. Return the enhanced prompt and component values in "
+                "the source_language shown above. Keep user-provided proper "
+                "nouns and technical terms unchanged."
+            )
+        )
+
     sections.extend(
         [
             (
                 "## RESPONSE FORMAT EXAMPLE\n"
                 f"{FORMAT_EXEMPLAR_NOTICE}\n\n"
-                f"{_format_exemplar_for(target_mode)}\n\n"
+                f"{_format_exemplar_for(target_mode, prompt_language)}\n\n"
                 "generate the response only from the actual user prompt, "
                 "selected mode, and creativity setting."
             ),
@@ -458,10 +550,72 @@ def _build_prompt(
     return "\n\n".join(sections)
 
 
-def _format_exemplar_for(target_mode: GenerationMode) -> str:
+def _format_exemplar_for(
+    target_mode: GenerationMode,
+    prompt_language: PromptLanguage,
+) -> str:
+    if prompt_language == "ko":
+        if target_mode == GenerationMode.T2I:
+            return T2I_KOREAN_FORMAT_EXEMPLAR
+        return VIDEO_KOREAN_FORMAT_EXEMPLAR
     if target_mode == GenerationMode.T2I:
         return T2I_FORMAT_EXEMPLAR
     return VIDEO_FORMAT_EXEMPLAR
+
+
+def _language_guidance_for(prompt_language: PromptLanguage) -> str:
+    if prompt_language == "ko":
+        return (
+            "Write the enhanced prompt and component values in Korean. "
+            "Do not translate Korean user text into English. Keep "
+            "user-provided English proper nouns, model names, product names, "
+            "and style labels unchanged."
+        )
+    if prompt_language == "en":
+        return (
+            "Write the enhanced prompt and component values in English. "
+            "Do not translate English user text into Korean. Keep "
+            "user-provided non-English proper nouns and technical terms "
+            "unchanged."
+        )
+    return (
+        "Write the enhanced prompt and component values in the same natural "
+        "language as the user prompt. If the user prompt has no clear natural "
+        "language, use concise English."
+    )
+
+
+def _detect_prompt_language(prompt: str) -> PromptLanguage:
+    if _hangul_count(prompt) > 0:
+        return "ko"
+    if _latin_count(prompt) > 0:
+        return "en"
+    return "unknown"
+
+
+def _should_retry_language_mismatch(
+    payload: PromptEnhancementPayload,
+    prompt_language: PromptLanguage,
+) -> bool:
+    if prompt_language == "ko":
+        return not _looks_like_korean_text(payload.enhanced)
+    if prompt_language == "en":
+        return _hangul_count(payload.enhanced) > 0
+    return False
+
+
+def _looks_like_korean_text(text: str) -> bool:
+    hangul_count = _hangul_count(text)
+    latin_count = _latin_count(text)
+    return hangul_count >= 3 and hangul_count >= max(1, round(latin_count * 0.15))
+
+
+def _hangul_count(text: str) -> int:
+    return len(HANGUL_RE.findall(text))
+
+
+def _latin_count(text: str) -> int:
+    return len(LATIN_RE.findall(text))
 
 
 def _mode_guidance_for(target_mode: GenerationMode) -> str:

@@ -13,6 +13,13 @@ import { Badge, Button, Panel, RoutePlaceholder, StatusDot } from "../components
 import { FilmIcon, ImageIcon, PipelineIcon, RetryIcon } from "../components/icons";
 import { useAsset } from "../hooks/useAsset";
 import { isTerminalJobState, useJob } from "../hooks/useJob";
+import {
+  formatDateTime,
+  formatGenerationMode,
+  shortId,
+  toJobSummaryViewModel,
+  type JobSummaryViewModel,
+} from "../ui/viewModels";
 import { getRepairInfo, type RepairInfo } from "../utils/repair";
 
 const stateSteps: JobState[] = [
@@ -73,13 +80,13 @@ const stateCopy: Record<
     label: "결과 저장 중",
     summary: "생성된 결과를 로컬 저장소에 쓰고 있습니다.",
     detail:
-      "모델이 데이터를 반환했고, 이 화면에서 preview할 수 있도록 결과를 저장하고 있습니다.",
+      "모델이 데이터를 반환했고, 이 화면에서 미리보기할 수 있도록 결과를 저장하고 있습니다.",
     timeline: "생성 결과를 저장하고 있습니다.",
   },
   completed: {
     label: "완료",
     summary: "작업이 성공적으로 최종 상태에 도달했습니다.",
-    detail: "반환된 asset이 있으면 Asset Viewer에서 확인할 수 있습니다.",
+    detail: "반환된 결과 파일이 있으면 결과 미리보기에서 확인할 수 있습니다.",
     timeline: "결과가 준비되었습니다.",
   },
   failed: {
@@ -119,7 +126,7 @@ export function JobDetailPage() {
       navigate(`/jobs/${newJob.id}`);
     },
     onError: (error) => {
-      setRetryError(error instanceof Error ? error.message : "Retry failed.");
+      setRetryError(error instanceof Error ? error.message : "재시도에 실패했습니다.");
     },
   });
 
@@ -145,61 +152,92 @@ export function JobDetailPage() {
     );
   }
 
+  const jobView = toJobSummaryViewModel(job);
+  const heroTone = job.state === "completed" ? "success" : job.state === "failed" ? "danger" : "info";
+
   return (
-    <div className="page-grid page-grid--detail">
-      <Panel className="asset-shell" title="Asset Viewer" eyebrow="결과">
-        <AssetViewer
-          asset={primaryAsset}
-          imageResultAssets={imageResultAssets}
-          i2vSourceAsset={i2vSourceQuery.data ?? null}
-          i2vSourceError={i2vSourceQuery.isError}
-          i2vSourceLoading={i2vSourceQuery.isLoading}
-          job={job}
-          onStartI2V={(assetId) => {
-            navigate(`/generate?mode=i2v&source_asset_id=${assetId}`);
-          }}
-        />
-      </Panel>
-
-      <Panel
-        title="작업 상태"
-        eyebrow={isTerminalJobState(job.state) ? "최종 상태" : "실시간 진행"}
-      >
-        {!isTerminalJobState(job.state) && <CurrentStepSummary job={job} />}
-        <JobStateTimeline history={job.state_history} state={job.state} />
-        <JobWaitingContext job={job} />
-        {job.state === "failed" && repairInfo && (
-          <RepairStatus attempts={job.attempts} repairInfo={repairInfo} />
-        )}
-        {job.state === "failed" && (
-          <RetryJobAction
-            error={retryError}
-            isRetrying={retryMutation.isPending}
-            onRetry={() => retryMutation.mutate(job.id)}
-            repairInfo={repairInfo}
-          />
-        )}
-      </Panel>
-
-      <Panel title="요청 요약" eyebrow={job.mode}>
-        <RequestSummary job={job} />
-      </Panel>
-
-      {job.error && (
-        <Panel title="오류 메시지" eyebrow="생성 오류">
-          <div className="inline-notice inline-notice--danger">
-            {formatErrorMessage(job.error)}
+    <div className="creative-page creative-page--job">
+      <section className="creative-page-hero">
+        <div className="creative-page-hero__copy">
+          <Badge tone={heroTone}>
+            <StatusDot tone={heroTone} />
+            {stateCopy[job.state].label}
+          </Badge>
+          <h1>작업 상세</h1>
+          <p>{jobView.prompt}</p>
+        </div>
+        <div className="creative-page-hero__metrics" aria-label="작업 요약">
+          <div className="creative-metric">
+            <span>모드</span>
+            <strong>{formatGenerationMode(job.mode)}</strong>
           </div>
+          <div className="creative-metric">
+            <span>작업</span>
+            <strong>{jobView.shortId}</strong>
+          </div>
+          <div className="creative-metric">
+            <span>시도</span>
+            <strong>{job.attempts}</strong>
+          </div>
+        </div>
+      </section>
+
+      <div className="page-grid page-grid--detail creative-detail-grid">
+        <Panel className="creative-panel asset-shell" title="결과 미리보기" eyebrow="결과">
+          <AssetViewer
+            asset={primaryAsset}
+            imageResultAssets={imageResultAssets}
+            i2vSourceAsset={i2vSourceQuery.data ?? null}
+            i2vSourceError={i2vSourceQuery.isError}
+            i2vSourceLoading={i2vSourceQuery.isLoading}
+            job={job}
+            onStartI2V={(assetId) => {
+              navigate(`/generate?mode=i2v&source_asset_id=${assetId}`);
+            }}
+          />
         </Panel>
-      )}
+
+        <Panel
+          className="creative-panel"
+          title="작업 상태"
+          eyebrow={isTerminalJobState(job.state) ? "최종 상태" : "실시간 진행"}
+        >
+          {!isTerminalJobState(job.state) && <CurrentStepSummary job={job} />}
+          <JobStateTimeline history={job.state_history} state={job.state} />
+          <JobWaitingContext job={job} />
+          {job.state === "failed" && repairInfo && (
+            <RepairStatus attempts={job.attempts} repairInfo={repairInfo} />
+          )}
+          {job.state === "failed" && (
+            <RetryJobAction
+              error={retryError}
+              isRetrying={retryMutation.isPending}
+              onRetry={() => retryMutation.mutate(job.id)}
+              repairInfo={repairInfo}
+            />
+          )}
+        </Panel>
+
+        <Panel className="creative-panel" title="요청 요약" eyebrow={jobView.modeLabel}>
+          <RequestSummary job={job} jobView={jobView} />
+        </Panel>
+
+        {job.error && (
+          <Panel className="creative-panel" title="오류 메시지" eyebrow="생성 오류">
+            <div className="inline-notice inline-notice--danger">
+              {formatErrorMessage(job.error)}
+            </div>
+          </Panel>
+        )}
+      </div>
     </div>
   );
 }
 
 function JobLoading({ jobId }: { jobId: string }) {
   return (
-    <div className="page-grid page-grid--detail">
-      <Panel title="작업 로딩 중" eyebrow={jobId}>
+    <div className="creative-page creative-page--job">
+      <Panel className="creative-panel" title="작업 로딩 중" eyebrow={jobId}>
         <div className="asset-preview">
           <div>
             <Badge tone="muted">
@@ -261,12 +299,12 @@ function AssetViewer({
               ? "결과 생성 전에 작업이 중단되었습니다"
               : cancelled
                 ? "생성이 취소되었습니다"
-                : "결과 preview가 여기에 표시됩니다"}
+                : "결과 미리보기가 여기에 표시됩니다"}
           </h2>
           <p>
             {failed || cancelled
-              ? "이 작업에는 완료된 asset이 없습니다. 원인은 작업 상태와 오류 상세를 확인하세요."
-              : "결과가 저장되면 완성된 이미지 또는 영상이 이 viewer에 렌더링됩니다."}
+              ? "이 작업에는 완료된 결과 파일이 없습니다. 원인은 작업 상태와 오류 상세를 확인하세요."
+              : "결과가 저장되면 완성된 이미지 또는 영상이 이 영역에 렌더링됩니다."}
           </p>
         </div>
       </div>
@@ -277,10 +315,10 @@ function AssetViewer({
     return (
       <div className="asset-preview">
         <div>
-          <Badge tone="warning">반환된 asset 없음</Badge>
-          <h2>Preview 없이 작업이 완료되었습니다</h2>
+          <Badge tone="warning">반환된 결과 없음</Badge>
+          <h2>미리보기 없이 작업이 완료되었습니다</h2>
           <p>
-            작업은 완료 상태에 도달했지만 표시할 asset이 응답에 포함되지 않았습니다.
+            작업은 완료 상태에 도달했지만 표시할 결과 파일이 응답에 포함되지 않았습니다.
             요청 요약과 상태 기록은 계속 확인할 수 있습니다.
           </p>
         </div>
@@ -312,7 +350,7 @@ function AssetViewer({
           ) : (
             <StatusDot tone="warning" />
           )}
-          {isVideo ? "영상 결과" : isImage ? "이미지 결과" : "Asset 반환됨"}
+          {isVideo ? "영상 결과" : isImage ? "이미지 결과" : "결과 반환됨"}
         </Badge>
         <div className="asset-result-header__copy">
           <h2>
@@ -320,14 +358,14 @@ function AssetViewer({
               ? "영상 결과 준비됨"
               : isImage
                 ? "이미지 결과 준비됨"
-                : "Asset 반환됨"}
+                : "결과 파일 반환됨"}
           </h2>
           <p>
             {isVideo
               ? "아래에서 재생 컨트롤을 사용할 수 있습니다."
               : isImage
                 ? "생성된 이미지가 아래에 준비되었습니다."
-                : "결과는 반환되었지만 이 viewer는 이미지와 영상 파일만 preview할 수 있습니다."}
+                : "결과는 반환되었지만 이 화면은 이미지와 영상 파일만 미리보기할 수 있습니다."}
           </p>
         </div>
       </div>
@@ -335,7 +373,7 @@ function AssetViewer({
       <div className="asset-stage">
         {isImage && (
           <img
-            alt={`생성된 asset ${asset.id}`}
+            alt={`생성된 결과 ${asset.id}`}
             className="asset-media"
             src={asset.url}
           />
@@ -348,11 +386,11 @@ function AssetViewer({
         {!isPreviewable && (
           <div className="asset-preview">
             <div>
-              <Badge tone="warning">Preview 불가</Badge>
-              <h2>이 파일 유형은 여기서 preview할 수 없습니다</h2>
+              <Badge tone="warning">미리보기 불가</Badge>
+              <h2>이 파일 유형은 여기서 미리보기할 수 없습니다</h2>
               <p>
-                이 asset은 {asset.mime} 유형으로 반환되었고, 이 viewer에서는 inline 렌더링할 수 없습니다.
-                Metadata는 아래에 표시됩니다.
+                이 결과 파일은 {asset.mime} 유형으로 반환되었고, 이 화면에서는 바로 렌더링할 수 없습니다.
+                메타데이터는 아래에 표시됩니다.
               </p>
             </div>
           </div>
@@ -385,7 +423,7 @@ function AssetViewer({
       <div className="asset-metadata-panel">
         <div className="asset-metadata-panel__head">
           <div className="section-label">파일 상세</div>
-          <p>생성 결과의 preview 상세입니다.</p>
+          <p>생성 결과의 미리보기 상세입니다.</p>
         </div>
         <div className="metadata-list asset-metadata">
           <div>
@@ -471,7 +509,7 @@ function T2IImageGallery({
       <div className="asset-metadata-panel">
         <div className="asset-metadata-panel__head">
           <div className="section-label">파일 상세</div>
-          <p>생성 이미지 세트의 preview 상세입니다.</p>
+          <p>생성 이미지 세트의 미리보기 상세입니다.</p>
         </div>
         <div className="metadata-list asset-metadata">
           <div>
@@ -534,13 +572,13 @@ function I2VSourcePreview({
                 소스 로딩 중
               </Badge>
               <h2>소스 이미지를 가져오는 중</h2>
-              <p>이 I2V 요청에 고정된 이미지 asset을 불러오고 있습니다.</p>
+              <p>이 I2V 요청에 고정된 이미지 결과를 불러오고 있습니다.</p>
             </div>
           </div>
         )}
         {!sourceLoading && sourceIsImage && (
           <img
-            alt={`소스 asset ${sourceAsset.id}`}
+            alt={`소스 결과 ${sourceAsset.id}`}
             className="asset-media"
             src={sourceAsset.url}
           />
@@ -551,10 +589,10 @@ function I2VSourcePreview({
               <Badge tone={sourceError ? "danger" : "warning"}>
                 {sourceError ? "소스 불러오기 실패" : "소스 대기 중"}
               </Badge>
-              <h2>소스 이미지 preview를 사용할 수 없습니다</h2>
-              <p>
-                작업 metadata에는 소스 asset ID {shortId(job.source_asset_id)}가 남아 있지만,
-                이미지 preview를 불러오지 못했습니다.
+          <h2>소스 이미지 미리보기를 사용할 수 없습니다</h2>
+          <p>
+                작업 메타데이터에는 소스 결과 ID {shortId(job.source_asset_id)}가 남아 있지만,
+                이미지 미리보기를 불러오지 못했습니다.
               </p>
             </div>
           </div>
@@ -568,7 +606,7 @@ function I2VSourcePreview({
         </div>
         <div className="metadata-list asset-metadata">
           <div>
-            <span>소스 asset</span>
+            <span>소스 결과</span>
             <strong>{shortId(job.source_asset_id)}</strong>
           </div>
           <div>
@@ -706,13 +744,13 @@ function RetryJobAction({
       <div className="retry-action__copy">
         <Badge tone={isRepairRetry ? "warning" : "danger"}>
           <StatusDot tone={isRepairRetry ? "warning" : "danger"} />
-          {isRepairRetry ? "Manual repair" : "Retry"}
+          {isRepairRetry ? "수동 복구" : "재시도"}
         </Badge>
-        <strong>{isRepairRetry ? "Retry after inspection" : "Retry this failed generation"}</strong>
+        <strong>{isRepairRetry ? "점검 후 재시도" : "실패한 생성을 다시 실행"}</strong>
         <p>
           {isRepairRetry
-            ? "Create a fresh job only after checking the failure reason."
-            : "Create a new job from the same confirmed generation payload."}
+            ? "실패 원인을 확인한 뒤 같은 요청으로 새 작업을 만듭니다."
+            : "확정된 생성 요청 payload를 그대로 사용해 새 작업을 만듭니다."}
         </p>
         {error && (
           <div className="inline-notice inline-notice--danger" role="alert">
@@ -722,7 +760,7 @@ function RetryJobAction({
       </div>
       <Button disabled={isRetrying} onClick={onRetry} type="button" variant="primary">
         <RetryIcon size={14} />
-        {isRetrying ? "Retrying" : isRepairRetry ? "Repair retry" : "Retry"}
+        {isRetrying ? "재시도 중" : isRepairRetry ? "복구 재시도" : "재시도"}
       </Button>
     </div>
   );
@@ -745,36 +783,42 @@ function RepairStatus({
         <strong>{repairInfo.title}</strong>
         <p>{repairInfo.detail}</p>
       </div>
-      <div className="repair-status__meta" aria-label="Repair metadata">
+      <div className="repair-status__meta" aria-label="복구 메타데이터">
         <span>
-          Reason
-          <strong>{repairInfo.reason ?? "review_required"}</strong>
+          원인
+          <strong>{formatRepairValue(repairInfo.reason, "검토 필요")}</strong>
         </span>
         <span>
-          Attempts
+          시도
           <strong>{attempts}</strong>
         </span>
         <span>
-          Action
-          <strong>{repairInfo.action ?? "inspect"}</strong>
+          조치
+          <strong>{formatRepairValue(repairInfo.action, "점검")}</strong>
         </span>
       </div>
     </div>
   );
 }
 
-function RequestSummary({ job }: { job: JobResponse }) {
+function RequestSummary({
+  job,
+  jobView,
+}: {
+  job: JobResponse;
+  jobView: JobSummaryViewModel;
+}) {
   return (
     <div className="request-summary">
       <div className="metadata-list">
         <div>
           <span>모드</span>
-          <strong>{job.mode}</strong>
+          <strong>{formatGenerationMode(job.mode)}</strong>
         </div>
         {job.retry_of_job_id && (
           <div>
-            <span>Retry</span>
-            <strong>Retry of {shortId(job.retry_of_job_id)}</strong>
+            <span>재시도</span>
+            <strong>원본 작업 {shortId(job.retry_of_job_id)}</strong>
           </div>
         )}
         <div>
@@ -783,11 +827,11 @@ function RequestSummary({ job }: { job: JobResponse }) {
         </div>
         <div>
           <span>생성일</span>
-          <strong>{formatDateTime(job.created_at)}</strong>
+          <strong>{jobView.createdAt}</strong>
         </div>
         <div>
           <span>수정일</span>
-          <strong>{formatDateTime(job.updated_at)}</strong>
+          <strong>{jobView.updatedAt}</strong>
         </div>
         {job.enhancement_id && (
           <div>
@@ -879,10 +923,6 @@ function sourcePreviewTitle(state: JobState): string {
   return "I2V 소스 이미지가 고정되었습니다";
 }
 
-function shortId(value: string | null): string {
-  return value ? value.slice(0, 8) : "알 수 없음";
-}
-
 function formatErrorMessage(error: Record<string, unknown>): string {
   if (typeof error.message === "string") {
     return error.message;
@@ -913,16 +953,22 @@ function formatAssetType(asset: AssetResponse): string {
   return asset.kind;
 }
 
+function formatRepairValue(value: string | null, fallback: string): string {
+  if (!value) {
+    return fallback;
+  }
+  if (value === "retry_exhausted") {
+    return "재시도 소진";
+  }
+  if (value === "manual_retry_or_inspect") {
+    return "수동 재시도 또는 점검";
+  }
+  return value;
+}
+
 function formatDimensions(asset: AssetResponse): string {
   if (asset.width && asset.height) {
     return `${asset.width} x ${asset.height}`;
   }
   return "알 수 없음";
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
