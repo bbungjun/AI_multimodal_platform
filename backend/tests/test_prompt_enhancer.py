@@ -131,6 +131,79 @@ async def test_enhance_prompt_builds_t2i_prompt_with_image_component_guidance():
     assert "source image as the fixed visual reference" not in prompt
 
 
+async def test_enhance_prompt_builds_korean_language_preservation_guidance():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "비 내리는 서울 골목의 젖은 포장도로 옆에 네온 간판이 은은하게 비칩니다.",
+                    "components": {
+                        "subject": "비 내리는 서울 골목",
+                        "lighting": "젖은 도로에 반사되는 네온 빛",
+                    },
+                }
+            )
+        ]
+    )
+
+    await enhancer.enhance_prompt(
+        "비 내리는 서울 골목, 네온 간판",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        creativity_preset=CreativityPreset.BALANCED,
+        client=FakeGenerateContentClient(models),
+    )
+
+    prompt = models.calls[0]["contents"][0]
+    assert isinstance(prompt, str)
+    assert "Write the enhanced prompt and component values in Korean." in prompt
+    assert "Do not translate Korean user text into English." in prompt
+    assert "한국어 형식 예시" in prompt
+    assert (
+        "<<<USER_PROMPT_START>>>\n"
+        "비 내리는 서울 골목, 네온 간판\n"
+        "<<<USER_PROMPT_END>>>"
+    ) in prompt
+
+
+async def test_enhance_prompt_retries_korean_input_when_response_is_english():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A rainy Seoul alley with neon signs reflected on wet pavement.",
+                    "components": {
+                        "subject": "rainy Seoul alley",
+                        "lighting": "neon reflections on wet pavement",
+                    },
+                }
+            ),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "비 내리는 서울 골목의 젖은 포장도로에 네온 간판 빛이 반사됩니다.",
+                    "components": {
+                        "subject": "비 내리는 서울 골목",
+                        "lighting": "젖은 포장도로에 반사되는 네온 간판 빛",
+                    },
+                }
+            ),
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "비 내리는 서울 골목, 네온 간판",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        creativity_preset=CreativityPreset.BALANCED,
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "비 내리는 서울 골목의 젖은 포장도로에 네온 간판 빛이 반사됩니다."
+    assert len(models.calls) == 2
+    assert "LANGUAGE RETRY" not in models.calls[0]["contents"][0]
+    assert "LANGUAGE RETRY" in models.calls[1]["contents"][0]
+
+
 async def test_enhance_prompt_builds_i2v_prompt_with_source_preservation_guidance():
     models = FakeGenerateContentModels(
         responses=[

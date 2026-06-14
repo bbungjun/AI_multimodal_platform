@@ -9,20 +9,21 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { JobDetailPage } from "./pages/JobDetailPage";
 import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
+import { APP_COPY } from "./ui/copy";
 import "./index.css";
 
 const navItems = [
-  { to: "/generate", label: "생성", icon: SparkleIcon },
-  { to: "/history", label: "기록", icon: HistoryIcon },
-  { to: "/ops", label: "운영", icon: CpuIcon },
+  { to: "/generate", label: APP_COPY.nav.generate, icon: SparkleIcon },
+  { to: "/history", label: APP_COPY.nav.history, icon: HistoryIcon },
+  { to: "/ops", label: APP_COPY.nav.ops, icon: CpuIcon },
 ];
 
 const routeTitles = [
-  { prefix: "/jobs/", title: "작업 상세", eyebrow: "작업공간 / 작업" },
-  { prefix: "/pipelines/", title: "Pipeline", eyebrow: "작업공간 / Pipeline" },
-  { prefix: "/ops", title: "운영", eyebrow: "작업공간 / 운영" },
-  { prefix: "/history", title: "기록", eyebrow: "작업공간 / 기록" },
-  { prefix: "/generate", title: "생성", eyebrow: "작업공간 / 생성" },
+  { prefix: "/jobs/", ...APP_COPY.routes.jobDetail },
+  { prefix: "/pipelines/", ...APP_COPY.routes.pipeline },
+  { prefix: "/ops", ...APP_COPY.routes.ops },
+  { prefix: "/history", ...APP_COPY.routes.history },
+  { prefix: "/generate", ...APP_COPY.routes.generate },
 ];
 
 export default function App() {
@@ -46,19 +47,23 @@ function AppShell() {
   const route = routeTitles.find((item) => location.pathname.startsWith(item.prefix));
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="주요 내비게이션">
-        <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">
-            <FilmIcon size={16} />
+    <div className="creative-shell app-shell">
+      <aside className="creative-sidebar sidebar" aria-label="주요 내비게이션">
+        <NavLink
+          aria-label="CreativeOps 홈으로 이동"
+          className="creative-brand brand-lockup"
+          to="/generate"
+        >
+          <div className="creative-brand__mark brand-mark" aria-hidden="true">
+            <SparkleIcon size={15} />
           </div>
           <div>
-            <div className="brand-name">Vertex Studio</div>
-            <div className="brand-meta">크리에이티브 작업공간</div>
+            <div className="brand-name">CreativeOps</div>
+            <div className="brand-meta">STUDIO · v1.0</div>
           </div>
-        </div>
+        </NavLink>
 
-        <nav className="sidebar-nav">
+        <nav className="creative-nav sidebar-nav">
           <div className="section-label">작업공간</div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -70,30 +75,68 @@ function AppShell() {
               >
                 <Icon size={15} />
                 <span>{item.label}</span>
+                {item.to === "/history" && <small>8</small>}
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="sidebar-note">
-          <div className="sidebar-note__title">
-            <PipelineIcon size={13} />
-            Image to Video
+        <nav className="creative-nav creative-nav--system sidebar-nav" aria-label="시스템">
+          <div className="section-label">시스템</div>
+          <button className="nav-item" type="button">
+            <CpuIcon size={15} />
+            <span>모델</span>
+          </button>
+          <button className="nav-item" type="button">
+            <PipelineIcon size={15} />
+            <span>템플릿</span>
+          </button>
+          <button className="nav-item" type="button">
+            <FilmIcon size={15} />
+            <span>설정</span>
+          </button>
+        </nav>
+
+        <div className="creative-sidebar__footer">
+          <div className="creative-system-card">
+            <div className="creative-system-card__title">
+              <StatusDot tone="success" />
+              VERTEX · 정상
+            </div>
+            <p>4개 엔드포인트 정상</p>
+            <p>평균 지연 412ms</p>
           </div>
-          <p>완성된 이미지 결과를 상세 화면에서 영상으로 이어 만들 수 있습니다.</p>
+          <div className="creative-user-card">
+            <div className="creative-user-avatar">SK</div>
+            <div>
+              <strong>S. Kim</strong>
+              <span>personal workspace</span>
+            </div>
+          </div>
         </div>
       </aside>
 
-      <div className="app-main">
-        <header className="topbar">
-          <div>
-            <div className="topbar-eyebrow">{route?.eyebrow ?? "작업공간"}</div>
-            <h1>{route?.title ?? "생성"}</h1>
+      <div className="creative-main app-main">
+        <header className="creative-topbar topbar">
+          <div className="creative-breadcrumb">
+            <span>CREATIVEOPS</span>
+            <span aria-hidden="true">/</span>
+            <strong>{route?.title ?? "생성"}</strong>
           </div>
-          <HealthIndicator />
+          <div className="creative-search" aria-hidden="true">
+            <SparkleIcon size={13} />
+            <span>작업, 프롬프트, asset 검색...</span>
+            <kbd>⌘K</kbd>
+          </div>
+          <div className="creative-topbar__actions">
+            <HealthIndicator />
+            <button className="creative-icon-button" aria-label="설정" type="button">
+              <CpuIcon size={14} />
+            </button>
+          </div>
         </header>
 
-        <main className="workspace-frame">
+        <main className="creative-workspace workspace-frame">
           <Outlet />
         </main>
       </div>
@@ -113,7 +156,7 @@ function HealthIndicator() {
     return (
       <Badge>
         <StatusDot tone="pending" />
-        API 확인 중
+        {APP_COPY.health.checking}
       </Badge>
     );
   }
@@ -122,7 +165,7 @@ function HealthIndicator() {
     return (
       <Badge tone="danger">
         <StatusDot tone="danger" />
-        API 연결 불가
+        {APP_COPY.health.unavailable}
       </Badge>
     );
   }
@@ -130,7 +173,7 @@ function HealthIndicator() {
   return (
     <Badge tone="success">
       <StatusDot tone="success" />
-      API {health.data.db === "up" ? "연결됨" : "저하됨"}
+      {health.data.db === "up" ? APP_COPY.health.connected : APP_COPY.health.degraded}
     </Badge>
   );
 }

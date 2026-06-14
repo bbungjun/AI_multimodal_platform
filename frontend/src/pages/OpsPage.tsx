@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getOpsHealth, type JobState, type OpsHealthResponse } from "../api/client";
 import { Badge, Panel, StatusDot } from "../components/ui";
 import { ClockIcon, CpuIcon, HistoryIcon, PipelineIcon } from "../components/icons";
+import { OPS_COPY } from "../ui/copy";
+import { formatDateTime, formatJobState } from "../ui/viewModels";
 
 const jobStates: JobState[] = [
   "pending",
@@ -18,6 +20,12 @@ const jobStates: JobState[] = [
 
 const outboxStatuses = ["pending", "published", "failed"] as const;
 
+const outboxStatusCopy: Record<(typeof outboxStatuses)[number], string> = {
+  pending: "대기 중",
+  published: "발행됨",
+  failed: "실패",
+};
+
 export function OpsPage() {
   const ops = useQuery({
     queryKey: ["ops-health"],
@@ -28,14 +36,14 @@ export function OpsPage() {
 
   if (ops.isLoading) {
     return (
-      <div className="page-stack">
-        <Panel title="Operations" eyebrow="Health">
+      <div className="creative-page creative-page--ops">
+        <Panel className="creative-panel" title="운영 상태" eyebrow="헬스">
           <div className="ops-message">
             <Badge tone="info">
               <StatusDot tone="info" />
-              Loading
+              불러오는 중
             </Badge>
-            <p>Fetching operational status.</p>
+            <p>운영 상태를 확인하고 있습니다.</p>
           </div>
         </Panel>
       </div>
@@ -44,14 +52,14 @@ export function OpsPage() {
 
   if (ops.isError || !ops.data) {
     return (
-      <div className="page-stack">
-        <Panel title="Operations" eyebrow="Health">
+      <div className="creative-page creative-page--ops">
+        <Panel className="creative-panel" title="운영 상태" eyebrow="헬스">
           <div className="ops-message">
             <Badge tone="danger">
               <StatusDot tone="danger" />
-              Unavailable
+              사용 불가
             </Badge>
-            <p>{ops.error instanceof Error ? ops.error.message : "Ops health request failed."}</p>
+            <p>{ops.error instanceof Error ? ops.error.message : "운영 상태 요청에 실패했습니다."}</p>
           </div>
         </Panel>
       </div>
@@ -74,34 +82,46 @@ function OpsDashboard({
     : "warning";
 
   return (
-    <div className="page-stack">
-      <Panel title="Runtime Health" eyebrow="Ops">
-        <div className="ops-hero">
-          <div>
-            <Badge tone={data.ok ? "success" : "danger"}>
-              <StatusDot tone={data.ok ? "success" : "danger"} />
-              {data.db === "up" ? "DB up" : "DB down"}
-            </Badge>
-            <h2>{data.service}</h2>
-            <p>{data.dispatch.mode} dispatch on {data.dispatch.queue ?? "no queue"}</p>
-          </div>
-          {isFetching && (
-            <Badge tone="info">
-              <StatusDot tone="info" />
-              Refreshing
-            </Badge>
-          )}
+    <div className="creative-page creative-page--ops">
+      <section className="creative-page-hero">
+        <div className="creative-page-hero__copy">
+          <Badge tone={data.ok ? "success" : "danger"}>
+            <StatusDot tone={data.ok ? "success" : "danger"} />
+            {data.db === "up" ? "DB 연결됨" : "DB 연결 끊김"}
+          </Badge>
+          <h1>운영 상태</h1>
+          <p>{data.dispatch.mode} 디스패치 · 큐 {data.dispatch.queue ?? "없음"}</p>
         </div>
-      </Panel>
+        <div className="creative-page-hero__metrics" aria-label="운영 요약">
+          <div className="creative-metric">
+            <span>작업</span>
+            <strong>{data.jobs.total}</strong>
+          </div>
+          <div className="creative-metric">
+            <span>Outbox</span>
+            <strong>{data.outbox.pending}</strong>
+          </div>
+          <div className="creative-metric">
+            <span>실패</span>
+            <strong>{data.recent_failures.length}</strong>
+          </div>
+        </div>
+        {isFetching && (
+          <Badge tone="info">
+            <StatusDot tone="info" />
+            새로고침 중
+          </Badge>
+        )}
+      </section>
 
       <div className="ops-grid">
-        <Panel title="Jobs" eyebrow="State">
+        <Panel className="creative-panel" title="작업" eyebrow="상태">
           <div className="ops-stat-grid">
-            <OpsStat label="Total" value={data.jobs.total} tone="info" />
-            <OpsStat label="Active" value={data.jobs.active} tone="warning" />
-            <OpsStat label="Blocked" value={data.jobs.blocked} tone={data.jobs.blocked > 0 ? "warning" : "muted"} />
+            <OpsStat label="전체" value={data.jobs.total} tone="info" />
+            <OpsStat label="진행 중" value={data.jobs.active} tone="warning" />
+            <OpsStat label="대기 차단" value={data.jobs.blocked} tone={data.jobs.blocked > 0 ? "warning" : "muted"} />
             <OpsStat
-              label="Resume"
+              label="재개 가능"
               value={data.jobs.resumable_polling}
               tone={data.jobs.resumable_polling > 0 ? "warning" : "muted"}
             />
@@ -109,31 +129,31 @@ function OpsDashboard({
           <div className="ops-state-list">
             {jobStates.map((state) => (
               <div key={state}>
-                <span>{state}</span>
+                <span>{formatJobState(state)}</span>
                 <strong>{data.jobs.by_state[state] ?? 0}</strong>
               </div>
             ))}
           </div>
         </Panel>
 
-        <Panel title="Outbox" eyebrow="Dispatch">
+        <Panel className="creative-panel" title={OPS_COPY.outbox} eyebrow="Dispatch">
           <div className="ops-stat-grid">
-            <OpsStat label="Pending" value={data.outbox.pending} tone={queueTone} />
-            <OpsStat label="Failed" value={data.outbox.failed} tone={data.outbox.failed > 0 ? "danger" : "muted"} />
-            <OpsStat label="Published" value={data.outbox.published} tone="success" />
-            <OpsStat label="Total" value={data.outbox.total} tone="info" />
+            <OpsStat label="대기 중" value={data.outbox.pending} tone={queueTone} />
+            <OpsStat label="실패" value={data.outbox.failed} tone={data.outbox.failed > 0 ? "danger" : "muted"} />
+            <OpsStat label="발행됨" value={data.outbox.published} tone="success" />
+            <OpsStat label="전체" value={data.outbox.total} tone="info" />
           </div>
           <div className="ops-state-list">
             {outboxStatuses.map((status) => (
               <div key={status}>
-                <span>{status}</span>
+                <span>{outboxStatusCopy[status]}</span>
                 <strong>{data.outbox.by_status[status] ?? 0}</strong>
               </div>
             ))}
           </div>
         </Panel>
 
-        <Panel title="Worker" eyebrow="Celery">
+        <Panel className="creative-panel" title="워커" eyebrow="Celery">
           <div className="ops-worker-card">
             <Badge tone={workerTone}>
               <CpuIcon size={12} />
@@ -141,16 +161,16 @@ function OpsDashboard({
             </Badge>
             <dl>
               <div>
-                <dt>Queue</dt>
+                <dt>큐</dt>
                 <dd>{data.dispatch.queue ?? "-"}</dd>
               </div>
               <div>
-                <dt>Late ack</dt>
-                <dd>{data.dispatch.task_acks_late ? "on" : "off"}</dd>
+                <dt>지연 ack</dt>
+                <dd>{data.dispatch.task_acks_late ? "켜짐" : "꺼짐"}</dd>
               </div>
               <div>
-                <dt>Reject lost</dt>
-                <dd>{data.dispatch.task_reject_on_worker_lost ? "on" : "off"}</dd>
+                <dt>유실 작업 거부</dt>
+                <dd>{data.dispatch.task_reject_on_worker_lost ? "켜짐" : "꺼짐"}</dd>
               </div>
               <div>
                 <dt>Prefetch</dt>
@@ -160,14 +180,14 @@ function OpsDashboard({
           </div>
         </Panel>
 
-        <Panel title="Recent Failures" eyebrow="Jobs">
+        <Panel className="creative-panel" title={OPS_COPY.recentFailures} eyebrow="작업">
           {data.recent_failures.length === 0 ? (
             <div className="ops-empty">
               <Badge tone="success">
                 <StatusDot tone="success" />
-                Clear
+                정상
               </Badge>
-              <p>No recent failed jobs.</p>
+              <p>최근 실패 작업이 없습니다.</p>
             </div>
           ) : (
             <div className="ops-failure-list">
@@ -176,10 +196,10 @@ function OpsDashboard({
                   <div>
                     <Badge tone={failure.dead_letter ? "warning" : "danger"}>
                       {failure.dead_letter ? <PipelineIcon size={12} /> : <HistoryIcon size={12} />}
-                      {failure.code ?? "failed"}
+                      {failure.dead_letter ? OPS_COPY.deadLetter : failure.code ?? "실패"}
                     </Badge>
                     <strong>{failure.model}</strong>
-                    <p>{failure.message ?? "No failure message recorded."}</p>
+                    <p>{failure.message ?? "기록된 실패 메시지가 없습니다."}</p>
                   </div>
                   <span title={failure.id}>
                     <ClockIcon size={12} />
@@ -210,11 +230,4 @@ function OpsStat({
       <strong>{value}</strong>
     </div>
   );
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
