@@ -16,6 +16,7 @@ from app.models import (
 )
 from app.prompt_enhancement import (
     DEFAULT_CREATIVITY_PRESET,
+    PROVIDER_PROMPT_PARAMETER_KEY,
     CreativityPreset,
     temperature_for_preset,
 )
@@ -222,7 +223,7 @@ def job_response_from_job(
         blocked=job.blocked,
         vertex_operation_name=job.vertex_operation_name,
         attempts=job.attempts,
-        parameters=job.parameters or {},
+        parameters=_public_job_parameters(job.parameters or {}),
         state_history=job.state_history or [],
         error=job.error,
         vertex_charged=job.vertex_charged,
@@ -235,6 +236,14 @@ def job_response_from_job(
             for asset in assets or []
         ],
     )
+
+
+def _public_job_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in parameters.items()
+        if key != PROVIDER_PROMPT_PARAMETER_KEY
+    }
 
 
 class PipelineResponse(BaseModel):

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.prompt_enhancement import PROVIDER_PROMPT_PARAMETER_KEY
 from app.state_machine import TERMINAL_STATES, transition
 from app.services import rate_limit, storage
 from app.services.jobs import pipeline_link
@@ -124,7 +125,7 @@ async def _attempt_imagen_generation(
     await session.commit()
     return await imagen.generate_image(
         job.model,
-        job.prompt,
+        _provider_prompt_for(job),
         number_of_images=number_of_images,
         aspect_ratio=aspect_ratio,
     )
@@ -141,7 +142,7 @@ async def _attempt_veo_submit(
     await session.commit()
     return await veo.submit_video(
         job.model,
-        job.prompt,
+        _provider_prompt_for(job),
         aspect_ratio=aspect_ratio,
         duration_sec=duration_sec,
     )
@@ -160,12 +161,21 @@ async def _attempt_veo_i2v_submit(
     await session.commit()
     return await veo.submit_video(
         job.model,
-        job.prompt,
+        _provider_prompt_for(job),
         aspect_ratio=aspect_ratio,
         duration_sec=duration_sec,
         image_bytes=image_bytes,
         image_mime=image_mime,
     )
+
+
+def _provider_prompt_for(job: Job) -> str:
+    provider_prompt = (job.parameters or {}).get(PROVIDER_PROMPT_PARAMETER_KEY)
+    if isinstance(provider_prompt, str):
+        provider_prompt = " ".join(provider_prompt.split())
+        if provider_prompt:
+            return provider_prompt
+    return job.prompt
 
 
 async def _mark_failed(session: AsyncSession, job: Job, exc: Exception) -> None:

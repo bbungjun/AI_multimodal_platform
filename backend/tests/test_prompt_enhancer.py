@@ -158,6 +158,8 @@ async def test_enhance_prompt_builds_korean_language_preservation_guidance():
     assert isinstance(prompt, str)
     assert "Write the enhanced prompt and component values in Korean." in prompt
     assert "Do not translate Korean user text into English." in prompt
+    assert '"provider_prompt_en"' in prompt
+    assert "English provider prompt" in prompt
     assert "한국어 형식 예시" in prompt
     assert (
         "<<<USER_PROMPT_START>>>\n"
