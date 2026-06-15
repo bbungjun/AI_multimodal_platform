@@ -2,6 +2,26 @@
 
 CreativeOps Studio는 이미지, 비디오, 이미지 기반 비디오 파이프라인을 만들고 각 작업의 운영 상태까지 확인할 수 있는 개인용 AI 크리에이티브 워크스페이스입니다. 겉으로는 생성 스튜디오처럼 쓰고, 내부는 상태 기반 job 처리와 Vertex AI 연동을 갖춘 FastAPI 백엔드로 동작합니다.
 
+## 실제 생성 흐름
+
+배포 서버에서 `잠자는 사자`를 입력한 뒤, 프롬프트 향상, 향상 프롬프트 적용, 동영상 생성까지 이어지는 화면입니다.
+
+1. 대기 화면 및 `잠자는 사자` 입력
+
+<img src="docs/assets/readme/creativeops-01-prompt-input.png" alt="잠자는 사자 입력 대기 화면" width="900" />
+
+2. 프롬프트 향상 검토
+
+<img src="docs/assets/readme/creativeops-02-prompt-enhance.png" alt="프롬프트 향상 검토 화면" width="900" />
+
+3. 향상 프롬프트 적용
+
+<img src="docs/assets/readme/creativeops-03-enhanced-applied.png" alt="향상 프롬프트 적용 화면" width="900" />
+
+4. 동영상 생성 결과
+
+<img src="docs/assets/readme/creativeops-04-video-result.png" alt="잠자는 사자 동영상 생성 결과 화면" width="900" />
+
 지원 기능:
 
 - Imagen text-to-image 생성
