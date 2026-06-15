@@ -222,6 +222,53 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     assert session.rollback_count == 0
 
 
+async def test_handle_t2i_uses_internal_provider_prompt_when_available(monkeypatch):
+    job = _t2i_job()
+    job.prompt = "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    job.enhanced_prompt = job.prompt
+    job.parameters = {
+        "aspect_ratio": "16:9",
+        "number_of_images": 1,
+        "provider_prompt": (
+            "A sleeping lion on dry grass in the African savanna "
+            "during warm golden hour sunlight."
+        ),
+    }
+    session = FakeHandlerSession(job)
+    prompts: list[str] = []
+
+    async def acquire_rate_limit(_model: str) -> float:
+        return 0.0
+
+    async def generate_image(
+        _model: str,
+        prompt: str,
+        *,
+        number_of_images: int,
+        aspect_ratio: str,
+    ) -> list[bytes]:
+        prompts.append(prompt)
+        assert number_of_images == 1
+        assert aspect_ratio == "16:9"
+        return [b"lion-image"]
+
+    def save_bytes(job_id: object, filename: str, data: bytes) -> str:
+        return f"{job_id}/{filename}"
+
+    monkeypatch.setattr(handlers.rate_limit, "acquire", acquire_rate_limit)
+    monkeypatch.setattr(handlers.imagen, "generate_image", generate_image)
+    monkeypatch.setattr(handlers.storage, "save_bytes", save_bytes)
+
+    await handlers.handle_t2i(session, job)
+
+    assert prompts == [
+        "A sleeping lion on dry grass in the African savanna "
+        "during warm golden hour sunlight."
+    ]
+    assert job.prompt == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    assert job.state == JobState.COMPLETED
+
+
 async def test_handle_t2i_does_not_dispatch_unblocked_pipeline_child_directly(monkeypatch):
     job = _t2i_job()
     child_id = uuid4()

@@ -129,6 +129,7 @@ const creativityOptions: CreativityOption[] = [
   { value: "imaginative", label: "상상력" },
 ];
 const defaultCreativityPreset: CreativityPreset = "balanced";
+const hiddenEnhancementComponentKeys = new Set(["provider_prompt_en"]);
 const defaultPrompt =
   "비 내리는 서울 종로 골목, 네온 반사, 자전거 타는 사람, 라면집 옆.";
 const defaultPipelineVideoPrompt =
@@ -787,12 +788,14 @@ function EnhanceReviewPanel({
           <p>향상 프롬프트에서 뽑은 주요 구성 단서입니다.</p>
         </div>
         <div className="component-list">
-          {Object.entries(enhancement.components).map(([key, value]) => (
-            <div className="component-chip" key={key}>
-              <span>{key}</span>
-              <strong>{formatComponentValue(value)}</strong>
-            </div>
-          ))}
+          {Object.entries(enhancement.components)
+            .filter(([key]) => !hiddenEnhancementComponentKeys.has(key))
+            .map(([key, value]) => (
+              <div className="component-chip" key={key}>
+                <span>{key}</span>
+                <strong>{formatComponentValue(value)}</strong>
+              </div>
+            ))}
         </div>
       </div>
     </section>

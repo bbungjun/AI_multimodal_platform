@@ -801,6 +801,57 @@ async def test_create_generation_links_matching_prompt_enhancement():
     _assert_job_dispatch_event(session, job=job, reason="generation_created")
 
 
+async def test_create_generation_copies_provider_prompt_from_enhancement():
+    enhancement_id = uuid4()
+    session = FakeGenerationSession(
+        prompt_enhancement=PromptEnhancement(
+            id=enhancement_id,
+            original="잠자는 사자",
+            enhanced="아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자.",
+            components={
+                "subject": "잠자는 사자",
+                "provider_prompt_en": (
+                    "A sleeping lion on dry grass in the African savanna "
+                    "during warm golden hour sunlight."
+                ),
+            },
+            target_mode=GenerationMode.T2I,
+            target_model="imagen-4.0-fast-generate-001",
+            llm_model="gemini-2.5-flash",
+        )
+    )
+
+    response = await _post_generation(
+        {
+            "mode": "t2i",
+            "prompt": "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자.",
+            "model": "imagen-4.0-fast-generate-001",
+            "enhancement_id": str(enhancement_id),
+            "aspect_ratio": "16:9",
+        },
+        session,
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["prompt"] == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    assert body["enhanced_prompt"] == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    assert body["parameters"] == {
+        "aspect_ratio": "16:9",
+        "number_of_images": 1,
+    }
+
+    job = _added_jobs(session)[0]
+    assert job.parameters == {
+        "aspect_ratio": "16:9",
+        "number_of_images": 1,
+        "provider_prompt": (
+            "A sleeping lion on dry grass in the African savanna "
+            "during warm golden hour sunlight."
+        ),
+    }
+
+
 async def test_create_generation_rejects_missing_prompt_enhancement_without_job():
     enhancement_id = uuid4()
     session = FakeGenerationSession()

@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.models import GenerationMode
 from app.prompt_enhancement import (
     DEFAULT_CREATIVITY_PRESET,
+    PROVIDER_PROMPT_COMPONENT_KEY,
     CreativityPreset,
     normalize_creativity_preset,
     strategy_for_preset,
@@ -373,6 +374,7 @@ def _mock_prompt_enhancement(
             "mode": target_mode.value,
             "model": target_model,
             "creativity_preset": creativity_preset.value,
+            PROVIDER_PROMPT_COMPONENT_KEY: normalized_prompt,
         },
         target_mode=target_mode,
         target_model=target_model,
@@ -498,7 +500,11 @@ def _build_prompt(
             "must include an enhanced prompt and named components. "
             "Return one JSON object only, with no markdown fences, "
             "preface, explanation, or trailing commentary. The components "
-            "value must be a JSON object whose keys and values are strings."
+            "value must be a JSON object whose keys and values are strings. "
+            f'The components object must include "{PROVIDER_PROMPT_COMPONENT_KEY}", '
+            "an English provider prompt optimized for the target Imagen or "
+            "Veo model. Keep enhanced in the requested display language; "
+            "use provider_prompt_en only as internal execution text."
         ),
     ]
     if strict_json_retry:

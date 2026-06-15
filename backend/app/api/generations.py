@@ -11,6 +11,10 @@ from sqlalchemy.orm import selectinload
 
 from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, PromptEnhancement, utc_now
+from app.prompt_enhancement import (
+    PROVIDER_PROMPT_COMPONENT_KEY,
+    PROVIDER_PROMPT_PARAMETER_KEY,
+)
 from app.schemas import GenerationCreate, GenerationResponse, job_response_from_job
 from app.services import storage
 from app.services.jobs import i2v_guard
@@ -103,6 +107,7 @@ async def create_generation(
         generation_mode=generation_mode,
         model=payload.model,
     )
+    parameters = _with_provider_prompt(parameters, prompt_enhancement)
 
     now = utc_now()
     job = Job(
@@ -289,6 +294,23 @@ async def delete_generation(
 def _validate_model(model: str, *, prefix: str, detail: str) -> None:
     if model not in DEFAULT_MODEL_LIMITS or not model.startswith(prefix):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+def _with_provider_prompt(
+    parameters: dict[str, object],
+    prompt_enhancement: PromptEnhancement | None,
+) -> dict[str, object]:
+    if prompt_enhancement is None:
+        return parameters
+    provider_prompt = (prompt_enhancement.components or {}).get(
+        PROVIDER_PROMPT_COMPONENT_KEY
+    )
+    if not isinstance(provider_prompt, str):
+        return parameters
+    provider_prompt = " ".join(provider_prompt.split())
+    if not provider_prompt:
+        return parameters
+    return {**parameters, PROVIDER_PROMPT_PARAMETER_KEY: provider_prompt}
 
 
 async def _get_matching_prompt_enhancement(

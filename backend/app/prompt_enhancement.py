@@ -10,6 +10,8 @@ class CreativityPreset(StrEnum):
 
 
 DEFAULT_CREATIVITY_PRESET = CreativityPreset.BALANCED
+PROVIDER_PROMPT_COMPONENT_KEY = "provider_prompt_en"
+PROVIDER_PROMPT_PARAMETER_KEY = "provider_prompt"
 
 CREATIVITY_TEMPERATURES: dict[CreativityPreset, float] = {
     CreativityPreset.FAITHFUL: 0.2,
