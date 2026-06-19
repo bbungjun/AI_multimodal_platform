@@ -37,15 +37,14 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
-- AWS portfolio deployment: the live stack is deployed in Sydney,
-  `ap-southeast-2`, under AWS account `827913617635`, and currently runs
-  `AI_PROVIDER=vertex` with GCP project `krafton-vertex-live-3108`. CloudFront
-  serves the frontend at `https://d3up7fakknt15b.cloudfront.net`, proxies
-  `/api/*` and `/files/*` to the ALB, and all three ECS services are enabled
-  with desired count `1`.
-- AWS Terraform: `infra/aws/` contains the Terraform baseline for the deployed
+- AWS portfolio deployment: no live AWS stack is currently running. The Sydney
+  `ap-southeast-2` portfolio stack under AWS account `827913617635` was
+  intentionally destroyed on 2026-06-19.
+- AWS Terraform: `infra/aws/` contains the Terraform baseline for recreating the
   portfolio stack. The committed defaults keep ECS desired counts at `0`; use
-  local ignored tfvars when intentionally enabling the live services.
+  local ignored tfvars when intentionally enabling live services. The previous
+  S3 remote state bucket was also deleted after the state was emptied, so a
+  future redeploy must recreate the backend bucket before `terraform init`.
 - Documentation loading policy: read this file first, then load only the
   directly relevant reference doc for the task. Historical phase plans and
   closeout files were removed to keep agent startup fast.
@@ -70,6 +69,27 @@ values empty. In Vertex mode, configure credentials locally and never commit or
 paste credential contents.
 
 ## Last Completed Work
+
+As of 2026-06-19, the AWS portfolio deployment was intentionally removed:
+
+- Fast-forwarded local `main` to `origin/main` at `727fccb`.
+- Initialized Terraform against the existing S3 remote state in
+  `ap-southeast-2` and generated a destroy plan for the deployed portfolio
+  stack.
+- Emptied the frontend S3 bucket and ECR repository images that would otherwise
+  block Terraform deletion.
+- Applied Terraform destroy for the CloudFront, ALB, ECS API/worker/dispatcher,
+  RDS PostgreSQL, ElastiCache Redis, EFS, ECR, frontend S3, VPC/networking,
+  CloudWatch Logs, IAM roles, and app Secrets Manager resources.
+- Forced deletion without recovery for the two app-managed Secrets Manager
+  secrets after Terraform scheduled them for deletion; the RDS managed secret
+  was already gone.
+- Deleted the manual Terraform backend S3 bucket
+  `creativeops-terraform-state-827913617635` after removing its versioned state
+  objects and delete markers.
+- Verification confirmed Terraform state was empty before backend bucket
+  removal, a new destroy plan had no remaining objects, and representative AWS
+  resources returned NotFound responses.
 
 As of 2026-06-14, the local frontend UI was aligned with the CreativeOps
 Studio direction while keeping backend/API contracts unchanged:
@@ -173,14 +193,16 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   `CELERY_TASK_ACKS_LATE=true`, `CELERY_TASK_REJECT_ON_WORKER_LOST=true`, and
   `CELERY_WORKER_PREFETCH_MULTIPLIER=1`; `setup_local.ps1` does not overwrite
   existing local `.env` files unless `-Force` is used.
-- Monitor AWS cost while the portfolio stack is live. If the demo is not needed,
-  scale ECS desired counts back to `0` or destroy the stack intentionally with
-  Terraform.
-- AWS Vertex mode is live. Keep using the smallest Gemini smoke checks first,
-  and only test Imagen/Veo when quota and cost risk are acceptable.
-- Optional polish before showing the portfolio: custom domain plus ACM
-  certificate, CloudFront HTTPS alias, and a small deployment script that
-  repeats build, ECR push, S3 sync, invalidation, and service update.
+- No AWS portfolio stack is currently live. Before a future AWS redeploy,
+  recreate the Terraform backend bucket, run `terraform init` with the backend
+  config, and reapply from `infra/aws/`.
+- If AWS will not be used again soon, optionally remove the manual IAM inline
+  policy `CreativeOpsPortfolioDeployPolicy` from the `de-ai-21` IAM user after
+  confirming that user does not need those deployment permissions.
+- For a future portfolio showing, recreate the AWS stack first, then consider
+  custom domain plus ACM certificate, CloudFront HTTPS alias, and a small
+  deployment script that repeats build, ECR push, S3 sync, invalidation, and
+  service update.
 - Run the full local quality gate before committing documentation changes:
 
 ```powershell
@@ -199,7 +221,7 @@ Latest Vertex API smoke:
 # Result: HTTP 200 from generateContent
 ```
 
-Latest AWS Vertex deployment checks:
+Previous AWS Vertex deployment checks:
 
 ```powershell
 # 2026-06-13, AWS account 827913617635, ap-southeast-2
@@ -226,3 +248,34 @@ Expected:
 - Prompt enhancement returns a Gemini result through the deployed API
 - ECS API, worker, and dispatcher are all running
 - full local quality gate passes when local dependencies are available
+
+Latest AWS teardown checks:
+
+```powershell
+# 2026-06-19, AWS account 827913617635, ap-southeast-2
+terraform init -backend-config="bucket=creativeops-terraform-state-827913617635" -backend-config="key=creativeops/portfolio/terraform.tfstate" -backend-config="region=ap-southeast-2" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+terraform plan -destroy '-var=container_image=827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio' '-out=tfplan.destroy'
+terraform apply -auto-approve tfplan.destroy
+terraform destroy -auto-approve '-var=container_image=827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio'
+terraform state list
+terraform plan -destroy '-var=container_image=827913617635.dkr.ecr.ap-southeast-2.amazonaws.com/creativeops-portfolio-backend:portfolio' -detailed-exitcode
+aws rds describe-db-instances --db-instance-identifier creativeops-portfolio --region ap-southeast-2
+aws elasticache describe-replication-groups --replication-group-id creativeops-portfolio-redis --region ap-southeast-2
+aws cloudfront get-distribution --id E2F32KLJZ6RUUM
+aws ecr describe-repositories --repository-names creativeops-portfolio-backend --region ap-southeast-2
+aws s3api head-bucket --bucket creativeops-portfolio-frontend-827913617635 --region ap-southeast-2
+aws s3api head-bucket --bucket creativeops-terraform-state-827913617635 --region ap-southeast-2
+aws logs describe-log-groups --log-group-name-prefix /creativeops/portfolio --region ap-southeast-2
+```
+
+Expected:
+
+- Terraform state is empty before backend bucket deletion.
+- Fresh Terraform destroy plan reports no objects need to be destroyed.
+- RDS, ElastiCache, CloudFront, ECR, frontend S3, EFS, VPC, and ALB checks
+  return NotFound responses.
+- S3 bucket listing has no `creativeops-` buckets.
+- CloudWatch log group prefix returns an empty list.
+- The Terraform backend bucket is deleted after state verification.
+- `tag:GetResources` verification was attempted but the current IAM user lacks
+  `tag:GetResources`; individual resource checks were used instead.
