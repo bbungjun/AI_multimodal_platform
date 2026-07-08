@@ -1,0 +1,79 @@
+name: Ops / QA
+description: mock smoke, Vertex live QA, 배포 검증, 운영 점검을 기록합니다.
+title: "[OPS] "
+labels: ["ops", "qa"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        운영/QA issue는 실행한 명령, 공개 가능한 결과, 남은 위험을 기록합니다. credential 값, `.env`, service-account JSON 내용은 절대 붙이지 않습니다.
+
+  - type: dropdown
+    id: qa_type
+    attributes:
+      label: 점검 유형
+      options:
+        - Local mock smoke
+        - Docker Compose config
+        - GCP / GKE deployment
+        - AWS deployment
+        - Vertex live QA
+        - GitHub Actions / CI
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: 점검 목적
+      placeholder: 예) GKE mock 배포 후 `/api/health`, `/api/ops/health`, mock T2I job 완료를 확인한다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: commands
+    attributes:
+      label: 실행 명령
+      description: 실행할 명령을 적어 주세요. 비밀값이 포함된 env 출력은 금지합니다.
+      render: powershell
+      value: |
+        # Example
+        python scripts/verify_local.py
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 공개 가능한 결과
+      description: 상태 코드, job id, final state, public error code처럼 공유 가능한 증거만 적어 주세요.
+      value: |
+        - Health:
+        - Job:
+        - Asset:
+        - Logs:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 안전 확인
+      options:
+        - label: "`.env`, credential JSON, API key, private key 값을 출력하지 않았다."
+          required: true
+        - label: Vertex live QA 또는 cloud apply 비용 위험을 확인했다.
+          required: false
+        - label: mock mode 검증을 먼저 실행했다.
+          required: false
+
+  - type: textarea
+    id: follow_up
+    attributes:
+      label: 후속 작업
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: false

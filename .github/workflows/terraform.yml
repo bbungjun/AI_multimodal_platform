@@ -1,0 +1,97 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+      - "scripts/*terraform*"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+      - "scripts/*terraform*"
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: "Terraform stack directory under infra, or all"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - aws
+          - gcp
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Terraform fmt / validate
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: Detect Terraform stacks
+        id: stacks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          requested="${{ github.event.inputs.stack || 'all' }}"
+          if [ "$requested" = "all" ]; then
+            mapfile -t dirs < <(find infra -name "*.tf" -exec dirname {} \; | sort -u)
+          else
+            if [ -d "infra/$requested" ] && find "infra/$requested" -name "*.tf" | grep -q .; then
+              dirs=("infra/$requested")
+            else
+              dirs=()
+            fi
+          fi
+
+          if [ "${#dirs[@]}" -eq 0 ]; then
+            echo "No Terraform stacks found for request: $requested"
+            echo "dirs=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf "%s\n" "${dirs[@]}"
+          {
+            echo "dirs<<EOF"
+            printf "%s\n" "${dirs[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Terraform fmt, init, validate
+        if: steps.stacks.outputs.dirs != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r dir; do
+            [ -n "$dir" ] || continue
+            echo "::group::$dir"
+            terraform -chdir="$dir" fmt -recursive -check
+            terraform -chdir="$dir" init -backend=false
+            terraform -chdir="$dir" validate
+            echo "::endgroup::"
+          done <<< "${{ steps.stacks.outputs.dirs }}"
+
+      - name: Terraform automation note
+        if: always()
+        run: |
+          echo "This workflow intentionally runs static Terraform checks only."
+          echo "Live plan/apply requires cloud credentials and should be handled through an explicit, reviewed workflow_dispatch path."

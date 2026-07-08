@@ -97,6 +97,23 @@ As of 2026-07-08, the GCP GKE deployment planning work started on Issue #3:
 - Fresh verification after splitting the GCP deployment queue into child issues
   passed: `git diff --check` and `python scripts/verify_local.py`.
 
+As of 2026-07-08, GitHub collaboration templates and automation were added on
+Issue #5:
+
+- Added issue forms modeled after `SKYAHO/Autoresearch` but tailored for
+  CreativeOps Studio: feature, bug, infra/Terraform, and ops/QA forms.
+- Added a PR template with issue linkage, validation, provider-mode,
+  Terraform/deployment impact, and secret-safety checks.
+- Added CODEOWNERS for lightweight repo ownership hints.
+- Kept collaboration management to GitHub Issues and Pull Requests only; no
+  GitHub Project sync workflow is used.
+- Added Terraform GitHub Actions automation that runs static `fmt`, `init
+  -backend=false`, and `validate` checks for Terraform stack changes.
+- Created repository labels used by the templates: `feature`, `infra`,
+  `terraform`, `ops`, and `qa`.
+- Fresh verification passed: `.github` YAML parse check, `git diff --check`,
+  and `python scripts/verify_local.py`.
+
 As of 2026-06-19, the AWS portfolio deployment was intentionally removed:
 
 - Fast-forwarded local `main` to `origin/main` at `727fccb`.
