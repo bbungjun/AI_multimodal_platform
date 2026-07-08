@@ -2,8 +2,9 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from time import perf_counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.assets import router as assets_router
@@ -16,6 +17,7 @@ from app.api.prompts import router as prompts_router
 from app.config import get_settings
 from app.db import close_db_connection, init_db_schema
 from app.services.jobs.runner import job_runner
+from app.services.ops.runtime import runtime_metrics
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def record_runtime_metrics(request: Request, call_next):
+    started = perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        runtime_metrics.record_http_request(
+            method=request.method,
+            path=runtime_metrics.path_for_request(request),
+            status_code=status_code,
+            duration_ms=(perf_counter() - started) * 1000,
+        )
+
 
 app.include_router(health_router, prefix="/api")
 app.include_router(ops_router)

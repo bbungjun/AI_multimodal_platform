@@ -61,6 +61,8 @@ Important backend contracts are already protected by focused tests:
 - health readiness and mock-provider readiness
 - ops metrics API for job state, outbox status, resumable polling, dispatch
   settings, and recent failure summaries
+- runtime observability for HTTP throughput, error rate, latency samples, and
+  provider failure code counts
 - state machine transitions and terminal behavior
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume

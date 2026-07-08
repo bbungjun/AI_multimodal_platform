@@ -11,6 +11,7 @@ from app.main import app
 from app.models import GenerationMode, PromptEnhancement, utc_now
 from app.prompt_enhancement import CreativityPreset, temperature_for_preset
 from app.services.llm import enhancer
+from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexRateLimitedError
 
 
@@ -127,20 +128,25 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
 
 async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     session = FakePromptSession()
+    runtime_metrics.reset()
 
     async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
         raise VertexRateLimitedError(status_code=429)
 
     monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
 
-    response = await _post_prompt_enhance(
-        {
-            "prompt": "a quiet desk lamp",
-            "target_mode": "t2i",
-            "target_model": "imagen-4.0-fast-generate-001",
-        },
-        session,
-    )
+    try:
+        response = await _post_prompt_enhance(
+            {
+                "prompt": "a quiet desk lamp",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+            },
+            session,
+        )
+        metrics_snapshot = runtime_metrics.snapshot()
+    finally:
+        runtime_metrics.reset()
 
     assert response.status_code == 503
     assert response.json()["detail"] == {
@@ -152,6 +158,10 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     assert session.added == []
     assert session.commit_count == 0
     assert session.refresh_count == 0
+    assert metrics_snapshot.provider_failures.failures_total == 1
+    assert metrics_snapshot.provider_failures.retryable == 1
+    assert metrics_snapshot.provider_failures.by_code == {"vertex_rate_limited": 1}
+    assert metrics_snapshot.provider_failures.by_status == {"429": 1}
 
 
 @pytest.mark.parametrize(

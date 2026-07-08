@@ -14,6 +14,7 @@ from app.schemas import (
     OpsOutboxResponse,
     OpsRecentFailureResponse,
 )
+from app.services.ops.runtime import runtime_metrics
 from app.state_machine import NON_TERMINAL_STATES
 
 
@@ -76,6 +77,7 @@ async def collect_ops_health(
             by_status=outbox_counts,
         ),
         recent_failures=recent_failures,
+        runtime=runtime_metrics.snapshot(),
     )
 
 

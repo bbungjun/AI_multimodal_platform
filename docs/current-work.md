@@ -70,8 +70,28 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-09, Issue #24 is in progress on branch
-`codex/issue-24-practical-ops-standards`:
+As of 2026-07-09, Issue #26 is in progress on branch
+`codex/issue-26-observability-baseline`:
+
+- PR #25 for Issue #24 was marked ready and merged into `main` at merge commit
+  `e5f09b3186e85d683635140c5e36c5cbbcdf51a9`.
+- Issue #26 scope: add a small, testable observability baseline before deeper
+  prompt reliability work.
+- Added in-memory runtime metrics for API request throughput, HTTP error rate,
+  per-endpoint status counts, latency samples, and provider failure counts by
+  public code/status.
+- Added request metrics middleware and `GET /api/ops/metrics`; `GET
+  /api/ops/health` now includes the same runtime snapshot under additive field
+  `runtime`.
+- Prompt enhancement `VertexServiceError` handling now records provider failure
+  counters without logging response bodies, prompts, credentials, or Secret
+  payloads.
+- Updated local mock and GCP GKE runbooks to inspect `/api/ops/metrics` before
+  and after smoke or k6 runs.
+
+As of 2026-07-09, Issue #24 completed on branch
+`codex/issue-24-practical-ops-standards`; PR #25 was merged into `main` at merge
+commit `e5f09b3186e85d683635140c5e36c5cbbcdf51a9`:
 
 - PR #23 for Issue #22 was marked ready and merged into `main` at merge commit
   `594f61766b6d8bef3b5a024db0dab438158aa194`.

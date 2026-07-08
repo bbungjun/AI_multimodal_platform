@@ -94,6 +94,7 @@ implicitly through application settings.
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/health"
 Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/health"
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/ops/health"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/ops/metrics"
 ```
 
 Expected provider status in mock mode:
@@ -113,6 +114,17 @@ Expected ops status in mock mode:
 - job counts grouped under `jobs.by_state`
 - outbox counts grouped under `outbox.by_status`
 - resumable Veo polling count under `jobs.resumable_polling`
+- runtime request metrics under `runtime.http`
+- provider failure counts under `runtime.provider_failures`
+
+`/api/ops/metrics` returns the same runtime-only metrics without querying the
+database. Use it before and after k6 or smoke runs to inspect:
+
+- `http.requests_total`
+- `http.errors_total` and `http.error_rate`
+- per-endpoint `status_counts`
+- per-endpoint `latency_ms.avg_ms`, `p50_ms`, `p95_ms`, and `max_ms`
+- `provider_failures.by_code` and `provider_failures.by_status`
 
 The frontend exposes the same operational summary at `/ops`.
 

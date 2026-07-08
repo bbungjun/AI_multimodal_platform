@@ -7,6 +7,7 @@ from sqlalchemy.dialects import postgresql
 from app.config import Settings
 from app.models import GenerationMode, Job, JobState, OutboxEventStatus, utc_now
 from app.services.ops import metrics
+from app.services.ops.runtime import runtime_metrics
 
 
 class FakeExecuteResult:
@@ -96,15 +97,25 @@ async def test_collect_ops_health_counts_jobs_outbox_and_recent_failures():
         ],
         failed_jobs=[failed_job],
     )
-
-    response = await metrics.collect_ops_health(
-        session,
-        settings=Settings(
-            _env_file=None,
-            job_dispatch_mode="celery",
-            celery_default_queue="generation",
-        ),
+    runtime_metrics.reset()
+    runtime_metrics.record_http_request(
+        method="GET",
+        path="/api/health",
+        status_code=200,
+        duration_ms=12.5,
     )
+
+    try:
+        response = await metrics.collect_ops_health(
+            session,
+            settings=Settings(
+                _env_file=None,
+                job_dispatch_mode="celery",
+                celery_default_queue="generation",
+            ),
+        )
+    finally:
+        runtime_metrics.reset()
 
     assert response.ok is True
     assert response.db == "up"
@@ -124,6 +135,8 @@ async def test_collect_ops_health_counts_jobs_outbox_and_recent_failures():
     assert response.recent_failures[0].code == "veo_timeout"
     assert response.recent_failures[0].dead_letter is True
     assert response.recent_failures[0].retryable is True
+    assert response.runtime.http.requests_total == 1
+    assert response.runtime.http.endpoints[0].path == "/api/health"
     assert len(session.execute_statements) == 4
     assert len(session.scalar_statements) == 1
 

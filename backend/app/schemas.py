@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any, Literal, Union
 from uuid import UUID
 
@@ -97,6 +97,50 @@ class OpsRecentFailureResponse(BaseModel):
     updated_at: datetime
 
 
+class OpsLatencyMetricsResponse(BaseModel):
+    avg_ms: float
+    p50_ms: float
+    p95_ms: float
+    max_ms: float
+    recent_samples: int
+
+
+class OpsHttpEndpointMetricsResponse(BaseModel):
+    method: str
+    path: str
+    requests: int
+    errors: int
+    error_rate: float
+    status_counts: dict[str, int]
+    latency_ms: OpsLatencyMetricsResponse
+
+
+class OpsHttpRuntimeMetricsResponse(BaseModel):
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    uptime_sec: float = 0.0
+    requests_total: int = 0
+    errors_total: int = 0
+    error_rate: float = 0.0
+    endpoints: list[OpsHttpEndpointMetricsResponse] = Field(default_factory=list)
+
+
+class OpsProviderFailureMetricsResponse(BaseModel):
+    failures_total: int = 0
+    retryable: int = 0
+    non_retryable: int = 0
+    by_code: dict[str, int] = Field(default_factory=dict)
+    by_status: dict[str, int] = Field(default_factory=dict)
+
+
+class OpsRuntimeMetricsResponse(BaseModel):
+    http: OpsHttpRuntimeMetricsResponse = Field(
+        default_factory=OpsHttpRuntimeMetricsResponse,
+    )
+    provider_failures: OpsProviderFailureMetricsResponse = Field(
+        default_factory=OpsProviderFailureMetricsResponse,
+    )
+
+
 class OpsHealthResponse(BaseModel):
     ok: bool
     db: Literal["up", "down"]
@@ -105,6 +149,7 @@ class OpsHealthResponse(BaseModel):
     jobs: OpsJobsResponse
     outbox: OpsOutboxResponse
     recent_failures: list[OpsRecentFailureResponse] = Field(default_factory=list)
+    runtime: OpsRuntimeMetricsResponse = Field(default_factory=OpsRuntimeMetricsResponse)
 
 
 class T2IRequest(GenerationRequestBase):

@@ -241,10 +241,16 @@ $frontendIp = kubectl get svc creativeops-frontend `
 $frontendUrl = "http://$frontendIp"
 Invoke-RestMethod -Uri "$frontendUrl/api/health"
 Invoke-RestMethod -Uri "$frontendUrl/api/ops/health"
+Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"
 python scripts/smoke_mock_golden_path.py --base-url $frontendUrl --timeout-sec 120
 ```
 
 Expected health mode: `vertex.status=mock_provider`.
+
+`/api/ops/metrics` is an application-runtime baseline for the API pod process.
+Use it before and after smoke or k6 runs to compare request throughput, error
+rate, per-endpoint latency, status counts, and provider failure codes. It does
+not print request/response bodies, env values, or Secret payloads.
 
 ## Vertex Readiness
 
@@ -262,6 +268,7 @@ terraform -chdir=infra/gcp apply `
   -var "dispatcher_replicas=1" `
   -var "ai_provider=vertex"
 Invoke-RestMethod -Uri "$frontendUrl/api/health"
+Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"
 ```
 
 Expected readiness mode: `vertex.status=ready`.
