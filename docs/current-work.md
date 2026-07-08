@@ -70,11 +70,47 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #11 added the deployment scripts and runbook layer on
+branch `codex/issue-11-gcp-deployment-runbooks`:
+
+- Started from `main` at PR #18 merge commit
+  `c528046 feat: add gke workloads (#18)`.
+- Added `scripts/use_personal_gcp.ps1` and shared guard helpers so GCP
+  deployment shells set `CLOUDSDK_CONFIG`, `KUBECONFIG`, project env vars, and
+  clear local credential-file env vars before any guarded action.
+- Guarded GCP helpers verify the personal account
+  `youngjun3108@gmail.com` and personal project `krafton-vertex-live-3108`, and
+  explicitly refuse the known team account/project.
+- Added `scripts/build_push_gcp_images.ps1` for backend/frontend Docker image
+  build and Artifact Registry push using the Terraform repository naming
+  contract.
+- Added `scripts/bootstrap_gcp_runtime_secrets.ps1` to create or rotate the
+  Cloud SQL app user password through the Cloud SQL Admin API, add a Secret
+  Manager `DATABASE_URL` version, and apply the Kubernetes runtime secret
+  without printing secret values.
+- Added `docs/runbooks/gcp-gke.md` and updated `infra/gcp/README.md` plus the
+  deployment plan to use the guarded scripts.
+- Updated `scripts/verify_local.py` to use the invoking Python executable for
+  backend tests, so environments without a `python` alias can still run the
+  quality gate.
+- No live GCP apply, API enable, image push, kubectl write, Vertex call, or
+  secret read was run in this step.
+- Fresh verification passed: PowerShell AST parse for all repository
+  PowerShell scripts, `terraform.exe -chdir=infra/gcp init -backend=false`,
+  `terraform.exe -chdir=infra/gcp fmt -recursive -check`,
+  `terraform.exe -chdir=infra/gcp validate`, `git diff --check`, and
+  `.venv/bin/python scripts/verify_local.py --env-file .env.example
+  --skip-compose` with 313 backend tests plus frontend lint/build.
+- `python3 scripts/verify_local.py --env-file .env.example --skip-compose`
+  initially failed before local backend test dependencies were installed, and
+  full compose verification failed because Docker Desktop WSL integration is
+  not enabled in this environment.
+
 As of 2026-07-08, Issue #10 added the first GKE workload layer on branch
 `codex/issue-10-gke-workloads`:
 
-- Merged PR #17 so the GKE cluster, Artifact Registry repositories, and
-  Workload Identity boundary are available on `main`, and Issue #9 is closed.
+- Merged PR #18 so the GKE workload manifests and production frontend image
+  path are available on `main`, and Issue #10 is closed.
 - Added `frontend/Dockerfile.prod` and `frontend/nginx.conf` so the Vite
   frontend can be built into an nginx image that serves static assets and
   proxies `/api` and `/files` to the in-cluster API service.
@@ -309,8 +345,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #10 PR after checks pass. Then start Issue #11
-  from updated `main` using branch `codex/issue-11-gcp-deployment-runbooks`.
+- Review and merge the Issue #11 PR after checks pass. Then start Issue #12
+  from updated `main` using branch `codex/issue-12-gcp-mock-smoke`.
 - Continue one child issue at a time through #14, always branching from updated
   `main`, opening a draft PR, getting review, and merging before the next issue
   starts.

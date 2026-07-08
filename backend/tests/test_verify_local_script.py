@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -43,7 +44,7 @@ def test_build_default_steps_uses_mock_backend_and_env_example():
         "--quiet",
     ]
     assert steps[1].cwd == Path("C:/repo/backend")
-    assert steps[1].command == ["python", "-m", "pytest"]
+    assert steps[1].command == [sys.executable, "-m", "pytest"]
     assert steps[1].env_overrides == {"AI_PROVIDER": "mock"}
     assert steps[2].cwd == Path("C:/repo/frontend")
     assert steps[2].command == ["npm", "run", "lint"]

@@ -22,10 +22,29 @@
 - Runtime namespace: `creativeops-portfolio`
 - Runtime secret name: `creativeops-runtime-secrets`
 - State bucket name pattern: `creativeops-terraform-state-$env:GCP_PROJECT_ID`
+- Personal GCP account: `youngjun3108@gmail.com`
+- Personal GCP project: `krafton-vertex-live-3108`
+- Guard helper: `scripts/use_personal_gcp.ps1`
 
 Do not print, commit, or paste `.env`, service-account JSON, ADC files, API keys,
 private keys, DB passwords, `backend.hcl`, `.tfvars`, Terraform state, generated
 media, or runtime logs containing secrets.
+
+Do not use the team GCP account or project for this repository. Before any
+`terraform apply`, `kubectl`, or GCP write command, run:
+
+```powershell
+.\scripts\use_personal_gcp.ps1
+gcloud config get-value account
+gcloud config get-value project
+```
+
+Expected:
+
+```text
+youngjun3108@gmail.com
+krafton-vertex-live-3108
+```
 
 ## Issue And PR Execution Map
 
@@ -103,17 +122,15 @@ Each command exits with code 0.
 Run:
 
 ```powershell
-$env:GCP_PROJECT_ID = Read-Host "GCP project id"
-$env:GCP_REGION = "asia-northeast3"
-$env:GCP_ZONE = "asia-northeast3-a"
-$env:IMAGE_TAG = "portfolio"
-$env:TF_VAR_gcp_project_id = $env:GCP_PROJECT_ID
+.\scripts\use_personal_gcp.ps1
+gcloud config get-value account
+gcloud config get-value project
 ```
 
 Expected:
 
 ```text
-Variables are set only in the local shell. Do not commit them to files.
+The account is youngjun3108@gmail.com and the project is krafton-vertex-live-3108.
 ```
 
 ## Phase 1: GCP Project And Remote State Bootstrap
@@ -267,17 +284,13 @@ Artifact Registry repositories exist for backend and frontend images.
 Run:
 
 ```powershell
-gcloud auth configure-docker "$env:GCP_REGION-docker.pkg.dev" --quiet
-docker build -t $backendImage ./backend
-docker push $backendImage
-docker build -f frontend/Dockerfile.prod -t $frontendImage ./frontend
-docker push $frontendImage
+.\scripts\build_push_gcp_images.ps1 -ImageTag $env:IMAGE_TAG
 ```
 
 Expected:
 
 ```text
-Both image pushes finish successfully.
+Both image pushes finish successfully, and the script refuses non-personal GCP context.
 ```
 
 ## Phase 4: Infrastructure Apply With Replicas At Zero
@@ -340,7 +353,7 @@ Run:
 Expected:
 
 ```text
-The script reports that the runtime secret was refreshed in namespace creativeops-portfolio.
+The script reports that the runtime secret was refreshed in namespace creativeops-portfolio, without printing secret values.
 ```
 
 - [ ] **Step 2: Confirm the Kubernetes secret exists without printing values**

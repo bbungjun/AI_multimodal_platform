@@ -40,6 +40,23 @@ terraform -chdir=infra/gcp init -backend-config=backend.hcl
 `backend.hcl`, `.tfvars`, Terraform state, credentials, and runtime secrets must
 stay local and uncommitted.
 
+## Personal GCP Guard
+
+This repository must deploy only to the personal CreativeOps GCP project. Start
+every GCP deployment shell with:
+
+```powershell
+.\scripts\use_personal_gcp.ps1
+gcloud config get-value account
+gcloud config get-value project
+```
+
+The expected account is `youngjun3108@gmail.com` and the expected project is
+`krafton-vertex-live-3108`. The helper sets `CLOUDSDK_CONFIG`, `KUBECONFIG`,
+`GOOGLE_CLOUD_PROJECT`, `CLOUDSDK_CORE_PROJECT`, `TF_VAR_gcp_project_id`, and
+clears local credential-file environment variables. Guarded deployment helpers
+refuse to run against the known team account/project.
+
 ## Secret Safety
 
 Do not put DB passwords, `DATABASE_URL`, ADC files, service-account JSON, API
@@ -60,3 +77,13 @@ GKE uses a custom node Google service account for image pulls, logging, and
 metrics. Application pods use the Kubernetes service account name
 `creativeops-app`, which maps to the app Google service account through Workload
 Identity. No service-account key files are created or mounted.
+
+## Deployment Helpers
+
+- `scripts/build_push_gcp_images.ps1` builds backend/frontend images and pushes
+  them to the Terraform-created Artifact Registry repositories.
+- `scripts/bootstrap_gcp_runtime_secrets.ps1` creates or rotates the Cloud SQL
+  app user password, adds a Secret Manager version for `DATABASE_URL`, and
+  applies the Kubernetes runtime Secret without printing secret values.
+- `docs/runbooks/gcp-gke.md` is the operator runbook for mock-first deployment,
+  Vertex readiness, and scale-down/teardown.
