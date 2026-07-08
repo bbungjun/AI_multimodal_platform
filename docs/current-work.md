@@ -70,9 +70,28 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-08, Issue #22 is in progress on branch
-`codex/issue-22-k6-load-test` to add bounded k6 load testing for the live GCP
-deployment:
+As of 2026-07-09, Issue #24 is in progress on branch
+`codex/issue-24-practical-ops-standards`:
+
+- PR #23 for Issue #22 was marked ready and merged into `main` at merge commit
+  `594f61766b6d8bef3b5a024db0dab438158aa194`.
+- Issue #24 scope: codify practical production-grade implementation standards
+  so future work is judged by platform engineering quality, not demo-only
+  functionality.
+- Updated `AGENTS.md` with a `실무 수준 구현 기준` section covering
+  Kubernetes probes/resources/rollout impact, Terraform/IaC reproducibility,
+  guarded automation, observability beyond health endpoints, k6 baseline/stress
+  reporting, AI provider retry/failure handling, security/secret discipline,
+  CI/CD rollback readiness, performance/cost/quota decisions, and accurate
+  separation of implemented evidence from planned GPU work.
+- Next recommended implementation issue after #24: an observability baseline
+  that makes latency, error rate, throughput, queue/backlog, worker state,
+  provider failure codes, and quota/rate-limit signals visible for the live
+  GKE/Vertex stack.
+
+As of 2026-07-08, Issue #22 completed on branch
+`codex/issue-22-k6-load-test`; PR #23 was merged into `main` at merge commit
+`594f61766b6d8bef3b5a024db0dab438158aa194`:
 
 - Started from `main` at PR #21 merge commit
   `44b0875 Merge pull request #21 from
