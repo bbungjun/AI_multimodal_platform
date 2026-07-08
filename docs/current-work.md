@@ -70,9 +70,39 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-08, Issue #13 is in progress on branch
-`codex/issue-13-gcp-vertex-readiness` and the live personal GCP stack is now in
-Vertex mode:
+As of 2026-07-08, Issue #22 is in progress on branch
+`codex/issue-22-k6-load-test` to add bounded k6 load testing for the live GCP
+deployment:
+
+- Started from `main` at PR #21 merge commit
+  `44b0875 Merge pull request #21 from
+  bbungjun/codex/issue-13-gcp-vertex-readiness`.
+- Added `scripts/k6/creativeops_gcp_load.js` with three profiles:
+  `readiness`, `prompt`, and `mixed`.
+- Added `docs/runbooks/k6-gcp-load-test.md` with Linux k6 commands and the WSL
+  workaround for running Windows `k6.exe` from a Windows temp copy of the
+  script.
+- Live target used for k6 verification: `http://34.50.26.152`, still running in
+  `AI_PROVIDER=vertex`.
+- `PROFILE=readiness`, `EXPECTED_VERTEX_STATUS=ready`,
+  `READINESS_MAX_VUS=10` passed: 1764 HTTP requests, 5292 checks, checks
+  100.00%, HTTP failure rate 0.00%, p95 request duration 53.92 ms.
+- `PROFILE=prompt`, `ALLOW_VERTEX_PROMPT=1`, `PROMPT_RATE=6`,
+  `PROMPT_DURATION=2m` failed as a stress run: 11 HTTP requests, 9 successes,
+  2 failures, checks 81.81%, HTTP failure rate 18.18%, p95 request duration
+  23.9 s, 1 dropped iteration.
+- `PROFILE=prompt`, `ALLOW_VERTEX_PROMPT=1`, `PROMPT_RATE=3`,
+  `PROMPT_DURATION=2m` also failed: 7 HTTP requests, 6 successes, 1 failure,
+  checks 85.71%, HTTP failure rate 14.28%, p95 request duration 23.32 s.
+- Recent API logs for failed prompt calls showed public error codes only:
+  `vertex_rate_limited` with status 429 during the 6/min run, and
+  `prompt_enhancement_invalid_response` with no provider status during both
+  runs. No response bodies, Secret payloads, or credential files were printed.
+- No Imagen or Veo load test was added or run.
+
+As of 2026-07-08, Issue #13 completed on branch
+`codex/issue-13-gcp-vertex-readiness`; PR #21 was merged into `main` at merge
+commit `44b0875`, and the live personal GCP stack is now in Vertex mode:
 
 - Merged PR #20 for Issue #12 into `main` at merge commit
   `deb29c8b4dc21ad5cd0a158784c51b1e6b30c6e1`, then created the Issue #13 branch
