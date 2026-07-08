@@ -62,7 +62,7 @@ def build_steps(repo_root: Path, env_file: Path) -> list[Step]:
         ),
         Step(
             name="Backend mock tests",
-            command=["python", "-m", "pytest"],
+            command=[sys.executable, "-m", "pytest"],
             cwd=repo_root / "backend",
             env_overrides={"AI_PROVIDER": "mock"},
         ),
