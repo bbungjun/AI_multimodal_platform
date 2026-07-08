@@ -10,6 +10,7 @@ from app.db import AsyncSessionLocal
 from app.models import PromptEnhancement
 from app.schemas import PromptEnhanceRequest, PromptEnhancementResponse
 from app.services.llm import enhancer
+from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexServiceError
 
 
@@ -40,6 +41,13 @@ async def enhance_prompt(
         )
     except VertexServiceError as exc:
         public = exc.to_public_dict()
+        runtime_metrics.record_provider_failure(
+            code=str(public["code"]),
+            status_code=(
+                public["status_code"] if isinstance(public["status_code"], int) else None
+            ),
+            retryable=public["retryable"] is True,
+        )
         logger.warning(
             "Prompt enhancement failed: code=%s retryable=%s status=%s",
             public["code"],
