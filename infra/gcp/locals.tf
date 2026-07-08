@@ -11,6 +11,7 @@ locals {
   backend_repository_id  = "${local.name_prefix}-backend"
   frontend_repository_id = "${local.name_prefix}-frontend"
   assets_bucket_name     = "${local.name_prefix}-assets-${var.gcp_project_id}"
+  app_service_account    = "creativeops-app"
 
   runtime_defaults = {
     AI_PROVIDER                       = var.ai_provider
