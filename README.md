@@ -202,7 +202,6 @@ docker compose config
 - [Testing strategy](docs/testing.md)
 - [Local mock runbook](docs/runbooks/local-mock.md)
 - [Vertex live QA runbook](docs/runbooks/vertex-live-qa.md)
-- [GitHub Project setup](docs/runbooks/github-projects.md)
 - [Troubleshooting notes](docs/troubleshooting.md)
 - [Architecture decision records](docs/adr)
 

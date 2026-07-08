@@ -77,11 +77,9 @@ Issue #5:
   CreativeOps Studio: feature, bug, infra/Terraform, and ops/QA forms.
 - Added a PR template with issue linkage, validation, provider-mode,
   Terraform/deployment impact, and secret-safety checks.
-- Added CODEOWNERS plus project automation that syncs issues and PRs to a
-  configured GitHub Project when `CREATIVEOPS_PROJECT_URL` and
-  `CREATIVEOPS_PROJECT_TOKEN` are available.
-- Added `docs/runbooks/github-projects.md` with the recommended Project fields,
-  views, labels, and repository variable/secret setup.
+- Added CODEOWNERS for lightweight repo ownership hints.
+- Kept collaboration management to GitHub Issues and Pull Requests only; no
+  GitHub Project sync workflow is used.
 - Added Terraform GitHub Actions automation that runs static `fmt`, `init
   -backend=false`, and `validate` checks for Terraform stack changes.
 - Created repository labels used by the templates: `feature`, `infra`,
@@ -203,9 +201,6 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- To enable GitHub Project sync, create or choose a GitHub Project, then set
-  repository variable `CREATIVEOPS_PROJECT_URL` to the Project URL and
-  repository secret `CREATIVEOPS_PROJECT_TOKEN` to a token with Project access.
 - Use `scripts/setup_local.ps1` after switching machines or after a fresh clone.
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating

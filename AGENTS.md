@@ -28,8 +28,6 @@
 - 작업 브랜치는 해당 Issue에서 만들고 `codex/issue-번호-짧은-설명` 형식을
   사용합니다.
 - 검증이 끝나면 브랜치를 push하고 `main` 대상으로 draft PR을 엽니다.
-- GitHub Project 자동 연결은 repository variable `CREATIVEOPS_PROJECT_URL`과
-  secret `CREATIVEOPS_PROJECT_TOKEN`이 설정된 경우에만 workflow가 수행합니다.
 - 작업을 시작할 때는 `AGENTS.md`를 읽은 뒤 `docs/current-work.md`를 읽어 현재
   작업 상태, 마지막 검증 결과, 다음 단계, 주의사항을 먼저 확인합니다.
 - 작업을 마칠 때는 `docs/current-work.md`에 이번에 어디까지 했는지, 남은 일,
