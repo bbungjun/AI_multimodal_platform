@@ -70,8 +70,47 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-09, Issue #26 is in progress on branch
-`codex/issue-26-observability-baseline`:
+As of 2026-07-09, Issue #28 is in progress on branch
+`codex/issue-28-observability-rollout-handoff` to record the live rollout of
+the observability baseline:
+
+- PR #27 for Issue #26 was marked ready and merged into `main` at merge commit
+  `67abc7cc0619f34523863dea5d896f7405f3d48b`.
+- Personal GCP guard was verified before write operations:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Built and pushed backend image with Cloud Build ID
+  `36a80e98-aa03-4e01-b7e8-eef10d79a9b7`:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-backend/creativeops-backend:67abc7c`
+  with digest
+  `sha256:c05bfbbc3bbaed993796f2fa0b358c1aa5aac470bd88cce27e53e753d780cdb3`.
+- Built and pushed frontend image with Cloud Build ID
+  `86845a41-7f8e-466b-8358-85cadf43ec6a`:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-frontend/creativeops-frontend:67abc7c`
+  with digest
+  `sha256:2d0d880d29a1cd5ed50bf7e931cbb1a64ae949d8cc7e793592e6247ff8e942c9`.
+- Terraform plan changed only four Kubernetes deployments in place: API,
+  worker, dispatcher, and frontend image tags from `998d40d` to `67abc7c`.
+  Terraform apply completed with `0 added, 4 changed, 0 destroyed`.
+- Kubernetes rollout status passed for `creativeops-api`, `creativeops-worker`,
+  `creativeops-dispatcher`, and `creativeops-frontend`; each deployment reported
+  `READY=1`, `UPDATED=1`, and `AVAILABLE=1`.
+- Confirmed all four deployments run image tag `67abc7c`.
+- Post-apply Terraform drift check passed with `plan_exit=0`.
+- Live URL remains `http://34.50.26.152` and the stack remains in
+  `AI_PROVIDER=vertex` with one replica per workload.
+- Live `/api/health` returned `ok=true`, `ready=true`, DB `up`, and
+  `vertex.status=ready`.
+- Live `/api/ops/metrics` returned HTTP runtime metrics, including
+  `requests_total=19`, `errors_total=0`, `error_rate=0.0`,
+  `/api/health` p95 latency `188.03 ms`, and provider failure count `0`.
+- Live `/api/ops/health` includes additive `runtime` metrics and reported
+  `jobs.completed=2`, `outbox.published=3`, and no recent failures.
+- No `.env`, ADC, service-account JSON, API key/private key, Terraform state,
+  `.tfvars`, DB password, or Kubernetes Secret payload was read or printed.
+
+As of 2026-07-09, Issue #26 completed on branch
+`codex/issue-26-observability-baseline`; PR #27 was merged into `main` at merge
+commit `67abc7cc0619f34523863dea5d896f7405f3d48b`:
 
 - PR #25 for Issue #24 was marked ready and merged into `main` at merge commit
   `e5f09b3186e85d683635140c5e36c5cbbcdf51a9`.
