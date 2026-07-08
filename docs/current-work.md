@@ -70,6 +70,20 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, the GCP GKE deployment planning work started on Issue #3:
+
+- Created GitHub Issue #3 for the GCP GKE Terraform deployment path and switched
+  to branch `codex/issue-3-gcp-gke-terraform`.
+- Added the implementation plan at
+  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`. The plan chooses a
+  GKE-first stack with Artifact Registry, Cloud SQL PostgreSQL, Memorystore
+  Redis, Secret Manager metadata, Cloud Storage FUSE for `/data/assets`, and
+  GKE workloads for frontend, API, worker, and dispatcher.
+- Recorded the repository workflow preference in `AGENTS.md`: implementation
+  work starts from a GitHub Issue, uses a `codex/issue-*` branch, and ends with
+  a draft PR to `main`.
+- Fresh verification passed: `git diff --check` and `python scripts/verify_local.py`.
+
 As of 2026-06-19, the AWS portfolio deployment was intentionally removed:
 
 - Fast-forwarded local `main` to `origin/main` at `727fccb`.
@@ -184,6 +198,10 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
+- Issue #3 is tracking the GCP GKE Terraform deployment path on branch
+  `codex/issue-3-gcp-gke-terraform`. The implementation plan lives at
+  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md` and should be
+  executed before creating `infra/gcp/` resources.
 - Use `scripts/setup_local.ps1` after switching machines or after a fresh clone.
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating
