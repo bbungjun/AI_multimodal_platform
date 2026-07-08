@@ -113,6 +113,16 @@ variable "db_tier" {
   default = "db-f1-micro"
 }
 
+variable "db_edition" {
+  type    = string
+  default = "ENTERPRISE"
+
+  validation {
+    condition     = contains(["ENTERPRISE", "ENTERPRISE_PLUS"], var.db_edition)
+    error_message = "db_edition must be ENTERPRISE or ENTERPRISE_PLUS."
+  }
+}
+
 variable "db_deletion_protection" {
   type    = bool
   default = false

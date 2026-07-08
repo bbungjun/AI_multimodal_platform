@@ -30,6 +30,8 @@ resource "kubernetes_persistent_volume_v1" "assets" {
 }
 
 resource "kubernetes_persistent_volume_claim_v1" "assets" {
+  wait_until_bound = false
+
   metadata {
     name      = "creativeops-assets"
     namespace = kubernetes_namespace_v1.app.metadata[0].name

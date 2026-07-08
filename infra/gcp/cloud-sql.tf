@@ -4,6 +4,7 @@ resource "google_sql_database_instance" "main" {
   region           = var.gcp_region
 
   settings {
+    edition           = var.db_edition
     tier              = var.db_tier
     availability_type = "ZONAL"
     disk_type         = "PD_SSD"
