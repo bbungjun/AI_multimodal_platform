@@ -53,3 +53,10 @@ Memorystore Redis over private service access, a public-access-blocked Cloud
 Storage asset bucket, and a Secret Manager container for `DATABASE_URL`. Secret
 versions and database passwords are intentionally created later by an explicit
 bootstrap script, not by committed Terraform values.
+
+## GKE Identity Boundary
+
+GKE uses a custom node Google service account for image pulls, logging, and
+metrics. Application pods use the Kubernetes service account name
+`creativeops-app`, which maps to the app Google service account through Workload
+Identity. No service-account key files are created or mounted.

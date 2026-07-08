@@ -70,6 +70,25 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #9 added the GKE platform, registry, and identity
+boundary on branch `codex/issue-9-gke-identity-registry`:
+
+- Merged PR #16 so private managed services are available on `main`, and Issue
+  #8 is closed.
+- Added backend and frontend Artifact Registry Docker repositories.
+- Added GKE Standard cluster and managed node pool using the existing VPC,
+  subnet, secondary ranges, Workload Identity pool, and GCS FUSE CSI driver.
+- Added a custom GKE node service account scoped for Artifact Registry reads,
+  logging, and metrics.
+- Added an app Google service account scoped for Vertex AI usage and generated
+  asset object access through GCS, with Workload Identity mapping for the future
+  `creativeops-app` Kubernetes service account.
+- Added Kubernetes provider wiring from the created cluster for the next
+  workload PR, and outputs for image repositories, cluster credentials command,
+  Workload Identity pool, service account names, and managed service names.
+- Fresh verification passed: `.\scripts\verify_gcp_terraform.ps1`,
+  `git diff --check`, and `python scripts/verify_local.py`.
+
 As of 2026-07-08, Issue #8 added the private GCP managed services layer on
 branch `codex/issue-8-gcp-managed-services`:
 
@@ -264,8 +283,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #8 PR after checks pass. Then start Issue #9 from
-  updated `main` using branch `codex/issue-9-gke-identity-registry`.
+- Review and merge the Issue #9 PR after checks pass. Then start Issue #10 from
+  updated `main` using branch `codex/issue-10-gke-workloads`.
 - Continue one child issue at a time through #14, always branching from updated
   `main`, opening a draft PR, getting review, and merging before the next issue
   starts.
