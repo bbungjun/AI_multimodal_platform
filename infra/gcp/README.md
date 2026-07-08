@@ -45,3 +45,11 @@ stay local and uncommitted.
 Do not put DB passwords, `DATABASE_URL`, ADC files, service-account JSON, API
 keys, or private keys into Terraform variables, committed files, PR comments, or
 terminal output. Runtime secrets are bootstrapped after infrastructure exists.
+
+## Managed Services
+
+The first managed services layer creates private Cloud SQL PostgreSQL,
+Memorystore Redis over private service access, a public-access-blocked Cloud
+Storage asset bucket, and a Secret Manager container for `DATABASE_URL`. Secret
+versions and database passwords are intentionally created later by an explicit
+bootstrap script, not by committed Terraform values.

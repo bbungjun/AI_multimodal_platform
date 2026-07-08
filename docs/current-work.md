@@ -70,6 +70,26 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #8 added the private GCP managed services layer on
+branch `codex/issue-8-gcp-managed-services`:
+
+- Merged PR #15 so the GCP Terraform foundation is available on `main`, and
+  Issue #7 is closed.
+- Added VPC, regional GKE subnet, secondary pod/service CIDRs, private service
+  access reserved range, and service networking connection.
+- Added private Cloud SQL PostgreSQL with public IPv4 disabled, app database
+  metadata, and deletion protection controlled by `db_deletion_protection`.
+- Added Memorystore Redis with private service access and connected the
+  Terraform runtime defaults to `CELERY_BROKER_URL`.
+- Added the generated asset Cloud Storage bucket with uniform bucket-level
+  access, enforced public access prevention, versioning, and a 30-day lifecycle
+  cleanup rule.
+- Added only the Secret Manager metadata container for `DATABASE_URL`; no secret
+  version, DB password, `.env`, service-account JSON, or credential value is
+  committed.
+- Fresh verification passed: `.\scripts\verify_gcp_terraform.ps1`,
+  `git diff --check`, and `python scripts/verify_local.py`.
+
 As of 2026-07-08, Issue #7 added the first GCP Terraform foundation on branch
 `codex/issue-7-gcp-terraform-foundation`:
 
@@ -244,8 +264,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #7 PR after checks pass. Then start Issue #8 from
-  updated `main` using branch `codex/issue-8-gcp-managed-services`.
+- Review and merge the Issue #8 PR after checks pass. Then start Issue #9 from
+  updated `main` using branch `codex/issue-9-gke-identity-registry`.
 - Continue one child issue at a time through #14, always branching from updated
   `main`, opening a draft PR, getting review, and merging before the next issue
   starts.
