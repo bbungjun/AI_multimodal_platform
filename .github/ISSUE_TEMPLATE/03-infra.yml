@@ -1,0 +1,83 @@
+name: Infra / Terraform
+description: GCP, AWS, Kubernetes, Terraform, CI/CD 작업을 정의합니다.
+title: "[INFRA] "
+labels: ["infra", "terraform"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        인프라 issue는 비용, credential, rollback, mock-first 검증을 먼저 정리합니다. 실제 Vertex 또는 cloud apply는 명시적인 목적이 있을 때만 진행합니다.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 대상 플랫폼
+      options:
+        - GCP / GKE
+        - AWS
+        - Docker Compose
+        - GitHub Actions
+        - Terraform 공통
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 이번 인프라 변경으로 달성할 운영 목표를 적어 주세요.
+      placeholder: 예) `infra/gcp` 변경 시 Terraform fmt/validate를 자동 실행한다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: resources
+    attributes:
+      label: 변경될 리소스
+      description: 생성/수정/삭제될 가능성이 있는 리소스를 적어 주세요.
+      value: |
+        - Terraform files:
+        - Cloud resources:
+        - Kubernetes resources:
+        - GitHub settings / workflows:
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: 비용 / 보안 / 운영 위험
+      description: 비용 발생, credential 노출, downtime, data loss 가능성을 적어 주세요.
+      value: |
+        - Cost:
+        - Secrets:
+        - Data / state:
+        - Rollback:
+    validations:
+      required: true
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: 실행 계획
+      description: apply 전에 끝낼 정적 검증과 실제 적용 순서를 적어 주세요.
+      value: |
+        - [ ] `terraform fmt -recursive -check`
+        - [ ] `terraform init -backend=false`
+        - [ ] `terraform validate`
+        - [ ] mock mode smoke
+        - [ ] live apply 또는 Vertex QA는 별도 승인 후 진행
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true

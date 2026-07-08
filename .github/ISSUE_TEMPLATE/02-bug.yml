@@ -1,0 +1,110 @@
+name: Bug
+description: 버그 수정 작업을 PAAR 형식으로 정리합니다.
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        버그 수정은 PAAR 형식으로 정리합니다.
+
+        - Problem: 어떤 문제가 발생했는가
+        - Analysis: 원인과 영향 범위는 무엇인가
+        - Action: 어떻게 수정할 것인가
+        - Result: 수정 후 무엇으로 검증할 것인가
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: P - Problem
+      description: 발생한 문제, 영향받는 사용자 흐름, 재현 절차를 적어 주세요.
+      placeholder: |
+        ## 현상
+        예) mock 생성 job이 completed가 되지만 asset preview가 404를 반환합니다.
+
+        ## 영향
+        예) 사용자가 결과 이미지를 확인하거나 삭제할 수 없습니다.
+
+        ## 재현 방법
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: analysis
+    attributes:
+      label: A - Analysis
+      description: 확인한 원인, 의심 지점, 관련 코드/로그/데이터 조건을 적어 주세요.
+      placeholder: |
+        ## 원인 또는 의심 지점
+        예) asset URL은 생성됐지만 storage helper의 path containment 검증에서 실패합니다.
+
+        ## 근거
+        예) 실패 테스트, stack trace, 브라우저 console, API response.
+
+        ## 영향 범위
+        예) `/files/...` streaming 경로에 한정됩니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: action
+    attributes:
+      label: A - Action
+      description: 수정 방향과 작업 체크리스트를 적어 주세요.
+      value: |
+        - [ ] 실패를 재현하는 테스트 또는 smoke를 추가한다
+        - [ ] 원인 코드를 작게 수정한다
+        - [ ] 관련 문서 또는 에러 메시지를 필요한 만큼 갱신한다
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: R - Result
+      description: 수정 후 기대 결과와 검증 명령을 적어 주세요.
+      placeholder: |
+        ## 기대 결과
+        예) mock 생성 asset이 `/files/...`에서 200 또는 range 206으로 응답합니다.
+
+        ## 검증
+        예) python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider_mode
+    attributes:
+      label: Provider mode
+      options:
+        - mock
+        - vertex
+        - 둘 다
+        - 알 수 없음
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 실행 환경
+      value: |
+        - Branch:
+        - Command:
+        - Browser:
+        - Python / Node:
+        - Docker / Compose:
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그
+      description: 에러 메시지나 관련 로그를 붙여 주세요. 비밀값은 제거하세요.
+      render: shell
+    validations:
+      required: false
