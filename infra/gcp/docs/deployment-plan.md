@@ -27,6 +27,40 @@ Do not print, commit, or paste `.env`, service-account JSON, ADC files, API keys
 private keys, DB passwords, `backend.hcl`, `.tfvars`, Terraform state, generated
 media, or runtime logs containing secrets.
 
+## Issue And PR Execution Map
+
+Use Issue #3 as the umbrella for the GCP deployment path. Implementation work
+must happen in the child issues below, one issue at a time, with a fresh branch,
+draft PR, review, and merge before the next issue starts.
+
+Preparation order:
+
+1. Review and merge PR #6 so issue/PR templates and Terraform validation
+   workflow are available on `main`.
+2. Review and merge PR #4 so this GCP deployment plan is available on `main`.
+3. Start Issue #7 from the updated `main` branch.
+
+Per-issue workflow:
+
+1. `git switch main`
+2. `git pull --ff-only origin main`
+3. `git switch -c codex/issue-<issue-number>-<short-slug>`
+4. Implement only the issue scope and update `docs/current-work.md`.
+5. Run the issue acceptance checks plus `git diff --check`.
+6. Push the branch and open a draft PR to `main`.
+7. Review the PR, address feedback, and merge before starting the next issue.
+
+| Order | Issue | Branch | Merge gate |
+| --- | --- | --- | --- |
+| 1 | #7 `[INFRA] Add GCP Terraform foundation and validation` | `codex/issue-7-gcp-terraform-foundation` | Terraform provider/API/variable foundation validates with no live apply. |
+| 2 | #8 `[INFRA] Add GCP managed data and asset services` | `codex/issue-8-gcp-managed-services` | Cloud SQL, Redis, VPC/private access, GCS, and secret metadata validate without committed secret values. |
+| 3 | #9 `[INFRA] Add GKE, IAM, Workload Identity, and Artifact Registry` | `codex/issue-9-gke-identity-registry` | GKE, Artifact Registry, IAM, and Workload Identity validate without service-account key files. |
+| 4 | #10 `[INFRA] Add production frontend image and GKE workload manifests` | `codex/issue-10-gke-workloads` | Frontend image and GKE workloads validate with safe replica defaults. |
+| 5 | #11 `[OPS] Add GCP image, secret bootstrap, and deployment runbooks` | `codex/issue-11-gcp-deployment-runbooks` | Build/push and secret bootstrap scripts plus runbooks are reviewed and secret-safe. |
+| 6 | #12 `[QA] Execute GCP mock deployment and smoke validation` | `codex/issue-12-gcp-mock-smoke` | Live GCP mock deployment passes health, ops health, and mock golden-path smoke. |
+| 7 | #13 `[QA] Verify GCP Vertex readiness through Workload Identity` | `codex/issue-13-gcp-vertex-readiness` | Vertex readiness passes through Workload Identity; any Gemini smoke is explicitly cost-approved. |
+| 8 | #14 `[OPS] Add GCP cost-control and teardown evidence` | `codex/issue-14-gcp-cost-control` | Scale-down or teardown evidence proves no unexpected billable runtime resources remain. |
+
 ## Phase 0: Local And GitHub Preconditions
 
 - [ ] **Step 1: Confirm branch and clean state**
