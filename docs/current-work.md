@@ -70,6 +70,33 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, the GCP GKE deployment planning work started on Issue #3:
+
+- Created GitHub Issue #3 for the GCP GKE Terraform deployment path and switched
+  to branch `codex/issue-3-gcp-gke-terraform`.
+- Added the implementation plan at
+  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`. The plan chooses a
+  GKE-first stack with Artifact Registry, Cloud SQL PostgreSQL, Memorystore
+  Redis, Secret Manager metadata, Cloud Storage FUSE for `/data/assets`, and
+  GKE workloads for frontend, API, worker, and dispatcher.
+- Added the deployment execution plan at
+  `infra/gcp/docs/deployment-plan.md`. This is the operator-facing checklist
+  for GCP project bootstrap, Terraform state, Artifact Registry, mock GKE
+  deployment, Vertex readiness, evidence capture, and teardown.
+- Split the GCP deployment path into child issues under umbrella Issue #3 so
+  each meaningful unit can use its own branch, draft PR, review, and merge:
+  #7 Terraform foundation, #8 managed data/assets, #9 GKE identity/registry,
+  #10 GKE workloads, #11 deployment scripts/runbooks, #12 mock deployment
+  smoke, #13 Vertex readiness, and #14 cost-control/teardown evidence.
+- Recorded the repository workflow preference in `AGENTS.md`: implementation
+  work starts from a GitHub Issue, uses a `codex/issue-*` branch, and ends with
+  a draft PR to `main`.
+- Fresh verification passed: `git diff --check` and `python scripts/verify_local.py`.
+- Fresh verification after adding `infra/gcp/docs/deployment-plan.md` passed:
+  plan placeholder scan, `git diff --check`, and `python scripts/verify_local.py`.
+- Fresh verification after splitting the GCP deployment queue into child issues
+  passed: `git diff --check` and `python scripts/verify_local.py`.
+
 As of 2026-07-08, GitHub collaboration templates and automation were added on
 Issue #5:
 
@@ -201,6 +228,17 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
+- Review and merge PR #6 first so issue/PR templates and Terraform validation
+  workflow are available on `main`, then review and merge PR #4 so the GCP
+  execution map is available on `main`.
+- After PR #4 is merged, start GCP implementation from Issue #7 using branch
+  `codex/issue-7-gcp-terraform-foundation`. Continue one child issue at a time
+  through #14, always branching from updated `main`, opening a draft PR, getting
+  review, and merging before the next issue starts.
+- Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. The
+  implementation plan lives at
+  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`; the deployment
+  execution checklist and issue map live at `infra/gcp/docs/deployment-plan.md`.
 - Use `scripts/setup_local.ps1` after switching machines or after a fresh clone.
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating
