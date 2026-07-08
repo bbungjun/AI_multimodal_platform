@@ -70,9 +70,48 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-08, Issue #12 is in progress on branch
-`codex/issue-12-gcp-mock-smoke` and the first personal GCP mock deployment is
-live:
+As of 2026-07-08, Issue #13 is in progress on branch
+`codex/issue-13-gcp-vertex-readiness` and the live personal GCP stack is now in
+Vertex mode:
+
+- Merged PR #20 for Issue #12 into `main` at merge commit
+  `deb29c8b4dc21ad5cd0a158784c51b1e6b30c6e1`, then created the Issue #13 branch
+  from updated `main`.
+- Personal GCP guard was verified before write operations:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Added a runtime ConfigMap hash annotation for API, worker, and dispatcher
+  pod templates so changing `AI_PROVIDER` through Terraform rolls the affected
+  workloads instead of leaving existing pods on stale environment values.
+- Applied Terraform with the existing deployed images and `ai_provider=vertex`.
+  The plan changed only `creativeops-backend-env` and the API, worker, and
+  dispatcher deployment templates.
+- Live frontend URL remains `http://34.50.26.152`.
+- `/api/health` now reports DB up and Vertex ready:
+  `vertex.status=ready`, `credentials=available`, `project=configured`, and
+  `location=us-central1`.
+- Workload Identity evidence: API, worker, and dispatcher run as Kubernetes
+  service account `creativeops-app`; API/worker pod specs have no
+  `GOOGLE_APPLICATION_CREDENTIALS` env var and no service-account JSON volume
+  mount. No credential file was read, mounted, or printed.
+- Ran exactly one Gemini prompt enhancement request through the live frontend
+  URL. It returned HTTP 201, enhancement id
+  `c7cc72cc-e898-4a3b-a0bd-8072d1d88897`, non-empty enhanced text, and usage
+  metadata `tokens_in=975`, `tokens_out=120`.
+- No Imagen or Veo live generation was run.
+- Fresh verification passed:
+  `terraform -chdir=infra/gcp fmt -recursive -check`,
+  `terraform -chdir=infra/gcp validate`,
+  `terraform -chdir=infra/gcp plan -detailed-exitcode` with
+  `plan_exit=0`, `/api/health`, `/api/ops/health`, the one Gemini prompt
+  enhancement call, and Kubernetes workload identity/spec checks without
+  printing Secret payloads.
+- Current live workload state: API, worker, dispatcher, and frontend are each
+  running at 1 replica in namespace `creativeops-portfolio`. This live stack is
+  now in Vertex mode and can incur GCP/Vertex cost until changed back to mock,
+  scaled down, or destroyed.
+
+As of 2026-07-08, Issue #12 completed on branch
+`codex/issue-12-gcp-mock-smoke` with the first personal GCP mock deployment:
 
 - Personal GCP guard was verified before write operations:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
@@ -128,9 +167,7 @@ live:
 - WSL/kubectl note: the Windows `gke-gcloud-auth-plugin` was not available, so
   Kubernetes operations used a temporary token kubeconfig generated from the
   personal gcloud login. The temp file was removed after use.
-- Follow-up before closing Issue #12: review and merge the draft PR, then decide
-  whether to keep the live demo running, scale replicas to zero, or destroy the
-  stack after evidence is captured.
+- PR #20 was reviewed, merged, and closed Issue #12 before Issue #13 started.
 
 As of 2026-07-08, Issue #11 added the deployment scripts and runbook layer on
 branch `codex/issue-11-gcp-deployment-runbooks`:

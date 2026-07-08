@@ -30,7 +30,8 @@ resource "kubernetes_deployment_v1" "api" {
           app = "creativeops-api"
         }
         annotations = {
-          "gke-gcsfuse/volumes" = "true"
+          "creativeops.io/runtime-config-hash" = local.runtime_defaults_hash
+          "gke-gcsfuse/volumes"                = "true"
         }
       }
 
@@ -149,7 +150,8 @@ resource "kubernetes_deployment_v1" "worker" {
           app = "creativeops-worker"
         }
         annotations = {
-          "gke-gcsfuse/volumes" = "true"
+          "creativeops.io/runtime-config-hash" = local.runtime_defaults_hash
+          "gke-gcsfuse/volumes"                = "true"
         }
       }
 
@@ -232,6 +234,9 @@ resource "kubernetes_deployment_v1" "dispatcher" {
       metadata {
         labels = {
           app = "creativeops-dispatcher"
+        }
+        annotations = {
+          "creativeops.io/runtime-config-hash" = local.runtime_defaults_hash
         }
       }
 

@@ -35,4 +35,6 @@ locals {
     ENHANCE_MODEL                     = var.enhance_model
     CORS_ORIGINS                      = "[]"
   }
+
+  runtime_defaults_hash = sha256(jsonencode(local.runtime_defaults))
 }
