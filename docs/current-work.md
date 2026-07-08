@@ -70,6 +70,22 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #7 added the first GCP Terraform foundation on branch
+`codex/issue-7-gcp-terraform-foundation`:
+
+- Merged PR #6 so GitHub issue/PR templates and Terraform validation workflow
+  are available on `main`.
+- Merged PR #4 so the GCP deployment plan and child issue execution map are
+  available on `main`. Issue #3 remains open as the umbrella for #7 through #14.
+- Added the minimal self-validating GCP Terraform stack under `infra/gcp/`:
+  provider/version lock, GCS backend placeholder/example, project/region/zone
+  variables, safe replica defaults, shared names/labels, runtime defaults that
+  do not reference future resources, and required Google API resources.
+- Added `scripts/verify_gcp_terraform.ps1` for local
+  `terraform init -backend=false`, `terraform fmt -recursive -check`, and
+  `terraform validate`.
+- Fresh verification passed: `.\scripts\verify_gcp_terraform.ps1`.
+
 As of 2026-07-08, the GCP GKE deployment planning work started on Issue #3:
 
 - Created GitHub Issue #3 for the GCP GKE Terraform deployment path and switched
@@ -228,13 +244,11 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge PR #6 first so issue/PR templates and Terraform validation
-  workflow are available on `main`, then review and merge PR #4 so the GCP
-  execution map is available on `main`.
-- After PR #4 is merged, start GCP implementation from Issue #7 using branch
-  `codex/issue-7-gcp-terraform-foundation`. Continue one child issue at a time
-  through #14, always branching from updated `main`, opening a draft PR, getting
-  review, and merging before the next issue starts.
+- Review and merge the Issue #7 PR after checks pass. Then start Issue #8 from
+  updated `main` using branch `codex/issue-8-gcp-managed-services`.
+- Continue one child issue at a time through #14, always branching from updated
+  `main`, opening a draft PR, getting review, and merging before the next issue
+  starts.
 - Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. The
   implementation plan lives at
   `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`; the deployment
