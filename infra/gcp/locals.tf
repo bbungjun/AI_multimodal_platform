@@ -17,6 +17,7 @@ locals {
     DATA_DIR                          = "/data/assets"
     JOB_RUNNER_AUTO_START             = "false"
     JOB_DISPATCH_MODE                 = "celery"
+    CELERY_BROKER_URL                 = "redis://${google_redis_instance.main.host}:6379/0"
     CELERY_DEFAULT_QUEUE              = "generation"
     RATE_LIMIT_GEMINI_PER_MIN         = tostring(var.rate_limit_gemini_per_min)
     RATE_LIMIT_IMAGEN_PER_MIN         = tostring(var.rate_limit_imagen_per_min)
