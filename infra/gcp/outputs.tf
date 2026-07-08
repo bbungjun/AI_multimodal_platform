@@ -30,8 +30,24 @@ output "app_kubernetes_service_account_name" {
   value = local.app_service_account
 }
 
+output "namespace" {
+  value = kubernetes_namespace_v1.app.metadata[0].name
+}
+
+output "frontend_service_name" {
+  value = kubernetes_service_v1.frontend.metadata[0].name
+}
+
 output "cloud_sql_instance_name" {
   value = google_sql_database_instance.main.name
+}
+
+output "cloud_sql_private_ip" {
+  value = google_sql_database_instance.main.private_ip_address
+}
+
+output "database_name" {
+  value = google_sql_database.app.name
 }
 
 output "redis_instance_name" {
