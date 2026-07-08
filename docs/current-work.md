@@ -74,6 +74,9 @@ As of 2026-07-09, Issue #30 is in progress on branch
 `codex/issue-30-prompt-enhancement-reliability` to harden prompt enhancement
 provider failure handling:
 
+- Draft PR #31 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/31`.
+- Implementation commit: `8f91727 fix: harden prompt enhancement reliability`.
 - PR #29 for Issue #28 was merged into `main` at merge commit
   `743cf5c5ca8353a1c510afba17e011e2eb09c58c`.
 - Issue #30 scope: treat Gemini prompt enhancement 429s, transient provider
