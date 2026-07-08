@@ -79,10 +79,16 @@ As of 2026-07-08, the GCP GKE deployment planning work started on Issue #3:
   GKE-first stack with Artifact Registry, Cloud SQL PostgreSQL, Memorystore
   Redis, Secret Manager metadata, Cloud Storage FUSE for `/data/assets`, and
   GKE workloads for frontend, API, worker, and dispatcher.
+- Added the deployment execution plan at
+  `infra/gcp/docs/deployment-plan.md`. This is the operator-facing checklist
+  for GCP project bootstrap, Terraform state, Artifact Registry, mock GKE
+  deployment, Vertex readiness, evidence capture, and teardown.
 - Recorded the repository workflow preference in `AGENTS.md`: implementation
   work starts from a GitHub Issue, uses a `codex/issue-*` branch, and ends with
   a draft PR to `main`.
 - Fresh verification passed: `git diff --check` and `python scripts/verify_local.py`.
+- Fresh verification after adding `infra/gcp/docs/deployment-plan.md` passed:
+  plan placeholder scan, `git diff --check`, and `python scripts/verify_local.py`.
 
 As of 2026-06-19, the AWS portfolio deployment was intentionally removed:
 
@@ -200,8 +206,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 - Issue #3 is tracking the GCP GKE Terraform deployment path on branch
   `codex/issue-3-gcp-gke-terraform`. The implementation plan lives at
-  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md` and should be
-  executed before creating `infra/gcp/` resources.
+  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`; the deployment
+  execution checklist lives at `infra/gcp/docs/deployment-plan.md`.
 - Use `scripts/setup_local.ps1` after switching machines or after a fresh clone.
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating
