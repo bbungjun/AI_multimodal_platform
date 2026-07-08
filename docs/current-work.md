@@ -70,6 +70,32 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #10 added the first GKE workload layer on branch
+`codex/issue-10-gke-workloads`:
+
+- Merged PR #17 so the GKE cluster, Artifact Registry repositories, and
+  Workload Identity boundary are available on `main`, and Issue #9 is closed.
+- Added `frontend/Dockerfile.prod` and `frontend/nginx.conf` so the Vite
+  frontend can be built into an nginx image that serves static assets and
+  proxies `/api` and `/files` to the in-cluster API service.
+- Added Kubernetes namespace and service account resources, with the
+  `creativeops-app` Kubernetes service account annotated for the app Google
+  service account.
+- Added a backend runtime ConfigMap from Terraform defaults, plus a GCS FUSE
+  persistent volume and claim for `/data/assets`.
+- Added Kubernetes deployments for API, worker, dispatcher, and frontend, an
+  internal API service, and a frontend `LoadBalancer` service. Replica defaults
+  remain `0` until an intentional apply enables live workloads.
+- No live GCP apply was run in this step. The first deployed URL is expected in
+  the future Issue #12 mock deployment smoke step, after the frontend
+  `LoadBalancer` receives an external IP.
+- Fresh verification passed: `.\scripts\verify_gcp_terraform.ps1`,
+  `npm run build`, `docker build -f frontend/Dockerfile.prod -t
+  creativeops-frontend:gke ./frontend`, `docker run --rm --add-host
+  creativeops-api:127.0.0.1 creativeops-frontend:gke nginx -t`,
+  `git diff --check`, `git diff --cached --check`, and
+  `python scripts/verify_local.py`.
+
 As of 2026-07-08, Issue #9 added the GKE platform, registry, and identity
 boundary on branch `codex/issue-9-gke-identity-registry`:
 
@@ -283,8 +309,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #9 PR after checks pass. Then start Issue #10 from
-  updated `main` using branch `codex/issue-10-gke-workloads`.
+- Review and merge the Issue #10 PR after checks pass. Then start Issue #11
+  from updated `main` using branch `codex/issue-11-gcp-deployment-runbooks`.
 - Continue one child issue at a time through #14, always branching from updated
   `main`, opening a draft PR, getting review, and merging before the next issue
   starts.
