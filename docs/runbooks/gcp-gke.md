@@ -32,6 +32,32 @@ krafton-vertex-live-3108
 Do not run `terraform apply`, `kubectl`, or GCP write commands until this check
 matches.
 
+When running from WSL bash, use the same personal config boundary with bash
+syntax before any GCP command:
+
+```bash
+export CLOUDSDK_CONFIG="$HOME/.gcloud-creativeops-personal"
+export KUBECONFIG="$HOME/.kube/creativeops-personal"
+unset GOOGLE_APPLICATION_CREDENTIALS
+unset GOOGLE_APPLICATION_CREDENTIALS_HOST
+export GOOGLE_CLOUD_PROJECT="krafton-vertex-live-3108"
+export CLOUDSDK_CORE_PROJECT="krafton-vertex-live-3108"
+export TF_VAR_gcp_project_id="krafton-vertex-live-3108"
+gcloud config get-value account
+gcloud config get-value project
+```
+
+In WSL, prefer a Linux Terraform binary for the GCS backend. Windows
+`terraform.exe` can fail while writing the backend lock from a WSL filesystem.
+If Terraform reports that default credentials are missing, run a personal user
+ADC login in the guarded shell; do not use or mount service-account JSON files
+for this repo deployment.
+
+```bash
+gcloud auth application-default login
+gcloud auth application-default set-quota-project "$GOOGLE_CLOUD_PROJECT"
+```
+
 ## Local Variables
 
 The personal guard script sets these defaults:
@@ -61,6 +87,7 @@ gcloud services enable `
   serviceusage.googleapis.com `
   storage.googleapis.com `
   artifactregistry.googleapis.com `
+  cloudbuild.googleapis.com `
   --project $env:GCP_PROJECT_ID
 ```
 
@@ -124,6 +151,16 @@ Build and push images through the guarded helper:
 
 The script refuses to run unless the personal GCP account and project are
 active.
+
+If Docker Desktop WSL integration is unavailable, use Cloud Build instead:
+
+```powershell
+gcloud builds submit ./backend --tag $backendImage --project $env:GCP_PROJECT_ID
+gcloud builds submit ./frontend `
+  --config infra/gcp/cloudbuild/frontend.yaml `
+  --substitutions "_IMAGE=$frontendImage" `
+  --project $env:GCP_PROJECT_ID
+```
 
 ## Apply Infrastructure With Replicas At Zero
 

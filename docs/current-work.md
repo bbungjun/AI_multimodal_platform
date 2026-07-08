@@ -70,6 +70,68 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-08, Issue #12 is in progress on branch
+`codex/issue-12-gcp-mock-smoke` and the first personal GCP mock deployment is
+live:
+
+- Personal GCP guard was verified before write operations:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- PR #19 for Issue #11 was merged before starting this branch; local `main`
+  was fast-forwarded to merge commit
+  `998d40dbd13f3e21dddeedc3da1f35f53cf69e5d`.
+- Docker Desktop WSL integration was unavailable, so backend and frontend
+  images were built and pushed with Cloud Build instead of local Docker.
+- Deployed image tag: `998d40d`.
+- Backend image:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-backend/creativeops-backend:998d40d`
+  with digest
+  `sha256:85f65f76ce5bf5aec035179dfdeb89842c229bbcda8128eab561009987668e49`.
+- Frontend image:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-frontend/creativeops-frontend:998d40d`
+  with digest
+  `sha256:d1cf0305b919b4932c64631262d533927df290b5ce948fef51e508405e2b6ada`.
+- Bootstrapped remote Terraform state bucket
+  `creativeops-terraform-state-krafton-vertex-live-3108` with ignored local
+  `infra/gcp/backend.hcl`.
+- Used Linux Terraform 1.14.8 from a temporary local tool directory because
+  Windows `terraform.exe` could not reliably write the GCS backend lock from
+  WSL.
+- Applied the GCP stack in `AI_PROVIDER=mock`: Artifact Registry, VPC/private
+  service access, GKE, node pool, GCS asset bucket, Memorystore Redis, private
+  Cloud SQL PostgreSQL, Secret Manager metadata, Workload Identity, and
+  Kubernetes workloads.
+- Cloud SQL is private at `10.218.0.3`; database `multimodal` exists. The app
+  DB password and `DATABASE_URL` were created/rotated without printing values,
+  added to Secret Manager, and applied to Kubernetes Secret
+  `creativeops-runtime-secrets`.
+- Live frontend URL: `http://34.50.26.152`.
+- Current live workload state: API, worker, dispatcher, and frontend are each
+  running at 1 replica in namespace `creativeops-portfolio`. This live stack
+  can incur GCP cost until scaled down or destroyed.
+- Fresh live verification passed:
+  `/api/health`, `/api/ops/health`, and
+  `.venv/bin/python scripts/smoke_mock_golden_path.py --base-url
+  http://34.50.26.152 --timeout-sec 180`.
+- Fresh repository verification passed:
+  `terraform -chdir=infra/gcp fmt -recursive -check`,
+  `terraform -chdir=infra/gcp validate`,
+  `terraform -chdir=infra/gcp plan -detailed-exitcode` with
+  `plan_exit=0`, `.venv/bin/python scripts/verify_local.py --env-file
+  .env.example --skip-compose`, `git diff --check`, and
+  `git diff --cached --check`.
+- No Vertex live generation call was run; health reports mock provider mode.
+- Implementation adjustments made during deployment: added Cloud Build API and
+  frontend Cloud Build config, set Cloud SQL edition to `ENTERPRISE`, serialized
+  Workload Identity IAM after GKE cluster creation, disabled Terraform PVC
+  bound waiting, lowered API/worker CPU requests for the single-node mock
+  deployment, and switched API/worker rollout strategy to `Recreate`.
+- WSL/kubectl note: the Windows `gke-gcloud-auth-plugin` was not available, so
+  Kubernetes operations used a temporary token kubeconfig generated from the
+  personal gcloud login. The temp file was removed after use.
+- Follow-up before closing Issue #12: review and merge the draft PR, then decide
+  whether to keep the live demo running, scale replicas to zero, or destroy the
+  stack after evidence is captured.
+
 As of 2026-07-08, Issue #11 added the deployment scripts and runbook layer on
 branch `codex/issue-11-gcp-deployment-runbooks`:
 

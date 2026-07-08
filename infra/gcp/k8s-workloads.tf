@@ -14,6 +14,10 @@ resource "kubernetes_deployment_v1" "api" {
   spec {
     replicas = var.api_replicas
 
+    strategy {
+      type = "Recreate"
+    }
+
     selector {
       match_labels = {
         app = "creativeops-api"
@@ -81,7 +85,7 @@ resource "kubernetes_deployment_v1" "api" {
 
           resources {
             requests = {
-              cpu    = "250m"
+              cpu    = "100m"
               memory = "512Mi"
             }
             limits = {
@@ -111,6 +115,10 @@ resource "kubernetes_service_v1" "api" {
       target_port = 8000
     }
   }
+
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
 }
 
 resource "kubernetes_deployment_v1" "worker" {
@@ -124,6 +132,10 @@ resource "kubernetes_deployment_v1" "worker" {
 
   spec {
     replicas = var.worker_replicas
+
+    strategy {
+      type = "Recreate"
+    }
 
     selector {
       match_labels = {
@@ -184,7 +196,7 @@ resource "kubernetes_deployment_v1" "worker" {
 
           resources {
             requests = {
-              cpu    = "500m"
+              cpu    = "200m"
               memory = "1Gi"
             }
             limits = {
@@ -354,5 +366,9 @@ resource "kubernetes_service_v1" "frontend" {
       port        = 80
       target_port = 8080
     }
+  }
+
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
   }
 }
