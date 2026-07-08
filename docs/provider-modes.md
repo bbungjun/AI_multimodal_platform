@@ -37,6 +37,12 @@ Vertex mode:
   `GOOGLE_APPLICATION_CREDENTIALS_JSON` injected by a secret manager
 - requires `GCP_PROJECT_ID` and `GCP_LOCATION`
 - may create billable Gemini, Imagen, or Veo requests
+- retries Gemini prompt-enhancement provider calls for retryable Vertex
+  failures such as 429 rate limits and transient 5xx/timeouts using the
+  configured `PROVIDER_RETRY_*` backoff policy
+- retries invalid Gemini prompt-enhancement payloads once with stricter JSON
+  repair instructions before returning the stable public
+  `prompt_enhancement_invalid_response` error
 
 Health readiness confirms that backend configuration and credentials can create
 the client. It does not prove every model is enabled or quota is available.

@@ -16,13 +16,20 @@ class FakeGenerateContentModels:
         *,
         responses: list[SimpleNamespace] | None = None,
         exc: Exception | None = None,
+        outcomes: list[SimpleNamespace | Exception] | None = None,
     ) -> None:
         self.responses = responses or []
         self.exc = exc
+        self.outcomes = outcomes or []
         self.calls: list[dict[str, object]] = []
 
     def generate_content(self, **kwargs: object) -> SimpleNamespace:
         self.calls.append(kwargs)
+        if self.outcomes:
+            outcome = self.outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
         if self.exc is not None:
             raise self.exc
         return self.responses.pop(0)
@@ -37,6 +44,15 @@ class StatusError(RuntimeError):
     def __init__(self, status_code: int) -> None:
         self.status_code = status_code
         super().__init__(f"status {status_code}")
+
+
+def _vertex_retry_settings(*, max_attempts: int = 3) -> SimpleNamespace:
+    return SimpleNamespace(
+        ai_provider="vertex",
+        provider_retry_max_attempts=max_attempts,
+        provider_retry_base_delay_sec=0.0,
+        provider_retry_max_delay_sec=0.0,
+    )
 
 
 async def test_enhance_prompt_parses_schema_payload_without_vertex_client():
@@ -285,6 +301,38 @@ async def test_enhance_prompt_retries_malformed_json_text_once():
     assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
 
 
+async def test_enhance_prompt_repairs_schema_invalid_response_once():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "",
+                    "components": {},
+                }
+            ),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A desk lamp with soft side light.",
+                    "components": {"subject": "desk lamp"},
+                }
+            ),
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "A desk lamp with soft side light."
+    assert result.components == {"subject": "desk lamp"}
+    assert len(models.calls) == 2
+    assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
+    assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
+
+
 async def test_enhance_prompt_parses_fenced_json_text_without_retry():
     models = FakeGenerateContentModels(
         responses=[
@@ -361,7 +409,7 @@ def test_parse_response_payload_logs_truncated_json_safe_diagnostics(caplog):
     )
 
 
-async def test_enhance_prompt_rejects_schema_invalid_response():
+async def test_enhance_prompt_rejects_schema_invalid_response_after_repair_retry():
     models = FakeGenerateContentModels(
         responses=[
             SimpleNamespace(
@@ -369,7 +417,13 @@ async def test_enhance_prompt_rejects_schema_invalid_response():
                     "enhanced": "",
                     "components": {},
                 }
-            )
+            ),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "",
+                    "components": {},
+                }
+            ),
         ]
     )
 
@@ -385,9 +439,48 @@ async def test_enhance_prompt_rejects_schema_invalid_response():
     assert exc_info.value.reason == "schema_validation_failed"
     assert exc_info.value.source == "parsed"
     assert exc_info.value.field == "enhanced"
+    assert len(models.calls) == 2
+    assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
+    assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
 
 
-async def test_enhance_prompt_maps_provider_rate_limit_error():
+async def test_enhance_prompt_retries_provider_rate_limit_then_succeeds(monkeypatch):
+    monkeypatch.setattr(
+        enhancer,
+        "get_settings",
+        lambda: _vertex_retry_settings(max_attempts=2),
+    )
+    models = FakeGenerateContentModels(
+        outcomes=[
+            StatusError(429),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A desk lamp with soft side light.",
+                    "components": {"subject": "desk lamp"},
+                }
+            ),
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "A desk lamp with soft side light."
+    assert len(models.calls) == 2
+
+
+async def test_enhance_prompt_maps_provider_rate_limit_error_after_retry_exhaustion(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        enhancer,
+        "get_settings",
+        lambda: _vertex_retry_settings(max_attempts=2),
+    )
     models = FakeGenerateContentModels(exc=StatusError(429))
 
     with pytest.raises(VertexRateLimitedError) as exc_info:
@@ -400,3 +493,4 @@ async def test_enhance_prompt_maps_provider_rate_limit_error():
 
     assert exc_info.value.code == "vertex_rate_limited"
     assert exc_info.value.status_code == 429
+    assert len(models.calls) == 2
