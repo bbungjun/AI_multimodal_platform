@@ -82,6 +82,11 @@ deployment:
 - Added `docs/runbooks/k6-gcp-load-test.md` with Linux k6 commands and the WSL
   workaround for running Windows `k6.exe` from a Windows temp copy of the
   script.
+- Updated `AGENTS.md` to make the Hyundai AutoEver Platform Engineer /
+  `AI 플랫폼 구축/운영` target explicit: future work should strengthen
+  Kubernetes/GKE operations, automation, observability, load testing, reliability,
+  and GPU-infrastructure readiness while clearly separating implemented evidence
+  from planned GPU work.
 - Live target used for k6 verification: `http://34.50.26.152`, still running in
   `AI_PROVIDER=vertex`.
 - `PROFILE=readiness`, `EXPECTED_VERTEX_STATUS=ready`,

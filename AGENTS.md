@@ -19,6 +19,35 @@
 - mock mode에서도 생성, 미리보기, 파일 서빙, 작업 상태 흐름이 끝까지 검증되어야
   합니다.
 
+## 포트폴리오/지원 직무 방향
+
+이 프로젝트는 현대오토에버 Platform Engineer 직무, 특히 `AI 플랫폼 구축/운영`
+포지션의 역량을 실제로 기르기 위한 개인 프로젝트입니다. 단순히 AI API를 호출하는
+앱이 아니라, AI 기능을 실제 운영 가능한 Kubernetes 기반 플랫폼 위에 배포하고
+검증하는 경험을 만드는 것이 핵심입니다.
+
+채용 공고의 `AI 플랫폼 구축/운영` 포지션은 HMC/KIA AI 플랫폼 운영, 대규모 GPU
+인프라 기반 K8S 구축/관리, 운영 자동화, 분산 학습 GPU 모니터링 고도화 및 성능
+개선을 다룹니다. 이 repo의 작업은 다음 역량을 증명하는 방향으로 우선순위를 둡니다.
+
+- Docker/Container, Kubernetes Pod/Service/Secret/ConfigMap/Deployment 이해와 운영
+- GCP GKE, Terraform, Artifact Registry, Cloud SQL, Redis, GCS, Workload Identity
+  기반의 클라우드 인프라 구축
+- CI/CD, 이미지 build/push, 배포 runbook, 운영 자동화 스크립트
+- health/readiness, k6 부하테스트, 장애 재현, 로그 기반 원인 분석
+- Prometheus/Grafana 또는 Cloud Monitoring 기반 관측성, 알림, 대시보드
+- HPA, resource request/limit, rollout, recovery, 비용/쿼터/장애 대응
+- GPU node pool, taint/toleration, nodeSelector, NVIDIA device plugin, GPU metric
+  수집 등 GPU 인프라 운영 설계 및 향후 실습
+- AI/ML 서비스 배포 관점의 provider boundary, retry, rate limit, prompt/generation
+  failure handling
+
+이력서나 면접에서 말할 때는 구현한 것과 아직 설계/학습 단계인 것을 구분합니다.
+현재까지 실제 구현한 것은 GKE/Terraform 배포, Kubernetes workload 운영,
+Workload Identity, Vertex AI 연동, runbook, mock/vertex 모드 분리, k6 부하테스트와
+장애 신호 분석입니다. GPU 인프라와 분산 학습 운영은 아직 실제 구현 전이므로,
+앞으로의 보강 작업으로 추적합니다.
+
 ## 저장소와 Git
 
 - 기본 브랜치는 `main`입니다.
