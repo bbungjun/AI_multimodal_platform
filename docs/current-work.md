@@ -70,12 +70,68 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-09, Issue #32 is in progress on branch
-`codex/issue-32-gke-rollout-safety` to add rollout safety for LLM-facing GKE
-changes:
+As of 2026-07-09, Issue #34 is in progress on branch
+`codex/issue-34-live-rollout-safety-evidence` to record live GKE rollout safety
+evidence for the Issue #32 rollout baseline:
 
-- Draft PR #33 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/33`.
+- Draft PR #35 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/35`.
+- Issue #32 / PR #33 was merged into `main` at merge commit
+  `e8a3c3d967535bb69db47ca068ba53e71c023e73`.
+- Personal GCP guard was verified before write operations:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Built and pushed backend image with Cloud Build ID
+  `4ad5d2f5-8dba-4a39-a6b2-57aac374f712`:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-backend/creativeops-backend:e8a3c3d`
+  with digest
+  `sha256:fa0cc129523513888a0ba86e88b17b1736a3ceceff7d6676932a7a9599f17655`.
+- Built and pushed frontend image with Cloud Build ID
+  `0f053ab7-1b83-4279-8fe5-ec5ac7980a2a`:
+  `asia-northeast3-docker.pkg.dev/krafton-vertex-live-3108/creativeops-portfolio-frontend/creativeops-frontend:e8a3c3d`
+  with digest
+  `sha256:4aae9833a2c2a875430e407537f66510db9f84fb54eb28efe2c1a1c24691e663`.
+- Initial Terraform rollout plan for image tag `e8a3c3d`,
+  `api_replicas=2`, `frontend_replicas=2`, `worker_replicas=1`,
+  `dispatcher_replicas=1`, and `ai_provider=vertex` proposed
+  `2 to add, 4 to change, 0 to destroy`: API/frontend PDBs plus image/probe
+  updates for API, worker, dispatcher, and frontend.
+- The first apply partially progressed but failed: API exceeded its deployment
+  progress deadline and worker reported `1 replicas wanted; 0 replicas Ready`.
+  Kubernetes events showed `Insufficient cpu` on the single-node
+  `e2-standard-2` node pool. The old API pods kept `/api/health` serving
+  `ready=true`, but `/api/health/live` returned 404 until new API pods entered
+  service, and the worker was unavailable during the capacity shortage.
+- Follow-up Terraform plan/apply added rollout capacity by setting
+  `node_count=2`. The apply completed with `0 added, 1 changed, 0 destroyed`.
+- Post-capacity Kubernetes verification found two Ready nodes. All deployments
+  recovered on image tag `e8a3c3d`: API `READY=2/2`, frontend `READY=2/2`,
+  worker `READY=1/1`, and dispatcher `READY=1/1`; each deployment reported
+  `updated == desired` and `available == desired`.
+- API and frontend PDBs are active with `minAvailable=1`, `currentHealthy=2`,
+  `desiredHealthy=1`, and `disruptionsAllowed=1`.
+- Live URL remains `http://34.50.26.152` and the stack remains in
+  `AI_PROVIDER=vertex`.
+- Live `/api/health` returned `ok=true`, `ready=true`, DB `up`, and
+  `vertex.status=ready`; live `/api/health/live` returned `ok=true`.
+- Live `/api/ops/metrics` after k6 readiness returned
+  `requests_total=705`, `errors_total=0`, `error_rate=0.0`,
+  `/api/health` p95 latency `9.1 ms`, `/api/ops/health` p95 latency
+  `17.55 ms`, and provider failure count `0`.
+- k6 readiness profile passed against the live URL with
+  `READINESS_MAX_VUS=10`: 640 iterations, 1,920 HTTP requests, 5,760 checks,
+  checks 100.00%, HTTP failure rate 0.00%, and p95 request duration
+  `23.07 ms`.
+- Post-apply Terraform drift check with the live var set, including
+  `node_count=2`, passed with `plan_exit=0`.
+- No live prompt enhancement, Imagen, or Veo generation call was run. No `.env`,
+  ADC, service-account JSON, API key/private key, Terraform state, `.tfvars`,
+  DB password, Kubernetes Secret payload, access token, or credential value was
+  read or printed.
+
+As of 2026-07-09, Issue #32 completed on branch
+`codex/issue-32-gke-rollout-safety`; PR #33 was merged into `main` at merge
+commit `e8a3c3d967535bb69db47ca068ba53e71c023e73`:
+
 - Implementation commit: `bf09d1f feat: add gke rollout safety baseline`.
 - PR #31 for Issue #30 was marked ready and merged into `main` at merge commit
   `5085195`.
@@ -633,13 +689,17 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #32 draft PR after GitHub checks pass, then merge it into
-  `main`.
-- After Issue #32 merges, consider a bounded live GKE rollout evidence issue:
-  build/push the merged image tag, apply the API/frontend rolling update with
-  two user-facing replicas, watch rollout status, compare `/api/ops/metrics`,
-  and optionally run the k6 readiness profile. This requires the personal GCP
-  guard and can incur GKE/Vertex cost.
+- Review the Issue #34 rollout evidence PR after GitHub checks pass, then merge
+  it into `main`.
+- Consider a follow-up capacity/autoscaling issue: make live rollout capacity
+  explicit in runbooks and Terraform usage, decide whether `node_count=2` should
+  remain the live baseline or become autoscaled, and add evidence for HPA or
+  cluster autoscaler behavior before more provider-facing rollout tests.
+- The next reliability implementation candidate is a bounded prompt-enhancement
+  provider failure validation run: low-rate live prompt profile, verify
+  `/api/ops/metrics.provider_failures.by_code`, and keep public error/log
+  safety intact. This can incur Vertex cost and should use the personal GCP
+  guard.
 - Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. Most
   child deployment issues through Vertex readiness are complete; keep future GCP
   work one issue and one branch at a time.
