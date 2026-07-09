@@ -74,6 +74,10 @@ As of 2026-07-10, Issue #47 is in progress on branch
 `codex/issue-47-prompt-reliability` to close the remaining prompt enhancement
 language-preservation reliability gap:
 
+- Draft PR #48 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/48`.
+- Implementation commit: `41586b6 fix: reject prompt language mismatch after
+  retry`.
 - Scope was narrowed after review because Issue #30 had already implemented
   provider retry/backoff, invalid JSON repair retry, safe public errors, and
   provider failure metrics for prompt enhancement.
