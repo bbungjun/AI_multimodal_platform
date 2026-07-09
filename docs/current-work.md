@@ -70,12 +70,47 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-09, Issue #30 is in progress on branch
+As of 2026-07-09, Issue #32 is in progress on branch
+`codex/issue-32-gke-rollout-safety` to add rollout safety for LLM-facing GKE
+changes:
+
+- PR #31 for Issue #30 was marked ready and merged into `main` at merge commit
+  `5085195`.
+- Issue #32 scope: connect prompt enhancement reliability work to safer GKE
+  deployment operations for API/frontend image or runtime-config changes.
+- Added process-only `GET /api/health/live` for Kubernetes liveness so external
+  DB or Vertex readiness failures do not trigger process restarts.
+- Updated API and frontend Kubernetes deployments to explicit
+  readiness-gated `RollingUpdate` with `maxUnavailable=0`, `maxSurge=1`,
+  `min_ready_seconds=5`, and `progress_deadline_seconds=180`.
+- Added API/frontend liveness probes and multi-replica PodDisruptionBudgets that
+  are created only when the corresponding replica count is greater than one.
+- Documented that worker/dispatcher rollout evidence is task-safety and
+  singleton-outbox safety, not HTTP zero-downtime evidence.
+- Updated `docs/runbooks/gcp-gke.md` and `infra/gcp/README.md` with rollout
+  verification, metrics comparison, and rollback guidance.
+- Focused verification passed:
+  `AI_PROVIDER=mock .venv/bin/python -m pytest backend/tests/test_health.py
+  backend/tests/test_gcp_k8s_rollout.py`.
+- Fresh mock/local verification passed:
+  `AI_PROVIDER=mock .venv/bin/python -m pytest backend/tests` with 322 tests,
+  `npm run build`, Windows Docker CLI
+  `docker compose --env-file .env.example config --quiet`,
+  Terraform `init -backend=false`, `fmt -recursive -check`, `validate`, and
+  `git diff --check`.
+- Terraform `fmt -recursive` was applied with the Windows Terraform binary.
+- The first sandboxed full backend test run hung because this managed sandbox
+  did not complete `asyncio.to_thread`; rerunning the same mock test command
+  outside the sandbox passed.
+- No GCP write, live Vertex request, k6 prompt run, `.env`, ADC,
+  service-account JSON, API key/private key, Terraform state, `.tfvars`, DB
+  password, or Kubernetes Secret payload was read or printed.
+
+As of 2026-07-09, Issue #30 completed on branch
 `codex/issue-30-prompt-enhancement-reliability` to harden prompt enhancement
 provider failure handling:
 
-- Draft PR #31 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/31`.
+- PR #31 was merged into `main` at merge commit `5085195`.
 - Implementation commit: `8f91727 fix: harden prompt enhancement reliability`.
 - PR #29 for Issue #28 was merged into `main` at merge commit
   `743cf5c5ca8353a1c510afba17e011e2eb09c58c`.
@@ -595,13 +630,13 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #30 draft PR after GitHub checks pass, then merge it into
+- Review the Issue #32 draft PR after GitHub checks pass, then merge it into
   `main`.
-- After Issue #30 merges, consider a bounded live GKE prompt reliability check
-  to confirm `/api/ops/metrics` records `provider_failures.by_code` for
-  `vertex_rate_limited` or `prompt_enhancement_invalid_response`. This can
-  incur Vertex cost and should only run after the personal GCP guard is
-  confirmed.
+- After Issue #32 merges, consider a bounded live GKE rollout evidence issue:
+  build/push the merged image tag, apply the API/frontend rolling update with
+  two user-facing replicas, watch rollout status, compare `/api/ops/metrics`,
+  and optionally run the k6 readiness profile. This requires the personal GCP
+  guard and can incur GKE/Vertex cost.
 - Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. Most
   child deployment issues through Vertex readiness are complete; keep future GCP
   work one issue and one branch at a time.

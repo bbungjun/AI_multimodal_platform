@@ -12,10 +12,17 @@ resource "kubernetes_deployment_v1" "api" {
   }
 
   spec {
-    replicas = var.api_replicas
+    replicas                  = var.api_replicas
+    min_ready_seconds         = 5
+    progress_deadline_seconds = 180
 
     strategy {
-      type = "Recreate"
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_surge       = "1"
+        max_unavailable = "0"
+      }
     }
 
     selector {
@@ -82,6 +89,19 @@ resource "kubernetes_deployment_v1" "api" {
             }
             initial_delay_seconds = 10
             period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/api/health/live"
+              port = 8000
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 20
+            timeout_seconds       = 5
+            failure_threshold     = 3
           }
 
           resources {
@@ -119,6 +139,25 @@ resource "kubernetes_service_v1" "api" {
 
   lifecycle {
     ignore_changes = [metadata[0].annotations]
+  }
+}
+
+resource "kubernetes_pod_disruption_budget_v1" "api" {
+  count = var.api_replicas > 1 ? 1 : 0
+
+  metadata {
+    name      = "creativeops-api"
+    namespace = kubernetes_namespace_v1.app.metadata[0].name
+  }
+
+  spec {
+    min_available = 1
+
+    selector {
+      match_labels = {
+        app = "creativeops-api"
+      }
+    }
   }
 }
 
@@ -305,7 +344,18 @@ resource "kubernetes_deployment_v1" "frontend" {
   }
 
   spec {
-    replicas = var.frontend_replicas
+    replicas                  = var.frontend_replicas
+    min_ready_seconds         = 5
+    progress_deadline_seconds = 180
+
+    strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_surge       = "1"
+        max_unavailable = "0"
+      }
+    }
 
     selector {
       match_labels = {
@@ -336,6 +386,19 @@ resource "kubernetes_deployment_v1" "frontend" {
             }
             initial_delay_seconds = 5
             period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/"
+              port = 8080
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 20
+            timeout_seconds       = 5
+            failure_threshold     = 3
           }
 
           resources {
@@ -375,5 +438,24 @@ resource "kubernetes_service_v1" "frontend" {
 
   lifecycle {
     ignore_changes = [metadata[0].annotations]
+  }
+}
+
+resource "kubernetes_pod_disruption_budget_v1" "frontend" {
+  count = var.frontend_replicas > 1 ? 1 : 0
+
+  metadata {
+    name      = "creativeops-frontend"
+    namespace = kubernetes_namespace_v1.app.metadata[0].name
+  }
+
+  spec {
+    min_available = 1
+
+    selector {
+      match_labels = {
+        app = "creativeops-frontend"
+      }
+    }
   }
 }

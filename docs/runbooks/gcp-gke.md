@@ -209,15 +209,17 @@ command that prints Secret payloads.
 
 ## Mock Scale-Up And Smoke
 
-Scale the app to one replica per workload:
+Scale the user-facing API and frontend to two replicas when validating rollout
+safety. Keep the worker and dispatcher at one replica unless a separate capacity
+or HA issue changes the queue-processing design:
 
 ```powershell
 terraform -chdir=infra/gcp apply `
   -var "gcp_project_id=$env:GCP_PROJECT_ID" `
   -var "backend_image=$backendImage" `
   -var "frontend_image=$frontendImage" `
-  -var "api_replicas=1" `
-  -var "frontend_replicas=1" `
+  -var "api_replicas=2" `
+  -var "frontend_replicas=2" `
   -var "worker_replicas=1" `
   -var "dispatcher_replicas=1" `
   -var "ai_provider=mock"
@@ -252,6 +254,60 @@ Use it before and after smoke or k6 runs to compare request throughput, error
 rate, per-endpoint latency, status counts, and provider failure codes. It does
 not print request/response bodies, env values, or Secret payloads.
 
+## Rollout Safety And Rollback
+
+API and frontend deployments use readiness-gated `RollingUpdate` with
+`maxUnavailable=0` and `maxSurge=1`. With at least two replicas, Kubernetes
+keeps existing ready pods serving while a replacement pod starts and passes its
+readiness probe. The API liveness probe uses `/api/health/live`, which checks
+only process availability; readiness remains on `/api/health`, which includes
+DB and Vertex readiness.
+
+Before changing image tags, runtime config, or prompt-enhancement behavior,
+capture the current deployment state and runtime metrics:
+
+```powershell
+kubectl get deploy creativeops-api creativeops-frontend `
+  -n creativeops-portfolio `
+  -o wide
+Invoke-RestMethod -Uri "$frontendUrl/api/health"
+Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"
+```
+
+Apply the image or config change with the intended replica counts, then watch
+rollouts and compare runtime metrics:
+
+```powershell
+kubectl rollout status deployment/creativeops-api -n creativeops-portfolio --timeout=180s
+kubectl rollout status deployment/creativeops-frontend -n creativeops-portfolio --timeout=180s
+Invoke-RestMethod -Uri "$frontendUrl/api/health"
+Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"
+```
+
+For HTTP availability evidence, run the k6 readiness profile during or
+immediately after the rollout and record p95/p99 latency, HTTP failure rate,
+and any provider failure counters. Use live prompt profiles only when a
+cost-aware issue explicitly approves Gemini traffic.
+
+If the rollout fails or `/api/ops/metrics` shows an unexpected error-rate spike,
+rollback with one of these paths:
+
+```powershell
+kubectl rollout undo deployment/creativeops-api -n creativeops-portfolio
+kubectl rollout undo deployment/creativeops-frontend -n creativeops-portfolio
+```
+
+or reapply Terraform with the previous backend/frontend image tags. Record the
+previous and restored image tags, rollout status, health, and metrics in
+`docs/current-work.md`.
+
+Worker and dispatcher rollouts are not user-facing HTTP zero-downtime evidence.
+The worker is protected by late ack, reject-on-worker-lost, prefetch `1`, and
+Postgres job state, so rollout safety means avoiding lost work and confirming
+failed or redelivered jobs are repairable. The dispatcher is kept singleton by
+default to avoid overlapping outbox publishers unless a future issue proves a
+multi-dispatcher locking strategy.
+
 ## Vertex Readiness
 
 Run this only after mock smoke passes. Imagen and Veo live generation remain out
@@ -262,8 +318,8 @@ terraform -chdir=infra/gcp apply `
   -var "gcp_project_id=$env:GCP_PROJECT_ID" `
   -var "backend_image=$backendImage" `
   -var "frontend_image=$frontendImage" `
-  -var "api_replicas=1" `
-  -var "frontend_replicas=1" `
+  -var "api_replicas=2" `
+  -var "frontend_replicas=2" `
   -var "worker_replicas=1" `
   -var "dispatcher_replicas=1" `
   -var "ai_provider=vertex"
