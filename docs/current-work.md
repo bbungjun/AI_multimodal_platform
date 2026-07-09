@@ -74,6 +74,8 @@ As of 2026-07-10, Issue #45 is in progress on branch
 `codex/issue-45-hpa-live-evidence` to verify live GKE workload HPA apply and
 rollback evidence:
 
+- Draft PR #46 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/46`.
 - Issue #43 / PR #44 was marked ready and merged into `main` at merge commit
   `12cc5cc2244eee39b040ed48bf2726937e5e7932`.
 - Personal GCP guard was verified before every GCP write:
