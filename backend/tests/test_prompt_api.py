@@ -164,6 +164,53 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     assert metrics_snapshot.provider_failures.by_status == {"429": 1}
 
 
+async def test_enhance_prompt_records_invalid_response_metrics(monkeypatch):
+    session = FakePromptSession()
+    runtime_metrics.reset()
+
+    async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
+        raise enhancer.PromptEnhancementResponseError(
+            "schema_validation_failed",
+            field="enhanced",
+            source="parsed",
+        )
+
+    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+
+    try:
+        response = await _post_prompt_enhance(
+            {
+                "prompt": "a quiet desk lamp",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+            },
+            session,
+        )
+        metrics_snapshot = runtime_metrics.snapshot()
+    finally:
+        runtime_metrics.reset()
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == {
+        "code": "prompt_enhancement_invalid_response",
+        "message": "Prompt enhancement response was invalid.",
+        "retryable": False,
+        "status_code": None,
+        "reason": "schema_validation_failed",
+        "field": "enhanced",
+        "source": "parsed",
+    }
+    assert session.added == []
+    assert session.commit_count == 0
+    assert session.refresh_count == 0
+    assert metrics_snapshot.provider_failures.failures_total == 1
+    assert metrics_snapshot.provider_failures.non_retryable == 1
+    assert metrics_snapshot.provider_failures.by_code == {
+        "prompt_enhancement_invalid_response": 1,
+    }
+    assert metrics_snapshot.provider_failures.by_status == {"none": 1}
+
+
 @pytest.mark.parametrize(
     ("payload", "expected_field"),
     [

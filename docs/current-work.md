@@ -70,6 +70,44 @@ paste credential contents.
 
 ## Last Completed Work
 
+As of 2026-07-09, Issue #30 is in progress on branch
+`codex/issue-30-prompt-enhancement-reliability` to harden prompt enhancement
+provider failure handling:
+
+- Draft PR #31 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/31`.
+- Implementation commit: `8f91727 fix: harden prompt enhancement reliability`.
+- PR #29 for Issue #28 was merged into `main` at merge commit
+  `743cf5c5ca8353a1c510afba17e011e2eb09c58c`.
+- Issue #30 scope: treat Gemini prompt enhancement 429s, transient provider
+  failures, and invalid/malformed response payloads as expected operating
+  conditions with testable retry/repair behavior and safe public errors.
+- Prompt enhancement provider calls now use the shared `PROVIDER_RETRY_*`
+  backoff policy for retryable Vertex failures such as 429 rate limits and
+  transient 5xx/timeouts.
+- Invalid Gemini prompt enhancement payloads now get one strict JSON repair
+  retry for malformed JSON, missing text, parsed payload shape errors, or
+  schema validation failures before returning the stable public
+  `prompt_enhancement_invalid_response` error.
+- Prompt enhancement API error handling still records only public provider
+  failure code/status/retryability in runtime metrics and does not persist a
+  prompt enhancement row on provider failure.
+- Added tests for schema-invalid repair success, schema-invalid repair
+  exhaustion, provider 429 retry success, provider 429 retry exhaustion, and
+  invalid-response metrics recording.
+- Fresh mock/local verification passed:
+  `AI_PROVIDER=mock .venv/bin/python -m pytest backend/tests` with 318 tests,
+  `npm run build`, and Windows Docker CLI
+  `docker compose --env-file .env.example config --quiet`.
+- `AI_PROVIDER=mock python -m pytest ...` failed before verification because
+  this WSL environment has no `python` alias; `.venv/bin/python` was used
+  instead.
+- Linux `docker` is not installed in this WSL environment; Windows
+  `docker.exe` was used only for `.env.example` Compose config validation.
+- No GCP write, live Vertex request, k6 prompt run, `.env`, ADC,
+  service-account JSON, API key/private key, Terraform state, `.tfvars`, DB
+  password, or Kubernetes Secret payload was read or printed.
+
 As of 2026-07-09, Issue #28 is in progress on branch
 `codex/issue-28-observability-rollout-handoff` to record the live rollout of
 the observability baseline:
@@ -557,15 +595,16 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #11 PR after checks pass. Then start Issue #12
-  from updated `main` using branch `codex/issue-12-gcp-mock-smoke`.
-- Continue one child issue at a time through #14, always branching from updated
-  `main`, opening a draft PR, getting review, and merging before the next issue
-  starts.
-- Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. The
-  implementation plan lives at
-  `docs/superpowers/plans/2026-07-08-gcp-gke-terraform.md`; the deployment
-  execution checklist and issue map live at `infra/gcp/docs/deployment-plan.md`.
+- Review the Issue #30 draft PR after GitHub checks pass, then merge it into
+  `main`.
+- After Issue #30 merges, consider a bounded live GKE prompt reliability check
+  to confirm `/api/ops/metrics` records `provider_failures.by_code` for
+  `vertex_rate_limited` or `prompt_enhancement_invalid_response`. This can
+  incur Vertex cost and should only run after the personal GCP guard is
+  confirmed.
+- Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. Most
+  child deployment issues through Vertex readiness are complete; keep future GCP
+  work one issue and one branch at a time.
 - Use `scripts/setup_local.ps1` after switching machines or after a fresh clone.
   Pass `-RunVerify` when local Python/Node dependencies are installed and you
   want the full quality gate. Pass `-Force` only when intentionally regenerating

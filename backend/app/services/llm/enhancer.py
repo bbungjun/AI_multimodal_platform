@@ -23,6 +23,7 @@ from app.prompt_enhancement import (
 )
 from app.services.vertex.client import get_vertex_client
 from app.services.vertex.errors import VertexServiceError, map_vertex_error
+from app.services.vertex.retry import RetryPolicy, build_retry_policy, with_retry
 
 
 DEFAULT_LLM_MODEL = "gemini-2.5-flash"
@@ -229,6 +230,7 @@ async def enhance_prompt(
     llm_model: str = DEFAULT_LLM_MODEL,
     client: Any | None = None,
 ) -> PromptEnhancementResult:
+    settings = get_settings()
     mode = (
         target_mode
         if isinstance(target_mode, GenerationMode)
@@ -237,7 +239,7 @@ async def enhance_prompt(
     preset = normalize_creativity_preset(creativity_preset)
     temperature = temperature_for_preset(preset)
     prompt_language = _detect_prompt_language(prompt)
-    if client is None and get_settings().ai_provider == "mock":
+    if client is None and settings.ai_provider == "mock":
         return _mock_prompt_enhancement(
             prompt,
             target_mode=mode,
@@ -249,9 +251,10 @@ async def enhance_prompt(
         )
 
     vertex_client = client or get_vertex_client()
+    retry_policy = build_retry_policy(settings)
     started = time.perf_counter()
 
-    response = await _generate_prompt_enhancement(
+    response = await _generate_prompt_enhancement_with_retry(
         vertex_client,
         llm_model=llm_model,
         prompt=prompt,
@@ -262,23 +265,26 @@ async def enhance_prompt(
         prompt_language=prompt_language,
         strict_json_retry=False,
         language_retry=False,
+        retry_policy=retry_policy,
     )
 
     try:
         payload = _parse_response_payload(response)
     except PromptEnhancementResponseError as exc:
-        if not _should_retry_malformed_json_response(exc):
+        if not _should_retry_invalid_response(exc):
             raise
         logger.warning(
             (
-                "Retrying prompt enhancement after malformed JSON response: "
-                "target_mode=%s target_model=%s source=%s"
+                "Retrying prompt enhancement after invalid response: "
+                "target_mode=%s target_model=%s reason=%s field=%s source=%s"
             ),
             mode.value,
             target_model,
+            exc.reason,
+            exc.field,
             exc.source,
         )
-        retry_response = await _generate_prompt_enhancement(
+        retry_response = await _generate_prompt_enhancement_with_retry(
             vertex_client,
             llm_model=llm_model,
             prompt=prompt,
@@ -289,6 +295,7 @@ async def enhance_prompt(
             prompt_language=prompt_language,
             strict_json_retry=True,
             language_retry=False,
+            retry_policy=retry_policy,
         )
         payload = _parse_response_payload(retry_response)
         response = retry_response
@@ -303,7 +310,7 @@ async def enhance_prompt(
             target_model,
             prompt_language,
         )
-        retry_response = await _generate_prompt_enhancement(
+        retry_response = await _generate_prompt_enhancement_with_retry(
             vertex_client,
             llm_model=llm_model,
             prompt=prompt,
@@ -314,6 +321,7 @@ async def enhance_prompt(
             prompt_language=prompt_language,
             strict_json_retry=False,
             language_retry=True,
+            retry_policy=retry_policy,
         )
         payload = _parse_response_payload(retry_response)
         response = retry_response
@@ -387,6 +395,37 @@ def _mock_prompt_enhancement(
     )
 
 
+async def _generate_prompt_enhancement_with_retry(
+    vertex_client: Any,
+    *,
+    llm_model: str,
+    prompt: str,
+    target_mode: GenerationMode,
+    target_model: str,
+    creativity_preset: CreativityPreset,
+    temperature: float,
+    prompt_language: PromptLanguage,
+    strict_json_retry: bool,
+    language_retry: bool,
+    retry_policy: RetryPolicy,
+) -> Any:
+    return await with_retry(
+        lambda: _generate_prompt_enhancement(
+            vertex_client,
+            llm_model=llm_model,
+            prompt=prompt,
+            target_mode=target_mode,
+            target_model=target_model,
+            creativity_preset=creativity_preset,
+            temperature=temperature,
+            prompt_language=prompt_language,
+            strict_json_retry=strict_json_retry,
+            language_retry=language_retry,
+        ),
+        policy=retry_policy,
+    )
+
+
 async def _generate_prompt_enhancement(
     vertex_client: Any,
     *,
@@ -428,10 +467,15 @@ async def _generate_prompt_enhancement(
         raise map_vertex_error(exc) from exc
 
 
-def _should_retry_malformed_json_response(
+def _should_retry_invalid_response(
     exc: PromptEnhancementResponseError,
 ) -> bool:
-    return exc.reason == "malformed_json" and exc.source == "text"
+    return exc.reason in {
+        "malformed_json",
+        "missing_text",
+        "parsed_payload_not_object",
+        "schema_validation_failed",
+    }
 
 
 def _build_prompt(
@@ -511,10 +555,11 @@ def _build_prompt(
         sections.append(
             (
                 "## STRICT JSON RETRY\n"
-                "The previous response could not be parsed as JSON. Return a "
-                "minimal valid JSON object only, using exactly these top-level "
-                'keys: "enhanced" and "components". Do not include arrays, '
-                "markdown, comments, or text outside the JSON object."
+                "The previous response could not be parsed or validated as "
+                "the required JSON schema. Return a minimal valid JSON object "
+                "only, using exactly these top-level keys: \"enhanced\" and "
+                '"components". Do not include arrays, markdown, comments, '
+                "or text outside the JSON object."
             )
         )
 
