@@ -70,12 +70,37 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-09, Issue #34 is in progress on branch
-`codex/issue-34-live-rollout-safety-evidence` to record live GKE rollout safety
-evidence for the Issue #32 rollout baseline:
+As of 2026-07-10, Issue #36 is in progress on branch
+`codex/issue-36-gke-rollout-capacity` to add GKE rollout capacity guardrails:
 
-- Draft PR #35 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/35`.
+- Draft PR #37 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/37`.
+- Issue #34 / PR #35 was marked ready and merged into `main` at merge commit
+  `9cbd72519d25909792bab429ea9d436f6d32c939`.
+- Issue #36 scope: prevent future Terraform plans from combining
+  readiness-gated multi-replica API/frontend rollouts with a single-node GKE
+  pool, which caused the 2026-07-09 live rollout capacity failure.
+- Added a Terraform `precondition` on the general GKE node pool: if
+  `api_replicas > 1` or `frontend_replicas > 1`, `node_count` must be at least
+  `2`; otherwise Terraform fails early with an `Insufficient cpu`-oriented
+  operator message.
+- Updated `docs/runbooks/gcp-gke.md` and `infra/gcp/README.md` to make
+  `node_count=2` part of the user-facing rollout contract and to include it in
+  mock and Vertex two-replica apply examples.
+- Added regression coverage in `backend/tests/test_gcp_k8s_rollout.py`.
+- Verification so far: `/tmp/creativeops-terraform/terraform -chdir=infra/gcp
+  fmt -recursive -check`, `AI_PROVIDER=mock .venv/bin/python -m pytest
+  backend/tests/test_gcp_k8s_rollout.py`, and backend-less Terraform
+  `validate` from an ignored temporary copy that excluded `.terraform`,
+  `backend.hcl`, Terraform state, and `.tfvars`.
+- No GCP apply, kubectl write, live Vertex request, k6 prompt run, `.env`, ADC,
+  service-account JSON, API key/private key, Terraform state, `.tfvars`, DB
+  password, or Kubernetes Secret payload was read or printed.
+
+As of 2026-07-09, Issue #34 completed on branch
+`codex/issue-34-live-rollout-safety-evidence`; PR #35 was merged into `main` at
+merge commit `9cbd72519d25909792bab429ea9d436f6d32c939`:
+
 - Issue #32 / PR #33 was merged into `main` at merge commit
   `e8a3c3d967535bb69db47ca068ba53e71c023e73`.
 - Personal GCP guard was verified before write operations:
@@ -689,12 +714,11 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #34 rollout evidence PR after GitHub checks pass, then merge
-  it into `main`.
-- Consider a follow-up capacity/autoscaling issue: make live rollout capacity
-  explicit in runbooks and Terraform usage, decide whether `node_count=2` should
-  remain the live baseline or become autoscaled, and add evidence for HPA or
-  cluster autoscaler behavior before more provider-facing rollout tests.
+- Review the Issue #36 rollout capacity guardrail PR after GitHub checks pass,
+  then merge it into `main`.
+- Consider a follow-up HPA or cluster-autoscaler issue after #36: keep
+  `node_count=2` as the proven live baseline for now, then add measured evidence
+  before changing autoscaling behavior.
 - The next reliability implementation candidate is a bounded prompt-enhancement
   provider failure validation run: low-rate live prompt profile, verify
   `/api/ops/metrics.provider_failures.by_code`, and keep public error/log

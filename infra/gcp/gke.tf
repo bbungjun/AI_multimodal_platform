@@ -41,6 +41,16 @@ resource "google_container_node_pool" "general" {
 
   node_count = var.node_count
 
+  lifecycle {
+    precondition {
+      condition = (
+        var.node_count >= 2 ||
+        (var.api_replicas <= 1 && var.frontend_replicas <= 1)
+      )
+      error_message = "Set node_count >= 2 when api_replicas or frontend_replicas is greater than 1. Readiness-gated RollingUpdate uses maxUnavailable=0 and maxSurge=1, so a single e2-standard-2 node can leave replacement pods Pending with Insufficient cpu."
+    }
+  }
+
   management {
     auto_repair  = true
     auto_upgrade = true

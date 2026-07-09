@@ -222,6 +222,7 @@ terraform -chdir=infra/gcp apply `
   -var "frontend_replicas=2" `
   -var "worker_replicas=1" `
   -var "dispatcher_replicas=1" `
+  -var "node_count=2" `
   -var "ai_provider=mock"
 ```
 
@@ -262,6 +263,14 @@ keeps existing ready pods serving while a replacement pod starts and passes its
 readiness probe. The API liveness probe uses `/api/health/live`, which checks
 only process availability; readiness remains on `/api/health`, which includes
 DB and Vertex readiness.
+
+Capacity is part of the rollout contract. When `api_replicas > 1` or
+`frontend_replicas > 1`, set `node_count=2` or higher in the same Terraform
+plan. Terraform intentionally fails early if a multi-replica user-facing rollout
+is planned against a single-node pool, because `maxUnavailable=0` plus
+`maxSurge=1` needs room for replacement pods while old pods remain serving. In
+the 2026-07-09 live rollout, omitting this left new API and worker pods Pending
+with `Insufficient cpu` until the node pool was expanded.
 
 Before changing image tags, runtime config, or prompt-enhancement behavior,
 capture the current deployment state and runtime metrics:
@@ -322,6 +331,7 @@ terraform -chdir=infra/gcp apply `
   -var "frontend_replicas=2" `
   -var "worker_replicas=1" `
   -var "dispatcher_replicas=1" `
+  -var "node_count=2" `
   -var "ai_provider=vertex"
 Invoke-RestMethod -Uri "$frontendUrl/api/health"
 Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"

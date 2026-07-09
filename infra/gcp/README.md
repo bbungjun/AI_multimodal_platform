@@ -82,10 +82,13 @@ Identity. No service-account key files are created or mounted.
 
 The API and frontend are user-facing workloads and use readiness-gated rolling
 updates with `maxUnavailable=0` and `maxSurge=1`. Validate rollout safety with
-at least two API and frontend replicas. Worker and dispatcher rollout evidence
-is different: the worker is judged by task redelivery/repair safety, and the
-dispatcher remains singleton unless a future issue proves multi-dispatcher
-outbox locking.
+at least two API and frontend replicas. Terraform requires `node_count >= 2`
+when `api_replicas > 1` or `frontend_replicas > 1`; this prevents a
+multi-replica rollout plan from running on a single-node pool where replacement
+pods can remain Pending with `Insufficient cpu` while old pods are intentionally
+kept serving. Worker and dispatcher rollout evidence is different: the worker
+is judged by task redelivery/repair safety, and the dispatcher remains
+singleton unless a future issue proves multi-dispatcher outbox locking.
 
 ## Deployment Helpers
 
