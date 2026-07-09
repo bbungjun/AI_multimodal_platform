@@ -74,6 +74,9 @@ As of 2026-07-09, Issue #32 is in progress on branch
 `codex/issue-32-gke-rollout-safety` to add rollout safety for LLM-facing GKE
 changes:
 
+- Draft PR #33 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/33`.
+- Implementation commit: `bf09d1f feat: add gke rollout safety baseline`.
 - PR #31 for Issue #30 was marked ready and merged into `main` at merge commit
   `5085195`.
 - Issue #32 scope: connect prompt enhancement reliability work to safer GKE
