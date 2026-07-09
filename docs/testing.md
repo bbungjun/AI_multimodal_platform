@@ -74,7 +74,8 @@ Important backend contracts are already protected by focused tests:
 - dispatch/repair/task observability fields without mutating job state history
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, provider retry/backoff, invalid
-  response repair retry, and metrics recording
+  response repair retry, language mismatch rejection after one retry, and
+  metrics recording
 - Vertex adapter parsing and public error mapping with fake clients
 - generation, pipeline, asset, and delete API contracts
 - failed-generation retry API contracts, including I2V source asset validation

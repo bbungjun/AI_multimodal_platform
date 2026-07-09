@@ -70,12 +70,39 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #45 is in progress on branch
-`codex/issue-45-hpa-live-evidence` to verify live GKE workload HPA apply and
-rollback evidence:
+As of 2026-07-10, Issue #47 is in progress on branch
+`codex/issue-47-prompt-reliability` to close the remaining prompt enhancement
+language-preservation reliability gap:
 
-- Draft PR #46 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/46`.
+- Scope was narrowed after review because Issue #30 had already implemented
+  provider retry/backoff, invalid JSON repair retry, safe public errors, and
+  provider failure metrics for prompt enhancement.
+- The remaining gap was that a Korean or English prompt could receive a
+  language retry, then still succeed if the retry response ignored the requested
+  display language.
+- Prompt enhancement now rejects unresolved language mismatch after the single
+  language retry with `prompt_enhancement_invalid_response` and reason
+  `language_mismatch`.
+- API handling records this failure through the existing provider failure
+  metrics path, returns a stable public 502 response, and does not persist a
+  prompt enhancement row.
+- Documentation now calls out language mismatch rejection after one retry in
+  `docs/provider-modes.md` and `docs/testing.md`.
+- Verification:
+  `AI_PROVIDER=mock .venv/bin/python -m pytest
+  backend/tests/test_prompt_enhancer.py backend/tests/test_prompt_api.py`
+  passed with 22 tests; `cd backend && AI_PROVIDER=mock
+  ../.venv/bin/python -m pytest` passed with 334 tests; `git diff --check`
+  passed.
+- No live prompt enhancement, Imagen, Veo, GCP write, Terraform apply, or
+  Kubernetes write was run. No `.env`, ADC, service-account JSON, API
+  key/private key, Terraform state, `.tfvars`, DB password, Kubernetes Secret
+  payload, access token, or credential value was read or printed.
+
+As of 2026-07-10, Issue #45 completed on branch
+`codex/issue-45-hpa-live-evidence`; PR #46 was merged into `main` at merge
+commit `8f05e59dcd5e9ffdd741777242a5db07c526922e`:
+
 - Issue #43 / PR #44 was marked ready and merged into `main` at merge commit
   `12cc5cc2244eee39b040ed48bf2726937e5e7932`.
 - Personal GCP guard was verified before every GCP write:
@@ -92,20 +119,9 @@ rollback evidence:
 - HPA enable plan proposed only the two HPA resources:
   `Plan: 2 to add, 0 to change, 0 to destroy`. Apply completed with
   `2 added, 0 changed, 0 destroyed`.
-- Post-apply HPA evidence:
-  - HPA count `2`
-  - `creativeops-api` min `2`, max `4`, target `cpu:Utilization:70`,
-    current/desired replicas `2/2`, current CPU metric `1`,
-    conditions `AbleToScale=True`, `ScalingActive=True`,
-    `ScalingLimited=False`
-  - `creativeops-frontend` min `2`, max `4`, target `cpu:Utilization:70`,
-    current/desired replicas `2/2`, current CPU metric `0`,
-    conditions `AbleToScale=True`, `ScalingActive=True`,
-    `ScalingLimited=False`
-  - nodes `2`, ready nodes `2`
-  - API/frontend desired/updated/ready/available `2/2/2/2`
-  - worker/dispatcher desired/updated/ready/available `1/1/1/1`
-  - app pods `6`, all `Running`
+- Post-apply HPA evidence: HPA count `2`; API/frontend min `2`, max `4`, CPU
+  target `70`, current/desired replicas `2/2`, and
+  `ScalingActive=True`; nodes `2/2` ready; app pods `6` all `Running`.
 - Live URL `http://34.50.26.152` stayed in mock mode. `/api/health` returned
   `ok=true`, `ready=true`, DB `up`, and `vertex.status=mock_provider`;
   `/api/health/live` returned `ok=true`.
@@ -122,16 +138,10 @@ rollback evidence:
   `frontend_hpa_enabled=false` proposed only HPA removal:
   `Plan: 0 to add, 0 to change, 2 to destroy`. Apply completed with
   `0 added, 0 changed, 2 destroyed`.
-- Post-rollback verification:
-  - HPA count `0`
-  - nodes `2`, ready nodes `2`
-  - API/frontend desired/updated/ready/available `2/2/2/2`
-  - worker/dispatcher desired/updated/ready/available `1/1/1/1`
-  - app pods `6`, all `Running`
-  - `/api/health`, `/api/health/live`, `/api/ops/metrics`, and
-    `/api/ops/health` returned HTTP 200
-  - post-rollback Terraform drift check with HPA disabled returned
-    `post_rollback_plan_exit=0`
+- Post-rollback verification: HPA count `0`; nodes `2/2` ready; app pods `6`
+  all `Running`; `/api/health`, `/api/health/live`, `/api/ops/metrics`, and
+  `/api/ops/health` returned HTTP 200; post-rollback Terraform drift check
+  returned `post_rollback_plan_exit=0`.
 - No live prompt enhancement, Imagen, or Veo generation call was run. No
   `.env`, ADC, service-account JSON, API key/private key, Terraform state,
   `.tfvars`, DB password, Kubernetes Secret payload, access token, or

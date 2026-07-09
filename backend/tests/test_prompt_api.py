@@ -211,6 +211,53 @@ async def test_enhance_prompt_records_invalid_response_metrics(monkeypatch):
     assert metrics_snapshot.provider_failures.by_status == {"none": 1}
 
 
+async def test_enhance_prompt_records_language_mismatch_metrics(monkeypatch):
+    session = FakePromptSession()
+    runtime_metrics.reset()
+
+    async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
+        raise enhancer.PromptEnhancementResponseError(
+            "language_mismatch",
+            field="enhanced",
+            source="response",
+        )
+
+    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+
+    try:
+        response = await _post_prompt_enhance(
+            {
+                "prompt": "비 내리는 서울 골목, 네온 간판",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+            },
+            session,
+        )
+        metrics_snapshot = runtime_metrics.snapshot()
+    finally:
+        runtime_metrics.reset()
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == {
+        "code": "prompt_enhancement_invalid_response",
+        "message": "Prompt enhancement response was invalid.",
+        "retryable": False,
+        "status_code": None,
+        "reason": "language_mismatch",
+        "field": "enhanced",
+        "source": "response",
+    }
+    assert session.added == []
+    assert session.commit_count == 0
+    assert session.refresh_count == 0
+    assert metrics_snapshot.provider_failures.failures_total == 1
+    assert metrics_snapshot.provider_failures.non_retryable == 1
+    assert metrics_snapshot.provider_failures.by_code == {
+        "prompt_enhancement_invalid_response": 1,
+    }
+    assert metrics_snapshot.provider_failures.by_status == {"none": 1}
+
+
 @pytest.mark.parametrize(
     ("payload", "expected_field"),
     [
