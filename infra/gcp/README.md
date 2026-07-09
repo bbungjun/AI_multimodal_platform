@@ -78,6 +78,15 @@ metrics. Application pods use the Kubernetes service account name
 `creativeops-app`, which maps to the app Google service account through Workload
 Identity. No service-account key files are created or mounted.
 
+## GKE Rollout Boundary
+
+The API and frontend are user-facing workloads and use readiness-gated rolling
+updates with `maxUnavailable=0` and `maxSurge=1`. Validate rollout safety with
+at least two API and frontend replicas. Worker and dispatcher rollout evidence
+is different: the worker is judged by task redelivery/repair safety, and the
+dispatcher remains singleton unless a future issue proves multi-dispatcher
+outbox locking.
+
 ## Deployment Helpers
 
 - `scripts/build_push_gcp_images.ps1` builds backend/frontend images and pushes

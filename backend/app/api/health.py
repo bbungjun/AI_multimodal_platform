@@ -11,6 +11,14 @@ from app.services.vertex.client import get_vertex_readiness
 router = APIRouter(prefix="/health", tags=["health"])
 
 
+@router.get("/live")
+async def live() -> dict[str, bool | str]:
+    return {
+        "ok": True,
+        "service": get_settings().app_name,
+    }
+
+
 @router.get("", response_model=HealthResponse)
 async def health() -> HealthResponse:
     db_up = await check_db_connection()
