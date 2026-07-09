@@ -344,7 +344,10 @@ intent in Issue #13.
 
 ## Scale Down Or Destroy
 
-Scale app workloads to zero when the demo is not active:
+Use **temporary demo pause** when the portfolio environment should remain
+recreatable without rebuilding managed data services. This scales app workloads
+and the GKE node pool to zero, switches future app pods back to mock mode, and
+keeps Terraform-managed platform resources intact:
 
 ```powershell
 terraform -chdir=infra/gcp apply `
@@ -355,8 +358,21 @@ terraform -chdir=infra/gcp apply `
   -var "frontend_replicas=0" `
   -var "worker_replicas=0" `
   -var "dispatcher_replicas=0" `
+  -var "node_count=0" `
   -var "ai_provider=mock"
 ```
+
+Expected temporary-pause state:
+
+- GKE app deployments have desired replicas `0`.
+- The app namespace has no running API, frontend, worker, or dispatcher pods.
+- The general GKE node pool has `0` nodes and no GKE worker VM instances.
+- API/frontend PodDisruptionBudgets are removed because there are no
+  multi-replica rollouts to protect.
+- The frontend `LoadBalancer` service, GKE cluster, Cloud SQL, Redis, GCS asset
+  bucket, Artifact Registry repositories, and Terraform state bucket remain.
+  These are expected retained platform resources for this mode and may still
+  incur cost.
 
 Destroy only when portfolio QA is complete and evidence is recorded:
 

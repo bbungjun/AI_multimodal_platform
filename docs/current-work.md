@@ -70,11 +70,59 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #36 is in progress on branch
-`codex/issue-36-gke-rollout-capacity` to add GKE rollout capacity guardrails:
+As of 2026-07-10, Issue #14 is in progress on branch
+`codex/issue-14-gcp-cost-control` to record GCP cost-control and teardown
+evidence:
 
-- Draft PR #37 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/37`.
+- Draft PR #38 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/38`.
+- Issue #36 / PR #37 was marked ready and merged into `main` at merge commit
+  `c189bc7`.
+- Cleanup mode selected: **temporary demo pause**, not full teardown. The stack
+  remains reproducible for later QA/autoscaling work, but app pods and GKE
+  worker VMs are scaled to zero.
+- Personal GCP guard was verified before write operations:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Terraform scale-down plan used image tag `e8a3c3d`,
+  `api_replicas=0`, `frontend_replicas=0`, `worker_replicas=0`,
+  `dispatcher_replicas=0`, `node_count=0`, and `ai_provider=mock`.
+  The plan proposed `0 to add, 6 to change, 2 to destroy`.
+- Terraform apply completed with `0 added, 6 changed, 2 destroyed`. Changed
+  resources were the general GKE node pool, backend ConfigMap, and four
+  deployments; destroyed resources were the API/frontend PDBs that only exist
+  for multi-replica rollouts.
+- Post-apply verification:
+  - node pool status `RUNNING`, node count `0`
+  - Kubernetes nodes `0`
+  - deployments `creativeops-api`, `creativeops-frontend`,
+    `creativeops-worker`, and `creativeops-dispatcher` each have replicas `0`
+  - app namespace pods `0`
+  - PDBs `0`
+  - frontend `LoadBalancer` service intentionally remains at `34.50.26.152`
+  - no `gke-creativeops` Compute Engine worker instances were listed
+- Expected retained resources for temporary pause remain present: Cloud SQL
+  `RUNNABLE`, Redis `READY`, GCS assets bucket, Terraform state bucket, and
+  backend/frontend Artifact Registry repositories.
+- Post-apply Terraform drift check with the same scale-down var set passed with
+  `plan_exit=0`.
+- Updated `docs/runbooks/gcp-gke.md` and `infra/gcp/README.md` so temporary
+  demo pause explicitly includes `node_count=0`, documents expected retained
+  resources, and distinguishes pause from full `terraform destroy`.
+- Added `backend/tests/test_gcp_cost_control_runbook.py` to keep the
+  cost-control runbook boundary covered.
+- Verification so far: `AI_PROVIDER=mock .venv/bin/python -m pytest
+  backend/tests/test_gcp_cost_control_runbook.py
+  backend/tests/test_gcp_k8s_rollout.py` with 6 tests passing, and
+  `git diff --check`.
+- No live prompt enhancement, Imagen, or Veo generation call was run. No `.env`,
+  ADC, service-account JSON, API key/private key, Terraform state, `.tfvars`,
+  DB password, Kubernetes Secret payload, access token, or credential value was
+  read or printed.
+
+As of 2026-07-10, Issue #36 completed on branch
+`codex/issue-36-gke-rollout-capacity`; PR #37 was merged into `main` at merge
+commit `c189bc7`:
+
 - Issue #34 / PR #35 was marked ready and merged into `main` at merge commit
   `9cbd72519d25909792bab429ea9d436f6d32c939`.
 - Issue #36 scope: prevent future Terraform plans from combining
@@ -714,11 +762,14 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #36 rollout capacity guardrail PR after GitHub checks pass,
-  then merge it into `main`.
-- Consider a follow-up HPA or cluster-autoscaler issue after #36: keep
-  `node_count=2` as the proven live baseline for now, then add measured evidence
-  before changing autoscaling behavior.
+- Review the Issue #14 cost-control PR after GitHub checks pass, then merge it
+  into `main`.
+- The live GCP stack is currently in temporary demo pause mode: app replicas
+  `0`, node pool `0`, and `ai_provider=mock`. Before HPA or cluster-autoscaler
+  evidence, intentionally scale the stack back up with the personal GCP guard.
+- Consider a follow-up HPA or cluster-autoscaler issue after #14: use the
+  proven `node_count=2` rollout baseline for the scale-up step, then add
+  measured evidence before changing autoscaling behavior.
 - The next reliability implementation candidate is a bounded prompt-enhancement
   provider failure validation run: low-rate live prompt profile, verify
   `/api/ops/metrics.provider_failures.by_code`, and keep public error/log
