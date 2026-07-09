@@ -99,3 +99,13 @@ singleton unless a future issue proves multi-dispatcher outbox locking.
   applies the Kubernetes runtime Secret without printing secret values.
 - `docs/runbooks/gcp-gke.md` is the operator runbook for mock-first deployment,
   Vertex readiness, and scale-down/teardown.
+
+## Cost-Control Boundary
+
+For a temporary demo pause, set all workload replicas to `0`, set
+`node_count=0`, and switch `ai_provider=mock`. This removes app pods and GKE
+worker VMs while keeping the GKE control plane, frontend LoadBalancer service,
+Cloud SQL, Redis, GCS assets bucket, Artifact Registry repositories, and
+Terraform state bucket available for a later resume. Use Terraform `destroy`
+only when full teardown is intended and the retained data/state implications
+are understood.
