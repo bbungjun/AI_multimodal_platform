@@ -109,3 +109,12 @@ Cloud SQL, Redis, GCS assets bucket, Artifact Registry repositories, and
 Terraform state bucket available for a later resume. Use Terraform `destroy`
 only when full teardown is intended and the retained data/state implications
 are understood.
+
+## Autoscaling Boundary
+
+GKE node pool autoscaling is available through explicit Terraform variables but
+is disabled by default. Keep the fixed `node_count=2` rollout baseline for live
+resume and zero-downtime evidence until a separate autoscaling validation issue
+records min/max node counts, k6 readiness results, Pending pod behavior, and a
+rollback path. Do not enable autoscaling as a hidden side effect of routine
+deploy, pause, or resume commands.

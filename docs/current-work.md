@@ -70,12 +70,51 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #14 is in progress on branch
-`codex/issue-14-gcp-cost-control` to record GCP cost-control and teardown
-evidence:
+As of 2026-07-10, Issue #39 is in progress on branch
+`codex/issue-39-gke-autoscaling-readiness` to add GKE autoscaling readiness
+guardrails:
 
-- Draft PR #38 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/38`.
+- Draft PR #40 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/40`.
+- Issue #14 / PR #38 was marked ready and merged into `main` at merge commit
+  `d28b445`.
+- Live GCP remains in temporary demo pause mode from Issue #14: app replicas
+  `0`, node pool `0`, and `ai_provider=mock`.
+- Issue #39 scope: make node pool autoscaling explicit and testable without
+  enabling autoscaling or changing the paused live state.
+- Added Terraform variables for optional node pool autoscaling:
+  `node_pool_autoscaling_enabled=false`,
+  `node_pool_autoscaling_min_count=0`, and
+  `node_pool_autoscaling_max_count=2`.
+- Added a dynamic GKE node pool `autoscaling` block that is created only when
+  `node_pool_autoscaling_enabled=true`.
+- Added a Terraform precondition so autoscaling min count must be less than or
+  equal to max count.
+- Kept the Issue #36 rollout capacity guardrail intact: multi-replica
+  API/frontend rollouts still require fixed `node_count >= 2`.
+- Updated `docs/runbooks/gcp-gke.md` and `infra/gcp/README.md` to document
+  autoscaling as an explicit operating mode, not a hidden deploy/pause/resume
+  side effect.
+- Added `backend/tests/test_gcp_autoscaling_readiness.py`.
+- Verification so far:
+  `/tmp/creativeops-terraform/terraform -chdir=infra/gcp fmt -recursive
+  -check`, `AI_PROVIDER=mock .venv/bin/python -m pytest
+  backend/tests/test_gcp_autoscaling_readiness.py
+  backend/tests/test_gcp_k8s_rollout.py
+  backend/tests/test_gcp_cost_control_runbook.py` with 9 tests passing,
+  backend-less Terraform `validate` from an ignored temporary copy excluding
+  `.terraform`, `backend.hcl`, Terraform state, and `.tfvars`, `git diff
+  --check`, and a no-apply Terraform drift plan against the paused live var set
+  with `plan_exit=0`.
+- No Terraform apply, kubectl write, live Vertex request, k6 prompt run,
+  `.env`, ADC, service-account JSON, API key/private key, Terraform state,
+  `.tfvars`, DB password, Kubernetes Secret payload, access token, or
+  credential value was read or printed.
+
+As of 2026-07-10, Issue #14 completed on branch
+`codex/issue-14-gcp-cost-control`; PR #38 was merged into `main` at merge
+commit `d28b445`:
+
 - Issue #36 / PR #37 was marked ready and merged into `main` at merge commit
   `c189bc7`.
 - Cleanup mode selected: **temporary demo pause**, not full teardown. The stack
@@ -762,14 +801,15 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #14 cost-control PR after GitHub checks pass, then merge it
-  into `main`.
+- Review the Issue #39 autoscaling readiness PR after GitHub checks pass, then
+  merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
-  `0`, node pool `0`, and `ai_provider=mock`. Before HPA or cluster-autoscaler
-  evidence, intentionally scale the stack back up with the personal GCP guard.
-- Consider a follow-up HPA or cluster-autoscaler issue after #14: use the
-  proven `node_count=2` rollout baseline for the scale-up step, then add
-  measured evidence before changing autoscaling behavior.
+  `0`, node pool `0`, and `ai_provider=mock`. Before live autoscaling, HPA, or
+  provider failure evidence, intentionally scale the stack back up with the
+  personal GCP guard.
+- Consider a follow-up measured autoscaling issue after #39: resume the proven
+  `node_count=2` rollout baseline, run k6 readiness, then apply autoscaling in
+  a bounded live issue with node count and Pending pod evidence.
 - The next reliability implementation candidate is a bounded prompt-enhancement
   provider failure validation run: low-rate live prompt profile, verify
   `/api/ops/metrics.provider_failures.by_code`, and keep public error/log

@@ -41,7 +41,24 @@ resource "google_container_node_pool" "general" {
 
   node_count = var.node_count
 
+  dynamic "autoscaling" {
+    for_each = var.node_pool_autoscaling_enabled ? [1] : []
+
+    content {
+      min_node_count = var.node_pool_autoscaling_min_count
+      max_node_count = var.node_pool_autoscaling_max_count
+    }
+  }
+
   lifecycle {
+    precondition {
+      condition = (
+        !var.node_pool_autoscaling_enabled ||
+        var.node_pool_autoscaling_min_count <= var.node_pool_autoscaling_max_count
+      )
+      error_message = "When node_pool_autoscaling_enabled is true, node_pool_autoscaling_min_count must be less than or equal to node_pool_autoscaling_max_count."
+    }
+
     precondition {
       condition = (
         var.node_count >= 2 ||

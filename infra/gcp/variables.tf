@@ -48,6 +48,24 @@ variable "node_count" {
   default = 1
 }
 
+variable "node_pool_autoscaling_enabled" {
+  type        = bool
+  default     = false
+  description = "Enable GKE node pool autoscaling. Keep disabled unless a cost-aware autoscaling issue is actively validating it."
+}
+
+variable "node_pool_autoscaling_min_count" {
+  type        = number
+  default     = 0
+  description = "Minimum node count when node pool autoscaling is enabled."
+}
+
+variable "node_pool_autoscaling_max_count" {
+  type        = number
+  default     = 2
+  description = "Maximum node count when node pool autoscaling is enabled."
+}
+
 variable "backend_image" {
   type        = string
   description = "Full Artifact Registry backend image URI including tag."
