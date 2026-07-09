@@ -317,6 +317,35 @@ failed or redelivered jobs are repairable. The dispatcher is kept singleton by
 default to avoid overlapping outbox publishers unless a future issue proves a
 multi-dispatcher locking strategy.
 
+## Autoscaling Readiness
+
+Do not enable autoscaling on the live stack as a side effect of routine
+deployment or pause/resume work. Autoscaling is an explicit operating mode with
+separate evidence.
+
+Start from the current cleanup state. If the stack is in temporary demo pause,
+first resume the proven rollout baseline with the personal GCP guard:
+
+```powershell
+terraform -chdir=infra/gcp apply `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "api_replicas=2" `
+  -var "frontend_replicas=2" `
+  -var "worker_replicas=1" `
+  -var "dispatcher_replicas=1" `
+  -var "node_count=2" `
+  -var "ai_provider=mock"
+```
+
+Before applying autoscaling live, run a no-apply Terraform plan with explicit
+autoscaling values and record the intended min/max node counts. Then collect a
+baseline with the k6 readiness profile and `/api/ops/metrics`. Autoscaling
+should not be considered ready until the evidence includes p95/p99 latency,
+HTTP failure rate, Pending pod count, node count before/after, and a rollback
+path back to fixed `node_count=2`.
+
 ## Vertex Readiness
 
 Run this only after mock smoke passes. Imagen and Veo live generation remain out
