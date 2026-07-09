@@ -74,6 +74,8 @@ As of 2026-07-10, Issue #43 is in progress on branch
 `codex/issue-43-gke-hpa-readiness` to add GKE workload HPA readiness
 guardrails:
 
+- Draft PR #44 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/44`.
 - Issue #41 / PR #42 was marked ready and merged into `main` at merge commit
   `59fb4119c6979104a36a2993d2521faeddc1eeb4`.
 - Issue #43 scope: add explicit, default-off API/frontend HPA support for
