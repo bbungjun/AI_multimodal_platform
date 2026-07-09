@@ -70,16 +70,73 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #39 is in progress on branch
-`codex/issue-39-gke-autoscaling-readiness` to add GKE autoscaling readiness
-guardrails:
+As of 2026-07-10, Issue #41 is in progress on branch
+`codex/issue-41-gke-autoscaling-evidence` to collect live GKE autoscaling
+evidence in mock mode:
 
-- Draft PR #40 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/40`.
+- Issue #39 / PR #40 was merged into `main` at merge commit `1e1db90`.
+- Personal GCP guard was verified before every write operation:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- The paused live stack from Issue #14 was resumed in two stages to avoid
+  scheduling workloads before nodes existed:
+  - Stage 1 set the GKE node pool back to `node_count=2`; follow-up evidence
+    showed the node pool `RUNNING` with `initialNodeCount=2`.
+  - Stage 2 restored app workloads with image tag `e8a3c3d`,
+    `api_replicas=2`, `frontend_replicas=2`, `worker_replicas=1`,
+    `dispatcher_replicas=1`, `node_count=2`, and `ai_provider=mock`.
+    Terraform apply completed with `2 added, 4 changed, 0 destroyed`.
+    The added resources were the API/frontend PDBs, and the changed resources
+    were the four Kubernetes deployments.
+- Post-resume Kubernetes evidence:
+  - nodes `2`, ready nodes `2`
+  - `creativeops-api` desired/updated/ready/available `2/2/2/2`
+  - `creativeops-frontend` desired/updated/ready/available `2/2/2/2`
+  - `creativeops-worker` desired/updated/ready/available `1/1/1/1`
+  - `creativeops-dispatcher` desired/updated/ready/available `1/1/1/1`
+  - app pods `6`, all `Running`
+  - API and frontend PDBs each reported `currentHealthy=2`,
+    `desiredHealthy=1`, and `disruptionsAllowed=1`
+- Live URL `http://34.50.26.152` is serving mock mode:
+  `/api/health` returned `ok=true`, `ready=true`, DB `up`, and
+  `vertex.status=mock_provider`; `/api/health/live` returned `ok=true`.
+- k6 readiness profile passed against the live URL with
+  `EXPECTED_VERTEX_STATUS=mock_provider` and `READINESS_MAX_VUS=10`: 588
+  iterations, 1,764 HTTP requests, 5,292 checks, checks 100.00%, HTTP failure
+  rate 0.00%, and p95 request duration `53.34 ms`.
+- `/api/ops/metrics` after k6 readiness returned `http_requests_total=632`,
+  `http_errors_total=0`, `http_error_rate=0.0`, and
+  `provider_failures_total=0`. Endpoint latency samples included
+  `/api/health` p95 `8.35 ms` and `/api/ops/health` p95 `19.01 ms`.
+- Bounded GKE node pool autoscaling was applied explicitly with
+  `node_pool_autoscaling_enabled=true`,
+  `node_pool_autoscaling_min_count=1`, and
+  `node_pool_autoscaling_max_count=2`. The Terraform plan changed only
+  `google_container_node_pool.general`; apply completed with
+  `0 added, 1 changed, 0 destroyed`.
+- Post-autoscaling evidence:
+  - node pool status `RUNNING`
+  - autoscaling enabled `true`, min `1`, max `2`
+  - current GKE worker instances `2`, both `RUNNING`
+  - Kubernetes nodes `2`, ready nodes `2`
+  - deployments and pods remained at the post-resume ready counts
+  - `/api/health`, `/api/health/live`, `/api/ops/metrics`, and
+    `/api/ops/health` continued to return HTTP 200
+  - `/api/ops/metrics` returned `http_requests_total=671`,
+    `http_errors_total=0`, `http_error_rate=0.0`, and
+    `provider_failures_total=0`
+- Post-apply Terraform drift check with the autoscaling live var set passed
+  with `plan_exit=0`.
+- No live prompt enhancement, Imagen, or Veo generation call was run. No
+  `.env`, ADC, service-account JSON, API key/private key, Terraform state,
+  `.tfvars`, DB password, Kubernetes Secret payload, access token, or
+  credential value was read or printed.
+
+As of 2026-07-10, Issue #39 completed on branch
+`codex/issue-39-gke-autoscaling-readiness`; PR #40 was merged into `main` at
+merge commit `1e1db90`:
+
 - Issue #14 / PR #38 was marked ready and merged into `main` at merge commit
   `d28b445`.
-- Live GCP remains in temporary demo pause mode from Issue #14: app replicas
-  `0`, node pool `0`, and `ai_provider=mock`.
 - Issue #39 scope: make node pool autoscaling explicit and testable without
   enabling autoscaling or changing the paused live state.
 - Added Terraform variables for optional node pool autoscaling:
@@ -96,7 +153,7 @@ guardrails:
   autoscaling as an explicit operating mode, not a hidden deploy/pause/resume
   side effect.
 - Added `backend/tests/test_gcp_autoscaling_readiness.py`.
-- Verification so far:
+- Verification:
   `/tmp/creativeops-terraform/terraform -chdir=infra/gcp fmt -recursive
   -check`, `AI_PROVIDER=mock .venv/bin/python -m pytest
   backend/tests/test_gcp_autoscaling_readiness.py
