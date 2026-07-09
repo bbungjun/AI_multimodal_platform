@@ -70,10 +70,12 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #41 is in progress on branch
+As of 2026-07-10, Issue #41 is in review on branch
 `codex/issue-41-gke-autoscaling-evidence` to collect live GKE autoscaling
 evidence in mock mode:
 
+- Draft PR #42 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/42`.
 - Issue #39 / PR #40 was merged into `main` at merge commit `1e1db90`.
 - Personal GCP guard was verified before every write operation:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
