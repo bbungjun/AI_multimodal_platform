@@ -70,12 +70,77 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #43 is in progress on branch
-`codex/issue-43-gke-hpa-readiness` to add GKE workload HPA readiness
-guardrails:
+As of 2026-07-10, Issue #45 is in progress on branch
+`codex/issue-45-hpa-live-evidence` to verify live GKE workload HPA apply and
+rollback evidence:
 
-- Draft PR #44 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/44`.
+- Draft PR #46 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/46`.
+- Issue #43 / PR #44 was marked ready and merged into `main` at merge commit
+  `12cc5cc2244eee39b040ed48bf2726937e5e7932`.
+- Personal GCP guard was verified before every GCP write:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- HPA enable Terraform plan used image tag `e8a3c3d`, `api_replicas=2`,
+  `api_hpa_enabled=true`, `api_hpa_min_replicas=2`,
+  `api_hpa_max_replicas=4`, `api_hpa_cpu_target_utilization=70`,
+  `frontend_replicas=2`, `frontend_hpa_enabled=true`,
+  `frontend_hpa_min_replicas=2`, `frontend_hpa_max_replicas=4`,
+  `frontend_hpa_cpu_target_utilization=70`, `worker_replicas=1`,
+  `dispatcher_replicas=1`, `node_count=2`,
+  `node_pool_autoscaling_enabled=true`, min `1`, max `2`, and
+  `ai_provider=mock`.
+- HPA enable plan proposed only the two HPA resources:
+  `Plan: 2 to add, 0 to change, 0 to destroy`. Apply completed with
+  `2 added, 0 changed, 0 destroyed`.
+- Post-apply HPA evidence:
+  - HPA count `2`
+  - `creativeops-api` min `2`, max `4`, target `cpu:Utilization:70`,
+    current/desired replicas `2/2`, current CPU metric `1`,
+    conditions `AbleToScale=True`, `ScalingActive=True`,
+    `ScalingLimited=False`
+  - `creativeops-frontend` min `2`, max `4`, target `cpu:Utilization:70`,
+    current/desired replicas `2/2`, current CPU metric `0`,
+    conditions `AbleToScale=True`, `ScalingActive=True`,
+    `ScalingLimited=False`
+  - nodes `2`, ready nodes `2`
+  - API/frontend desired/updated/ready/available `2/2/2/2`
+  - worker/dispatcher desired/updated/ready/available `1/1/1/1`
+  - app pods `6`, all `Running`
+- Live URL `http://34.50.26.152` stayed in mock mode. `/api/health` returned
+  `ok=true`, `ready=true`, DB `up`, and `vertex.status=mock_provider`;
+  `/api/health/live` returned `ok=true`.
+- k6 readiness profile passed with HPA enabled using
+  `EXPECTED_VERTEX_STATUS=mock_provider` and `READINESS_MAX_VUS=10`: 590
+  iterations, 1,770 HTTP requests, 5,310 checks, checks 100.00%, HTTP failure
+  rate 0.00%, and p95 request duration `53 ms`.
+- `/api/ops/metrics` after k6 showed k6-covered endpoints at error rate `0.0`
+  and provider failure count `0`. One scrape also observed a single
+  `GET /api/.env` error from an external scan-like request, so the aggregate
+  in-memory metrics on that API pod briefly showed `http_errors_total=1` and
+  `http_error_rate=0.00056`; no secret file or secret payload was read.
+- HPA rollback Terraform plan with `api_hpa_enabled=false` and
+  `frontend_hpa_enabled=false` proposed only HPA removal:
+  `Plan: 0 to add, 0 to change, 2 to destroy`. Apply completed with
+  `0 added, 0 changed, 2 destroyed`.
+- Post-rollback verification:
+  - HPA count `0`
+  - nodes `2`, ready nodes `2`
+  - API/frontend desired/updated/ready/available `2/2/2/2`
+  - worker/dispatcher desired/updated/ready/available `1/1/1/1`
+  - app pods `6`, all `Running`
+  - `/api/health`, `/api/health/live`, `/api/ops/metrics`, and
+    `/api/ops/health` returned HTTP 200
+  - post-rollback Terraform drift check with HPA disabled returned
+    `post_rollback_plan_exit=0`
+- No live prompt enhancement, Imagen, or Veo generation call was run. No
+  `.env`, ADC, service-account JSON, API key/private key, Terraform state,
+  `.tfvars`, DB password, Kubernetes Secret payload, access token, or
+  credential value was read or printed.
+
+As of 2026-07-10, Issue #43 completed on branch
+`codex/issue-43-gke-hpa-readiness`; PR #44 was merged into `main` at merge
+commit `12cc5cc2244eee39b040ed48bf2726937e5e7932`:
+
 - Issue #41 / PR #42 was marked ready and merged into `main` at merge commit
   `59fb4119c6979104a36a2993d2521faeddc1eeb4`.
 - Issue #43 scope: add explicit, default-off API/frontend HPA support for
