@@ -86,6 +86,64 @@ variable "frontend_replicas" {
   default = 0
 }
 
+variable "api_hpa_enabled" {
+  type        = bool
+  default     = false
+  description = "Enable a HorizontalPodAutoscaler for the API deployment. Keep disabled unless explicitly validating workload autoscaling."
+}
+
+variable "api_hpa_min_replicas" {
+  type        = number
+  default     = 2
+  description = "Minimum API replicas when api_hpa_enabled is true."
+}
+
+variable "api_hpa_max_replicas" {
+  type        = number
+  default     = 4
+  description = "Maximum API replicas when api_hpa_enabled is true."
+}
+
+variable "api_hpa_cpu_target_utilization" {
+  type        = number
+  default     = 70
+  description = "Average CPU utilization percentage target for the API HPA."
+
+  validation {
+    condition     = var.api_hpa_cpu_target_utilization >= 1 && var.api_hpa_cpu_target_utilization <= 100
+    error_message = "api_hpa_cpu_target_utilization must be between 1 and 100."
+  }
+}
+
+variable "frontend_hpa_enabled" {
+  type        = bool
+  default     = false
+  description = "Enable a HorizontalPodAutoscaler for the frontend deployment. Keep disabled unless explicitly validating workload autoscaling."
+}
+
+variable "frontend_hpa_min_replicas" {
+  type        = number
+  default     = 2
+  description = "Minimum frontend replicas when frontend_hpa_enabled is true."
+}
+
+variable "frontend_hpa_max_replicas" {
+  type        = number
+  default     = 4
+  description = "Maximum frontend replicas when frontend_hpa_enabled is true."
+}
+
+variable "frontend_hpa_cpu_target_utilization" {
+  type        = number
+  default     = 70
+  description = "Average CPU utilization percentage target for the frontend HPA."
+
+  validation {
+    condition     = var.frontend_hpa_cpu_target_utilization >= 1 && var.frontend_hpa_cpu_target_utilization <= 100
+    error_message = "frontend_hpa_cpu_target_utilization must be between 1 and 100."
+  }
+}
+
 variable "worker_replicas" {
   type    = number
   default = 0

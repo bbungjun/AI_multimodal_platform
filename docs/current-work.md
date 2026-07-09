@@ -70,12 +70,64 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #41 is in review on branch
-`codex/issue-41-gke-autoscaling-evidence` to collect live GKE autoscaling
-evidence in mock mode:
+As of 2026-07-10, Issue #43 is in progress on branch
+`codex/issue-43-gke-hpa-readiness` to add GKE workload HPA readiness
+guardrails:
 
-- Draft PR #42 is open:
-  `https://github.com/bbungjun/AI_multimodal_platform/pull/42`.
+- Issue #41 / PR #42 was marked ready and merged into `main` at merge commit
+  `59fb4119c6979104a36a2993d2521faeddc1eeb4`.
+- Issue #43 scope: add explicit, default-off API/frontend HPA support for
+  workload-level autoscaling without turning HPA on during routine
+  deploy/pause/resume flows.
+- Added Terraform HPA variables:
+  `api_hpa_enabled=false`, `api_hpa_min_replicas=2`,
+  `api_hpa_max_replicas=4`, `api_hpa_cpu_target_utilization=70`,
+  `frontend_hpa_enabled=false`, `frontend_hpa_min_replicas=2`,
+  `frontend_hpa_max_replicas=4`, and
+  `frontend_hpa_cpu_target_utilization=70`.
+- Added `kubernetes_horizontal_pod_autoscaler_v2` resources for API and
+  frontend, each targeting CPU utilization and using bounded scale-up/scale-down
+  behavior. The resources are created only when the corresponding
+  `*_hpa_enabled` variable is true.
+- Added preconditions so HPA min replicas must be less than or equal to max
+  replicas, and the Terraform Deployment replica floor must equal the HPA
+  minimum when HPA is enabled. This keeps Terraform's initial desired replica
+  count aligned with the HPA controller before load starts.
+- Updated `docs/runbooks/gcp-gke.md` and `infra/gcp/README.md` to document the
+  workload HPA boundary, HPA/node-pool autoscaling distinction, no-generation
+  k6 baseline, temporary Terraform replica drift during active HPA tests, and
+  rollback back to fixed replicas.
+- Added `backend/tests/test_gcp_hpa_readiness.py`.
+- Verification so far:
+  `/tmp/creativeops-terraform/terraform -chdir=infra/gcp fmt -recursive
+  -check`, `AI_PROVIDER=mock .venv/bin/python -m pytest
+  backend/tests/test_gcp_hpa_readiness.py
+  backend/tests/test_gcp_autoscaling_readiness.py
+  backend/tests/test_gcp_k8s_rollout.py
+  backend/tests/test_gcp_cost_control_runbook.py` with 13 tests passing, and
+  `AI_PROVIDER=mock ../.venv/bin/python -m pytest` from `backend/` with 332
+  tests passing. Terraform verification included backend-less `validate` from
+  an ignored temporary copy excluding `.terraform`, `backend.hcl`, Terraform
+  state, and `.tfvars`.
+- Personal GCP guard was verified before no-apply live Terraform plans:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- No-apply live Terraform plan with current mock live vars and HPA disabled
+  returned `No changes` with `hpa_disabled_plan_exit=0`.
+- No-apply live Terraform plan with HPA enabled for API/frontend
+  (`min=2`, `max=4`, CPU target `70`) proposed only
+  `kubernetes_horizontal_pod_autoscaler_v2.api[0]` and
+  `kubernetes_horizontal_pod_autoscaler_v2.frontend[0]`, with
+  `Plan: 2 to add, 0 to change, 0 to destroy` and
+  `hpa_enabled_plan_exit=2`.
+- No Terraform apply, kubectl write, live Vertex request, k6 prompt run,
+  `.env`, ADC, service-account JSON, API key/private key, Terraform state,
+  `.tfvars`, DB password, Kubernetes Secret payload, access token, or
+  credential value was read or printed.
+
+As of 2026-07-10, Issue #41 completed on branch
+`codex/issue-41-gke-autoscaling-evidence`; PR #42 was merged into `main` at
+merge commit `59fb4119c6979104a36a2993d2521faeddc1eeb4`:
+
 - Issue #39 / PR #40 was merged into `main` at merge commit `1e1db90`.
 - Personal GCP guard was verified before every write operation:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
