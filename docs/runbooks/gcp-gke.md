@@ -346,6 +346,84 @@ should not be considered ready until the evidence includes p95/p99 latency,
 HTTP failure rate, Pending pod count, node count before/after, and a rollback
 path back to fixed `node_count=2`.
 
+## Workload HPA Readiness
+
+Workload HPA is separate from node pool autoscaling. Node pool autoscaling adds
+or removes worker nodes; HPA changes the API and frontend Deployment replica
+counts. Do not enable HPA as part of routine deploy, pause, or resume work.
+Enable it only for a dedicated evidence issue.
+
+Terraform still declares the initial Deployment replica floor. When HPA is
+enabled, set each initial replica count equal to that workload's HPA minimum so
+the first apply is predictable and Terraform is not fighting the controller at
+the start of the test:
+
+```powershell
+terraform -chdir=infra/gcp plan `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "api_replicas=2" `
+  -var "api_hpa_enabled=true" `
+  -var "api_hpa_min_replicas=2" `
+  -var "api_hpa_max_replicas=4" `
+  -var "api_hpa_cpu_target_utilization=70" `
+  -var "frontend_replicas=2" `
+  -var "frontend_hpa_enabled=true" `
+  -var "frontend_hpa_min_replicas=2" `
+  -var "frontend_hpa_max_replicas=4" `
+  -var "frontend_hpa_cpu_target_utilization=70" `
+  -var "worker_replicas=1" `
+  -var "dispatcher_replicas=1" `
+  -var "node_count=2" `
+  -var "node_pool_autoscaling_enabled=true" `
+  -var "node_pool_autoscaling_min_count=1" `
+  -var "node_pool_autoscaling_max_count=2" `
+  -var "ai_provider=mock"
+```
+
+Before applying, confirm the plan only creates or updates the expected HPA
+resources and does not alter Secrets, managed data services, or provider mode.
+After applying, verify:
+
+```powershell
+kubectl get hpa -n creativeops-portfolio
+kubectl describe hpa creativeops-api -n creativeops-portfolio
+kubectl describe hpa creativeops-frontend -n creativeops-portfolio
+kubectl get deploy -n creativeops-portfolio
+Invoke-RestMethod -Uri "$frontendUrl/api/health"
+Invoke-RestMethod -Uri "$frontendUrl/api/ops/metrics"
+```
+
+For load evidence, run the k6 readiness profile first to capture a no-generation
+baseline. A later HPA stress profile should record starting replicas, peak
+replicas, node count before/after, Pending pods, p95/p99 latency, HTTP failure
+rate, and `/api/ops/metrics` error rate. In active HPA tests, Terraform drift can
+temporarily show Deployment replica differences because the HPA controller owns
+runtime scale decisions. Record that boundary instead of treating it as a code
+drift bug.
+
+Rollback to fixed replicas by applying with HPA disabled and the fixed replica
+counts:
+
+```powershell
+terraform -chdir=infra/gcp apply `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "api_replicas=2" `
+  -var "api_hpa_enabled=false" `
+  -var "frontend_replicas=2" `
+  -var "frontend_hpa_enabled=false" `
+  -var "worker_replicas=1" `
+  -var "dispatcher_replicas=1" `
+  -var "node_count=2" `
+  -var "node_pool_autoscaling_enabled=true" `
+  -var "node_pool_autoscaling_min_count=1" `
+  -var "node_pool_autoscaling_max_count=2" `
+  -var "ai_provider=mock"
+```
+
 ## Vertex Readiness
 
 Run this only after mock smoke passes. Imagen and Veo live generation remain out

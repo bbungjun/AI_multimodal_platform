@@ -118,3 +118,15 @@ resume and zero-downtime evidence until a separate autoscaling validation issue
 records min/max node counts, k6 readiness results, Pending pod behavior, and a
 rollback path. Do not enable autoscaling as a hidden side effect of routine
 deploy, pause, or resume commands.
+
+## Workload HPA Boundary
+
+API and frontend HorizontalPodAutoscalers are available through explicit
+Terraform variables but are disabled by default. Enable them only for a
+dedicated HPA validation issue. When HPA is enabled, keep `api_replicas` equal
+to `api_hpa_min_replicas` and `frontend_replicas` equal to
+`frontend_hpa_min_replicas`; Terraform declares the initial floor, while the
+HPA controller owns runtime scale decisions during load. Record k6 readiness or
+stress evidence, HPA min/max/target values, node count behavior, and the
+rollback apply back to `api_hpa_enabled=false` and
+`frontend_hpa_enabled=false`.
