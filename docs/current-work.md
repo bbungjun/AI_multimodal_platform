@@ -74,6 +74,10 @@ As of 2026-07-10, Issue #49 is in progress on branch
 `codex/issue-49-managed-prometheus-alerts` to connect application runtime
 metrics to a GKE collection and alerting path:
 
+- Draft PR #50 is open:
+  `https://github.com/bbungjun/AI_multimodal_platform/pull/50`.
+- Implementation commit: `116ff21 feat: add managed Prometheus alerting
+  baseline`.
 - Added `prometheus-client` and a standard `/metrics` endpoint backed by the
   existing process-local `RuntimeMetrics` source of truth.
 - Prometheus output includes HTTP request counters by method, FastAPI route
