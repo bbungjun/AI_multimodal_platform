@@ -68,6 +68,7 @@ def test_reliability_dashboard_covers_service_and_slo_signals():
     outputs = _one_line(_text(OUTPUTS_PATH))
 
     assert 'displayName = "CreativeOps API Reliability"' in monitoring
+    assert 'columns = "2"' in monitoring
     assert "Request throughput" in monitoring
     assert "HTTP 5xx ratio" in monitoring
     assert "HTTP request latency p95" in monitoring

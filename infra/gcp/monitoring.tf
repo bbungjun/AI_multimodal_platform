@@ -170,7 +170,7 @@ resource "google_monitoring_dashboard" "reliability" {
     displayName = "CreativeOps API Reliability"
     labels      = local.labels
     gridLayout = {
-      columns = 2
+      columns = "2"
       widgets = [
         {
           title = "Request throughput"
