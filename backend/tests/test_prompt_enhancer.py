@@ -222,6 +222,48 @@ async def test_enhance_prompt_retries_korean_input_when_response_is_english():
     assert "LANGUAGE RETRY" in models.calls[1]["contents"][0]
 
 
+async def test_enhance_prompt_rejects_language_mismatch_after_retry():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A rainy Seoul alley with neon signs reflected on wet pavement.",
+                    "components": {
+                        "subject": "rainy Seoul alley",
+                        "lighting": "neon reflections on wet pavement",
+                    },
+                }
+            ),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A rain-soaked Seoul alley with bright neon reflections.",
+                    "components": {
+                        "subject": "rain-soaked Seoul alley",
+                        "lighting": "bright neon reflections",
+                    },
+                }
+            ),
+        ]
+    )
+
+    with pytest.raises(enhancer.PromptEnhancementResponseError) as exc_info:
+        await enhancer.enhance_prompt(
+            "비 내리는 서울 골목, 네온 간판",
+            target_mode=GenerationMode.T2I,
+            target_model="imagen-4.0-fast-generate-001",
+            creativity_preset=CreativityPreset.BALANCED,
+            client=FakeGenerateContentClient(models),
+        )
+
+    assert exc_info.value.code == "prompt_enhancement_invalid_response"
+    assert exc_info.value.reason == "language_mismatch"
+    assert exc_info.value.source == "response"
+    assert exc_info.value.field == "enhanced"
+    assert len(models.calls) == 2
+    assert "LANGUAGE RETRY" not in models.calls[0]["contents"][0]
+    assert "LANGUAGE RETRY" in models.calls[1]["contents"][0]
+
+
 async def test_enhance_prompt_builds_i2v_prompt_with_source_preservation_guidance():
     models = FakeGenerateContentModels(
         responses=[

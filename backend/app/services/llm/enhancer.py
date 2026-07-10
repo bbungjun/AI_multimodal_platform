@@ -325,6 +325,15 @@ async def enhance_prompt(
         )
         payload = _parse_response_payload(retry_response)
         response = retry_response
+        if _should_retry_language_mismatch(payload, prompt_language):
+            _raise_response_error(
+                "language_mismatch",
+                field="enhanced",
+                source="response",
+                expected_language=prompt_language,
+                target_mode=mode.value,
+                target_model=target_model,
+            )
 
     latency_ms = max(0, round((time.perf_counter() - started) * 1000))
     usage = getattr(response, "usage_metadata", None)

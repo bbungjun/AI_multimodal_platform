@@ -43,6 +43,9 @@ Vertex mode:
 - retries invalid Gemini prompt-enhancement payloads once with stricter JSON
   repair instructions before returning the stable public
   `prompt_enhancement_invalid_response` error
+- retries prompt-enhancement language mismatches once, then returns
+  `prompt_enhancement_invalid_response` with reason `language_mismatch` if the
+  retry still ignores the requested display language
 
 Health readiness confirms that backend configuration and credentials can create
 the client. It does not prove every model is enabled or quota is available.
