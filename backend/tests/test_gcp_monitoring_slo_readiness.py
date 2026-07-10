@@ -76,6 +76,9 @@ def test_reliability_dashboard_covers_service_and_slo_signals():
     assert "select_slo_compliance" in monitoring
     assert "select_slo_budget" in monitoring
     assert "select_slo_burn_rate" in monitoring
+    assert 'color = "RED"' not in monitoring
+    assert 'direction = "ABOVE"' not in monitoring
+    assert 'direction = "BELOW"' not in monitoring
     assert "monitoring_dashboard_name" in outputs
     assert "monitoring_service_name" in outputs
     assert "monitoring_availability_slo_name" in outputs
