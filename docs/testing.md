@@ -86,6 +86,11 @@ Important backend contracts are already protected by focused tests:
 - opt-in Cloud Monitoring custom service, 99.5%/28-day availability SLO, and
   reliability dashboard wiring, including compliance, error-budget, and
   one-hour burn-rate selectors
+- pinned hosted image security workflow, fixable HIGH/CRITICAL vulnerability
+  gate, SPDX SBOM generation, and verified Cloud Build provenance configs
+- digest-only personal GCP release profile, Terraform deployment change
+  allowlist, rollout/health verification, and previous-digest automatic
+  rollback path
 - Vertex adapter parsing and public error mapping with fake clients
 - generation, pipeline, asset, and delete API contracts
 - failed-generation retry API contracts, including I2V source asset validation

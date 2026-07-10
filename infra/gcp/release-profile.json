@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "account": "youngjun3108@gmail.com",
+  "project_id": "krafton-vertex-live-3108",
+  "region": "asia-northeast3",
+  "cluster_name": "creativeops-portfolio",
+  "cluster_zone": "asia-northeast3-a",
+  "namespace": "creativeops-portfolio",
+  "state_bucket": "creativeops-terraform-state-krafton-vertex-live-3108",
+  "health_url": "http://34.50.26.152/api/health",
+  "expected_vertex_status": "mock_provider",
+  "terraform_vars": {
+    "api_replicas": 2,
+    "frontend_replicas": 2,
+    "worker_replicas": 1,
+    "dispatcher_replicas": 1,
+    "node_count": 2,
+    "node_pool_autoscaling_enabled": true,
+    "node_pool_autoscaling_min_count": 1,
+    "node_pool_autoscaling_max_count": 2,
+    "api_hpa_enabled": false,
+    "frontend_hpa_enabled": false,
+    "ai_provider": "mock",
+    "enhance_model": "gemini-2.5-flash",
+    "monitoring_alerts_enabled": true,
+    "monitoring_notification_channel_names": [],
+    "monitoring_dashboard_slo_enabled": true,
+    "monitoring_availability_slo_goal": 0.995,
+    "monitoring_availability_slo_rolling_days": 28
+  }
+}

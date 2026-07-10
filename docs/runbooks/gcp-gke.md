@@ -150,17 +150,71 @@ Build and push images through the guarded helper:
 ```
 
 The script refuses to run unless the personal GCP account and project are
-active.
+active. Pushes use Cloud Build configs that require verified build provenance;
+`-NoPush` is the only local Docker path and never uploads an image.
 
-If Docker Desktop WSL integration is unavailable, use Cloud Build instead:
+To submit one image directly, use the same verified configs:
 
 ```powershell
-gcloud builds submit ./backend --tag $backendImage --project $env:GCP_PROJECT_ID
+gcloud builds submit ./backend `
+  --config infra/gcp/cloudbuild/backend.yaml `
+  --substitutions "_IMAGE=$backendImage" `
+  --project $env:GCP_PROJECT_ID
 gcloud builds submit ./frontend `
   --config infra/gcp/cloudbuild/frontend.yaml `
   --substitutions "_IMAGE=$frontendImage" `
   --project $env:GCP_PROJECT_ID
 ```
+
+Both configs list the image in the Cloud Build `images` field and set
+`requestedVerifyOption: VERIFIED`. Do not replace this with an explicit
+`docker push`; that bypasses Cloud Build provenance generation. Resolve the
+result to an immutable `@sha256` reference before release.
+
+## Supply Chain And Automated Release
+
+The hosted `Image supply chain` workflow builds backend and frontend images,
+blocks fixable HIGH/CRITICAL OS or library vulnerabilities with Trivy, and
+retains a per-image SPDX JSON SBOM for 14 days. Third-party actions are pinned
+to full commit SHAs and the workflow has read-only repository permissions.
+Unfixed findings are reported but do not block because no patched artifact is
+available; reevaluate that boundary when a fix becomes available.
+
+Live deployment is intentionally separate. The mandatory personal-account
+guard requires `youngjun3108@gmail.com`, so a GitHub-hosted service account or
+Workload Identity Federation job is not allowed to write this stack. The
+manual `Deploy personal GCP release` workflow targets only a self-hosted runner
+labeled `creativeops-personal-gcp` with the personal gcloud profile already
+configured. Do not add a service-account JSON secret or weaken the account
+guard to make hosted CD run.
+
+The release script accepts only backend/frontend Artifact Registry references
+pinned by digest:
+
+```bash
+GCLOUD_BIN="/mnt/c/Program Files (x86)/Google/Cloud SDK/google-cloud-sdk/bin/gcloud" \
+KUBECTL_BIN="/mnt/c/Program Files/Docker/Docker/resources/bin/kubectl.exe" \
+TERRAFORM_BIN=/tmp/creativeops-terraform/terraform \
+scripts/deploy_gcp_release.sh \
+  --backend-image "BACKEND_REPOSITORY@sha256:DIGEST" \
+  --frontend-image "FRONTEND_REPOSITORY@sha256:DIGEST"
+```
+
+`infra/gcp/release-profile.json` is the reviewed, non-secret live topology. The
+script validates its exact schema, rechecks the personal account/project,
+captures the ready running image digests, creates a full Terraform plan, and
+rejects any change outside the four workload Deployments. It then applies the
+saved plan, waits for all rollouts, and requires mock health with DB up. If
+apply or verification fails, it creates and applies a second Terraform plan
+using the captured running digests, verifies recovery health, and exits
+non-zero so the release is still reported as failed.
+
+Use `--plan-only` to validate an immutable candidate without applying. A
+controlled rollback exercise can pass a deliberately unmatched
+`--expected-vertex-status`; this must be recorded in a dedicated Issue and must
+use a healthy candidate so the smoke mismatch, rather than an application
+fault, is what triggers rollback. Always finish with the normal expected status
+and a full no-drift Terraform plan.
 
 ## Apply Infrastructure With Replicas At Zero
 

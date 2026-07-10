@@ -92,13 +92,24 @@ singleton unless a future issue proves multi-dispatcher outbox locking.
 
 ## Deployment Helpers
 
-- `scripts/build_push_gcp_images.ps1` builds backend/frontend images and pushes
-  them to the Terraform-created Artifact Registry repositories.
+- `scripts/build_push_gcp_images.ps1` submits backend/frontend images through
+  provenance-verified Cloud Build configs. `-NoPush` performs local Docker
+  builds only.
+- `.github/workflows/image-supply-chain.yml` blocks fixable HIGH/CRITICAL image
+  vulnerabilities and emits SPDX SBOM artifacts for both images.
+- `scripts/deploy_gcp_release.sh` performs digest-only Terraform releases with
+  a deployment change allowlist and automatic rollback to captured running
+  digests when rollout or mock health verification fails.
 - `scripts/bootstrap_gcp_runtime_secrets.ps1` creates or rotates the Cloud SQL
   app user password, adds a Secret Manager version for `DATABASE_URL`, and
   applies the Kubernetes runtime Secret without printing secret values.
 - `docs/runbooks/gcp-gke.md` is the operator runbook for mock-first deployment,
   Vertex readiness, and scale-down/teardown.
+
+The manual GitHub deployment workflow requires a personal-GCP self-hosted
+runner. GitHub-hosted service-account deployment is intentionally unsupported
+because it cannot satisfy the repository's mandatory personal user-account
+guard. Never solve that constraint by adding a service-account key secret.
 
 ## Cost-Control Boundary
 
