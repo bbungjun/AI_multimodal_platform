@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     google_application_credentials_json: str | None = None
     gcp_project_id: str | None = None
     gcp_location: str = "us-central1"
+    enhance_model: str = "gemini-2.5-flash"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

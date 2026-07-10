@@ -36,6 +36,8 @@ Vertex mode:
 - supports ADC, an explicitly mounted credential file, or
   `GOOGLE_APPLICATION_CREDENTIALS_JSON` injected by a secret manager
 - requires `GCP_PROJECT_ID` and `GCP_LOCATION`
+- uses `ENHANCE_MODEL` as the runtime-selected Gemini model for prompt
+  enhancement, with `gemini-2.5-flash` as the default
 - may create billable Gemini, Imagen, or Veo requests
 - retries Gemini prompt-enhancement provider calls for retryable Vertex
   failures such as 429 rate limits and transient 5xx/timeouts using the

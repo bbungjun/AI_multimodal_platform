@@ -49,6 +49,7 @@ class StatusError(RuntimeError):
 def _vertex_retry_settings(*, max_attempts: int = 3) -> SimpleNamespace:
     return SimpleNamespace(
         ai_provider="vertex",
+        enhance_model=enhancer.DEFAULT_LLM_MODEL,
         provider_retry_max_attempts=max_attempts,
         provider_retry_base_delay_sec=0.0,
         provider_retry_max_delay_sec=0.0,
@@ -101,6 +102,32 @@ async def test_enhance_prompt_parses_schema_payload_without_vertex_client():
     assert call["model"] == enhancer.DEFAULT_LLM_MODEL
     assert "a quiet desk lamp" in call["contents"][0]
     assert getattr(call["config"], "temperature") == 0.2
+
+
+async def test_enhance_prompt_uses_configured_model_by_default(monkeypatch):
+    settings = _vertex_retry_settings()
+    settings.enhance_model = "gemini-configured-for-test"
+    monkeypatch.setattr(enhancer, "get_settings", lambda: settings)
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A glass cup on a plain table.",
+                    "components": {"subject": "glass cup"},
+                }
+            )
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "glass cup",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.llm_model == "gemini-configured-for-test"
+    assert models.calls[0]["model"] == "gemini-configured-for-test"
 
 
 async def test_enhance_prompt_builds_t2i_prompt_with_image_component_guidance():

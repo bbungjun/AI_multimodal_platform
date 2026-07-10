@@ -70,11 +70,63 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #49 is in progress on branch
-`codex/issue-49-managed-prometheus-alerts` to connect application runtime
-metrics to a GKE collection and alerting path:
+As of 2026-07-10, Issue #51 is in progress on branch
+`codex/issue-51-live-observability-evidence` to validate the managed
+observability path in the personal GKE environment:
 
-- Draft PR #50 is open:
+- Personal GCP guard was verified before every write:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- PR #50 was marked ready and merged into `main` at merge commit
+  `791fa45d03cc9d1d3f5259d9f342b4d27eb129c4`.
+- Cloud Build produced backend image `791fa45` with build ID
+  `6171410b-42e6-44a0-9e6a-ac6739b09c34` and digest
+  `sha256:8001191afd70acd3bf7c84f1b977b722372289197a8c1482564486b85e12beb2`.
+- The first monitoring rollout applied the new backend image, explicitly
+  managed the Monitoring API, and created `PodMonitoring`; Terraform reported
+  `2 added, 3 changed, 0 destroyed`. Managed Prometheus PromQL returned a
+  successful `creativeops_http_requests_total` query across the API pods.
+- The first alert-policy apply exposed a real provisioning dependency: the
+  provider-failure policy could not be created before its metric descriptor
+  existed. The HTTP 5xx policy was created, while the provider policy returned
+  a controlled API validation error.
+- Commit `f577028 fix: wire prompt model and seed alert metrics` adds zero-valued
+  bounded provider-failure series before the first incident, wires Terraform's
+  `ENHANCE_MODEL` through backend settings, and preserves explicit model
+  overrides in tests.
+- Cloud Build produced the corrected backend image `f577028` with build ID
+  `c1429054-2e5c-493f-bce1-2353d87bc95e` and digest
+  `sha256:4acb3c46823450f1205c453e9897757a622ec74f397c6459b531507f4ec4b285`.
+  A targeted image rollout reported `0 added, 3 changed, 0 destroyed`; after
+  collection created all four zero-valued provider series, the full apply
+  created the remaining provider-failure policy with `1 added, 0 changed, 0
+  destroyed`.
+- Controlled failure validation temporarily used `AI_PROVIDER=vertex` and an
+  intentionally invalid model identifier. Two bounded batches each sent 17
+  successful metrics requests and 3 prompt-enhancement requests. The second
+  batch produced a five-minute PromQL increase of 20 requests, 3 HTTP 5xx
+  responses, a 15% 5xx ratio, and 3 `vertex_request_invalid` provider failures.
+- Both Terraform-managed policies opened incidents at
+  `2026-07-10T01:47:06Z`. After restoring `AI_PROVIDER=mock` and
+  `ENHANCE_MODEL=gemini-2.5-flash`, the HTTP 5xx incident closed at
+  `2026-07-10T01:51:41Z` and the provider-failure incident closed at
+  `2026-07-10T01:52:31Z`.
+- Recovery apply reported `0 added, 4 changed, 0 destroyed`. All rollouts are
+  healthy: API/frontend are `2/2`, worker/dispatcher are `1/1`; backend uses
+  `f577028`, frontend uses `e8a3c3d`; health reports `ok=true`, `ready=true`, DB
+  `up`, and `vertex.status=mock_provider`.
+- Post-recovery Terraform drift verification returned `No changes` with
+  `post_recovery_plan_exit=0`. Both alert policies and 30-second
+  `PodMonitoring` collection remain enabled.
+- Verification: focused prompt/ops tests passed with 29 tests; the complete
+  backend suite passed with 342 tests. No prompt text, request body, credential,
+  access token, Secret payload, Terraform state, local tfvars, or database
+  password was printed or committed.
+
+As of 2026-07-10, Issue #49 completed on branch
+`codex/issue-49-managed-prometheus-alerts`; PR #50 was merged into `main` at
+merge commit `791fa45d03cc9d1d3f5259d9f342b4d27eb129c4`:
+
+- Merged PR #50:
   `https://github.com/bbungjun/AI_multimodal_platform/pull/50`.
 - Implementation commit: `116ff21 feat: add managed Prometheus alerting
   baseline`.

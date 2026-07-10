@@ -10,6 +10,14 @@ from prometheus_client.core import (
 from app.services.ops.runtime import RuntimeMetrics, runtime_metrics
 
 
+PROVIDER_FAILURE_ZERO_SERIES: tuple[tuple[str, str, bool], ...] = (
+    ("prompt_enhancement_invalid_response", "none", False),
+    ("vertex_rate_limited", "none", True),
+    ("vertex_request_invalid", "none", False),
+    ("vertex_transient_error", "none", True),
+)
+
+
 class RuntimeMetricsCollector:
     def __init__(self, metrics: RuntimeMetrics) -> None:
         self._metrics = metrics
@@ -53,7 +61,13 @@ class RuntimeMetricsCollector:
             "AI provider failures handled by the API process.",
             labels=["code", "status", "retryable"],
         )
-        for (code, status, retryable), count in snapshot.provider_failures.items():
+        provider_failure_values = {
+            series: 0 for series in PROVIDER_FAILURE_ZERO_SERIES
+        }
+        provider_failure_values.update(snapshot.provider_failures)
+        for (code, status, retryable), count in sorted(
+            provider_failure_values.items()
+        ):
             provider_failures.add_metric(
                 [code, status, str(retryable).lower()],
                 count,

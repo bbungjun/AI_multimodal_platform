@@ -168,6 +168,27 @@ def test_runtime_metrics_render_valid_prometheus_families():
     assert provider_sample.value == 1
 
 
+def test_runtime_metrics_seed_provider_failure_series_before_first_failure():
+    rendered = render_prometheus_metrics(RuntimeMetrics()).decode("utf-8")
+    families = {
+        family.name: family
+        for family in text_string_to_metric_families(rendered)
+    }
+    samples = [
+        sample
+        for sample in families["creativeops_provider_failures"].samples
+        if sample.name == "creativeops_provider_failures_total"
+    ]
+
+    assert {sample.labels["code"] for sample in samples} == {
+        "prompt_enhancement_invalid_response",
+        "vertex_rate_limited",
+        "vertex_request_invalid",
+        "vertex_transient_error",
+    }
+    assert all(sample.value == 0 for sample in samples)
+
+
 async def test_ops_metrics_endpoint_reports_recorded_route_template(monkeypatch):
     runtime_metrics.reset()
     monkeypatch.setattr(health_api, "check_db_connection", _db_up)
