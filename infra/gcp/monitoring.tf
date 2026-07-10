@@ -202,7 +202,6 @@ resource "google_monitoring_dashboard" "reliability" {
             thresholds = [{
               value     = var.monitoring_http_5xx_error_rate_threshold
               direction = "ABOVE"
-              color     = "RED"
             }]
             yAxis = { scale = "LINEAR" }
           }
@@ -257,7 +256,6 @@ resource "google_monitoring_dashboard" "reliability" {
             thresholds = [{
               value     = var.monitoring_availability_slo_goal
               direction = "BELOW"
-              color     = "RED"
             }]
             yAxis = { scale = "LINEAR" }
           }
@@ -302,7 +300,6 @@ resource "google_monitoring_dashboard" "reliability" {
             thresholds = [{
               value     = 1
               direction = "ABOVE"
-              color     = "RED"
             }]
             yAxis = { scale = "LINEAR" }
           }
