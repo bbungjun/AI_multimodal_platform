@@ -1,0 +1,37 @@
+name: Deploy personal GCP release
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_image:
+        description: "Backend Artifact Registry image pinned by @sha256"
+        required: true
+        type: string
+      frontend_image:
+        description: "Frontend Artifact Registry image pinned by @sha256"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: creativeops-personal-gcp-release
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, x64, creativeops-personal-gcp]
+    environment: personal-gcp-production
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Guarded digest release with automatic rollback
+        run: |
+          set -euo pipefail
+          scripts/deploy_gcp_release.sh \
+            --backend-image "${{ inputs.backend_image }}" \
+            --frontend-image "${{ inputs.frontend_image }}"

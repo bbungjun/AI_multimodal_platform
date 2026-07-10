@@ -3,7 +3,7 @@ steps:
     args:
       - build
       - -f
-      - Dockerfile.prod
+      - Dockerfile
       - -t
       - ${_IMAGE}
       - .

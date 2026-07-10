@@ -8,6 +8,7 @@ from threading import Lock
 from time import monotonic
 
 from fastapi import Request
+from starlette.routing import Match
 
 from app.schemas import (
     OpsHttpEndpointMetricsResponse,
@@ -111,10 +112,32 @@ class RuntimeMetrics:
             self._provider_non_retryable = 0
 
     def path_for_request(self, request: Request) -> str:
+        fastapi_scope = request.scope.get("fastapi", {})
+        effective_route = fastapi_scope.get("effective_route_context")
+        effective_path = getattr(effective_route, "path", None)
+        if isinstance(effective_path, str) and effective_path:
+            return effective_path
+
         route = request.scope.get("route")
         route_path = getattr(route, "path", None)
         if isinstance(route_path, str) and route_path:
             return route_path
+
+        app = request.scope.get("app")
+        router = getattr(app, "router", None)
+        partial_path = None
+        for candidate in getattr(router, "routes", ()):
+            match, child_scope = candidate.matches(request.scope)
+            matched_route = child_scope.get("route", candidate)
+            matched_path = getattr(matched_route, "path", None)
+            if not isinstance(matched_path, str) or not matched_path:
+                continue
+            if match is Match.FULL:
+                return matched_path
+            if match is Match.PARTIAL and partial_path is None:
+                partial_path = matched_path
+        if partial_path is not None:
+            return partial_path
         return "unmatched"
 
     def record_http_request(

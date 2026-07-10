@@ -70,10 +70,78 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #53 is in progress on branch
+As of 2026-07-10, Issue #55 is in progress on branch
+`codex/issue-55-supply-chain-rollback` to add image supply-chain gates and a
+Terraform-aligned release rollback path:
+
+- Personal GCP guard was verified before every write:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Commits `a308e91 feat: add supply chain gates and release rollback` and
+  `43a99ff fix: retry release health before rollback` add hosted GitHub Actions
+  image scans and SPDX SBOM artifacts, verified Cloud Build configuration,
+  digest-only release inputs, a non-secret personal release profile, and an
+  automatic Terraform rollback script.
+- The hosted image gate scans backend and frontend runtime images with Trivy,
+  rejects fixable HIGH/CRITICAL findings, and retains SPDX JSON SBOM artifacts
+  for 14 days. Third-party actions are pinned to full commit SHAs and workflow
+  permissions are read-only.
+- The first hosted scan correctly blocked both images: the frontend's old
+  nginx/Alpine runtime had 37 fixable HIGH/CRITICAL OS findings, while the
+  backend had five fixable HIGH findings from old Starlette and build tooling
+  included in the runtime image. The remediation upgrades the frontend to the
+  current official nginx Alpine 3.23 image, converts the backend to a
+  production-only multi-stage image, excludes tests and development packages,
+  and pins FastAPI 0.139 with Starlette 1.3.1 or newer in the 1.3 line.
+- A second scan reduced the remaining findings to four frontend OS packages
+  and two backend build packages. Patching the Alpine runtime and removing
+  pip/setuptools/wheel from the backend runtime cleared the gate. Final PR
+  checks passed for backend scan/SBOM, frontend scan/SBOM, Terraform
+  format/validate, and the complete verify workflow.
+- FastAPI 0.139 introduced nested included-router context. Runtime metrics now
+  resolves that effective route template before falling back to Starlette route
+  matching, preserving complete `/api/...` labels without exposing arbitrary
+  unmatched request paths.
+- The release workflow uses a dedicated self-hosted runner label and protected
+  `personal-gcp-production` environment. The release script validates the exact
+  personal account/project guard, permits only four Deployment image updates,
+  requires Artifact Registry digest references, verifies rollout and bounded
+  external health retries, and rolls back to captured running digests through
+  Terraform when verification fails.
+- Terraform enabled the Container Analysis API with an isolated plan of
+  `1 added, 0 changed, 0 destroyed`. Verified Cloud Builds produced backend
+  build `d66d53e2-72cf-450b-baf8-f0a142fa881b`, digest
+  `sha256:85b49ac248e890fb23d05ecfde81aaa7155b9af0a1b02bfc13ad6b0585457cbc`,
+  and frontend build `86bf7e8c-a0ff-4f4b-bcdf-78d307c5bc72`, digest
+  `sha256:e42fada2c620314b51a2fbef53c776baff7a4ef7393e7f0de415871c7b860059`.
+  Container Analysis returned two provenance records for each digest.
+- The first live candidate rollout exposed a transient HTTP 502 immediately
+  after Kubernetes rollout completion. Automatic rollback restored all four
+  workloads and recovered health, but the event showed that a one-shot health
+  probe was too sensitive. The follow-up change added bounded retries before a
+  release is rejected.
+- A second controlled failure used a deliberately impossible expected provider
+  status. Candidate rollout completed, health failed to converge after three
+  attempts, and automatic Terraform rollback applied exactly four image
+  updates. All API, worker, dispatcher, and frontend rollouts recovered and
+  health returned `ready=true`, `vertex.status=mock_provider`; the script
+  reported `automatic_rollback_complete=true` and exited non-zero as designed.
+- The normal digest release then applied `0 added, 4 changed, 0 destroyed`.
+  All four deployments rolled out successfully and external health passed with
+  `vertex.status=mock_provider`. A repeated full plan with the same digests
+  returned `No changes`, `release_plan_changes=0`, and
+  `release_plan_only=true`.
+- Fresh verification passed 352 backend tests in mock mode, frontend TypeScript
+  lint and production build, Bash syntax, Terraform format, initialization,
+  and validation. No live Vertex prompt enhancement, Imagen, or Veo call was
+  run, and no credential, token, Secret payload, state content, local tfvars,
+  or database password was printed or committed.
+
+As of 2026-07-10, Issue #53 completed on branch
 `codex/issue-53-monitoring-dashboard-slo` to add a Terraform-managed
 reliability dashboard and availability SLO:
 
+- PR #54 was merged into `main` at merge commit
+  `80ed664ad5314a051e28da2fdb73c31685ec33f6`.
 - Personal GCP guard was verified before every write:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
 - Commit `9fcf032 feat: add monitoring dashboard and availability SLO` adds a

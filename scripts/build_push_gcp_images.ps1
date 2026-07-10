@@ -40,47 +40,49 @@ try {
     Write-Host "[images] Backend image: $backendImage"
     Write-Host "[images] Frontend image: $frontendImage"
 
-    if (-not $NoPush) {
-        Write-Host "[images] Configuring Docker auth for $Region-docker.pkg.dev"
-        & gcloud auth configure-docker "$Region-docker.pkg.dev" --quiet --project $ProjectId
-        if ($LASTEXITCODE -ne 0) {
-            throw "gcloud auth configure-docker failed."
-        }
-    }
-
     if (-not $SkipBackend) {
-        Write-Host "[images] Building backend image."
-        & docker build -t $backendImage ./backend
-        if ($LASTEXITCODE -ne 0) {
-            throw "Backend docker build failed."
-        }
-
-        if (-not $NoPush) {
-            Write-Host "[images] Pushing backend image."
-            & docker push $backendImage
+        if ($NoPush) {
+            Write-Host "[images] Building backend image locally without push."
+            & docker build -t $backendImage ./backend
             if ($LASTEXITCODE -ne 0) {
-                throw "Backend docker push failed."
+                throw "Backend local docker build failed."
+            }
+        }
+        else {
+            Write-Host "[images] Building backend image with verified Cloud Build provenance."
+            & gcloud builds submit ./backend `
+                --config infra/gcp/cloudbuild/backend.yaml `
+                --substitutions "_IMAGE=$backendImage" `
+                --project $ProjectId `
+                --quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "Backend Cloud Build failed."
             }
         }
     }
 
     if (-not $SkipFrontend) {
-        Write-Host "[images] Building frontend image."
-        & docker build -f frontend/Dockerfile.prod -t $frontendImage ./frontend
-        if ($LASTEXITCODE -ne 0) {
-            throw "Frontend docker build failed."
-        }
-
-        if (-not $NoPush) {
-            Write-Host "[images] Pushing frontend image."
-            & docker push $frontendImage
+        if ($NoPush) {
+            Write-Host "[images] Building frontend image locally without push."
+            & docker build -f frontend/Dockerfile.prod -t $frontendImage ./frontend
             if ($LASTEXITCODE -ne 0) {
-                throw "Frontend docker push failed."
+                throw "Frontend local docker build failed."
+            }
+        }
+        else {
+            Write-Host "[images] Building frontend image with verified Cloud Build provenance."
+            & gcloud builds submit ./frontend `
+                --config infra/gcp/cloudbuild/frontend.yaml `
+                --substitutions "_IMAGE=$frontendImage" `
+                --project $ProjectId `
+                --quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "Frontend Cloud Build failed."
             }
         }
     }
 
-    Write-Host "[images] Build/push step completed."
+    Write-Host "[images] Build step completed."
     Write-Host "[images] Terraform backend_image=$backendImage"
     Write-Host "[images] Terraform frontend_image=$frontendImage"
 }

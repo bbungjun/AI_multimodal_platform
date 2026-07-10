@@ -1,0 +1,74 @@
+name: Image supply chain
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/gcp/cloudbuild/**"
+      - ".github/workflows/image-supply-chain.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infra/gcp/cloudbuild/**"
+      - ".github/workflows/image-supply-chain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan-and-sbom:
+    name: Scan and SBOM (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            context: backend
+            dockerfile: backend/Dockerfile
+          - service: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile.prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Build local image
+        env:
+          IMAGE_REF: creativeops-${{ matrix.service }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker build --pull \
+            --file "${{ matrix.dockerfile }}" \
+            --tag "$IMAGE_REF" \
+            "${{ matrix.context }}"
+
+      - name: Block fixable high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: creativeops-${{ matrix.service }}:${{ github.sha }}
+          scan-type: image
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+          hide-progress: true
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: creativeops-${{ matrix.service }}:${{ github.sha }}
+          format: spdx-json
+          artifact-name: creativeops-${{ matrix.service }}-${{ github.sha }}.spdx.json
+          upload-artifact: true
+          upload-artifact-retention: 14
+          upload-release-assets: false
