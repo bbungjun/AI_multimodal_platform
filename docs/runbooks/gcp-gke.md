@@ -520,11 +520,11 @@ disabled during the first backend rollout because the dashboard p95 chart
 depends on the request-duration histogram descriptor being ingested first.
 
 The default objective is **99.5% availability over a rolling 28-day period**.
-Eligible traffic excludes `/metrics`, `/api/health`, `/api/health/live`, and
-unmatched routes. An eligible HTTP 5xx response is bad; all other eligible
-responses are good. The corresponding error budget is 0.5% of eligible
-requests. A one-hour burn rate above `1` means the current bad-request rate is
-consuming that budget faster than the sustainable rate.
+Eligible traffic excludes `/metrics`, health endpoints, ops metrics/health
+endpoints, and unmatched routes. An eligible HTTP 5xx response is bad; all
+other eligible responses are good. The corresponding error budget is 0.5% of
+eligible requests. A one-hour burn rate above `1` means the current bad-request
+rate is consuming that budget faster than the sustainable rate.
 
 First deploy the backend image with the histogram exporter while leaving the
 dashboard/SLO disabled. Verify all API pods and the histogram query:

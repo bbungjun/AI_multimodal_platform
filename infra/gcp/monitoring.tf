@@ -42,12 +42,12 @@ resource "google_monitoring_alert_policy" "api_http_5xx_error_rate" {
     condition_prometheus_query_language {
       query               = <<-EOT
         (
-          sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"/metrics|/api/health|/api/health/live|unmatched", status=~"5.."}[5m]))
+          sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"${local.monitoring_application_path_matcher}", status=~"5.."}[5m]))
           /
-          clamp_min(sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"/metrics|/api/health|/api/health/live|unmatched"}[5m])), 1)
+          clamp_min(sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"${local.monitoring_application_path_matcher}"}[5m])), 1)
         ) > ${var.monitoring_http_5xx_error_rate_threshold}
         and
-        sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"/metrics|/api/health|/api/health/live|unmatched"}[5m])) >= ${var.monitoring_http_min_requests_per_window}
+        sum(increase(creativeops_http_requests_total{namespace="${local.namespace}", path!~"${local.monitoring_application_path_matcher}"}[5m])) >= ${var.monitoring_http_min_requests_per_window}
       EOT
       duration            = "120s"
       evaluation_interval = "60s"
@@ -114,7 +114,7 @@ resource "google_monitoring_alert_policy" "provider_failures" {
 }
 
 locals {
-  monitoring_application_path_matcher = "/metrics|/api/health|/api/health/live|unmatched"
+  monitoring_application_path_matcher = "/metrics|/api/health|/api/health/live|/api/ops/metrics|/api/ops/health|unmatched"
   monitoring_request_metric_filter = join(" AND ", [
     "metric.type=\"prometheus.googleapis.com/creativeops_http_requests_total/counter\"",
     "resource.type=\"prometheus_target\"",
@@ -122,6 +122,8 @@ locals {
     "metric.label.\"path\"!=\"/metrics\"",
     "metric.label.\"path\"!=\"/api/health\"",
     "metric.label.\"path\"!=\"/api/health/live\"",
+    "metric.label.\"path\"!=\"/api/ops/metrics\"",
+    "metric.label.\"path\"!=\"/api/ops/health\"",
     "metric.label.\"path\"!=\"unmatched\"",
   ])
 }

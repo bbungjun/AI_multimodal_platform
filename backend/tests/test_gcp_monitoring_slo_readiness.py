@@ -49,7 +49,14 @@ def test_availability_sli_uses_prometheus_bad_and_total_counters():
     )
     assert 'resource.type=\\"prometheus_target\\"' in monitoring
     assert 'resource.label.\\"namespace\\"' in monitoring
-    for excluded_path in ("/metrics", "/api/health", "/api/health/live", "unmatched"):
+    for excluded_path in (
+        "/metrics",
+        "/api/health",
+        "/api/health/live",
+        "/api/ops/metrics",
+        "/api/ops/health",
+        "unmatched",
+    ):
         assert f'metric.label.\\"path\\"!=\\"{excluded_path}\\"' in monitoring
     assert "good_total_ratio" in monitoring
     assert 'metric.label.\\"status\\"=starts_with(\\"5\\")' in monitoring

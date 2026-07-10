@@ -154,8 +154,8 @@ availability SLO are disabled by default through
 `monitoring_dashboard_slo_enabled=false`. Enable them only after every API pod
 is exporting request counters and the latency histogram is queryable through
 Managed Prometheus. The default SLO requires 99.5% of eligible requests to avoid
-HTTP 5xx responses over a rolling 28-day period. Metrics, health probes, and
-unmatched paths are excluded from eligible traffic.
+HTTP 5xx responses over a rolling 28-day period. Metrics, ops, health-probe,
+and unmatched paths are excluded from eligible traffic.
 
 This SLO measures application-observed requests. It cannot count requests that
 never reach a running API process, so a complete outage with no scrapeable API
