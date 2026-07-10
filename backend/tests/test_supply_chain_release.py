@@ -67,11 +67,13 @@ def test_scanned_runtime_images_exclude_development_dependencies():
     assert "FROM python:3.11-slim AS build" in backend
     assert "FROM python:3.11-slim AS runtime" in backend
     assert "--prefix=/install ." in backend
+    assert "pip uninstall -y pip setuptools wheel jaraco.context" in backend
     assert ".[dev]" not in backend
     assert "COPY tests" not in backend
     assert '"fastapi>=0.139,<0.140"' in pyproject
     assert '"starlette>=1.3.1,<1.4"' in pyproject
     assert "FROM nginx:1.31.2-alpine3.23" in frontend
+    assert "apk upgrade --no-cache" in frontend
 
 
 def test_manual_cd_requires_personal_self_hosted_runner_and_digest_inputs():

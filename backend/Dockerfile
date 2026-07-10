@@ -22,6 +22,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY --from=build /install /usr/local
+RUN python -m pip uninstall -y pip setuptools wheel jaraco.context
 
 EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
