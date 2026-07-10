@@ -559,6 +559,13 @@ query `select_slo_compliance`, `select_slo_budget`, and
 `select_slo_burn_rate` for the Terraform SLO name. New SLOs can legitimately
 show sparse or no compliance points until eligible request data is available.
 
+Keep `gridLayout.columns` encoded as a JSON string in Terraform, matching the
+Cloud Monitoring API representation. Encoding it as a number creates a
+permanent Terraform diff because the API reads it back as a string. XY chart
+thresholds accept a numeric `value`; do not add scorecard-only `color` or
+`direction` fields. Terraform provider validation does not currently reject
+those fields, but the Dashboard API rejects them during create.
+
 This SLI covers application-observed requests only. If all API pods are down,
 no process counter can record requests that failed before reaching the app.
 Use load-balancer request metrics or a synthetic availability signal before

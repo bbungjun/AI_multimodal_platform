@@ -70,9 +70,62 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #51 is in progress on branch
+As of 2026-07-10, Issue #53 is in progress on branch
+`codex/issue-53-monitoring-dashboard-slo` to add a Terraform-managed
+reliability dashboard and availability SLO:
+
+- Personal GCP guard was verified before every write:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- Commit `9fcf032 feat: add monitoring dashboard and availability SLO` adds a
+  cumulative request-duration histogram, opt-in Cloud Monitoring custom
+  service/SLO/dashboard resources, bounded SLI filters, tests, and runbook
+  guidance. Follow-up commits exclude ops traffic from reliability signals and
+  enforce the Dashboard API's supported threshold/grid JSON contract.
+- The default request-based availability SLO is 99.5% over a rolling 28 days.
+  It treats eligible HTTP 5xx responses as bad and excludes metrics, ops,
+  health, and unmatched routes. The dashboard contains seven widgets for
+  throughput, 5xx ratio, p95 latency, provider failures, SLO compliance,
+  remaining error budget, and one-hour burn rate.
+- Cloud Build ID `b2f1726c-ba2f-429c-9b3e-5b0d5228a955` produced backend
+  image `9fcf032` with digest
+  `sha256:1aa7aef0f465fbd9275f3451cef70c5daa438abaa38c2dcf8955481cd64a92b0`.
+- The histogram rollout plan changed only API, worker, and dispatcher images;
+  Terraform reported `0 added, 3 changed, 0 destroyed`. All four deployment
+  rollouts succeeded; API/frontend are `2/2`, worker/dispatcher are `1/1`, and
+  health remains `ok=true`, `ready=true`, DB `up`,
+  `vertex.status=mock_provider`.
+- A dedicated alert refinement plan updated only the HTTP 5xx policy to exclude
+  `/api/ops/metrics` and `/api/ops/health`; apply reported `0 added, 1 changed,
+  0 destroyed`.
+- Two bounded batches of 20 read-only `GET /api/generations?limit=1` requests
+  returned HTTP 200. Managed Prometheus then returned 20 histogram bucket
+  series and a successful p95 query value of `25 ms` for that route.
+- The initial SLO enablement plan was exactly `3 added, 0 changed, 0 destroyed`.
+  The custom service and SLO were created, but Dashboard API validation rejected
+  unsupported XY threshold `color`, then `direction`, fields. Removing those
+  fields allowed the dashboard recovery plan (`1 added, 0 changed, 0
+  destroyed`) to complete. No workload was changed by either dashboard attempt.
+- Cloud Monitoring API evidence: service display name `CreativeOps API`; SLO
+  goal `0.995`, rolling period `2419200s`, and bad/total filters present;
+  dashboard display name `CreativeOps API Reliability` with all seven expected
+  widgets. SLO compliance, budget, and one-hour burn-rate selectors each
+  returned one time series with data points.
+- `gridLayout.columns` is encoded as the API-canonical string `"2"`; this
+  removed the numeric/string permanent diff. Final full Terraform verification
+  returned `No changes` with `dashboard_canonical_plan_exit=0`.
+- Verification before live rollout: focused monitoring tests passed with 13
+  tests; the full backend suite passed with 346 tests; frontend TypeScript lint
+  and production build passed; Terraform format and validate passed.
+- No live Vertex prompt enhancement, Imagen, or Veo call was run. No prompt,
+  request body, credential, access token, Secret payload, Terraform state,
+  local tfvars, or database password was printed or committed.
+
+As of 2026-07-10, Issue #51 completed on branch
 `codex/issue-51-live-observability-evidence` to validate the managed
 observability path in the personal GKE environment:
+
+- PR #52 was merged into `main` at merge commit
+  `7389562a80105e1eb04307d177d11632568587d7`.
 
 - Personal GCP guard was verified before every write:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
