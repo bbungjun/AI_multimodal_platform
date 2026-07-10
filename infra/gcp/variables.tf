@@ -228,3 +228,51 @@ variable "celery_worker_concurrency" {
   type    = number
   default = 2
 }
+
+variable "monitoring_alerts_enabled" {
+  type        = bool
+  default     = false
+  description = "Create Cloud Monitoring alert policies for CreativeOps Prometheus metrics. Enable only after metric ingestion is verified."
+}
+
+variable "monitoring_notification_channel_names" {
+  type        = list(string)
+  default     = []
+  description = "Existing Cloud Monitoring notification channel resource names attached to CreativeOps alert policies."
+}
+
+variable "monitoring_http_5xx_error_rate_threshold" {
+  type        = number
+  default     = 0.05
+  description = "HTTP 5xx error-rate threshold over a five-minute PromQL window."
+
+  validation {
+    condition = (
+      var.monitoring_http_5xx_error_rate_threshold > 0 &&
+      var.monitoring_http_5xx_error_rate_threshold <= 1
+    )
+    error_message = "monitoring_http_5xx_error_rate_threshold must be greater than 0 and no greater than 1."
+  }
+}
+
+variable "monitoring_http_min_requests_per_window" {
+  type        = number
+  default     = 20
+  description = "Minimum requests in the five-minute window before the HTTP 5xx alert can fire."
+
+  validation {
+    condition     = var.monitoring_http_min_requests_per_window >= 1
+    error_message = "monitoring_http_min_requests_per_window must be at least 1."
+  }
+}
+
+variable "monitoring_provider_failures_per_window" {
+  type        = number
+  default     = 3
+  description = "Provider failures with the same code in five minutes required to fire an alert."
+
+  validation {
+    condition     = var.monitoring_provider_failures_per_window >= 1
+    error_message = "monitoring_provider_failures_per_window must be at least 1."
+  }
+}

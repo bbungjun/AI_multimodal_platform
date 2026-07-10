@@ -130,3 +130,18 @@ HPA controller owns runtime scale decisions during load. Record k6 readiness or
 stress evidence, HPA min/max/target values, node count behavior, and the
 rollback apply back to `api_hpa_enabled=false` and
 `frontend_hpa_enabled=false`.
+
+## Managed Prometheus Boundary
+
+The API exposes process-local counters and latency summaries at `/metrics`.
+GKE Managed Service for Prometheus is explicitly enabled, and the
+namespace-scoped `PodMonitoring` resource scrapes each API pod every 30
+seconds. Route labels come from FastAPI route templates, not raw URLs, and the
+exporter never includes request bodies, prompt text, environment values, or
+Secret payloads.
+
+Cloud Monitoring alert policies are disabled by default through
+`monitoring_alerts_enabled=false`. Verify metric ingestion and PromQL queries
+before enabling policies. Existing notification channel resource names can be
+passed through `monitoring_notification_channel_names`; Terraform does not
+create or embed email, webhook, or credential values in this stack.

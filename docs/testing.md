@@ -63,6 +63,10 @@ Important backend contracts are already protected by focused tests:
   settings, and recent failure summaries
 - runtime observability for HTTP throughput, error rate, latency samples, and
   provider failure code counts
+- Prometheus exposition parsing for API route/status counters, request duration
+  summaries, and provider failure labels
+- GKE Managed Service for Prometheus scrape wiring and opt-in Cloud Monitoring
+  alert-policy safety defaults
 - state machine transitions and terminal behavior
 - storage path safety, file roundtrips, and range streaming
 - job runner row locking, concurrency, orphan sweep, and polling resume

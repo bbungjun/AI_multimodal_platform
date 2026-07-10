@@ -70,11 +70,46 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #47 is in progress on branch
-`codex/issue-47-prompt-reliability` to close the remaining prompt enhancement
-language-preservation reliability gap:
+As of 2026-07-10, Issue #49 is in progress on branch
+`codex/issue-49-managed-prometheus-alerts` to connect application runtime
+metrics to a GKE collection and alerting path:
 
-- Draft PR #48 is open:
+- Added `prometheus-client` and a standard `/metrics` endpoint backed by the
+  existing process-local `RuntimeMetrics` source of truth.
+- Prometheus output includes HTTP request counters by method, FastAPI route
+  template, and status; request duration count/sum; process uptime; and prompt
+  provider failures by controlled code, status, and retryability.
+- Unmatched HTTP paths collapse to the bounded label `unmatched` so arbitrary
+  404 paths cannot create unbounded metric series. No request body, prompt,
+  env value, credential, or Secret payload is exported.
+- Terraform explicitly enables GKE Managed Service for Prometheus, enables the
+  Monitoring API, names the API pod scrape port, and adds a namespace-scoped
+  `PodMonitoring` for 30-second `/metrics` collection.
+- Added opt-in Cloud Monitoring PromQL policies for sustained application HTTP
+  5xx ratio and repeated prompt-provider failure codes. Alert creation remains
+  disabled by default with `monitoring_alerts_enabled=false`; notification
+  channel resource names are optional inputs.
+- The HTTP alert excludes scrape, health-probe, and unmatched-route traffic,
+  requires at least 20 application requests in five minutes, and uses a 5%
+  5xx threshold. The provider policy requires three failures with the same
+  code in five minutes.
+- Verification: focused mock tests passed with 8 tests; the full backend suite
+  passed with 340 tests; `.venv/bin/python scripts/verify_local.py
+  --skip-compose` passed backend tests, frontend lint, and frontend production
+  build; Terraform `fmt` and isolated `init -backend=false` plus `validate`
+  passed.
+- Compose config verification was skipped because Docker CLI is unavailable in
+  this WSL environment.
+- No GCP write, Terraform plan/apply, Kubernetes write, live prompt request,
+  Imagen, or Veo call was run. No `.env`, ADC, service-account JSON, API
+  key/private key, Terraform state, `.tfvars`, DB password, Kubernetes Secret
+  payload, access token, or credential value was read or printed.
+
+As of 2026-07-10, Issue #47 completed on branch
+`codex/issue-47-prompt-reliability`; PR #48 was merged into `main` at merge
+commit `11cc0c172749b0ccc568859712f53c06f28f3079`:
+
+- Merged PR #48:
   `https://github.com/bbungjun/AI_multimodal_platform/pull/48`.
 - Implementation commit: `41586b6 fix: reject prompt language mismatch after
   retry`.
@@ -993,20 +1028,21 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review the Issue #39 autoscaling readiness PR after GitHub checks pass, then
-  merge it into `main`.
+- Review the Issue #49 managed Prometheus and alert-policy draft PR after
+  GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
   `0`, node pool `0`, and `ai_provider=mock`. Before live autoscaling, HPA, or
   provider failure evidence, intentionally scale the stack back up with the
   personal GCP guard.
-- Consider a follow-up measured autoscaling issue after #39: resume the proven
-  `node_count=2` rollout baseline, run k6 readiness, then apply autoscaling in
-  a bounded live issue with node count and Pending pod evidence.
-- The next reliability implementation candidate is a bounded prompt-enhancement
-  provider failure validation run: low-rate live prompt profile, verify
-  `/api/ops/metrics.provider_failures.by_code`, and keep public error/log
-  safety intact. This can incur Vertex cost and should use the personal GCP
-  guard.
+- After Issue #49 merges, use a dedicated live observability rollout issue:
+  resume the proven mock baseline, build and deploy the new backend image,
+  review a Terraform plan with alerts disabled, verify `PodMonitoring` scrape
+  ingestion in Cloud Monitoring, then explicitly enable the two alert policies.
+- Follow that with a bounded prompt-enhancement provider failure validation
+  run: use low-rate Vertex prompt traffic, verify both
+  `/api/ops/metrics.provider_failures.by_code` and the managed Prometheus
+  provider-failure series, and keep public error/log safety intact. This can
+  incur Vertex cost and must use the personal GCP guard.
 - Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. Most
   child deployment issues through Vertex readiness are complete; keep future GCP
   work one issue and one branch at a time.
