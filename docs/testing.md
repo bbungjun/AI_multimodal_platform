@@ -64,7 +64,7 @@ Important backend contracts are already protected by focused tests:
 - runtime observability for HTTP throughput, error rate, latency samples, and
   provider failure code counts
 - Prometheus exposition parsing for API route/status counters, request duration
-  summaries, and provider failure labels
+  histograms, and provider failure labels
 - GKE Managed Service for Prometheus scrape wiring and opt-in Cloud Monitoring
   alert-policy safety defaults
 - state machine transitions and terminal behavior
@@ -82,6 +82,10 @@ Important backend contracts are already protected by focused tests:
   configured model selection and metrics recording
 - zero-valued provider-failure Prometheus series before the first live failure,
   so alert policies can be provisioned before an incident
+- cumulative request-duration histogram buckets used for dashboard p95 latency
+- opt-in Cloud Monitoring custom service, 99.5%/28-day availability SLO, and
+  reliability dashboard wiring, including compliance, error-budget, and
+  one-hour burn-rate selectors
 - Vertex adapter parsing and public error mapping with fake clients
 - generation, pipeline, asset, and delete API contracts
 - failed-generation retry API contracts, including I2V source asset validation

@@ -154,6 +154,16 @@ def test_runtime_metrics_render_valid_prometheus_families():
     assert duration_samples[
         "creativeops_http_request_duration_milliseconds_sum"
     ] == 50.0
+    duration_buckets = {
+        sample.labels["le"]: sample.value
+        for sample in families[
+            "creativeops_http_request_duration_milliseconds"
+        ].samples
+        if sample.name == "creativeops_http_request_duration_milliseconds_bucket"
+    }
+    assert duration_buckets["25"] == 1
+    assert duration_buckets["50"] == 2
+    assert duration_buckets["+Inf"] == 2
 
     provider_sample = next(
         sample

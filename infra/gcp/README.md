@@ -133,7 +133,8 @@ rollback apply back to `api_hpa_enabled=false` and
 
 ## Managed Prometheus Boundary
 
-The API exposes process-local counters and latency summaries at `/metrics`.
+The API exposes process-local counters and a cumulative latency histogram at
+`/metrics`.
 GKE Managed Service for Prometheus is explicitly enabled, and the
 namespace-scoped `PodMonitoring` resource scrapes each API pod every 30
 seconds. Route labels come from FastAPI route templates, not raw URLs, and the
@@ -145,3 +146,19 @@ Cloud Monitoring alert policies are disabled by default through
 before enabling policies. Existing notification channel resource names can be
 passed through `monitoring_notification_channel_names`; Terraform does not
 create or embed email, webhook, or credential values in this stack.
+
+## Dashboard And SLO Boundary
+
+The reliability dashboard, custom monitored service, and request-based
+availability SLO are disabled by default through
+`monitoring_dashboard_slo_enabled=false`. Enable them only after every API pod
+is exporting request counters and the latency histogram is queryable through
+Managed Prometheus. The default SLO requires 99.5% of eligible requests to avoid
+HTTP 5xx responses over a rolling 28-day period. Metrics, ops, health-probe,
+and unmatched paths are excluded from eligible traffic.
+
+This SLO measures application-observed requests. It cannot count requests that
+never reach a running API process, so a complete outage with no scrapeable API
+pods requires load-balancer or synthetic availability telemetry as a future
+SLI. Treat the current SLO as an application reliability objective, not a claim
+that edge-to-backend availability is fully measured.

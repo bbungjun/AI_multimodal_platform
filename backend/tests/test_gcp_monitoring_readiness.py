@@ -50,7 +50,9 @@ def test_alert_policies_are_opt_in_and_use_bounded_promql_windows():
     assert "monitoring_alerts_enabled ? 1 : 0" in monitoring
     assert "creativeops_http_requests_total" in monitoring
     assert 'status=~"5.."' in monitoring
-    assert 'path!~"/metrics|/api/health|/api/health/live|unmatched"' in monitoring
+    assert "monitoring_application_path_matcher" in monitoring
+    assert "/api/ops/metrics" in monitoring
+    assert "/api/ops/health" in monitoring
     assert "[5m]" in monitoring
     assert "monitoring_http_min_requests_per_window" in monitoring
     assert "creativeops_provider_failures_total" in monitoring
