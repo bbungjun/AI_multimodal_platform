@@ -58,6 +58,7 @@ resource "kubernetes_deployment_v1" "api" {
           command = ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
           port {
+            name           = "metrics"
             container_port = 8000
           }
 

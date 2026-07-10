@@ -424,6 +424,77 @@ terraform -chdir=infra/gcp apply `
   -var "ai_provider=mock"
 ```
 
+## Managed Prometheus And Alert Readiness
+
+The API exposes Prometheus text at `/metrics` on its existing port. The endpoint
+contains process-local HTTP counters and duration summaries labeled by method,
+FastAPI route template, and status, plus provider failure counters labeled by
+controlled error code, provider status, and retryability. It does not contain
+request bodies, prompt text, env values, or Secret payloads.
+
+Terraform explicitly enables GKE Managed Service for Prometheus and applies a
+namespace-scoped `PodMonitoring` that scrapes every API pod at 30-second
+intervals. Keep Cloud Monitoring alert policies disabled during the first
+collection rollout:
+
+```powershell
+terraform -chdir=infra/gcp plan `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "monitoring_alerts_enabled=false"
+```
+
+Confirm the plan does not change provider mode, workload replica counts,
+Secrets, Cloud SQL, Redis, or asset storage unexpectedly. After an intentional
+apply and API rollout, verify the target and endpoint without printing any
+credentials:
+
+```powershell
+kubectl get podmonitoring -n creativeops-portfolio
+kubectl describe podmonitoring creativeops-api -n creativeops-portfolio
+kubectl port-forward deployment/creativeops-api 8000:8000 -n creativeops-portfolio
+Invoke-WebRequest -Uri "http://127.0.0.1:8000/metrics"
+```
+
+In Cloud Monitoring Metrics Explorer, query
+`creativeops_http_requests_total` and
+`creativeops_provider_failures_total` with PromQL. Confirm each running API pod
+is represented before enabling alerts. The HTTP policy excludes metrics,
+health-probe, and unmatched-route traffic, then requires at least 20 application
+requests in five minutes and a 5xx ratio above 5%. The provider policy requires
+three failures with the same code in five minutes. These defaults avoid a
+single low-traffic failure opening an incident.
+
+Attach existing notification channel resource names only through the
+`monitoring_notification_channel_names` variable. An empty list still permits
+Cloud Monitoring incidents but sends no email, SMS, webhook, or PagerDuty
+notification. Do not commit channel credentials or local `.tfvars`.
+
+After ingestion and query checks pass, create the policies with an explicit
+plan and apply:
+
+```powershell
+terraform -chdir=infra/gcp plan `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "monitoring_alerts_enabled=true" `
+  -var 'monitoring_notification_channel_names=[]'
+```
+
+Before this or any other GCP write, run the personal GCP guard and verify the
+active account and project. Apply only the reviewed plan. A later live prompt
+failure evidence issue can run bounded Vertex traffic and verify that
+`vertex_rate_limited` or `prompt_enhancement_invalid_response` reaches the
+provider-failure series and policy.
+
+Rollback alert evaluation without disabling metric collection by reapplying
+with `monitoring_alerts_enabled=false`. If collection itself causes an
+unexpected rollout or ingestion issue, first remove the `PodMonitoring` from
+Terraform in a dedicated change; do not disable GKE system monitoring or alter
+application health probes as an incident shortcut.
+
 ## Vertex Readiness
 
 Run this only after mock smoke passes. Imagen and Veo live generation remain out

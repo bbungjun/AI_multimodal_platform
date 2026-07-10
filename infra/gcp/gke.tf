@@ -28,6 +28,12 @@ resource "google_container_cluster" "main" {
     channel = "REGULAR"
   }
 
+  monitoring_config {
+    managed_prometheus {
+      enabled = true
+    }
+  }
+
   depends_on = [
     google_project_service.required,
     google_compute_subnetwork.gke

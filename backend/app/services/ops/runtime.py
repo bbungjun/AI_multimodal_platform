@@ -21,6 +21,22 @@ from app.schemas import (
 RECENT_LATENCY_SAMPLE_SIZE = 512
 
 
+@dataclass(frozen=True)
+class RuntimeEndpointExport:
+    method: str
+    path: str
+    requests: int
+    total_latency_ms: float
+    status_counts: dict[str, int]
+
+
+@dataclass(frozen=True)
+class RuntimeMetricsExport:
+    uptime_sec: float
+    endpoints: tuple[RuntimeEndpointExport, ...]
+    provider_failures: dict[tuple[str, str, bool], int]
+
+
 @dataclass
 class _EndpointStats:
     method: str
@@ -74,6 +90,7 @@ class RuntimeMetrics:
             self._endpoints: dict[tuple[str, str], _EndpointStats] = {}
             self._provider_failures_by_code: Counter[str] = Counter()
             self._provider_failures_by_status: Counter[str] = Counter()
+            self._provider_failures: Counter[tuple[str, str, bool]] = Counter()
             self._provider_retryable = 0
             self._provider_non_retryable = 0
 
@@ -82,7 +99,7 @@ class RuntimeMetrics:
         route_path = getattr(route, "path", None)
         if isinstance(route_path, str) and route_path:
             return route_path
-        return request.url.path or "unknown"
+        return "unmatched"
 
     def record_http_request(
         self,
@@ -121,6 +138,9 @@ class RuntimeMetrics:
         with self._lock:
             self._provider_failures_by_code[normalized_code] += 1
             self._provider_failures_by_status[normalized_status] += 1
+            self._provider_failures[
+                (normalized_code, normalized_status, retryable)
+            ] += 1
             if retryable:
                 self._provider_retryable += 1
             else:
@@ -157,6 +177,27 @@ class RuntimeMetrics:
                     by_code=dict(sorted(self._provider_failures_by_code.items())),
                     by_status=dict(sorted(self._provider_failures_by_status.items())),
                 ),
+            )
+
+    def export(self) -> RuntimeMetricsExport:
+        with self._lock:
+            endpoints = tuple(
+                RuntimeEndpointExport(
+                    method=endpoint.method,
+                    path=endpoint.path,
+                    requests=endpoint.requests,
+                    total_latency_ms=endpoint.total_latency_ms,
+                    status_counts=dict(sorted(endpoint.status_counts.items())),
+                )
+                for endpoint in sorted(
+                    self._endpoints.values(),
+                    key=lambda item: (item.path, item.method),
+                )
+            )
+            return RuntimeMetricsExport(
+                uptime_sec=max(0.0, monotonic() - self._started_monotonic),
+                endpoints=endpoints,
+                provider_failures=dict(sorted(self._provider_failures.items())),
             )
 
 
