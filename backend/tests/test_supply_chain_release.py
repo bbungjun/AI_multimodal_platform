@@ -11,6 +11,9 @@ SUPPLY_CHAIN_WORKFLOW = REPO_ROOT / ".github/workflows/image-supply-chain.yml"
 DEPLOY_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-personal-gcp.yml"
 BACKEND_BUILD = REPO_ROOT / "infra/gcp/cloudbuild/backend.yaml"
 FRONTEND_BUILD = REPO_ROOT / "infra/gcp/cloudbuild/frontend.yaml"
+BACKEND_DOCKERFILE = REPO_ROOT / "backend/Dockerfile"
+BACKEND_PYPROJECT = REPO_ROOT / "backend/pyproject.toml"
+FRONTEND_DOCKERFILE = REPO_ROOT / "frontend/Dockerfile.prod"
 RELEASE_PROFILE = REPO_ROOT / "infra/gcp/release-profile.json"
 RELEASE_SCRIPT = REPO_ROOT / "scripts/deploy_gcp_release.sh"
 BUILD_HELPER = REPO_ROOT / "scripts/build_push_gcp_images.ps1"
@@ -54,6 +57,21 @@ def test_cloud_build_requires_verified_provenance_for_both_images():
     assert "gcloud builds submit" in helper
     assert "docker push" not in helper
     assert "if ($NoPush)" in helper
+
+
+def test_scanned_runtime_images_exclude_development_dependencies():
+    backend = _text(BACKEND_DOCKERFILE)
+    pyproject = _text(BACKEND_PYPROJECT)
+    frontend = _text(FRONTEND_DOCKERFILE)
+
+    assert "FROM python:3.11-slim AS build" in backend
+    assert "FROM python:3.11-slim AS runtime" in backend
+    assert "--prefix=/install ." in backend
+    assert ".[dev]" not in backend
+    assert "COPY tests" not in backend
+    assert '"fastapi>=0.139,<0.140"' in pyproject
+    assert '"starlette>=1.3.1,<1.4"' in pyproject
+    assert "FROM nginx:1.31.2-alpine3.23" in frontend
 
 
 def test_manual_cd_requires_personal_self_hosted_runner_and_digest_inputs():

@@ -85,6 +85,17 @@ Terraform-aligned release rollback path:
   rejects fixable HIGH/CRITICAL findings, and retains SPDX JSON SBOM artifacts
   for 14 days. Third-party actions are pinned to full commit SHAs and workflow
   permissions are read-only.
+- The first hosted scan correctly blocked both images: the frontend's old
+  nginx/Alpine runtime had 37 fixable HIGH/CRITICAL OS findings, while the
+  backend had five fixable HIGH findings from old Starlette and build tooling
+  included in the runtime image. The remediation upgrades the frontend to the
+  current official nginx Alpine 3.23 image, converts the backend to a
+  production-only multi-stage image, excludes tests and development packages,
+  and pins FastAPI 0.139 with Starlette 1.3.1 or newer in the 1.3 line.
+- FastAPI 0.139 introduced nested included-router context. Runtime metrics now
+  resolves that effective route template before falling back to Starlette route
+  matching, preserving complete `/api/...` labels without exposing arbitrary
+  unmatched request paths.
 - The release workflow uses a dedicated self-hosted runner label and protected
   `personal-gcp-production` environment. The release script validates the exact
   personal account/project guard, permits only four Deployment image updates,
@@ -114,7 +125,7 @@ Terraform-aligned release rollback path:
   `vertex.status=mock_provider`. A repeated full plan with the same digests
   returned `No changes`, `release_plan_changes=0`, and
   `release_plan_only=true`.
-- Fresh verification passed 351 backend tests in mock mode, frontend TypeScript
+- Fresh verification passed 352 backend tests in mock mode, frontend TypeScript
   lint and production build, Bash syntax, Terraform format, initialization,
   and validation. No live Vertex prompt enhancement, Imagen, or Veo call was
   run, and no credential, token, Secret payload, state content, local tfvars,

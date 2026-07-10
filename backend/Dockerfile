@@ -1,5 +1,18 @@
-# Phase 0 stub — final multi-stage build comes in Phase 15.
-FROM python:3.11-slim
+FROM python:3.11-slim AS build
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+COPY pyproject.toml ./
+COPY app ./app
+RUN python -m pip install --upgrade pip \
+    && python -m pip install --prefix=/install .
+
+FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -8,15 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY pyproject.toml ./
-RUN pip install --upgrade pip && pip install -e .[dev]
-
-COPY app ./app
-COPY tests ./tests
+COPY --from=build /install /usr/local
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
