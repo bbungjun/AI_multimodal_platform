@@ -511,6 +511,65 @@ rollouts and health endpoints, then wait for both policies to close. Finish
 with a complete Terraform plan using the restored variables and require exit
 code `0` (`No changes`).
 
+## Dashboard And Availability SLO
+
+Terraform can create a custom monitored service, a request-based availability
+SLO, and the `CreativeOps API Reliability` dashboard. These resources are
+disabled by default with `monitoring_dashboard_slo_enabled=false`. Keep them
+disabled during the first backend rollout because the dashboard p95 chart
+depends on the request-duration histogram descriptor being ingested first.
+
+The default objective is **99.5% availability over a rolling 28-day period**.
+Eligible traffic excludes `/metrics`, `/api/health`, `/api/health/live`, and
+unmatched routes. An eligible HTTP 5xx response is bad; all other eligible
+responses are good. The corresponding error budget is 0.5% of eligible
+requests. A one-hour burn rate above `1` means the current bad-request rate is
+consuming that budget faster than the sustainable rate.
+
+First deploy the backend image with the histogram exporter while leaving the
+dashboard/SLO disabled. Verify all API pods and the histogram query:
+
+```text
+histogram_quantile(0.95,
+  sum by (le) (
+    rate(creativeops_http_request_duration_milliseconds_bucket{
+      namespace="creativeops-portfolio"
+    }[5m])
+  )
+)
+```
+
+Then review a complete Terraform plan with the known-good workload, replica,
+node-pool, provider, and alert variables plus:
+
+```powershell
+terraform -chdir=infra/gcp plan `
+  -var "gcp_project_id=$env:GCP_PROJECT_ID" `
+  -var "backend_image=$backendImage" `
+  -var "frontend_image=$frontendImage" `
+  -var "monitoring_alerts_enabled=true" `
+  -var "monitoring_dashboard_slo_enabled=true" `
+  -var "monitoring_availability_slo_goal=0.995" `
+  -var "monitoring_availability_slo_rolling_days=28"
+```
+
+The enablement plan should create only the custom service, SLO, and dashboard.
+After apply, read the three resources through the Cloud Monitoring API and
+query `select_slo_compliance`, `select_slo_budget`, and
+`select_slo_burn_rate` for the Terraform SLO name. New SLOs can legitimately
+show sparse or no compliance points until eligible request data is available.
+
+This SLI covers application-observed requests only. If all API pods are down,
+no process counter can record requests that failed before reaching the app.
+Use load-balancer request metrics or a synthetic availability signal before
+claiming edge-to-backend availability coverage.
+
+Rollback the dashboard and SLO by reapplying the complete known-good variables
+with `monitoring_dashboard_slo_enabled=false`. This deletes only the three
+opt-in monitoring resources; it must not disable Managed Prometheus collection,
+existing alert policies, or application health probes. Review the destroy plan
+before applying it.
+
 Rollback alert evaluation without disabling metric collection by reapplying
 with `monitoring_alerts_enabled=false`. If collection itself causes an
 unexpected rollout or ingestion issue, first remove the `PodMonitoring` from

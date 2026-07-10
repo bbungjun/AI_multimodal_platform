@@ -34,6 +34,18 @@ output "namespace" {
   value = kubernetes_namespace_v1.app.metadata[0].name
 }
 
+output "monitoring_dashboard_name" {
+  value = try(google_monitoring_dashboard.reliability[0].id, null)
+}
+
+output "monitoring_service_name" {
+  value = try(google_monitoring_custom_service.api[0].name, null)
+}
+
+output "monitoring_availability_slo_name" {
+  value = try(google_monitoring_slo.api_availability[0].name, null)
+}
+
 output "frontend_service_name" {
   value = kubernetes_service_v1.frontend.metadata[0].name
 }

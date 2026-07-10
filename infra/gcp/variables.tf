@@ -276,3 +276,37 @@ variable "monitoring_provider_failures_per_window" {
     error_message = "monitoring_provider_failures_per_window must be at least 1."
   }
 }
+
+variable "monitoring_dashboard_slo_enabled" {
+  type        = bool
+  default     = false
+  description = "Create the CreativeOps reliability dashboard, custom service, and availability SLO after Prometheus ingestion is verified."
+}
+
+variable "monitoring_availability_slo_goal" {
+  type        = number
+  default     = 0.995
+  description = "Fraction of eligible API requests that must avoid HTTP 5xx responses during the rolling SLO period."
+
+  validation {
+    condition = (
+      var.monitoring_availability_slo_goal > 0 &&
+      var.monitoring_availability_slo_goal <= 0.999
+    )
+    error_message = "monitoring_availability_slo_goal must be greater than 0 and no greater than 0.999."
+  }
+}
+
+variable "monitoring_availability_slo_rolling_days" {
+  type        = number
+  default     = 28
+  description = "Rolling evaluation period in days for the API availability SLO."
+
+  validation {
+    condition = (
+      var.monitoring_availability_slo_rolling_days >= 1 &&
+      var.monitoring_availability_slo_rolling_days <= 30
+    )
+    error_message = "monitoring_availability_slo_rolling_days must be between 1 and 30."
+  }
+}

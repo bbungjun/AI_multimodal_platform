@@ -19,6 +19,17 @@ from app.schemas import (
 
 
 RECENT_LATENCY_SAMPLE_SIZE = 512
+REQUEST_LATENCY_BUCKETS_MS: tuple[float, ...] = (
+    25.0,
+    50.0,
+    100.0,
+    250.0,
+    500.0,
+    1000.0,
+    2500.0,
+    5000.0,
+    10000.0,
+)
 
 
 @dataclass(frozen=True)
@@ -27,6 +38,7 @@ class RuntimeEndpointExport:
     path: str
     requests: int
     total_latency_ms: float
+    latency_bucket_counts: tuple[tuple[float, int], ...]
     status_counts: dict[str, int]
 
 
@@ -45,6 +57,7 @@ class _EndpointStats:
     errors: int = 0
     total_latency_ms: float = 0.0
     max_latency_ms: float = 0.0
+    latency_bucket_counts: Counter[float] = field(default_factory=Counter)
     status_counts: Counter[str] = field(default_factory=Counter)
     recent_latencies_ms: deque[float] = field(
         default_factory=lambda: deque(maxlen=RECENT_LATENCY_SAMPLE_SIZE),
@@ -56,6 +69,9 @@ class _EndpointStats:
             self.errors += 1
         self.total_latency_ms += duration_ms
         self.max_latency_ms = max(self.max_latency_ms, duration_ms)
+        for upper_bound in REQUEST_LATENCY_BUCKETS_MS:
+            if duration_ms <= upper_bound:
+                self.latency_bucket_counts[upper_bound] += 1
         self.status_counts[str(status_code)] += 1
         self.recent_latencies_ms.append(duration_ms)
 
@@ -187,6 +203,10 @@ class RuntimeMetrics:
                     path=endpoint.path,
                     requests=endpoint.requests,
                     total_latency_ms=endpoint.total_latency_ms,
+                    latency_bucket_counts=tuple(
+                        (upper_bound, endpoint.latency_bucket_counts[upper_bound])
+                        for upper_bound in REQUEST_LATENCY_BUCKETS_MS
+                    ),
                     status_counts=dict(sorted(endpoint.status_counts.items())),
                 )
                 for endpoint in sorted(

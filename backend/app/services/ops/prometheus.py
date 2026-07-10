@@ -4,7 +4,7 @@ from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.core import (
     CounterMetricFamily,
     GaugeMetricFamily,
-    SummaryMetricFamily,
+    HistogramMetricFamily,
 )
 
 from app.services.ops.runtime import RuntimeMetrics, runtime_metrics
@@ -37,7 +37,7 @@ class RuntimeMetricsCollector:
             "HTTP requests handled by the API process.",
             labels=["method", "path", "status"],
         )
-        duration = SummaryMetricFamily(
+        duration = HistogramMetricFamily(
             "creativeops_http_request_duration_milliseconds",
             "HTTP request duration observed by the API process in milliseconds.",
             labels=["method", "path"],
@@ -48,9 +48,14 @@ class RuntimeMetricsCollector:
                     [endpoint.method, endpoint.path, status],
                     count,
                 )
+            buckets = [
+                (format(upper_bound, "g"), count)
+                for upper_bound, count in endpoint.latency_bucket_counts
+            ]
+            buckets.append(("+Inf", endpoint.requests))
             duration.add_metric(
                 [endpoint.method, endpoint.path],
-                count_value=endpoint.requests,
+                buckets=buckets,
                 sum_value=endpoint.total_latency_ms,
             )
         yield requests
