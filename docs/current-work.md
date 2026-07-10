@@ -92,6 +92,11 @@ Terraform-aligned release rollback path:
   current official nginx Alpine 3.23 image, converts the backend to a
   production-only multi-stage image, excludes tests and development packages,
   and pins FastAPI 0.139 with Starlette 1.3.1 or newer in the 1.3 line.
+- A second scan reduced the remaining findings to four frontend OS packages
+  and two backend build packages. Patching the Alpine runtime and removing
+  pip/setuptools/wheel from the backend runtime cleared the gate. Final PR
+  checks passed for backend scan/SBOM, frontend scan/SBOM, Terraform
+  format/validate, and the complete verify workflow.
 - FastAPI 0.139 introduced nested included-router context. Runtime metrics now
   resolves that effective route template before falling back to Starlette route
   matching, preserving complete `/api/...` labels without exposing arbitrary
