@@ -484,10 +484,32 @@ terraform -chdir=infra/gcp plan `
 ```
 
 Before this or any other GCP write, run the personal GCP guard and verify the
-active account and project. Apply only the reviewed plan. A later live prompt
-failure evidence issue can run bounded Vertex traffic and verify that
-`vertex_rate_limited` or `prompt_enhancement_invalid_response` reaches the
-provider-failure series and policy.
+active account and project. Apply only the reviewed plan. The API exports
+zero-valued series for the bounded provider error-code set so the provider
+policy can be created before the first live failure. If a new alert references
+a new label value or metric, first roll out collection, wait until a Prometheus
+query returns that series, and only then create the policy. Do not use targeted
+Terraform applies as the normal deployment path; they are a recovery tool for
+an already-partially-applied rollout and must be followed by a complete plan.
+
+For controlled incident validation, use a dedicated Issue and record the exact
+request bound before sending traffic. Establish the counter series first, then
+send a second bounded batch inside the policy window because the first sample
+of a newly observed cumulative series is its baseline rather than an increase.
+Query Managed Prometheus through its Prometheus HTTP API endpoint:
+
+```text
+https://monitoring.googleapis.com/v1/projects/PROJECT_ID/location/global/prometheus/api/v1/query
+```
+
+Confirm the exact policy PromQL is above threshold before checking the Cloud
+Monitoring incident. A model-not-found response is suitable for validating the
+safe `vertex_request_invalid` path because it does not generate media and the
+public API response does not expose provider payloads. Restore the known-good
+provider/model configuration immediately after the incident opens, verify all
+rollouts and health endpoints, then wait for both policies to close. Finish
+with a complete Terraform plan using the restored variables and require exit
+code `0` (`No changes`).
 
 Rollback alert evaluation without disabling metric collection by reapplying
 with `monitoring_alerts_enabled=false`. If collection itself causes an
