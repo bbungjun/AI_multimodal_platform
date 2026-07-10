@@ -70,10 +70,57 @@ paste credential contents.
 
 ## Last Completed Work
 
-As of 2026-07-10, Issue #55 is in progress on branch
+As of 2026-07-10, Issue #57 completed on branch
+`codex/issue-57-milestone-evidence-audit` to close the six-stage platform
+reliability milestone against merged source, CI, Terraform, and live runtime
+evidence:
+
+- Closeout PR #58 passed its verify workflow before merge.
+- The milestone implementation PRs are all merged: PR #50 at `791fa45`, PR #52
+  at `7389562`, PR #54 at `80ed664`, and PR #56 at `9f1734f`.
+- Merged `main` commit `9f1734f` passed its push workflows: CI run
+  `29066671359`, Terraform run `29066671374`, and backend/frontend image scan
+  plus SBOM run `29066671378` all completed successfully.
+- Personal GCP guard was verified before every write:
+  `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
+- VERIFIED Cloud Build created the final backend with build
+  `f2858aa0-7c6d-4811-bbcb-3dba1246626b`, digest
+  `sha256:7f91585902a75ca8e378ff61579af6e0ed7701a9ea1aab49efb7cb3f6bfc1a44`,
+  and frontend with build `a80e9192-9ca6-44cf-9780-91b3f55acb47`, digest
+  `sha256:1534d58e344978c756dae4ba5fbad460a6910406fe67dde859d5a1434b325e01`.
+  Both Artifact Registry digests report SLSA build level 3 and two provenance
+  records.
+- The guarded release plan allowed only API, worker, dispatcher, and frontend
+  Deployment image changes. Apply reported `0 added, 4 changed, 0 destroyed`;
+  all rollouts and the bounded external health gate passed.
+- Live API and frontend Deployments are `2/2`; worker and dispatcher are `1/1`.
+  API, worker, and dispatcher run the final backend digest, and frontend runs
+  the final frontend digest. Health reports `ok=true`, `ready=true`, DB `up`,
+  and `vertex.status=mock_provider`.
+- GKE node-pool autoscaling remains `RUNNING` and enabled with min `1`, max `2`.
+  API/frontend HPA resources remain intentionally absent after Issue #45's
+  enable, k6 observation, and controlled rollback exercise.
+- Managed observability remains live: `PodMonitoring` scrapes `/metrics` every
+  30 seconds; both HTTP 5xx and prompt-provider alert policies are enabled; the
+  `CreativeOps API Reliability` dashboard exists; and availability SLO
+  `availability-28d` reports goal `0.995` over `2419200s`.
+- Repeating the digest release as a full plan returned `No changes`,
+  `release_plan_changes=0`, and `release_plan_only=true`. Fresh local
+  verification passed 352 backend tests in mock mode, frontend lint/build,
+  Terraform format, Bash syntax, and diff checks.
+- GPU node pools, NVIDIA device plugins, GPU telemetry, and distributed
+  training operations remain future implementation work. This closeout does
+  not claim them as completed experience.
+- No live Vertex prompt enhancement, Imagen, or Veo call was run. No credential,
+  access token, Secret payload, Terraform state content, local tfvars, or
+  database password was printed or committed.
+
+As of 2026-07-10, Issue #55 completed on branch
 `codex/issue-55-supply-chain-rollback` to add image supply-chain gates and a
 Terraform-aligned release rollback path:
 
+- PR #56 was merged into `main` at merge commit
+  `9f1734ffc5d205df5037f091051855000b4643dc`.
 - Personal GCP guard was verified before every write:
   `youngjun3108@gmail.com` / `krafton-vertex-live-3108`.
 - Commits `a308e91 feat: add supply chain gates and release rollback` and
