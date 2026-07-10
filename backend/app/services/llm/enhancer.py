@@ -227,10 +227,11 @@ async def enhance_prompt(
     target_mode: GenerationMode | str,
     target_model: str,
     creativity_preset: CreativityPreset | str | None = DEFAULT_CREATIVITY_PRESET,
-    llm_model: str = DEFAULT_LLM_MODEL,
+    llm_model: str | None = None,
     client: Any | None = None,
 ) -> PromptEnhancementResult:
     settings = get_settings()
+    selected_llm_model = llm_model or settings.enhance_model
     mode = (
         target_mode
         if isinstance(target_mode, GenerationMode)
@@ -245,7 +246,7 @@ async def enhance_prompt(
             target_mode=mode,
             target_model=target_model,
             creativity_preset=preset,
-            llm_model=llm_model,
+            llm_model=selected_llm_model,
             temperature=temperature,
             prompt_language=prompt_language,
         )
@@ -256,7 +257,7 @@ async def enhance_prompt(
 
     response = await _generate_prompt_enhancement_with_retry(
         vertex_client,
-        llm_model=llm_model,
+        llm_model=selected_llm_model,
         prompt=prompt,
         target_mode=mode,
         target_model=target_model,
@@ -286,7 +287,7 @@ async def enhance_prompt(
         )
         retry_response = await _generate_prompt_enhancement_with_retry(
             vertex_client,
-            llm_model=llm_model,
+            llm_model=selected_llm_model,
             prompt=prompt,
             target_mode=mode,
             target_model=target_model,
@@ -312,7 +313,7 @@ async def enhance_prompt(
         )
         retry_response = await _generate_prompt_enhancement_with_retry(
             vertex_client,
-            llm_model=llm_model,
+            llm_model=selected_llm_model,
             prompt=prompt,
             target_mode=mode,
             target_model=target_model,
@@ -343,7 +344,7 @@ async def enhance_prompt(
         components=dict(payload.components),
         target_mode=mode,
         target_model=target_model,
-        llm_model=llm_model,
+        llm_model=selected_llm_model,
         creativity_preset=preset,
         temperature=temperature,
         latency_ms=latency_ms,

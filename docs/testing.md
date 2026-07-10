@@ -79,7 +79,9 @@ Important backend contracts are already protected by focused tests:
 - job handlers for T2I, T2V, I2V, and pipeline linking
 - prompt enhancement parsing, validation, provider retry/backoff, invalid
   response repair retry, language mismatch rejection after one retry, and
-  metrics recording
+  configured model selection and metrics recording
+- zero-valued provider-failure Prometheus series before the first live failure,
+  so alert policies can be provisioned before an incident
 - Vertex adapter parsing and public error mapping with fake clients
 - generation, pipeline, asset, and delete API contracts
 - failed-generation retry API contracts, including I2V source asset validation
