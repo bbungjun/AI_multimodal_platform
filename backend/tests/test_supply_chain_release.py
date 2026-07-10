@@ -103,6 +103,9 @@ def test_release_script_guards_plan_scope_and_uses_terraform_rollback():
     assert "krafton-vertex-live-3108" in script
     assert "valid_digest_image" in script
     assert "running_digest" in script
+    assert 'RELEASE_HEALTH_ATTEMPTS:-12' in script
+    assert 'RELEASE_HEALTH_INTERVAL_SEC:-5' in script
+    assert "Release health did not converge" in script
     assert '"kubernetes_deployment_v1.api"' in script
     assert '"kubernetes_deployment_v1.worker"' in script
     assert '"kubernetes_deployment_v1.dispatcher"' in script

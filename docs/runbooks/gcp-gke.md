@@ -209,6 +209,12 @@ apply or verification fails, it creates and applies a second Terraform plan
 using the captured running digests, verifies recovery health, and exits
 non-zero so the release is still reported as failed.
 
+After Kubernetes rollout success, health uses a bounded 12-attempt, five-second
+retry window so a transient load-balancer backend transition does not trigger
+rollback from a single 502. `RELEASE_HEALTH_ATTEMPTS` and
+`RELEASE_HEALTH_INTERVAL_SEC` may be shortened only for a documented controlled
+rollback exercise; keep the defaults for real releases.
+
 Use `--plan-only` to validate an immutable candidate without applying. A
 controlled rollback exercise can pass a deliberately unmatched
 `--expected-vertex-status`; this must be recorded in a dedicated Issue and must

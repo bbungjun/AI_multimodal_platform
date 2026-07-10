@@ -64,6 +64,13 @@ fi
 gcloud_bin="${GCLOUD_BIN:-gcloud}"
 kubectl_bin="${KUBECTL_BIN:-kubectl}"
 terraform_bin="${TERRAFORM_BIN:-terraform}"
+health_attempts="${RELEASE_HEALTH_ATTEMPTS:-12}"
+health_interval_sec="${RELEASE_HEALTH_INTERVAL_SEC:-5}"
+
+if [[ ! "$health_attempts" =~ ^[1-9][0-9]*$ || ! "$health_interval_sec" =~ ^[0-9]+$ ]]; then
+  echo "Health retry settings must be positive attempts and a non-negative interval." >&2
+  exit 2
+fi
 
 for command in git python3 curl base64 "$gcloud_bin" "$kubectl_bin" "$terraform_bin"; do
   if ! command -v "$command" >/dev/null 2>&1 && [[ ! -x "$command" ]]; then
@@ -342,13 +349,18 @@ print(f"release_plan_changes={len(changes)}")
 
 verify_release() {
   local expected_status="$1"
+  local attempt
+  local response
   local deployment
   for deployment in creativeops-api creativeops-worker creativeops-dispatcher creativeops-frontend; do
     "${kubectl_args[@]}" rollout status "deployment/$deployment" --timeout=180s
   done
 
-  curl -fsS --max-time 20 "$health_url" |
-    EXPECTED_VERTEX_STATUS="$expected_status" python3 -c '
+  for ((attempt = 1; attempt <= health_attempts; attempt++)); do
+    response=""
+    if response="$(curl -fsS --max-time 20 "$health_url" 2>/dev/null)"; then
+      if printf '%s' "$response" |
+        EXPECTED_VERTEX_STATUS="$expected_status" python3 -c '
 import json
 import os
 import sys
@@ -361,7 +373,17 @@ if payload.get("ok") is not True or payload.get("ready") is not True:
 if payload.get("db") != "up" or actual != expected:
     raise SystemExit(f"Health dependency mismatch: db={payload.get(chr(100)+chr(98))}, vertex={actual}")
 print(f"release_health_ready=true vertex_status={actual}")
-'
+' 2>/dev/null; then
+        return 0
+      fi
+    fi
+    if ((attempt < health_attempts)); then
+      sleep "$health_interval_sec"
+    fi
+  done
+
+  echo "Release health did not converge after $health_attempts attempts." >&2
+  return 1
 }
 
 plan_release "$backend_image" "$frontend_image" "$plan_file"
