@@ -8,7 +8,9 @@ backend/worker 이미지나 데이터베이스에 평가 전용 상태와 무거
 Issue #61은 버전이 있는 파일 계약을 정의했고, Issue #62는 실제 제품 HTTP API를
 사용하는 mock paired-generation runner를 추가했다. Issue #63은 실제 품질을 주장하지 않는
 deterministic synthetic VQAScore, ImageReward, TIFA adapter와 case 단위 paired 통계를
-추가했다. 실제 offline scorer는 후속 Issue #65 범위다.
+추가했다. Issue #65는 production dependency와 분리된 실제 VQAScore, ImageReward, TIFA
+Docker runtime, 고정 TIFA QA, 한국어 canonical prompt review와 tie threshold calibration을
+추가했다.
 
 `schemas.py`는 다음 artifact를 검증한다.
 
@@ -139,6 +141,39 @@ python generate_pairs.py `
   --run-id mock-failure-001
 # 의도된 non-zero 종료와 mock_provider_failure manifest를 확인한다.
 ```
+
+## 실제 offline scorer fixture smoke
+
+실제 VQAScore, ImageReward, TIFA는 `offline/`의 hash-locked CPU Docker image에서만
+실행한다. Production backend/worker image와 Python dependency에는 추가되지 않는다. 모델
+cache 준비만 공개 Hugging Face network를 사용하고, 추론은 exact-revision marker를 확인한 뒤
+offline mode를 강제한다.
+
+```powershell
+cd evals/prompt_enhancement
+docker build -f offline/Dockerfile -t creativeops-offline-scorers:v1 .
+
+New-Item -ItemType Directory -Force .model-cache | Out-Null
+docker run --rm `
+  -v "${PWD}/.model-cache:/model-cache" `
+  creativeops-offline-scorers:v1 `
+  python -m offline.run_smoke --prepare-models --prepare-only
+
+New-Item -ItemType Directory -Force runs/issue65-all-scorers-smoke | Out-Null
+docker run --rm `
+  -v "${PWD}/.model-cache:/model-cache" `
+  -v "${PWD}/runs/issue65-all-scorers-smoke:/runs" `
+  creativeops-offline-scorers:v1 `
+  python -m offline.run_smoke --device cpu --output-dir /runs
+```
+
+기본 fixture는 세 지표를 각각 3회 실행한다. 반복 noise와 사전 정의 floor로 VQAScore
+`0.001`, ImageReward `0.01`, TIFA `0.0` tie threshold를 계산해 `calibration.json`에
+기록한다. Fixture score는 adapter 실행 근거일 뿐 Raw/Enhanced 품질 비교가 아니다.
+
+CPU image는 최소 12GiB 가용 메모리를 요구하고 GPU는 아직 지원하지 않는다. 정확한 revision,
+cache/실패 처리, 한국어 canonical review, 실제 검증 기록은
+`docs/runbooks/prompt-enhancement-offline-scorers.md`를 따른다.
 
 ## 로컬 artifact 경계
 

@@ -94,13 +94,15 @@ MOCK EVALUATION GATE PASSED — SYNTHETIC EVIDENCE ONLY. ...
 - [x] 동일 canonical prompt를 사용하는 세 mock metric과 paired 통계가 검증된다.
 - [x] 이 mock end-to-end gate와 controlled failure가 통과한다.
 - [x] generated media, run artifact와 evaluator cache가 Git에서 제외된다.
-- [ ] Issue #65의 실제 offline scorer revision, model cache, TIFA QA와 한계가 검증된다.
-- [ ] scorer별 tie threshold가 실제 score noise 기준으로 고정된다.
+- [x] Issue #65의 실제 offline scorer revision, model cache, TIFA QA와 한계가 검증된다.
+- [x] scorer별 tie threshold가 실제 score noise 기준으로 고정된다.
 - [ ] 사용자가 Vertex 파일럿의 최대 case/image 수와 예상 비용을 명시적으로 승인한다.
 - [ ] 개인 GCP account/project guard와 Vertex readiness를 실행 직전에 확인한다.
 
 하나라도 미충족이면 결론은 **No-Go**다. Mock gate 통과만으로 실제 Vertex 요청을 시작하지
 않는다. 현재 승인 전 파일럿 상한 후보는 20 case, 80 image이며 자동 실행하지 않는다.
+실제 scorer 재현 절차와 CPU/GPU 한계는
+`docs/runbooks/prompt-enhancement-offline-scorers.md`를 따른다.
 
 ## 종료 검증
 

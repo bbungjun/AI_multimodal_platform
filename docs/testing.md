@@ -83,6 +83,29 @@ duplicate generation, controlled failure cleanup, no credential access, and no
 Vertex or remote-scorer dependency. Operational checks and the paid-run block
 are documented in `docs/runbooks/prompt-enhancement-evaluation-gate.md`.
 
+## Prompt Enhancement Offline Scorer Smoke
+
+Actual VQAScore, ImageReward, and TIFA dependencies are isolated in
+`evals/prompt_enhancement/offline/`; they are not installed into the backend,
+worker, or normal evaluation test environment. The focused contract tests use
+fakes and do not download models:
+
+```powershell
+cd evals/prompt_enhancement
+python -m pytest tests/test_offline_scorers.py -q
+```
+
+The tests validate dependency/model revisions, input hashes, complete TIFA QA
+coverage, Korean canonical review binding, cache markers, resource failures,
+calibration math, real-evidence manifest/report shape, provider isolation, and
+the Docker hash-lock boundary.
+
+The manual real-model smoke requires the dedicated Docker image and explicit
+model preparation. It makes no Vertex request, but the prepare step downloads
+about 10GB of public model snapshots. See
+`docs/runbooks/prompt-enhancement-offline-scorers.md` for the exact commands,
+minimum CPU memory, GPU limitation, expected artifacts, and failure handling.
+
 ## Local Quality Gate
 
 Run the local quality gate from the repository root before handing off a change:

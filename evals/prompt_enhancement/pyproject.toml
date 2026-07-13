@@ -17,6 +17,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
+# Real-model scorers are distributed only through offline/Dockerfile.
+packages = []
 py-modules = [
   "generate_pairs",
   "run_mock_e2e",
