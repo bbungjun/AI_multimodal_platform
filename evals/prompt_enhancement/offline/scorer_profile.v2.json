@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "profile_id": "creativeops-offline-scorers-v2",
+  "python_version": "3.11",
+  "container_base": "python:3.11.13-slim-bookworm@sha256:86adf8dbadc3d6e82ee5dd2c74bec2e1c2467cdad47886280501df722372d2e1",
+  "runtime_lock": {
+    "path": "requirements-runtime.lock.txt",
+    "sha256": "b6db84c651483703902e208b2410db42bf8209bf35a59944ace701617702062b"
+  },
+  "adapter_lock": {
+    "path": "requirements-adapters.lock.txt",
+    "sha256": "ec8673b0b5046a6dd75af86ec37facb7f8b602f827bbd4f8c9b7b86cffd910d4"
+  },
+  "packages": [
+    {
+      "name": "t2v-metrics",
+      "version": "3.0",
+      "wheel_sha256": "448398dc130d6ab99cc1e5638e51e7eff57bdf7a771d996be969e6022e461c1b",
+      "install_mode": "no-deps",
+      "repository": "https://github.com/linzhiqiu/t2v_metrics",
+      "repository_audit_revision": "6ecb74f92028f42c7e64546d3a71e98c8c73068f"
+    },
+    {
+      "name": "image-reward",
+      "version": "1.5",
+      "wheel_sha256": "b4917a680c3caa68a1ce3847cebab3ae6d5b4c409d7f8804f537b9d42662cf12",
+      "install_mode": "no-deps",
+      "repository": "https://github.com/zai-org/ImageReward",
+      "repository_audit_revision": "78f8051059b34fef8e0032ccb40561c23a2ddbbb"
+    }
+  ],
+  "cache_policy": {
+    "root_env": "SCORER_MODEL_CACHE",
+    "network_allowed_only_during_prepare": true,
+    "offline_inference": true,
+    "marker_filename": "prepared.json"
+  },
+  "model_snapshots": [
+    {
+      "key": "clip_flant5_xl",
+      "repo_id": "zhiqiulin/clip-flant5-xl",
+      "revision": "3b4a6b1b618f4e286f5353b5b5147a3ae7d9ec55",
+      "allow_patterns": ["*.json", "pytorch_model.bin", "*.model"]
+    },
+    {
+      "key": "flan_t5_xl_tokenizer",
+      "repo_id": "google/flan-t5-xl",
+      "revision": "7d6315df2c2fb742f0f5b556879d730926ca9001",
+      "allow_patterns": ["*.json", "*.model"]
+    },
+    {
+      "key": "clip_vit_large_patch14_336",
+      "repo_id": "openai/clip-vit-large-patch14-336",
+      "revision": "ce19dc912ca5cd21c8a653c79e251e808ccabcd1",
+      "allow_patterns": ["*.json", "pytorch_model.bin"]
+    },
+    {
+      "key": "image_reward",
+      "repo_id": "THUDM/ImageReward",
+      "revision": "5736be03b2652728fb87788c9797b0570450ab72",
+      "allow_patterns": ["ImageReward.pt", "med_config.json"]
+    },
+    {
+      "key": "bert_base_uncased_tokenizer",
+      "repo_id": "bert-base-uncased",
+      "revision": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "allow_patterns": ["config.json", "tokenizer.json", "tokenizer_config.json", "vocab.txt"]
+    },
+    {
+      "key": "blip_vqa_base",
+      "repo_id": "Salesforce/blip-vqa-base",
+      "revision": "787b3d35d57e49572baabd22884b3d5a05acf072",
+      "allow_patterns": ["*.json", "model.safetensors", "*.txt"]
+    },
+    {
+      "key": "all_mpnet_base_v2",
+      "repo_id": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "allow_patterns": ["*.json", "model.safetensors", "*.txt"]
+    }
+  ],
+  "metrics": {
+    "vqascore": {
+      "adapter": "offline_vqascore_clip_flant5_xl_v1",
+      "model_revision": "clip-flant5-xl@3b4a6b1b618f4e286f5353b5b5147a3ae7d9ec55",
+      "implementation": "t2v-metrics==3.0 narrow CLIP-FlanT5 import",
+      "question_template": "Does this figure show \"{}\"? Please answer yes or no.",
+      "answer_template": "Yes",
+      "limitations": "The XL checkpoint is English-centric and resource intensive. CPU execution follows the upstream bfloat16 load path and is intended only for bounded runs."
+    },
+    "image_reward": {
+      "adapter": "offline_image_reward_v1",
+      "model_revision": "ImageReward-v1.0@5736be03b2652728fb87788c9797b0570450ab72",
+      "implementation": "image-reward==1.5 narrow checkpoint loader",
+      "limitations": "A learned preference score is not a factual-faithfulness guarantee and may encode training-data preferences."
+    },
+    "tifa": {
+      "adapter": "offline_tifa_blip_base_v1",
+      "model_revision": "blip-vqa-base@787b3d35d57e49572baabd22884b3d5a05acf072+sbert@e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "implementation": "TIFA multiple-choice algorithm at git revision 8e37050f44ab4ee681e4251f3c8a9d4cc86e901e",
+      "questions_path": "tifa_questions.v2.jsonl",
+      "questions_sha256": "460cd20d02b75ba737a685b770922f366d75ff4590fb92c37dd67391f2fe14d0",
+      "limitations": "The score depends on frozen question coverage, BLIP answer quality, and SBERT choice mapping. It does not validate concepts absent from the question set."
+    }
+  },
+  "canonical_prompt_review": {
+    "path": "canonical_prompt_reviews.v2.json",
+    "sha256": "c42aa2ce408fa100f52c6cb3132faa2b7175b3f4c2d943ed2c7e9b08040fdc94"
+  },
+  "resource_policy": {
+    "cpu": {
+      "dtype": "metric_specific",
+      "dtypes": {
+        "vqascore": "bfloat16",
+        "image_reward": "float32",
+        "tifa": "float32"
+      },
+      "minimum_available_ram_gib_by_metric": {
+        "vqascore": 12,
+        "image_reward": 8,
+        "tifa": 8
+      },
+      "warning": "VQAScore follows the upstream bfloat16 load path and can take more than an hour for 80 images. Scorers are released between metrics."
+    },
+    "cuda": {
+      "dtype": "bfloat16",
+      "minimum_total_vram_gib": 12,
+      "warning": "Run scorers sequentially; simultaneous model residency is not supported. The versioned v2 image remains CPU-only."
+    }
+  },
+  "calibration": {
+    "algorithm": "repeat-max-deviation-v1",
+    "fixture_case_id": "en-short-subject-001",
+    "repetitions": 3,
+    "noise_multiplier": 3.0,
+    "minimum_floors": {
+      "vqascore": 0.001,
+      "image_reward": 0.01,
+      "tifa": 0.0
+    },
+    "rule": "epsilon=max(minimum_floor, noise_multiplier * max(abs(score_i - median(scores))))",
+    "freeze_before_provider_run": true
+  }
+}

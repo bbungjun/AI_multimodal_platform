@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -26,7 +27,12 @@ from schemas import (
     BenchmarkLanguage,
     CreativityPreset,
     CleanupPolicy,
+    EvidenceKind,
+    MetricAdapterConfig,
+    MetricName,
+    ProviderMode,
     RunLifecycle,
+    StatisticsConfig,
     file_sha256,
     load_benchmark_cases,
     load_cleanup_record,
@@ -55,10 +61,12 @@ class FakeEvaluationClient:
         self,
         *,
         provider_status: str = "mock_provider",
+        provider_retry_max_attempts: int = 3,
         fail_prompt_fragment: str | None = None,
         interrupt_next_poll: bool = False,
     ) -> None:
         self.provider_status = provider_status
+        self.provider_retry_max_attempts = provider_retry_max_attempts
         self.fail_prompt_fragment = fail_prompt_fragment
         self.interrupt_next_poll = interrupt_next_poll
         self.calls: list[tuple[str, str]] = []
@@ -83,13 +91,16 @@ class FakeEvaluationClient:
         self.calls.append((method, path))
 
         if method == "GET" and path == "/api/health":
+            vertex_ready = self.provider_status == "ready"
             return {
                 "ok": True,
                 "ready": True,
                 "db": "up",
+                "provider_retry_max_attempts": self.provider_retry_max_attempts,
                 "vertex": {
                     "status": self.provider_status,
-                    "credentials": "not_required",
+                    "credentials": "available" if vertex_ready else "not_required",
+                    "project": "configured" if vertex_ready else "not_required",
                 },
             }
 
@@ -407,6 +418,63 @@ def test_non_mock_health_is_rejected_before_any_generation(tmp_path: Path):
     assert client.enhancement_payloads == []
     assert client.created_payloads == []
     assert not (config.runs_dir / config.run_id).exists()
+
+
+def test_vertex_runner_records_real_provenance_with_ready_health(tmp_path: Path):
+    config = _config(tmp_path, _benchmark_cases(1), keep_artifacts=True)
+    adapters = tuple(
+        MetricAdapterConfig(
+            metric=metric,
+            adapter=f"offline_{metric.value}_test",
+            model_revision=f"{metric.value}-revision",
+            evidence_kind=EvidenceKind.REAL,
+            settings={},
+        )
+        for metric in MetricName
+    )
+    statistics = StatisticsConfig(
+        bootstrap_seed=6600,
+        bootstrap_resamples=10000,
+        tie_thresholds={
+            MetricName.VQA_SCORE: 0.001,
+            MetricName.IMAGE_REWARD: 0.01,
+            MetricName.TIFA: 0.0,
+        },
+    )
+    config = replace(
+        config,
+        provider_mode=ProviderMode.VERTEX,
+        evidence_kind=EvidenceKind.REAL,
+        metric_adapters=adapters,
+        statistics=statistics,
+        expected_provider_retry_max_attempts=3,
+    )
+    mismatched = FakeEvaluationClient(
+        provider_status="ready",
+        provider_retry_max_attempts=4,
+    )
+    with pytest.raises(EvaluationRunnerError, match="retry cap"):
+        run_pairs(
+            config,
+            client=mismatched,
+            environ={"AI_PROVIDER": "vertex"},
+            now=IncrementingClock(),
+        )
+    assert mismatched.enhancement_payloads == []
+
+    client = FakeEvaluationClient(provider_status="ready")
+
+    manifest = run_pairs(
+        config,
+        client=client,
+        environ={"AI_PROVIDER": "vertex"},
+        now=IncrementingClock(),
+    )
+
+    assert manifest.provider_mode == ProviderMode.VERTEX
+    assert manifest.evidence_kind == EvidenceKind.REAL
+    assert manifest.metric_adapters == adapters
+    assert manifest.statistics == statistics
 
 
 def test_process_environment_requires_mock_without_echoing_value():

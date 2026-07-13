@@ -376,6 +376,8 @@ evidence로 명확히 표시된다.
 
 **의존성:** Task 5, Task 6, 사용자의 명시적 승인
 
+**상태:** 20-case 입력·예산/request guard·mock dry-run 구현 완료, 실제 실행 승인 대기
+
 **구현:**
 
 - 개인 GCP account/project guard와 Vertex readiness를 검증한다.
@@ -386,6 +388,12 @@ evidence로 명확히 표시된다.
 
 **완료 기준:** 보고서가 실제 Vertex 근거와 mock 흐름 검증을 구분하고 진행·축소·수정·중단 중
 하나를 권고한다.
+
+고정 정책은 영어 10/한국어 10, 5개 category별 4개, arm별 2장이다. 정상 예상 비용은
+`$1.728000`, 3회 retry와 enhancement repair call을 포함한 보수적 envelope는 `$5.952000`,
+workload-local stop은 `$20`이다. 결과 확인 전 TIFA 비열등성 허용폭 `0.05`와
+proceed/stop/otherwise 규칙을 고정한다. 실제 실행은 성공한 20-case mock 결과와 plan SHA-256을
+제시한 뒤 별도 승인받는다.
 
 ## Mock-to-Vertex Go/No-Go Gate
 
@@ -403,7 +411,11 @@ evidence로 명확히 표시된다.
 - [x] Test가 mock mode에서 Vertex client를 생성하지 않음을 증명한다.
 - [x] 단일 mock E2E gate가 success, resume, controlled failure를 검증한다.
 - [x] 실제 offline scorer revision과 한계가 기록된다.
-- [ ] 사용자가 파일럿 요청·이미지 한도를 명시적으로 승인한다.
+- [x] 사용자가 20 case/80 image와 `$20` workload-local 상한을 승인한다.
+- [x] 20-case v2 mock success/resume/controlled failure가 통과한다.
+- [ ] 병합된 clean revision에서 Git-bound preflight/mock evidence를 다시 생성한다.
+- [ ] 사용자가 고정 plan SHA-256과 mock 결과를 확인한 뒤 실제 실행을 별도로 승인한다.
+- [ ] 개인 GCP guard와 Vertex readiness가 실행 직전에 통과한다.
 
 ## 검증 전략
 

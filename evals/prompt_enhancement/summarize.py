@@ -45,7 +45,7 @@ RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class SummaryError(RuntimeError):
-    """Raised when mock scores cannot be summarized safely."""
+    """Raised when paired scores cannot be summarized safely."""
 
 
 def require_mock_provider(environ: Mapping[str, str]) -> None:
@@ -55,18 +55,28 @@ def require_mock_provider(environ: Mapping[str, str]) -> None:
         )
 
 
+def require_manifest_provider(
+    environ: Mapping[str, str],
+    manifest: RunManifest,
+) -> None:
+    expected = manifest.provider_mode.value
+    if environ.get("AI_PROVIDER") != expected:
+        raise SummaryError(
+            f"AI_PROVIDER={expected} is required for this manifest. "
+            "The current environment value is not printed."
+        )
+
+
 def summarize_run(
     run_dir: Path | str,
     *,
     environ: Mapping[str, str],
     now: Callable[[], datetime] | None = None,
 ) -> AggregateReport:
-    require_mock_provider(environ)
     directory = Path(run_dir)
     manifest_path = directory / "manifest.json"
     manifest = load_run_manifest(manifest_path)
-    if manifest.evidence_kind != EvidenceKind.SYNTHETIC:
-        raise SummaryError("Mock summary requires synthetic evidence")
+    require_manifest_provider(environ, manifest)
     if manifest.lifecycle == RunLifecycle.COMPLETED:
         return _load_idempotent_summary(directory, manifest)
     if manifest.lifecycle != RunLifecycle.SUMMARIZING:
@@ -141,8 +151,8 @@ def build_case_metrics(
             raise SummaryError(f"Score references unknown case {score.case_id}")
         if score.run_id != manifest.run_id:
             raise SummaryError("Score run_id does not match manifest")
-        if score.evidence_kind != EvidenceKind.SYNTHETIC:
-            raise SummaryError("Every mock score must be marked synthetic")
+        if score.evidence_kind != manifest.evidence_kind:
+            raise SummaryError("Score evidence_kind does not match the manifest")
         if score.evaluation_prompt_sha256 != pair.evaluation_prompt_sha256:
             raise SummaryError(
                 f"Score for case {score.case_id} does not use the shared canonical prompt"
@@ -288,7 +298,7 @@ def build_aggregate_report(
     return AggregateReport(
         schema_version=CURRENT_SCHEMA_VERSION,
         run_id=manifest.run_id,
-        evidence_kind=EvidenceKind.SYNTHETIC,
+        evidence_kind=manifest.evidence_kind,
         generated_at=generated_at,
         completed_case_count=len(complete_case_ids),
         failed_case_count=failed_case_count,
@@ -358,11 +368,22 @@ def render_markdown_report(
     report: AggregateReport,
     case_metrics: Sequence[CaseMetricRecord],
 ) -> str:
+    if report.evidence_kind == EvidenceKind.SYNTHETIC:
+        title = f"# Prompt Enhancement Mock Evaluation — {report.run_id}"
+        evidence_lines = [
+            "> **SYNTHETIC MOCK EVIDENCE — 실제 이미지 품질 근거가 아닙니다.**",
+            "> 이 결과는 평가 orchestration, artifact, paired 통계 흐름만 검증합니다.",
+        ]
+    else:
+        title = f"# Prompt Enhancement Vertex Pilot — {report.run_id}"
+        evidence_lines = [
+            "> **REAL PAIRED SCORER EVIDENCE — 20-case pilot 범위입니다.**",
+            "> Full benchmark나 보편적 제품 품질 향상을 자동으로 의미하지 않습니다.",
+        ]
     lines = [
-        f"# Prompt Enhancement Mock Evaluation — {report.run_id}",
+        title,
         "",
-        "> **SYNTHETIC MOCK EVIDENCE — 실제 이미지 품질 근거가 아닙니다.**",
-        "> 이 결과는 평가 orchestration, artifact, paired 통계 흐름만 검증합니다.",
+        *evidence_lines,
         "",
         f"- 완료 case: {report.completed_case_count}",
         f"- 실패 case: {report.failed_case_count}",
@@ -492,7 +513,7 @@ def _utc_now() -> datetime:
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build paired mock statistics and a synthetic-evidence report."
+        description="Build paired statistics and an evidence-scoped report."
     )
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
@@ -502,7 +523,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     arguments = _parse_args(sys.argv[1:] if argv is None else argv)
     if not RUN_ID_RE.fullmatch(arguments.run_id):
-        print("MOCK SUMMARY FAILED: invalid run-id", file=sys.stderr)
+        print("SUMMARY FAILED: invalid run-id", file=sys.stderr)
         return 2
     try:
         report = summarize_run(
@@ -510,12 +531,14 @@ def main(argv: list[str] | None = None) -> int:
             environ=os.environ,
         )
     except (OSError, ValueError, SummaryError) as exc:
-        print(f"MOCK SUMMARY FAILED: {exc}", file=sys.stderr)
+        print(f"SUMMARY FAILED: {exc}", file=sys.stderr)
         return 1
-    print(
-        "SYNTHETIC MOCK REPORT ONLY — NOT IMAGE QUALITY EVIDENCE. "
-        f"run_id={report.run_id} completed_cases={report.completed_case_count}"
+    scope = (
+        "SYNTHETIC MOCK REPORT ONLY — NOT IMAGE QUALITY EVIDENCE."
+        if report.evidence_kind == EvidenceKind.SYNTHETIC
+        else "REAL VERTEX PILOT REPORT — BOUNDED EVIDENCE ONLY."
     )
+    print(f"{scope} run_id={report.run_id} completed_cases={report.completed_case_count}")
     return 0
 
 

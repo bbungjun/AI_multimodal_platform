@@ -70,53 +70,53 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #65 implements and locally verifies the actual offline
-scorer boundary on branch `codex/issue-65-offline-scorer-adapters`:
+As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
+`codex/issue-66-vertex-pilot-guard`:
 
-- Added a production-isolated, CPU-only Docker runtime with a digest-pinned
-  Python 3.11 base, hash-locked transitive dependencies, and hash-pinned
-  `t2v-metrics==3.0`/`image-reward==1.5` wheels installed through narrow
-  `--no-deps` imports. Backend/worker dependencies and Compose images are
-  unchanged.
-- `scorer_profile.v1.json` records every package, upstream code audit revision,
-  Hugging Face model commit, load dtype, resource limit, cache policy, known
-  limitation, calibration rule, QA hash, and canonical-review hash.
-- VQAScore uses CLIP-FlanT5-XL, ImageReward uses ImageReward-v1.0, and TIFA uses
-  BLIP-VQA-base plus all-mpnet-base-v2 choice mapping. Model preparation is the
-  only network-enabled step; inference forces Hugging Face/Transformers offline
-  mode and fails if an exact-revision marker or payload is missing.
-- Frozen TIFA QA contains 14 auditable questions covering all four enabled
-  benchmark cases. The Korean case preserves its original prompt and reviewed
-  English canonical prompt in a separate benchmark-hash-bound review artifact;
-  non-visual Seoul identity is intentionally excluded from TIFA questions.
-- The dedicated image built successfully. Seven pinned model snapshots were
-  prepared into ignored `.model-cache` in about 1,697 seconds without a provider
-  call. Empty cache validation fails before model import and does not silently
-  download during inference.
-- Actual ignored CPU fixture smokes passed individually and together. The final
-  three-adapter run completed in about 197 seconds with artifact hashes intact:
-  VQAScore `0.6201549768447876`, ImageReward `-0.23932480812072754`, and TIFA
-  `1.0`. Each score repeated identically three times.
-- Pre-registered repeat-noise calibration therefore fixed tie thresholds at the
-  metric floors: VQAScore `0.001`, ImageReward `0.01`, and TIFA `0.0`. These are
-  adapter fixture results, not Raw/Enhanced quality evidence, and no composite
-  score is created.
-- Actual smoke exposed and fixed three concrete boundary issues: missing
-  Pydantic in the isolated lock, Transformers `AutoModel` enumeration conflicting
-  with ImageReward's pinned Timm version, and missing CPU bfloat16 autocast in
-  the upstream CUDA-oriented VQAScore wrapper.
-- CPU execution requires at least 12GiB available container memory and loads one
-  scorer at a time. The versioned image does not include CUDA PyTorch; GPU
-  execution remains unsupported until a separate GPU lock/image is implemented
-  and verified.
-- Fresh verification passes all 57 evaluation tests, the scorer Docker build,
-  narrow upstream imports, package wheel build, frontend TypeScript lint/build,
-  and both Compose config checks. The backend run passed 351 tests and failed
-  only the previously documented Windows `/bin/bash` path conversion test
+- Added `benchmark.v2.jsonl` with exactly 20 enabled cases: English 10/Korean
+  10, five categories with four cases each, and two cases in every
+  language/category cross-slice. Every case uses Imagen Fast, `balanced`, 1:1,
+  and two images per Raw/Enhanced arm.
+- Pinned 80 auditable TIFA QA records, reviewed canonical English prompts for
+  all 10 Korean cases, and `scorer_profile.v2.json` with the already verified
+  actual scorer/model revisions and calibrated tie floors.
+- `pilot_policy.v1.json` hash-binds all inputs and fixes the request caps at 20
+  enhancement HTTP calls, 40 generation HTTP calls, 80 images, and three
+  provider attempts. It also fixes bootstrap seed/resamples, TIFA
+  noninferiority margin `0.05`, and proceed/stop/otherwise rules before real
+  results are visible.
+- The user approved a `$20` workload-local limit. Normal estimate is `$1.728000`
+  and the conservative retry/repair envelope is `$5.952000`. This is not a
+  Google Cloud Billing account hard stop and excludes unrelated project usage,
+  taxes, credits, exchange rates, and delayed adjustments.
+- Preflight completes without provider calls and now binds policy/input hashes
+  plus the Git commit/tree/dirty state. Dirty development output is explicitly
+  non-approvable; the exact approval SHA must be regenerated from the merged
+  clean revision.
+- Fresh Compose mock dry-run completed 20 pairs, 40 generation jobs/cleanup,
+  80 PNGs, 240 synthetic scores, and 60 case-statistic rows with no missing or
+  failed cases. Resume identity and the separate `mock_provider_failure` path
+  both passed and remain in ignored local artifacts.
+- The real runner requires `--execute`, exact plan SHA, the completed mock
+  evidence, clean Git state, personal GCP guard, retry setting, and an
+  ephemeral post-mock approval value. Backend health must also expose the exact
+  runtime retry cap before any paid request. The runner reserves a prompt-free
+  usage ledger before each HTTP request and refuses duplicate/reconciled-unsafe
+  steps or cap overruns.
+- The real scorer path produces 240 score records, paired statistics, and a
+  real-evidence report. Finalization verifies exact 20/40/80 usage, retry/budget
+  limits and hashes before applying the pre-registered decision and writing
+  `pilot_decision.json`/`pilot_result.md`.
+- Fresh verification passes all 64 evaluation tests, the scorer v2 Docker build
+  and in-image real-score/finalize CLIs, frontend lint/build, both Compose config
+  checks, PowerShell parser checks, and focused health/worker tests. The backend
+  full run passed 351 tests and failed only the previously documented Windows
+  `/bin/bash` path conversion test
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
-- No Gemini, Imagen, Veo, or Vertex request was made; no credential was read and
-  no provider cost was incurred. Issue #66 remains No-Go until the user approves
-  a paid case/image limit and the personal GCP account/project guard passes.
+- No Gemini, Imagen, Veo, or Vertex request was made in this work; no credential
+  was read and no provider cost was incurred. Actual execution remains **No-Go**
+  until the clean merged revision repeats preflight/mock, the user explicitly
+  approves that exact plan SHA, and the personal GCP/readiness guards pass.
 
 ## Last Completed Work
 
@@ -1354,12 +1354,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #62 mock paired-generation runner PR, then
-  implement Issues #63 and #64 to complete the full no-cost mock evaluation
-  flow.
-- After the mock gate passes, implement Issue #65 for isolated local
-  VQAScore/ImageReward/TIFA adapters. Do not start Issue #66 until the user
-  explicitly approves the bounded Vertex pilot and its request/image caps.
+- Review and merge the Issue #66 guard PR. Then show the fixed plan SHA, mock
+  result, `$1.728000` normal estimate, `$5.952000` retry envelope and `$20`
+  limitation to the user. Run Vertex only after a separate explicit approval.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas

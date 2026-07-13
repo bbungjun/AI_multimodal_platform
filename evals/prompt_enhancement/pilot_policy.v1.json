@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy_id": "creativeops-vertex-pilot-v1",
+  "benchmark_path": "benchmark.v2.jsonl",
+  "benchmark_sha256": "259e25f7418a1a44f92de625ce7cb9fa150512a7cde21cf44a1a889d7934bd92",
+  "scorer_profile_path": "offline/scorer_profile.v2.json",
+  "scorer_profile_sha256": "85415dd3394000b093bcc215c2a82a58ec1f536804a74cd92cfc13c25d692093",
+  "models": {
+    "enhancer": "gemini-2.5-flash",
+    "generator": "imagen-4.0-fast-generate-001",
+    "creativity_preset": "balanced",
+    "aspect_ratio": "1:1"
+  },
+  "limits": {
+    "max_cases": 20,
+    "max_enhancement_http_requests": 20,
+    "max_generation_http_requests": 40,
+    "max_generated_images": 80,
+    "samples_per_arm": 2,
+    "max_provider_retry_attempts": 3,
+    "max_enhancement_call_groups_per_case": 3,
+    "max_gemini_input_tokens_per_call": 8000,
+    "max_gemini_output_tokens_per_call": 1600
+  },
+  "budget": {
+    "approved_usd": "20.00",
+    "stop_at_usd": "20.00",
+    "pricing_as_of": "2026-07-13",
+    "pricing_source_url": "https://cloud.google.com/vertex-ai/generative-ai/pricing",
+    "imagen_fast_per_image_usd": "0.02",
+    "gemini_flash_input_per_million_tokens_usd": "0.30",
+    "gemini_flash_output_per_million_tokens_usd": "2.50",
+    "scope": "workload_local_conservative_estimate",
+    "limitation": "This guard caps this pilot's requested workload under the pinned retry assumptions. It is not a Google Cloud billing-account hard stop and does not include unrelated project usage, taxes, credits, exchange rates, or delayed billing adjustments."
+  },
+  "statistics": {
+    "bootstrap_seed": 6600,
+    "bootstrap_resamples": 10000,
+    "tie_thresholds": {
+      "vqascore": 0.001,
+      "image_reward": 0.01,
+      "tifa": 0.0
+    }
+  },
+  "decision": {
+    "required_completed_cases": 20,
+    "tifa_noninferiority_margin": 0.05,
+    "proceed_rule": "Both VQAScore and ImageReward mean deltas are positive; at least one primary metric has ci95_low > 0; neither primary metric has ci95_high < 0; TIFA ci95_low >= -0.05; and all 20 cases complete without missing cases.",
+    "stop_rule": "Both primary metrics have ci95_high < 0, or TIFA has ci95_high < -0.05.",
+    "otherwise": "revise_or_expand",
+    "slice_interpretation": "Language and category slices are exploratory because their effective case counts are smaller than 20."
+  },
+  "approval": {
+    "budget_cap_approved": true,
+    "approved_budget_usd": "20.00",
+    "requires_post_mock_dry_run_execution_approval": true,
+    "provider_execution_approved": false
+  }
+}

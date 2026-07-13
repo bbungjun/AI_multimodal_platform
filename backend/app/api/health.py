@@ -23,10 +23,12 @@ async def live() -> dict[str, bool | str]:
 async def health() -> HealthResponse:
     db_up = await check_db_connection()
     vertex = get_vertex_readiness()
+    settings = get_settings()
     return HealthResponse(
         ok=db_up,
         ready=db_up and vertex.ready,
-        service=get_settings().app_name,
+        service=settings.app_name,
         db="up" if db_up else "down",
+        provider_retry_max_attempts=settings.provider_retry_max_attempts,
         vertex=VertexReadinessResponse(**vertex.to_public_dict()),
     )

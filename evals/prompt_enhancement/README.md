@@ -10,7 +10,8 @@ Issue #61은 버전이 있는 파일 계약을 정의했고, Issue #62는 실제
 deterministic synthetic VQAScore, ImageReward, TIFA adapter와 case 단위 paired 통계를
 추가했다. Issue #65는 production dependency와 분리된 실제 VQAScore, ImageReward, TIFA
 Docker runtime, 고정 TIFA QA, 한국어 canonical prompt review와 tie threshold calibration을
-추가했다.
+추가했다. Issue #66은 20-case v2 입력, `$20` workload-local budget/request guard, 실제
+paired scorer와 사전 등록 판정 report 경계를 추가한다.
 
 `schemas.py`는 다음 artifact를 검증한다.
 
@@ -141,6 +142,30 @@ python generate_pairs.py `
   --run-id mock-failure-001
 # 의도된 non-zero 종료와 mock_provider_failure manifest를 확인한다.
 ```
+
+## Issue #66 Vertex 20-case 파일럿
+
+`benchmark.v2.jsonl`은 영어 10개/한국어 10개, 5개 category별 4개로 구성된다. 함께
+사용하는 `offline/tifa_questions.v2.jsonl`, `offline/canonical_prompt_reviews.v2.json`,
+`offline/scorer_profile.v2.json`과 hash로 묶여 있다. `pilot_policy.v1.json`은 모델,
+generation parameter, 요청/이미지/retry 상한, `$20` 예산, bootstrap seed, tie threshold와
+TIFA `0.05` 비열등성 허용폭을 결과 확인 전에 고정한다.
+
+Provider 호출 없는 preflight:
+
+```powershell
+cd evals/prompt_enhancement
+python -m pilot --output runs/issue66-preflight/preflight.json
+```
+
+실제 실행기는 `--execute`, 승인된 preflight SHA-256, 성공한 20-case mock run, clean
+worktree, 개인 GCP guard, 별도 post-mock 승인 환경값을 모두 요구한다. 실제 scorer는 paired
+generation 뒤 `score_real_pairs.py`로 240개 real score를 만들고 `summarize.py`와
+`finalize_vertex_pilot.py`가 통계·usage·사전 등록 판정을 hash-bound artifact로 닫는다.
+
+전체 승인·실행·중단 절차는
+`docs/runbooks/prompt-enhancement-vertex-pilot.md`를 따른다. `$20` 가드는 이 workload의
+보수적 추정 상한이지 Google Cloud Billing account 전체의 결제 hard stop이 아니다.
 
 ## 실제 offline scorer fixture smoke
 
