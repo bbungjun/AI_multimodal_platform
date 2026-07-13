@@ -28,9 +28,9 @@ python verify_mock.py
 
 The command accepts no env-file argument and rejects any provider mode other
 than `mock`. Tests cover benchmark, manifest, Raw/Enhanced arm, asset, score,
-and aggregate-report roundtrips; unsupported schema versions; atomic resumable
-manifest writes; prompt/file hashes; relative artifact paths; and ignored run
-and model-cache directories.
+case-statistics and aggregate-report roundtrips; unsupported schema versions;
+atomic resumable manifest writes; prompt/file hashes; relative artifact paths;
+and ignored run and model-cache directories.
 
 The paired-generation runner uses the same explicit process guard and verifies
 `/api/health` reports `mock_provider` before calling the product HTTP APIs:
@@ -47,6 +47,23 @@ failure checkpoints, default backend cleanup, `--keep-artifacts`, and resume
 without duplicate enhancement or generation requests. The versioned
 `fixtures/benchmark.failure.v1.jsonl` is reserved for controlled mock-provider
 failure validation and is not part of the default success benchmark.
+
+After paired generation reaches `lifecycle=scoring`, run the deterministic mock
+metric and statistics stages with the same run id:
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+python score_pairs.py --run-id mock-local-001
+python summarize.py --run-id mock-local-001
+```
+
+The metric tests prove that VQAScore, ImageReward, and TIFA remain separate
+synthetic signals; both arms use the same frozen canonical prompt; image scores
+are reduced to per-case arm means before paired deltas; and fixed-seed bootstrap
+confidence intervals, W/T/L, language/category slices, missing cases, hashes,
+and idempotent byte-stable artifacts are reproducible. These mock scores only
+validate orchestration and must not be reported as image-quality evidence.
 
 ## Local Quality Gate
 

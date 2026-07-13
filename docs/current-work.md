@@ -70,51 +70,61 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #62 implements the mock-only paired-generation runner
-on branch `codex/issue-62-mock-paired-runner`:
+As of 2026-07-13, Issue #63 implements deterministic mock metrics and paired
+statistics on branch `codex/issue-63-mock-metrics-statistics`:
 
-- Added `generate_pairs.py` in the isolated evaluation package. It uses only
-  the public health, prompt enhancement, generation, job polling, asset
-  metadata, file serving, and generation deletion HTTP APIs; it does not import
-  application DB/session, queue, storage, or Vertex modules.
-- The process requires `AI_PROVIDER=mock` and backend health must report
-  `mock_provider` with credentials not required before any benchmark artifact
-  directory or provider-facing request is created.
-- Raw/Enhanced arms use the same model, aspect ratio, and sample count. Sorted
-  case ids alternate `raw_first` and `enhanced_first` generation order.
-- Atomic checkpoints preserve enhancement ids, exact execution-prompt hashes,
-  submitted/completed/failed job state, actual generation parameters, retry
-  counts and asset ids/hashes. A separate versioned `cleanup.json` records the
-  backend retention policy and job-level retained/deleted state without
-  changing the already-merged v1 arm schema.
-- Reusing the same run id with matching Git/worktree/benchmark/config reuses
-  completed local assets and submitted job ids. It refuses incompatible or
-  failed manifests instead of silently starting duplicate generations.
-- Local artifacts and failure manifests are always preserved. By default,
-  terminal generation jobs/assets are deleted after verified local copies;
-  `--keep-artifacts` preserves them and records that choice per arm. Prompt
-  enhancement rows remain because there is no public delete API.
-- Focused evaluation verification passes 29 tests, including matched arm
-  parameters, balanced order, completed/submitted resume, controlled failure,
-  cleanup, keep-artifacts, path/hash safety, and no production/Vertex imports.
-- Actual Docker Compose mock E2E `issue62-mock-e2e-final` completed 4 cases, 8
-  jobs, and 16 synthetic PNGs. The manifest reached `scoring`; file, pairs, and
-  cleanup hashes matched; all eight cleanup records were `deleted`; no backend
-  job remained; and a second run kept job ids and the pairs hash unchanged.
-- Actual controlled failure run `issue62-mock-failure-final` exited non-zero
-  with lifecycle `failed`, public code `mock_provider_failure`, retry count `0`,
-  cleanup state `deleted`, a matching cleanup hash, and no remaining backend
-  generation job. Both run directories are local ignored artifacts.
-- Fresh repository verification passed 351 backend tests with the unrelated
-  Windows/bash path test deselected, frontend TypeScript lint and production
-  build, Compose mock config, run ignore checks, and `git diff --check`. The
-  unfiltered 352-test backend run failed only
+- Added a common scorer adapter contract and separate synthetic VQAScore,
+  ImageReward, and TIFA implementations. Their values are deterministic hashes
+  for orchestration tests only and are never presented as image-quality
+  evidence.
+- `score_pairs.py` requires `AI_PROVIDER=mock`, verifies benchmark, pair, image,
+  and manifest hashes, and refuses provider or heavy model imports. Both arms
+  are scored against the same original/reviewed canonical prompt hash; the
+  enhanced execution prompt cannot become the reference answer.
+- Added versioned `case_statistics.jsonl` records so image scores are first
+  reduced to per-case arm means and `Enhanced - Raw` deltas before aggregate
+  statistics. The existing aggregate-report v1 contract was not changed.
+- `summarize.py` reports each metric separately with mean/median delta,
+  fixed-seed paired bootstrap 95% CI, configured-threshold W/T/L, and
+  language/category slices. It records missing cases instead of silently
+  dropping them and does not create a composite score.
+- Scoring advances the manifest from `scoring` to `summarizing`; summary writes
+  case statistics, `summary.json`, and a prominently synthetic `report.md`,
+  hashes every artifact, and completes the manifest. Completed runs verify and
+  reuse the byte-stable artifacts.
+- Focused evaluation verification passes 38 tests. Coverage includes adapter
+  separation, canonical-reference enforcement, deterministic scores,
+  per-prompt statistics, bootstrap reproducibility, W/T/L, slices, missing
+  cases, lifecycle/hash integrity, idempotency, and mock-only guards.
+- The ignored Compose mock run `issue62-mock-e2e-final` was scored without new
+  generation calls: 16 images produced 48 image scores and 12 case/metric
+  records across 4 completed cases. The report contains all three metrics, 5
+  language/category slices, no missing case, matching hashes, and unchanged
+  artifact digests on repeat execution.
+- Fresh verification passed all 38 evaluation tests, 351 backend tests with the
+  known Windows/bash path test deselected, frontend TypeScript lint and
+  production build, both Compose config checks, and diff hygiene. The
+  unfiltered 352-test backend run again failed only
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
-  bash could not resolve the Windows-style script path.
-- No live Vertex request, model download, credential read, or provider cost was
-  incurred.
+  `/bin/bash` cannot resolve the Windows-style absolute script path.
+- No live Vertex request, offline model download, credential read, or provider
+  cost was incurred. Actual offline scorer revisions and quality evidence
+  remain Issue #65 work after the complete mock gate in Issue #64.
 
 ## Last Completed Work
+
+As of 2026-07-13, Issue #62 completed on branch
+`codex/issue-62-mock-paired-runner` and merged through PR #70 at `f079f88`:
+
+- Added the mock-only paired generation runner over public product HTTP APIs,
+  with matched arm parameters, alternating request order, resumable atomic
+  checkpoints, local asset hashes, controlled failure recording, and explicit
+  backend cleanup/retention policy.
+- The ignored Docker Compose E2E completed 4 cases, 8 jobs, and 16 synthetic
+  PNGs, then reached `lifecycle=scoring` without a live Vertex call.
+- Evaluation verification passed 29 tests; repository checks passed except for
+  the already documented Windows/bash path invocation in one release-script
+  test, whose remaining 351 backend tests passed.
 
 As of 2026-07-13, Issue #61 completed on branch
 `codex/issue-61-eval-artifact-schemas` and merged through PR #69 at `546a9b2`:
