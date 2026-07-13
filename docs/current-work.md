@@ -68,6 +68,33 @@ Adjust `.env` only for local machine needs. In mock mode, leave credential
 values empty. In Vertex mode, configure credentials locally and never commit or
 paste credential contents.
 
+## Active Work
+
+As of 2026-07-13, Issue #59 is documenting a mock-first prompt enhancement
+benchmark on branch `codex/issue-59-prompt-enhancement-eval-plan`:
+
+- Created parent Issue #59 and child implementation Issues #60 through #66.
+- Tasks #60 through #64 cover exact execution-prompt provenance, versioned
+  evaluation schemas, Raw/Enhanced mock paired generation, deterministic mock
+  VQAScore/ImageReward/TIFA adapters, paired statistics, and the mock end-to-end
+  gate.
+- Task #65 adds real offline scorer models in an isolated evaluation
+  environment without changing the production backend/worker dependency set.
+- Task #66 is a separately authorized, cost-bounded Vertex pilot. It remains
+  blocked until the mock gate passes and the user explicitly approves live
+  Gemini/Imagen calls.
+- Added the staged implementation plan at
+  `docs/superpowers/plans/2026-07-13-prompt-enhancement-benchmark.md`.
+- No live Vertex request, model download, generated media, credential read, or
+  runtime code change is part of Issue #59.
+- Fresh documentation verification passed `git diff --check`, Compose config,
+  351 backend mock tests with one unrelated Windows/bash path test deselected,
+  frontend TypeScript lint, and the production build. The unfiltered quality
+  gate ran 352 backend tests and failed only
+  `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
+  Windows Python passed a Windows-style repository path to bash, which removed
+  the backslashes and could not find `scripts/deploy_gcp_release.sh`.
+
 ## Last Completed Work
 
 As of 2026-07-10, Issue #57 completed on branch
@@ -1252,6 +1279,11 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
+- Review and merge the Issue #59 planning PR, then implement Issues #60 through
+  #64 in order to complete the full no-cost mock evaluation flow.
+- After the mock gate passes, implement Issue #65 for isolated local
+  VQAScore/ImageReward/TIFA adapters. Do not start Issue #66 until the user
+  explicitly approves the bounded Vertex pilot and its request/image caps.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
