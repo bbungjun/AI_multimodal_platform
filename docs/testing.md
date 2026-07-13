@@ -32,6 +32,22 @@ and aggregate-report roundtrips; unsupported schema versions; atomic resumable
 manifest writes; prompt/file hashes; relative artifact paths; and ignored run
 and model-cache directories.
 
+The paired-generation runner uses the same explicit process guard and verifies
+`/api/health` reports `mock_provider` before calling the product HTTP APIs:
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+python generate_pairs.py --compose --run-id mock-local-001
+```
+
+Its focused tests use a fake HTTP boundary to prove alternating Raw/Enhanced
+order, matched generation parameters, asset downloads and hashes, terminal
+failure checkpoints, default backend cleanup, `--keep-artifacts`, and resume
+without duplicate enhancement or generation requests. The versioned
+`fixtures/benchmark.failure.v1.jsonl` is reserved for controlled mock-provider
+failure validation and is not part of the default success benchmark.
+
 ## Local Quality Gate
 
 Run the local quality gate from the repository root before handing off a change:

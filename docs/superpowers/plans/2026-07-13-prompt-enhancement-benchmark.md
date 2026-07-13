@@ -386,14 +386,14 @@ evidence로 명확히 표시된다.
 
 - [x] Issue #60이 정확한 execution prompt 계약을 증명한다.
 - [x] 버전이 있는 benchmark와 run schema가 검증된다.
-- [ ] Raw/Enhanced mock job이 동일 parameter로 완료된다.
-- [ ] Resume가 완료 작업을 중복 생성하지 않는다.
-- [ ] 통제된 실패가 report를 손상시키지 않고 기록된다.
+- [x] Raw/Enhanced mock job이 동일 parameter로 완료된다.
+- [x] Resume가 완료 작업을 중복 생성하지 않는다.
+- [x] 통제된 실패가 report를 손상시키지 않고 기록된다.
 - [ ] 세 mock metric adapter 결과가 서로 분리되어 있다.
 - [ ] 두 arm이 같은 original/canonical prompt로 평가된다.
 - [ ] Paired 통계와 신뢰구간이 재현된다.
-- [ ] Artifact와 model cache가 ignored 상태이며 staged되지 않는다.
-- [ ] Test가 mock mode에서 Vertex client를 생성하지 않음을 증명한다.
+- [x] Artifact와 model cache가 ignored 상태이며 staged되지 않는다.
+- [x] Test가 mock mode에서 Vertex client를 생성하지 않음을 증명한다.
 - [ ] 실제 offline scorer revision과 한계가 기록된다.
 - [ ] 사용자가 파일럿 요청·이미지 한도를 명시적으로 승인한다.
 
