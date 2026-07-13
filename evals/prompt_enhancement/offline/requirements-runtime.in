@@ -1,0 +1,14 @@
+--index-url https://pypi.org/simple
+
+fairscale==0.4.13
+huggingface-hub==0.29.3
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+pillow==11.1.0
+protobuf==5.29.3
+pydantic==2.12.5
+sentencepiece==0.2.0
+timm==0.6.13
+torch @ https://download.pytorch.org/whl/cpu/torch-2.5.1%2Bcpu-cp311-cp311-linux_x86_64.whl
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.20.1%2Bcpu-cp311-cp311-linux_x86_64.whl
+transformers==4.49.0

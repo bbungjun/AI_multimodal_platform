@@ -70,49 +70,53 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #64 implements the complete mock evaluation gate on
-branch `codex/issue-64-mock-e2e-gate`:
+As of 2026-07-13, Issue #65 implements and locally verifies the actual offline
+scorer boundary on branch `codex/issue-65-offline-scorer-adapters`:
 
-- Added `run_mock_e2e.py` as the single pre-Vertex smoke command. It runs the
-  benchmark through enhancement, paired generation, deterministic synthetic
-  scoring, case statistics, summary, and report without importing production
-  state, Vertex clients, or remote scorer runtimes.
-- The command requires process `AI_PROVIDER=mock`, validates only a non-secret
-  mock env file, and still relies on backend health to report
-  `mock_provider`/`credentials=not_required` before an evaluation run is
-  created.
-- After the success run reaches `completed`, the command executes the same run
-  again and rejects any changed job id, asset hash, artifact hash, or aggregate
-  report. Submitted checkpoints remain resumable through the existing runner.
-- A separate `<run-id>-failure` run requires the explicit Imagen mock-failure
-  sentinel and expected provider error. It verifies failed arm/checkpoint,
-  cleanup and hashes while rejecting any downstream score, case-statistics,
-  summary, or report artifact.
-- Run/media and evaluator model-cache paths must be outside the repository or
-  Git ignored. Scoped Git status must remain empty before and after the gate,
-  including forced-staged files.
-- Focused evaluation verification passes 45 tests. New coverage proves the
-  complete flow, repeated-run idempotency, submitted-job resume without a
-  duplicate generation request, controlled failure, environment/fixture guards,
-  Git hygiene, and absence of provider/heavy-scorer imports.
-- Actual ignored Compose run `issue64-mock-gate-final` passed: 4 cases, 8
-  success jobs, 16 images, 48 scores, 12 case/metric records, 5 slices, and no
-  missing case. Its `-failure` run recorded `mock_provider_failure` with deleted
-  cleanup and no downstream report. A repeated full gate kept all result hashes
-  stable, and all 9 success/failure backend job ids returned HTTP 404 after
-  cleanup.
-- `docs/runbooks/prompt-enhancement-evaluation-gate.md` documents execution,
-  resume, failure handling, evidence checks, and the paid Vertex No-Go state.
-  Actual offline scorer revisions/tie thresholds and explicit user cost approval
-  remain required before a Vertex pilot.
-- Fresh repository verification passed all 45 evaluation tests, 351 backend
-  tests with the known Windows/bash path test deselected, frontend TypeScript
-  lint and production build, both Compose config checks, and diff hygiene. The
-  unfiltered 352-test backend run again failed only
-  `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
-  `/bin/bash` cannot resolve the Windows-style absolute script path.
-- No live Vertex request, offline model download, credential read, or provider
-  cost was incurred.
+- Added a production-isolated, CPU-only Docker runtime with a digest-pinned
+  Python 3.11 base, hash-locked transitive dependencies, and hash-pinned
+  `t2v-metrics==3.0`/`image-reward==1.5` wheels installed through narrow
+  `--no-deps` imports. Backend/worker dependencies and Compose images are
+  unchanged.
+- `scorer_profile.v1.json` records every package, upstream code audit revision,
+  Hugging Face model commit, load dtype, resource limit, cache policy, known
+  limitation, calibration rule, QA hash, and canonical-review hash.
+- VQAScore uses CLIP-FlanT5-XL, ImageReward uses ImageReward-v1.0, and TIFA uses
+  BLIP-VQA-base plus all-mpnet-base-v2 choice mapping. Model preparation is the
+  only network-enabled step; inference forces Hugging Face/Transformers offline
+  mode and fails if an exact-revision marker or payload is missing.
+- Frozen TIFA QA contains 14 auditable questions covering all four enabled
+  benchmark cases. The Korean case preserves its original prompt and reviewed
+  English canonical prompt in a separate benchmark-hash-bound review artifact;
+  non-visual Seoul identity is intentionally excluded from TIFA questions.
+- The dedicated image built successfully. Seven pinned model snapshots were
+  prepared into ignored `.model-cache` in about 1,697 seconds without a provider
+  call. Empty cache validation fails before model import and does not silently
+  download during inference.
+- Actual ignored CPU fixture smokes passed individually and together. The final
+  three-adapter run completed in about 197 seconds with artifact hashes intact:
+  VQAScore `0.6201549768447876`, ImageReward `-0.23932480812072754`, and TIFA
+  `1.0`. Each score repeated identically three times.
+- Pre-registered repeat-noise calibration therefore fixed tie thresholds at the
+  metric floors: VQAScore `0.001`, ImageReward `0.01`, and TIFA `0.0`. These are
+  adapter fixture results, not Raw/Enhanced quality evidence, and no composite
+  score is created.
+- Actual smoke exposed and fixed three concrete boundary issues: missing
+  Pydantic in the isolated lock, Transformers `AutoModel` enumeration conflicting
+  with ImageReward's pinned Timm version, and missing CPU bfloat16 autocast in
+  the upstream CUDA-oriented VQAScore wrapper.
+- CPU execution requires at least 12GiB available container memory and loads one
+  scorer at a time. The versioned image does not include CUDA PyTorch; GPU
+  execution remains unsupported until a separate GPU lock/image is implemented
+  and verified.
+- Fresh verification passes all 57 evaluation tests, the scorer Docker build,
+  narrow upstream imports, package wheel build, frontend TypeScript lint/build,
+  and both Compose config checks. The backend run passed 351 tests and failed
+  only the previously documented Windows `/bin/bash` path conversion test
+  `test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
+- No Gemini, Imagen, Veo, or Vertex request was made; no credential was read and
+  no provider cost was incurred. Issue #66 remains No-Go until the user approves
+  a paid case/image limit and the personal GCP account/project guard passes.
 
 ## Last Completed Work
 

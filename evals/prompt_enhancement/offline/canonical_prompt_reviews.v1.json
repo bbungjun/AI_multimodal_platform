@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "review_set_id": "creativeops-canonical-prompt-review-v1",
+  "benchmark_sha256": "5a1e2db16b46adbbef6f512227c10c95c7ffdff3d8a0d3599c3be63d5eb1b597",
+  "review_policy": "A bilingual human review confirms semantic equivalence and removes no visually testable requirement. Proper nouns that cannot be inferred visually may remain in the canonical prompt but must not become a TIFA question.",
+  "reviews": [
+    {
+      "case_id": "ko-short-subject-001",
+      "source_language": "ko",
+      "original_prompt": "비 내리는 서울 골목의 빨간 자전거",
+      "canonical_prompt_en": "a red bicycle in a rainy Seoul alley",
+      "status": "reviewed",
+      "reviewed_at": "2026-07-13",
+      "reviewer_role": "benchmark_owner",
+      "notes": "Object, color, weather, and alley setting are preserved. Seoul is retained as context but excluded from visual QA because city identity is not reliably inferable from pixels alone."
+    }
+  ]
+}
