@@ -22,6 +22,12 @@ from app.models import (
     PromptEnhancement,
     utc_now,
 )
+from app.prompt_enhancement import (
+    PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
+    PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+    PROMPT_PROVENANCE_PARAMETER_KEY,
+    prompt_sha256,
+)
 from app.services.jobs import outbox
 from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME
 from app.services.vertex import storage as vertex_storage
@@ -590,6 +596,9 @@ async def test_create_t2i_generation_accepts_max_image_count_boundary():
     )
 
     assert response.status_code == 201
+    assert response.json()["execution_prompt_sha256"] == prompt_sha256(
+        "a four panel image set"
+    )
     assert session.commit_count == 1
     job = _added_jobs(session)[0]
     assert job.parameters == {"aspect_ratio": "1:1", "number_of_images": 4}
@@ -789,6 +798,9 @@ async def test_create_generation_links_matching_prompt_enhancement():
     assert response.status_code == 201
     body = response.json()
     assert body["prompt"] == "cinematic quiet desk lamp"
+    assert body["execution_prompt_sha256"] == prompt_sha256(
+        "cinematic quiet desk lamp"
+    )
     assert body["enhanced_prompt"] == "cinematic quiet desk lamp"
     assert body["enhancement_id"] == str(enhancement_id)
 
@@ -801,19 +813,26 @@ async def test_create_generation_links_matching_prompt_enhancement():
     _assert_job_dispatch_event(session, job=job, reason="generation_created")
 
 
-async def test_create_generation_copies_provider_prompt_from_enhancement():
+async def test_create_generation_preserves_edited_execution_prompt_and_provenance():
     enhancement_id = uuid4()
+    enhanced_draft = "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    edited_prompt = "푸른 새벽, 아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
     session = FakeGenerationSession(
         prompt_enhancement=PromptEnhancement(
             id=enhancement_id,
             original="잠자는 사자",
-            enhanced="아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자.",
+            enhanced=enhanced_draft,
             components={
                 "subject": "잠자는 사자",
                 "provider_prompt_en": (
                     "A sleeping lion on dry grass in the African savanna "
                     "during warm golden hour sunlight."
                 ),
+                PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY: {
+                    "creativity_preset": "balanced",
+                    "temperature": 0.5,
+                    "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+                },
             },
             target_mode=GenerationMode.T2I,
             target_model="imagen-4.0-fast-generate-001",
@@ -824,7 +843,7 @@ async def test_create_generation_copies_provider_prompt_from_enhancement():
     response = await _post_generation(
         {
             "mode": "t2i",
-            "prompt": "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자.",
+            "prompt": edited_prompt,
             "model": "imagen-4.0-fast-generate-001",
             "enhancement_id": str(enhancement_id),
             "aspect_ratio": "16:9",
@@ -834,22 +853,33 @@ async def test_create_generation_copies_provider_prompt_from_enhancement():
 
     assert response.status_code == 201
     body = response.json()
-    assert body["prompt"] == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
-    assert body["enhanced_prompt"] == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
+    assert body["prompt"] == edited_prompt
+    assert body["execution_prompt_sha256"] == prompt_sha256(edited_prompt)
+    assert body["enhanced_prompt"] == enhanced_draft
     assert body["parameters"] == {
         "aspect_ratio": "16:9",
         "number_of_images": 1,
+        PROMPT_PROVENANCE_PARAMETER_KEY: {
+            "source": "enhancement",
+            "enhancement_id": str(enhancement_id),
+            "llm_model": "gemini-2.5-flash",
+            "target_mode": "t2i",
+            "target_model": "imagen-4.0-fast-generate-001",
+            "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+            "creativity_preset": "balanced",
+            "temperature": 0.5,
+            "original_prompt_sha256": prompt_sha256("잠자는 사자"),
+            "enhanced_draft_sha256": prompt_sha256(enhanced_draft),
+            "execution_prompt_sha256": prompt_sha256(edited_prompt),
+            "edited_after_enhancement": True,
+        },
     }
 
     job = _added_jobs(session)[0]
-    assert job.parameters == {
-        "aspect_ratio": "16:9",
-        "number_of_images": 1,
-        "provider_prompt": (
-            "A sleeping lion on dry grass in the African savanna "
-            "during warm golden hour sunlight."
-        ),
-    }
+    assert job.prompt == edited_prompt
+    assert job.enhanced_prompt == enhanced_draft
+    assert job.parameters == body["parameters"]
+    assert "provider_prompt" not in job.parameters
 
 
 async def test_create_generation_rejects_missing_prompt_enhancement_without_job():

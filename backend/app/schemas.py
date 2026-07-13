@@ -16,8 +16,10 @@ from app.models import (
 )
 from app.prompt_enhancement import (
     DEFAULT_CREATIVITY_PRESET,
+    PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
     PROVIDER_PROMPT_PARAMETER_KEY,
     CreativityPreset,
+    prompt_sha256,
     temperature_for_preset,
 )
 
@@ -211,6 +213,7 @@ class PromptEnhancementResponse(BaseModel):
     target_mode: GenerationMode
     target_model: str
     llm_model: str
+    template_version: str = PROMPT_ENHANCEMENT_TEMPLATE_VERSION
     creativity_preset: CreativityPreset = DEFAULT_CREATIVITY_PRESET
     temperature: float = temperature_for_preset(DEFAULT_CREATIVITY_PRESET)
     latency_ms: int | None = None
@@ -227,6 +230,7 @@ class JobResponse(BaseModel):
     model: str
     state: JobState
     prompt: str
+    execution_prompt_sha256: str
     enhanced_prompt: str | None = None
     enhancement_id: UUID | None = None
     parent_job_id: UUID | None = None
@@ -260,6 +264,7 @@ def job_response_from_job(
         model=job.model,
         state=job.state,
         prompt=job.prompt,
+        execution_prompt_sha256=prompt_sha256(job.prompt),
         enhanced_prompt=job.enhanced_prompt,
         enhancement_id=job.enhancement_id,
         parent_job_id=job.parent_job_id,

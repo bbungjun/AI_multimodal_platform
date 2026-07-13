@@ -80,6 +80,8 @@ Important backend contracts are already protected by focused tests:
 - prompt enhancement parsing, validation, provider retry/backoff, invalid
   response repair retry, language mismatch rejection after one retry, and
   configured model selection and metrics recording
+- accepted prompt provenance, stable execution-prompt hashing, edited-draft
+  tracking, and rejection of stale hidden provider-prompt overrides
 - zero-valued provider-failure Prometheus series before the first live failure,
   so alert policies can be provisioned before an incident
 - cumulative request-duration histogram buckets used for dashboard p95 latency

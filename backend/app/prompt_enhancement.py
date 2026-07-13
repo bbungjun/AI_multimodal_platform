@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from enum import StrEnum
 
 
@@ -12,6 +13,9 @@ class CreativityPreset(StrEnum):
 DEFAULT_CREATIVITY_PRESET = CreativityPreset.BALANCED
 PROVIDER_PROMPT_COMPONENT_KEY = "provider_prompt_en"
 PROVIDER_PROMPT_PARAMETER_KEY = "provider_prompt"
+PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY = "_creativeops"
+PROMPT_ENHANCEMENT_TEMPLATE_VERSION = "v1"
+PROMPT_PROVENANCE_PARAMETER_KEY = "prompt_provenance"
 
 CREATIVITY_TEMPERATURES: dict[CreativityPreset, float] = {
     CreativityPreset.FAITHFUL: 0.2,
@@ -52,3 +56,7 @@ def temperature_for_preset(preset: CreativityPreset) -> float:
 
 def strategy_for_preset(preset: CreativityPreset) -> str:
     return CREATIVITY_STRATEGIES[preset]
+
+
+def prompt_sha256(prompt: str) -> str:
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()

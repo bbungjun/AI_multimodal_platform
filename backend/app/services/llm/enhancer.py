@@ -558,7 +558,8 @@ def _build_prompt(
             f'The components object must include "{PROVIDER_PROMPT_COMPONENT_KEY}", '
             "an English provider prompt optimized for the target Imagen or "
             "Veo model. Keep enhanced in the requested display language; "
-            "use provider_prompt_en only as internal execution text."
+            "use provider_prompt_en only as audit/reference metadata. Runtime "
+            "generation must use the user-reviewed enhanced prompt."
         ),
     ]
     if strict_json_retry:

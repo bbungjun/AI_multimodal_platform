@@ -12,8 +12,9 @@ from sqlalchemy.orm import selectinload
 from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, PromptEnhancement, utc_now
 from app.prompt_enhancement import (
-    PROVIDER_PROMPT_COMPONENT_KEY,
-    PROVIDER_PROMPT_PARAMETER_KEY,
+    PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
+    PROMPT_PROVENANCE_PARAMETER_KEY,
+    prompt_sha256,
 )
 from app.schemas import GenerationCreate, GenerationResponse, job_response_from_job
 from app.services import storage
@@ -107,7 +108,11 @@ async def create_generation(
         generation_mode=generation_mode,
         model=payload.model,
     )
-    parameters = _with_provider_prompt(parameters, prompt_enhancement)
+    parameters = _with_prompt_provenance(
+        parameters,
+        execution_prompt=payload.prompt,
+        prompt_enhancement=prompt_enhancement,
+    )
 
     now = utc_now()
     job = Job(
@@ -296,21 +301,36 @@ def _validate_model(model: str, *, prefix: str, detail: str) -> None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
-def _with_provider_prompt(
+def _with_prompt_provenance(
     parameters: dict[str, object],
+    *,
+    execution_prompt: str,
     prompt_enhancement: PromptEnhancement | None,
 ) -> dict[str, object]:
     if prompt_enhancement is None:
         return parameters
-    provider_prompt = (prompt_enhancement.components or {}).get(
-        PROVIDER_PROMPT_COMPONENT_KEY
+
+    provenance: dict[str, object] = {
+        "source": "enhancement",
+        "enhancement_id": str(prompt_enhancement.id),
+        "llm_model": prompt_enhancement.llm_model,
+        "target_mode": prompt_enhancement.target_mode.value,
+        "target_model": prompt_enhancement.target_model,
+        "original_prompt_sha256": prompt_sha256(prompt_enhancement.original),
+        "enhanced_draft_sha256": prompt_sha256(prompt_enhancement.enhanced),
+        "execution_prompt_sha256": prompt_sha256(execution_prompt),
+        "edited_after_enhancement": execution_prompt != prompt_enhancement.enhanced,
+    }
+    metadata = (prompt_enhancement.components or {}).get(
+        PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY
     )
-    if not isinstance(provider_prompt, str):
-        return parameters
-    provider_prompt = " ".join(provider_prompt.split())
-    if not provider_prompt:
-        return parameters
-    return {**parameters, PROVIDER_PROMPT_PARAMETER_KEY: provider_prompt}
+    if isinstance(metadata, dict):
+        for key in ("template_version", "creativity_preset", "temperature"):
+            value = metadata.get(key)
+            if isinstance(value, str | int | float):
+                provenance[key] = value
+
+    return {**parameters, PROMPT_PROVENANCE_PARAMETER_KEY: provenance}
 
 
 async def _get_matching_prompt_enhancement(
