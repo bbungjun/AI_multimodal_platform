@@ -84,6 +84,16 @@ class ArmStatus(StrEnum):
     FAILED = "failed"
 
 
+class CleanupPolicy(StrEnum):
+    DELETE_BACKEND = "delete_backend"
+    KEEP_BACKEND = "keep_backend"
+
+
+class BackendArtifactState(StrEnum):
+    RETAINED = "retained"
+    DELETED = "deleted"
+
+
 class ArmOrder(StrEnum):
     RAW_FIRST = "raw_first"
     ENHANCED_FIRST = "enhanced_first"
@@ -298,6 +308,28 @@ class PairRecord(ArtifactModel):
             enhanced_order,
         ):
             raise ValueError("request_order values do not match arm_order")
+        return self
+
+
+class JobCleanupRecord(ArtifactModel):
+    job_id: Identifier
+    case_id: Identifier
+    arm: ArmName
+    state: BackendArtifactState
+    updated_at: AwareDateTime
+
+
+class CleanupRecord(ArtifactModel):
+    schema_version: Literal[1]
+    run_id: Identifier
+    policy: CleanupPolicy
+    jobs: tuple[JobCleanupRecord, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_unique_jobs(self) -> CleanupRecord:
+        job_ids = [job.job_id for job in self.jobs]
+        if len(job_ids) != len(set(job_ids)):
+            raise ValueError("cleanup jobs must not contain duplicate job_id values")
         return self
 
 
@@ -656,6 +688,21 @@ def load_run_manifest(path: Path | str) -> RunManifest:
 
 def write_run_manifest(path: Path | str, manifest: RunManifest) -> None:
     validated = RunManifest.model_validate(manifest.model_dump())
+    _atomic_write(Path(path), validated.model_dump_json(indent=2) + "\n")
+
+
+def load_cleanup_record(path: Path | str) -> CleanupRecord:
+    artifact_path = Path(path)
+    return _validate_json_model(
+        _read_text(artifact_path),
+        CleanupRecord,
+        path=artifact_path,
+        artifact_kind="cleanup record",
+    )
+
+
+def write_cleanup_record(path: Path | str, cleanup: CleanupRecord) -> None:
+    validated = CleanupRecord.model_validate(cleanup.model_dump())
     _atomic_write(Path(path), validated.model_dump_json(indent=2) + "\n")
 
 

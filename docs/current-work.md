@@ -70,37 +70,63 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #61 implements versioned prompt-enhancement benchmark
-and run artifact contracts on branch `codex/issue-61-eval-artifact-schemas`:
+As of 2026-07-13, Issue #62 implements the mock-only paired-generation runner
+on branch `codex/issue-62-mock-paired-runner`:
 
-- Added the isolated `evals/prompt_enhancement/` package without changing the
-  production backend/worker dependency set or database schema.
-- Schema version 1 covers benchmark cases, resumable run manifests, paired
-  Raw/Enhanced arm checkpoints, generated assets, per-image metric scores, and
-  aggregate reports.
-- Run manifests record Git/provider/evidence state, benchmark and prompt hashes,
-  enhancer/template/model/scorer versions, generation parameters, lifecycle
-  timestamps, retry/failure state, asset hashes, bootstrap settings, and metric
-  tie thresholds.
-- Manifest and JSONL writers use flushed same-directory temporary files and
-  atomic replacement. Loaders reject missing, incompatible, malformed, or
-  duplicate records with the artifact path and specific validation error.
-- Artifact paths reject absolute, drive-relative, and parent-traversal values.
-  `runs/` and `.model-cache/` are ignored; versioned schemas, fixtures, and
-  reviewed aggregate reports remain eligible for source control.
-- `verify_mock.py` requires explicit `AI_PROVIDER=mock`, accepts no `.env`
-  argument, and never imports application/provider clients. Its 18 schema and
-  safety tests pass.
-- Fresh repository verification passed 351 backend tests with one unrelated
+- Added `generate_pairs.py` in the isolated evaluation package. It uses only
+  the public health, prompt enhancement, generation, job polling, asset
+  metadata, file serving, and generation deletion HTTP APIs; it does not import
+  application DB/session, queue, storage, or Vertex modules.
+- The process requires `AI_PROVIDER=mock` and backend health must report
+  `mock_provider` with credentials not required before any benchmark artifact
+  directory or provider-facing request is created.
+- Raw/Enhanced arms use the same model, aspect ratio, and sample count. Sorted
+  case ids alternate `raw_first` and `enhanced_first` generation order.
+- Atomic checkpoints preserve enhancement ids, exact execution-prompt hashes,
+  submitted/completed/failed job state, actual generation parameters, retry
+  counts and asset ids/hashes. A separate versioned `cleanup.json` records the
+  backend retention policy and job-level retained/deleted state without
+  changing the already-merged v1 arm schema.
+- Reusing the same run id with matching Git/worktree/benchmark/config reuses
+  completed local assets and submitted job ids. It refuses incompatible or
+  failed manifests instead of silently starting duplicate generations.
+- Local artifacts and failure manifests are always preserved. By default,
+  terminal generation jobs/assets are deleted after verified local copies;
+  `--keep-artifacts` preserves them and records that choice per arm. Prompt
+  enhancement rows remain because there is no public delete API.
+- Focused evaluation verification passes 29 tests, including matched arm
+  parameters, balanced order, completed/submitted resume, controlled failure,
+  cleanup, keep-artifacts, path/hash safety, and no production/Vertex imports.
+- Actual Docker Compose mock E2E `issue62-mock-e2e-final` completed 4 cases, 8
+  jobs, and 16 synthetic PNGs. The manifest reached `scoring`; file, pairs, and
+  cleanup hashes matched; all eight cleanup records were `deleted`; no backend
+  job remained; and a second run kept job ids and the pairs hash unchanged.
+- Actual controlled failure run `issue62-mock-failure-final` exited non-zero
+  with lifecycle `failed`, public code `mock_provider_failure`, retry count `0`,
+  cleanup state `deleted`, a matching cleanup hash, and no remaining backend
+  generation job. Both run directories are local ignored artifacts.
+- Fresh repository verification passed 351 backend tests with the unrelated
   Windows/bash path test deselected, frontend TypeScript lint and production
-  build, Compose mock config, ignore checks, and `git diff --check`. The
+  build, Compose mock config, run ignore checks, and `git diff --check`. The
   unfiltered 352-test backend run failed only
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
   bash could not resolve the Windows-style script path.
-- No live Vertex request, model download, generated media, credential read, or
-  provider cost was incurred.
+- No live Vertex request, model download, credential read, or provider cost was
+  incurred.
 
 ## Last Completed Work
+
+As of 2026-07-13, Issue #61 completed on branch
+`codex/issue-61-eval-artifact-schemas` and merged through PR #69 at `546a9b2`:
+
+- Added the isolated evaluation package without changing production
+  dependencies or the application database.
+- Schema version 1 validates benchmark, resumable manifest, paired arm, asset,
+  score, and aggregate-report artifacts with explicit model/scorer/hash and
+  lifecycle provenance.
+- Atomic JSON/JSONL writers, actionable version/field errors, relative-path
+  containment, ignored run/model-cache directories, and mock-only verification
+  passed 18 focused tests.
 
 As of 2026-07-13, Issue #60 completed on branch
 `codex/issue-60-prompt-execution-provenance` and merged through PR #68 at
@@ -1300,8 +1326,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #61 evaluation artifact schema PR, then implement
-  Issues #62 through #64 in order to complete the full no-cost mock evaluation
+- Review and merge the Issue #62 mock paired-generation runner PR, then
+  implement Issues #63 and #64 to complete the full no-cost mock evaluation
   flow.
 - After the mock gate passes, implement Issue #65 for isolated local
   VQAScore/ImageReward/TIFA adapters. Do not start Issue #66 until the user
