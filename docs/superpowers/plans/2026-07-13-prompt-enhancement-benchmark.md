@@ -384,8 +384,8 @@ evidence로 명확히 표시된다.
 
 다음 항목이 모두 충족되기 전에는 실제 prompt enhancement 또는 Imagen 요청을 실행하지 않는다.
 
-- [ ] Issue #60이 정확한 execution prompt 계약을 증명한다.
-- [ ] 버전이 있는 benchmark와 run schema가 검증된다.
+- [x] Issue #60이 정확한 execution prompt 계약을 증명한다.
+- [x] 버전이 있는 benchmark와 run schema가 검증된다.
 - [ ] Raw/Enhanced mock job이 동일 parameter로 완료된다.
 - [ ] Resume가 완료 작업을 중복 생성하지 않는다.
 - [ ] 통제된 실패가 report를 손상시키지 않고 기록된다.

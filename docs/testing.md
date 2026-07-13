@@ -13,6 +13,25 @@ $env:AI_PROVIDER = "mock"
 python -m pytest
 ```
 
+## Prompt Enhancement Evaluation Schemas
+
+The prompt-enhancement benchmark has an isolated package under
+`evals/prompt_enhancement/`. Its schema gate does not load `.env`, application
+settings, credentials, or provider clients. Run it with an explicit mock
+provider marker:
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+python verify_mock.py
+```
+
+The command accepts no env-file argument and rejects any provider mode other
+than `mock`. Tests cover benchmark, manifest, Raw/Enhanced arm, asset, score,
+and aggregate-report roundtrips; unsupported schema versions; atomic resumable
+manifest writes; prompt/file hashes; relative artifact paths; and ignored run
+and model-cache directories.
+
 ## Local Quality Gate
 
 Run the local quality gate from the repository root before handing off a change:
@@ -82,6 +101,8 @@ Important backend contracts are already protected by focused tests:
   configured model selection and metrics recording
 - accepted prompt provenance, stable execution-prompt hashing, edited-draft
   tracking, and rejection of stale hidden provider-prompt overrides
+- versioned prompt-enhancement benchmark/run/arm/asset/score/summary artifacts,
+  including resumable writes and incompatible-version rejection
 - zero-valued provider-failure Prometheus series before the first live failure,
   so alert policies can be provisioned before an incident
 - cumulative request-duration histogram buckets used for dashboard p95 latency

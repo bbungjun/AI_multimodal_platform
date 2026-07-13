@@ -70,34 +70,53 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #60 implements the exact execution-prompt and
-provenance boundary on branch `codex/issue-60-prompt-execution-provenance`:
+As of 2026-07-13, Issue #61 implements versioned prompt-enhancement benchmark
+and run artifact contracts on branch `codex/issue-61-eval-artifact-schemas`:
 
-- Issue #59 and planning PR #67 are merged. The staged benchmark plan at
-  `docs/superpowers/plans/2026-07-13-prompt-enhancement-benchmark.md` is now
-  written in Korean.
-- The `prompt` stored on a generation `Job` is the exact Imagen/Veo execution
-  prompt. Job handlers no longer replace it with the legacy hidden
-  `provider_prompt` parameter, including for already-created pending jobs.
-- Every job response exposes a SHA-256 hash of the exact execution prompt.
-  Enhancement-linked jobs also record the enhancement id, enhancer model,
-  prompt-template version, target mode/model, creativity preset, temperature,
-  original/draft/execution prompt hashes, and whether the user edited the
-  draft before generation.
-- Prompt provenance reuses the existing JSON fields and does not add a schema
-  migration. Prompt text is not duplicated into the provenance object.
-- `provider_prompt_en` remains enhancement audit/reference metadata only. The
-  final generation payload remains the user-reviewed source of truth.
-- Fresh focused backend verification passed 90 tests. The full mock suite
-  passed 351 tests with one unrelated Windows/bash path test deselected;
-  frontend TypeScript lint and production build passed; and Compose mock config
-  validation passed. The unfiltered 352-test run failed only
+- Added the isolated `evals/prompt_enhancement/` package without changing the
+  production backend/worker dependency set or database schema.
+- Schema version 1 covers benchmark cases, resumable run manifests, paired
+  Raw/Enhanced arm checkpoints, generated assets, per-image metric scores, and
+  aggregate reports.
+- Run manifests record Git/provider/evidence state, benchmark and prompt hashes,
+  enhancer/template/model/scorer versions, generation parameters, lifecycle
+  timestamps, retry/failure state, asset hashes, bootstrap settings, and metric
+  tie thresholds.
+- Manifest and JSONL writers use flushed same-directory temporary files and
+  atomic replacement. Loaders reject missing, incompatible, malformed, or
+  duplicate records with the artifact path and specific validation error.
+- Artifact paths reject absolute, drive-relative, and parent-traversal values.
+  `runs/` and `.model-cache/` are ignored; versioned schemas, fixtures, and
+  reviewed aggregate reports remain eligible for source control.
+- `verify_mock.py` requires explicit `AI_PROVIDER=mock`, accepts no `.env`
+  argument, and never imports application/provider clients. Its 18 schema and
+  safety tests pass.
+- Fresh repository verification passed 351 backend tests with one unrelated
+  Windows/bash path test deselected, frontend TypeScript lint and production
+  build, Compose mock config, ignore checks, and `git diff --check`. The
+  unfiltered 352-test backend run failed only
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
   bash could not resolve the Windows-style script path.
 - No live Vertex request, model download, generated media, credential read, or
   provider cost was incurred.
 
 ## Last Completed Work
+
+As of 2026-07-13, Issue #60 completed on branch
+`codex/issue-60-prompt-execution-provenance` and merged through PR #68 at
+`541d93f`:
+
+- The `prompt` stored on a generation `Job` is the exact Imagen/Veo execution
+  prompt; legacy hidden `provider_prompt` metadata cannot replace it.
+- Job responses expose the execution-prompt SHA-256. Enhancement-linked jobs
+  also preserve enhancement/model/template/target provenance and whether the
+  user edited the draft before generation.
+- Prompt provenance reuses existing JSON fields and does not add a database
+  migration or duplicate prompt text into the provenance object.
+- `provider_prompt_en` remains audit/reference metadata only, and the final
+  generation payload remains the user-reviewed source of truth.
+- Focused mock verification passed 90 backend tests, frontend lint/build,
+  Compose config, and diff checks without a live provider call.
 
 As of 2026-07-10, Issue #57 completed on branch
 `codex/issue-57-milestone-evidence-audit` to close the six-stage platform
@@ -1281,8 +1300,8 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #60 execution-prompt provenance PR, then implement
-  Issues #61 through #64 in order to complete the full no-cost mock evaluation
+- Review and merge the Issue #61 evaluation artifact schema PR, then implement
+  Issues #62 through #64 in order to complete the full no-cost mock evaluation
   flow.
 - After the mock gate passes, implement Issue #65 for isolated local
   VQAScore/ImageReward/TIFA adapters. Do not start Issue #66 until the user
