@@ -459,6 +459,46 @@ class ScoreRecord(ArtifactModel):
         return value
 
 
+class CaseMetricRecord(ArtifactModel):
+    schema_version: Literal[1]
+    run_id: Identifier
+    case_id: Identifier
+    language: BenchmarkLanguage
+    category: BenchmarkCategory
+    metric: MetricName
+    raw_sample_count: int = Field(ge=1)
+    enhanced_sample_count: int = Field(ge=1)
+    raw_mean: float
+    enhanced_mean: float
+    delta: float
+    tie_threshold: float = Field(ge=0)
+    outcome: Literal["win", "tie", "loss"]
+
+    @model_validator(mode="after")
+    def validate_case_metric(self) -> CaseMetricRecord:
+        values = (
+            self.raw_mean,
+            self.enhanced_mean,
+            self.delta,
+            self.tie_threshold,
+        )
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError("case metric values must be finite")
+        expected_delta = self.enhanced_mean - self.raw_mean
+        if not math.isclose(self.delta, expected_delta, rel_tol=0.0, abs_tol=1e-12):
+            raise ValueError("delta must equal enhanced_mean - raw_mean")
+        expected_outcome = (
+            "win"
+            if self.delta > self.tie_threshold
+            else "loss"
+            if self.delta < -self.tie_threshold
+            else "tie"
+        )
+        if self.outcome != expected_outcome:
+            raise ValueError("outcome does not match delta and tie_threshold")
+        return self
+
+
 class MetricAggregate(ArtifactModel):
     metric: MetricName
     case_count: int = Field(ge=0)
@@ -729,6 +769,37 @@ def write_score_records(path: Path | str, scores: list[ScoreRecord]) -> None:
     _write_jsonl(path, scores, ScoreRecord, artifact_kind="score record")
 
 
+def load_case_metric_records(path: Path | str) -> list[CaseMetricRecord]:
+    records = _load_jsonl(
+        path,
+        CaseMetricRecord,
+        artifact_kind="case metric record",
+    )
+    keys = [(record.case_id, record.metric) for record in records]
+    if len(keys) != len(set(keys)):
+        raise ArtifactSchemaError(
+            f"Case metric artifact {path} contains duplicate case/metric values"
+        )
+    return records
+
+
+def write_case_metric_records(
+    path: Path | str,
+    records: list[CaseMetricRecord],
+) -> None:
+    keys = [(record.case_id, record.metric) for record in records]
+    if len(keys) != len(set(keys)):
+        raise ArtifactSchemaError(
+            "Cannot write case metric records with duplicate case/metric values"
+        )
+    _write_jsonl(
+        path,
+        records,
+        CaseMetricRecord,
+        artifact_kind="case metric record",
+    )
+
+
 def load_summary(path: Path | str) -> AggregateReport:
     artifact_path = Path(path)
     return _validate_json_model(
@@ -742,3 +813,9 @@ def load_summary(path: Path | str) -> AggregateReport:
 def write_summary(path: Path | str, report: AggregateReport) -> None:
     validated = AggregateReport.model_validate(report.model_dump())
     _atomic_write(Path(path), validated.model_dump_json(indent=2) + "\n")
+
+
+def write_report_markdown(path: Path | str, content: str) -> None:
+    if not content.strip():
+        raise ArtifactSchemaError("Cannot write an empty Markdown report")
+    _atomic_write(Path(path), content.rstrip() + "\n")

@@ -176,6 +176,7 @@ evals/prompt_enhancement/runs/<run-id>/
   pairs.jsonl
   images/
   scores.jsonl
+  case_statistics.jsonl
   summary.json
   report.md
 ```
@@ -317,6 +318,8 @@ artifact를 생성한다.
 
 **Issue:** [#63](https://github.com/bbungjun/AI_multimodal_platform/issues/63)
 
+**상태:** 구현 및 mock 검증 완료
+
 **의존성:** Task 2, Task 3
 
 **구현:**
@@ -389,9 +392,9 @@ evidence로 명확히 표시된다.
 - [x] Raw/Enhanced mock job이 동일 parameter로 완료된다.
 - [x] Resume가 완료 작업을 중복 생성하지 않는다.
 - [x] 통제된 실패가 report를 손상시키지 않고 기록된다.
-- [ ] 세 mock metric adapter 결과가 서로 분리되어 있다.
-- [ ] 두 arm이 같은 original/canonical prompt로 평가된다.
-- [ ] Paired 통계와 신뢰구간이 재현된다.
+- [x] 세 mock metric adapter 결과가 서로 분리되어 있다.
+- [x] 두 arm이 같은 original/canonical prompt로 평가된다.
+- [x] Paired 통계와 신뢰구간이 재현된다.
 - [x] Artifact와 model cache가 ignored 상태이며 staged되지 않는다.
 - [x] Test가 mock mode에서 Vertex client를 생성하지 않음을 증명한다.
 - [ ] 실제 offline scorer revision과 한계가 기록된다.
