@@ -337,6 +337,8 @@ evidence로 명확히 표시된다.
 
 **Issue:** [#64](https://github.com/bbungjun/AI_multimodal_platform/issues/64)
 
+**상태:** 구현 및 Compose mock 검증 완료
+
 **의존성:** Task 1~4
 
 **구현:**
@@ -397,6 +399,7 @@ evidence로 명확히 표시된다.
 - [x] Paired 통계와 신뢰구간이 재현된다.
 - [x] Artifact와 model cache가 ignored 상태이며 staged되지 않는다.
 - [x] Test가 mock mode에서 Vertex client를 생성하지 않음을 증명한다.
+- [x] 단일 mock E2E gate가 success, resume, controlled failure를 검증한다.
 - [ ] 실제 offline scorer revision과 한계가 기록된다.
 - [ ] 사용자가 파일럿 요청·이미지 한도를 명시적으로 승인한다.
 

@@ -70,48 +70,62 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #63 implements deterministic mock metrics and paired
-statistics on branch `codex/issue-63-mock-metrics-statistics`:
+As of 2026-07-13, Issue #64 implements the complete mock evaluation gate on
+branch `codex/issue-64-mock-e2e-gate`:
 
-- Added a common scorer adapter contract and separate synthetic VQAScore,
-  ImageReward, and TIFA implementations. Their values are deterministic hashes
-  for orchestration tests only and are never presented as image-quality
-  evidence.
-- `score_pairs.py` requires `AI_PROVIDER=mock`, verifies benchmark, pair, image,
-  and manifest hashes, and refuses provider or heavy model imports. Both arms
-  are scored against the same original/reviewed canonical prompt hash; the
-  enhanced execution prompt cannot become the reference answer.
-- Added versioned `case_statistics.jsonl` records so image scores are first
-  reduced to per-case arm means and `Enhanced - Raw` deltas before aggregate
-  statistics. The existing aggregate-report v1 contract was not changed.
-- `summarize.py` reports each metric separately with mean/median delta,
-  fixed-seed paired bootstrap 95% CI, configured-threshold W/T/L, and
-  language/category slices. It records missing cases instead of silently
-  dropping them and does not create a composite score.
-- Scoring advances the manifest from `scoring` to `summarizing`; summary writes
-  case statistics, `summary.json`, and a prominently synthetic `report.md`,
-  hashes every artifact, and completes the manifest. Completed runs verify and
-  reuse the byte-stable artifacts.
-- Focused evaluation verification passes 38 tests. Coverage includes adapter
-  separation, canonical-reference enforcement, deterministic scores,
-  per-prompt statistics, bootstrap reproducibility, W/T/L, slices, missing
-  cases, lifecycle/hash integrity, idempotency, and mock-only guards.
-- The ignored Compose mock run `issue62-mock-e2e-final` was scored without new
-  generation calls: 16 images produced 48 image scores and 12 case/metric
-  records across 4 completed cases. The report contains all three metrics, 5
-  language/category slices, no missing case, matching hashes, and unchanged
-  artifact digests on repeat execution.
-- Fresh verification passed all 38 evaluation tests, 351 backend tests with the
-  known Windows/bash path test deselected, frontend TypeScript lint and
-  production build, both Compose config checks, and diff hygiene. The
+- Added `run_mock_e2e.py` as the single pre-Vertex smoke command. It runs the
+  benchmark through enhancement, paired generation, deterministic synthetic
+  scoring, case statistics, summary, and report without importing production
+  state, Vertex clients, or remote scorer runtimes.
+- The command requires process `AI_PROVIDER=mock`, validates only a non-secret
+  mock env file, and still relies on backend health to report
+  `mock_provider`/`credentials=not_required` before an evaluation run is
+  created.
+- After the success run reaches `completed`, the command executes the same run
+  again and rejects any changed job id, asset hash, artifact hash, or aggregate
+  report. Submitted checkpoints remain resumable through the existing runner.
+- A separate `<run-id>-failure` run requires the explicit Imagen mock-failure
+  sentinel and expected provider error. It verifies failed arm/checkpoint,
+  cleanup and hashes while rejecting any downstream score, case-statistics,
+  summary, or report artifact.
+- Run/media and evaluator model-cache paths must be outside the repository or
+  Git ignored. Scoped Git status must remain empty before and after the gate,
+  including forced-staged files.
+- Focused evaluation verification passes 45 tests. New coverage proves the
+  complete flow, repeated-run idempotency, submitted-job resume without a
+  duplicate generation request, controlled failure, environment/fixture guards,
+  Git hygiene, and absence of provider/heavy-scorer imports.
+- Actual ignored Compose run `issue64-mock-gate-final` passed: 4 cases, 8
+  success jobs, 16 images, 48 scores, 12 case/metric records, 5 slices, and no
+  missing case. Its `-failure` run recorded `mock_provider_failure` with deleted
+  cleanup and no downstream report. A repeated full gate kept all result hashes
+  stable, and all 9 success/failure backend job ids returned HTTP 404 after
+  cleanup.
+- `docs/runbooks/prompt-enhancement-evaluation-gate.md` documents execution,
+  resume, failure handling, evidence checks, and the paid Vertex No-Go state.
+  Actual offline scorer revisions/tie thresholds and explicit user cost approval
+  remain required before a Vertex pilot.
+- Fresh repository verification passed all 45 evaluation tests, 351 backend
+  tests with the known Windows/bash path test deselected, frontend TypeScript
+  lint and production build, both Compose config checks, and diff hygiene. The
   unfiltered 352-test backend run again failed only
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
   `/bin/bash` cannot resolve the Windows-style absolute script path.
 - No live Vertex request, offline model download, credential read, or provider
-  cost was incurred. Actual offline scorer revisions and quality evidence
-  remain Issue #65 work after the complete mock gate in Issue #64.
+  cost was incurred.
 
 ## Last Completed Work
+
+As of 2026-07-13, Issue #63 completed on branch
+`codex/issue-63-mock-metrics-statistics` and merged through PR #71 at `4a44ec0`:
+
+- Added deterministic synthetic VQAScore, ImageReward, and TIFA adapters that
+  evaluate both arms against one original/reviewed canonical prompt.
+- Image scores are reduced to per-case arm means and paired deltas before
+  separate metric aggregates, bootstrap confidence intervals, W/T/L, and
+  language/category slices. Mock reports explicitly reject quality claims.
+- Evaluation verification passed 38 tests and the ignored 4-case Compose run
+  produced 48 scores and 12 case/metric records with stable repeated hashes.
 
 As of 2026-07-13, Issue #62 completed on branch
 `codex/issue-62-mock-paired-runner` and merged through PR #70 at `f079f88`:

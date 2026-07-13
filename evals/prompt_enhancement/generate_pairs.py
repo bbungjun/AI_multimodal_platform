@@ -273,11 +273,12 @@ def run_pairs(
     config: RunnerConfig,
     *,
     client: EvaluationClient | None = None,
+    environ: Mapping[str, str] | None = None,
     now: Callable[[], datetime] | None = None,
     monotonic: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> RunManifest:
-    require_mock_provider(os.environ)
+    require_mock_provider(os.environ if environ is None else environ)
     runner = PairRunner(
         config,
         client=client or HttpClient(config.base_url),
