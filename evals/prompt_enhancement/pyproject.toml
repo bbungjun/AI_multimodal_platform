@@ -17,7 +17,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["generate_pairs", "schemas", "score_pairs", "summarize", "verify_mock"]
+py-modules = [
+  "generate_pairs",
+  "run_mock_e2e",
+  "schemas",
+  "score_pairs",
+  "summarize",
+  "verify_mock",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

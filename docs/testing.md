@@ -65,6 +65,24 @@ confidence intervals, W/T/L, language/category slices, missing cases, hashes,
 and idempotent byte-stable artifacts are reproducible. These mock scores only
 validate orchestration and must not be reported as image-quality evidence.
 
+Run the complete pre-Vertex mock evaluation gate with one command:
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+python run_mock_e2e.py --compose --run-id mock-gate-local-001
+```
+
+The command validates `.env.example` without reading `.env`, runs the success
+benchmark through `report.md`, repeats the completed run to prove stable job and
+artifact identity, and runs the explicit failure fixture as
+`mock-gate-local-001-failure`. It also rejects run/model-cache paths inside the
+repository unless Git ignores them and they are absent from staged/visible
+status. Focused tests inject an HTTP fake to prove submitted-job resume without
+duplicate generation, controlled failure cleanup, no credential access, and no
+Vertex or remote-scorer dependency. Operational checks and the paid-run block
+are documented in `docs/runbooks/prompt-enhancement-evaluation-gate.md`.
+
 ## Local Quality Gate
 
 Run the local quality gate from the repository root before handing off a change:
