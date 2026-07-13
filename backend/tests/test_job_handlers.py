@@ -222,7 +222,7 @@ async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     assert session.rollback_count == 0
 
 
-async def test_handle_t2i_uses_internal_provider_prompt_when_available(monkeypatch):
+async def test_handle_t2i_uses_job_prompt_even_with_legacy_provider_prompt(monkeypatch):
     job = _t2i_job()
     job.prompt = "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
     job.enhanced_prompt = job.prompt
@@ -261,10 +261,7 @@ async def test_handle_t2i_uses_internal_provider_prompt_when_available(monkeypat
 
     await handlers.handle_t2i(session, job)
 
-    assert prompts == [
-        "A sleeping lion on dry grass in the African savanna "
-        "during warm golden hour sunlight."
-    ]
+    assert prompts == ["아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."]
     assert job.prompt == "아프리카 사바나의 마른 풀밭 위에서 깊이 잠든 사자."
     assert job.state == JobState.COMPLETED
 

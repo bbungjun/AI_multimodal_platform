@@ -117,6 +117,7 @@ export type PromptEnhancementResponse = {
   target_mode: GenerationMode;
   target_model: string;
   llm_model: string;
+  template_version: string;
   creativity_preset: CreativityPreset;
   temperature: number;
   latency_ms: number | null;
@@ -159,6 +160,7 @@ export type JobResponse = {
   model: string;
   state: JobState;
   prompt: string;
+  execution_prompt_sha256: string;
   enhanced_prompt: string | null;
   enhancement_id: UUID | null;
   parent_job_id: UUID | null;

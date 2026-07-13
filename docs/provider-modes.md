@@ -48,6 +48,12 @@ Vertex mode:
 - retries prompt-enhancement language mismatches once, then returns
   `prompt_enhancement_invalid_response` with reason `language_mismatch` if the
   retry still ignores the requested display language
+- stores the enhancer model, prompt-template version, creativity preset, and
+  prompt hashes as non-secret provenance when an enhancement is accepted
+
+The generation payload's `prompt` is the exact Imagen/Veo execution text in
+both provider modes. The enhancement component `provider_prompt_en` is retained
+only as audit/reference metadata and never overrides a user-reviewed prompt.
 
 Health readiness confirms that backend configuration and credentials can create
 the client. It does not prove every model is enabled or quota is available.
@@ -72,6 +78,8 @@ credential object, project id, and location.
 - API routes, database models, job handlers, storage, and frontend code should
   not need to know whether the active provider is mock or Vertex.
 - Provider selection belongs inside the service boundary.
+- Generation handlers must pass `Job.prompt` to the selected provider without
+  replacing it from enhancement metadata.
 - Automated tests should patch or fake provider calls instead of relying on
   live external services.
 - Real provider flows should include visible cost and readiness cues before

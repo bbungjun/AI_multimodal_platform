@@ -129,7 +129,10 @@ const creativityOptions: CreativityOption[] = [
   { value: "imaginative", label: "상상력" },
 ];
 const defaultCreativityPreset: CreativityPreset = "balanced";
-const hiddenEnhancementComponentKeys = new Set(["provider_prompt_en"]);
+const hiddenEnhancementComponentKeys = new Set([
+  "provider_prompt_en",
+  "_creativeops",
+]);
 const defaultPrompt =
   "비 내리는 서울 종로 골목, 네온 반사, 자전거 타는 사람, 라면집 옆.";
 const defaultPipelineVideoPrompt =

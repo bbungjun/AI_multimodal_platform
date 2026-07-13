@@ -9,7 +9,12 @@ import pytest
 from app.api import prompts
 from app.main import app
 from app.models import GenerationMode, PromptEnhancement, utc_now
-from app.prompt_enhancement import CreativityPreset, temperature_for_preset
+from app.prompt_enhancement import (
+    PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
+    PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+    CreativityPreset,
+    temperature_for_preset,
+)
 from app.services.llm import enhancer
 from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexRateLimitedError
@@ -99,10 +104,16 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
     assert body["components"] == {
         "subject": "desk lamp",
         "lighting": "soft side light",
+        PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY: {
+            "creativity_preset": "imaginative",
+            "temperature": 0.8,
+            "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+        },
     }
     assert body["target_mode"] == "t2i"
     assert body["target_model"] == "imagen-4.0-fast-generate-001"
     assert body["llm_model"] == "gemini-2.5-flash"
+    assert body["template_version"] == PROMPT_ENHANCEMENT_TEMPLATE_VERSION
     assert body["creativity_preset"] == "imaginative"
     assert body["temperature"] == 0.8
     assert body["latency_ms"] == 42
@@ -115,7 +126,7 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
     assert body["id"] == str(row.id)
     assert row.original == "a quiet desk lamp"
     assert row.enhanced == "A quiet desk lamp on walnut wood with soft side light."
-    assert row.components == {"subject": "desk lamp", "lighting": "soft side light"}
+    assert row.components == body["components"]
     assert row.target_mode == GenerationMode.T2I
     assert row.target_model == "imagen-4.0-fast-generate-001"
     assert row.llm_model == "gemini-2.5-flash"

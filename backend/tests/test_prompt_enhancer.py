@@ -203,6 +203,8 @@ async def test_enhance_prompt_builds_korean_language_preservation_guidance():
     assert "Do not translate Korean user text into English." in prompt
     assert '"provider_prompt_en"' in prompt
     assert "English provider prompt" in prompt
+    assert "audit/reference metadata" in prompt
+    assert "internal execution text" not in prompt
     assert "한국어 형식 예시" in prompt
     assert (
         "<<<USER_PROMPT_START>>>\n"

@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import AsyncSessionLocal
 from app.models import PromptEnhancement
+from app.prompt_enhancement import (
+    PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
+    PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+)
 from app.schemas import PromptEnhanceRequest, PromptEnhancementResponse
 from app.services.llm import enhancer
 from app.services.ops.runtime import runtime_metrics
@@ -59,10 +63,16 @@ async def enhance_prompt(
             detail=public,
         ) from exc
 
+    components = dict(result.components)
+    components[PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY] = {
+        "creativity_preset": result.creativity_preset.value,
+        "temperature": result.temperature,
+        "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+    }
     prompt_enhancement = PromptEnhancement(
         original=result.original,
         enhanced=result.enhanced,
-        components=result.components,
+        components=components,
         target_mode=result.target_mode,
         target_model=result.target_model,
         llm_model=result.llm_model,
@@ -82,6 +92,7 @@ async def enhance_prompt(
         target_mode=prompt_enhancement.target_mode,
         target_model=prompt_enhancement.target_model,
         llm_model=prompt_enhancement.llm_model,
+        template_version=PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
         creativity_preset=result.creativity_preset,
         temperature=result.temperature,
         latency_ms=prompt_enhancement.latency_ms,

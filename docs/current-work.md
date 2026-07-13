@@ -70,30 +70,32 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #59 is documenting a mock-first prompt enhancement
-benchmark on branch `codex/issue-59-prompt-enhancement-eval-plan`:
+As of 2026-07-13, Issue #60 implements the exact execution-prompt and
+provenance boundary on branch `codex/issue-60-prompt-execution-provenance`:
 
-- Created parent Issue #59 and child implementation Issues #60 through #66.
-- Tasks #60 through #64 cover exact execution-prompt provenance, versioned
-  evaluation schemas, Raw/Enhanced mock paired generation, deterministic mock
-  VQAScore/ImageReward/TIFA adapters, paired statistics, and the mock end-to-end
-  gate.
-- Task #65 adds real offline scorer models in an isolated evaluation
-  environment without changing the production backend/worker dependency set.
-- Task #66 is a separately authorized, cost-bounded Vertex pilot. It remains
-  blocked until the mock gate passes and the user explicitly approves live
-  Gemini/Imagen calls.
-- Added the staged implementation plan at
-  `docs/superpowers/plans/2026-07-13-prompt-enhancement-benchmark.md`.
-- No live Vertex request, model download, generated media, credential read, or
-  runtime code change is part of Issue #59.
-- Fresh documentation verification passed `git diff --check`, Compose config,
-  351 backend mock tests with one unrelated Windows/bash path test deselected,
-  frontend TypeScript lint, and the production build. The unfiltered quality
-  gate ran 352 backend tests and failed only
+- Issue #59 and planning PR #67 are merged. The staged benchmark plan at
+  `docs/superpowers/plans/2026-07-13-prompt-enhancement-benchmark.md` is now
+  written in Korean.
+- The `prompt` stored on a generation `Job` is the exact Imagen/Veo execution
+  prompt. Job handlers no longer replace it with the legacy hidden
+  `provider_prompt` parameter, including for already-created pending jobs.
+- Every job response exposes a SHA-256 hash of the exact execution prompt.
+  Enhancement-linked jobs also record the enhancement id, enhancer model,
+  prompt-template version, target mode/model, creativity preset, temperature,
+  original/draft/execution prompt hashes, and whether the user edited the
+  draft before generation.
+- Prompt provenance reuses the existing JSON fields and does not add a schema
+  migration. Prompt text is not duplicated into the provenance object.
+- `provider_prompt_en` remains enhancement audit/reference metadata only. The
+  final generation payload remains the user-reviewed source of truth.
+- Fresh focused backend verification passed 90 tests. The full mock suite
+  passed 351 tests with one unrelated Windows/bash path test deselected;
+  frontend TypeScript lint and production build passed; and Compose mock config
+  validation passed. The unfiltered 352-test run failed only
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback` because
-  Windows Python passed a Windows-style repository path to bash, which removed
-  the backslashes and could not find `scripts/deploy_gcp_release.sh`.
+  bash could not resolve the Windows-style script path.
+- No live Vertex request, model download, generated media, credential read, or
+  provider cost was incurred.
 
 ## Last Completed Work
 
@@ -1279,8 +1281,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #59 planning PR, then implement Issues #60 through
-  #64 in order to complete the full no-cost mock evaluation flow.
+- Review and merge the Issue #60 execution-prompt provenance PR, then implement
+  Issues #61 through #64 in order to complete the full no-cost mock evaluation
+  flow.
 - After the mock gate passes, implement Issue #65 for isolated local
   VQAScore/ImageReward/TIFA adapters. Do not start Issue #66 until the user
   explicitly approves the bounded Vertex pilot and its request/image caps.
