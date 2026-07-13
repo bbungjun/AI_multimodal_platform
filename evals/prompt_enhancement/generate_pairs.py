@@ -116,6 +116,11 @@ class RunnerConfig:
     git_sha: str
     dirty_worktree: bool
     health_timeout_sec: float = 60.0
+    provider_mode: ProviderMode = ProviderMode.MOCK
+    evidence_kind: EvidenceKind = EvidenceKind.SYNTHETIC
+    metric_adapters: tuple[MetricAdapterConfig, ...] = ()
+    statistics: StatisticsConfig | None = None
+    expected_provider_retry_max_attempts: int | None = None
 
     def __post_init__(self) -> None:
         if not IDENTIFIER_RE.fullmatch(self.run_id):
@@ -127,6 +132,23 @@ class RunnerConfig:
             raise EvaluationRunnerError("timeout values must be positive")
         if self.poll_interval_sec < 0:
             raise EvaluationRunnerError("poll_interval_sec must be non-negative")
+        if self.provider_mode == ProviderMode.MOCK:
+            if self.evidence_kind != EvidenceKind.SYNTHETIC:
+                raise EvaluationRunnerError("mock pair runs require synthetic evidence")
+        elif self.evidence_kind != EvidenceKind.REAL:
+            raise EvaluationRunnerError("Vertex pair runs require real evidence")
+        if self.provider_mode == ProviderMode.VERTEX:
+            if not self.metric_adapters or self.statistics is None:
+                raise EvaluationRunnerError(
+                    "Vertex pair runs require pinned real metric adapters and statistics"
+                )
+        if (
+            self.expected_provider_retry_max_attempts is not None
+            and self.expected_provider_retry_max_attempts < 1
+        ):
+            raise EvaluationRunnerError(
+                "expected_provider_retry_max_attempts must be positive"
+            )
 
 
 class HttpClient:
@@ -216,9 +238,17 @@ def _http_status_message(
 
 
 def require_mock_provider(environ: Mapping[str, str]) -> None:
-    if environ.get("AI_PROVIDER") != "mock":
+    require_provider_mode(environ, ProviderMode.MOCK)
+
+
+def require_provider_mode(
+    environ: Mapping[str, str],
+    expected: ProviderMode,
+) -> None:
+    if environ.get("AI_PROVIDER") != expected.value:
         raise EvaluationRunnerError(
-            "AI_PROVIDER=mock is required. The current environment value is not printed."
+            f"AI_PROVIDER={expected.value} is required. "
+            "The current environment value is not printed."
         )
 
 
@@ -278,7 +308,10 @@ def run_pairs(
     monotonic: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
 ) -> RunManifest:
-    require_mock_provider(os.environ if environ is None else environ)
+    require_provider_mode(
+        os.environ if environ is None else environ,
+        config.provider_mode,
+    )
     runner = PairRunner(
         config,
         client=client or HttpClient(config.base_url),
@@ -309,7 +342,7 @@ class PairRunner:
         self.cleanup_path = self.run_dir / "cleanup.json"
 
     def run(self) -> RunManifest:
-        self._wait_for_mock_health()
+        self._wait_for_health()
         cases = [case for case in load_benchmark_cases(self.config.benchmark_path) if case.enabled]
         if not cases:
             raise EvaluationRunnerError("Benchmark contains no enabled cases")
@@ -367,7 +400,7 @@ class PairRunner:
         write_run_manifest(self.manifest_path, manifest)
         return manifest
 
-    def _wait_for_mock_health(self) -> None:
+    def _wait_for_health(self) -> None:
         deadline = self.monotonic() + self.config.health_timeout_sec
         last_error = "backend health was not requested"
         while self.monotonic() <= deadline:
@@ -376,7 +409,7 @@ class PairRunner:
                     "GET",
                     "/api/health",
                     expected_status=200,
-                    step_name="Mock health",
+                    step_name=f"{self.config.provider_mode.value} health",
                 )
             except HttpRequestError as exc:
                 last_error = str(exc)
@@ -384,19 +417,40 @@ class PairRunner:
                 continue
             vertex = health.get("vertex")
             vertex = vertex if isinstance(vertex, dict) else {}
-            if (
-                health.get("ok") is not True
-                or health.get("ready") is not True
-                or health.get("db") != "up"
-                or vertex.get("status") != "mock_provider"
-                or vertex.get("credentials") != "not_required"
-            ):
+            common_ready = (
+                health.get("ok") is True
+                and health.get("ready") is True
+                and health.get("db") == "up"
+            )
+            provider_ready = (
+                vertex.get("status") == "mock_provider"
+                and vertex.get("credentials") == "not_required"
+                if self.config.provider_mode == ProviderMode.MOCK
+                else vertex.get("status") == "ready"
+                and vertex.get("credentials") == "available"
+                and vertex.get("project") == "configured"
+            )
+            retry_limit_ready = (
+                self.config.expected_provider_retry_max_attempts is None
+                or health.get("provider_retry_max_attempts")
+                == self.config.expected_provider_retry_max_attempts
+            )
+            if not common_ready or not provider_ready or not retry_limit_ready:
+                expected_status = (
+                    "mock_provider/credentials=not_required"
+                    if self.config.provider_mode == ProviderMode.MOCK
+                    else "ready/credentials=available/project=configured"
+                )
                 raise EvaluationRunnerError(
-                    "Backend health must report ready DB state, mock_provider, and "
-                    "credentials=not_required before evaluation."
+                    "Backend health does not match the required provider readiness "
+                    f"for {self.config.provider_mode.value}; expected {expected_status} "
+                    "and the approved provider retry cap."
                 )
             return
-        raise EvaluationRunnerError(f"Timed out waiting for mock backend health: {last_error}")
+        raise EvaluationRunnerError(
+            f"Timed out waiting for {self.config.provider_mode.value} backend health: "
+            f"{last_error}"
+        )
 
     def _load_or_create_manifest(self, cases: list[BenchmarkCase]) -> RunManifest:
         benchmark_hash = file_sha256(self.config.benchmark_path)
@@ -434,8 +488,8 @@ class PairRunner:
             completed_at=None,
             git_sha=self.config.git_sha,
             dirty_worktree=self.config.dirty_worktree,
-            provider_mode=ProviderMode.MOCK,
-            evidence_kind=EvidenceKind.SYNTHETIC,
+            provider_mode=self.config.provider_mode,
+            evidence_kind=self.config.evidence_kind,
             benchmark_path="benchmark.jsonl",
             benchmark_sha256=benchmark_hash,
             enhancer=EnhancerConfig(
@@ -446,15 +500,23 @@ class PairRunner:
                 ),
             ),
             generation_models=tuple(sorted({case.target_model for case in cases})),
-            metric_adapters=_mock_metric_adapters(),
-            statistics=StatisticsConfig(
-                bootstrap_seed=6100,
-                bootstrap_resamples=1000,
-                tie_thresholds={
-                    MetricName.VQA_SCORE: 0.0,
-                    MetricName.IMAGE_REWARD: 0.0,
-                    MetricName.TIFA: 0.0,
-                },
+            metric_adapters=(
+                self.config.metric_adapters
+                if self.config.metric_adapters
+                else _mock_metric_adapters()
+            ),
+            statistics=(
+                self.config.statistics
+                if self.config.statistics is not None
+                else StatisticsConfig(
+                    bootstrap_seed=6100,
+                    bootstrap_resamples=1000,
+                    tie_thresholds={
+                        MetricName.VQA_SCORE: 0.0,
+                        MetricName.IMAGE_REWARD: 0.0,
+                        MetricName.TIFA: 0.0,
+                    },
+                )
             ),
             order_policy="alternating_by_case",
             pairs=pairs,
@@ -529,9 +591,9 @@ class PairRunner:
         problems: list[str] = []
         if manifest.run_id != self.config.run_id:
             problems.append("run_id")
-        if manifest.provider_mode != ProviderMode.MOCK:
+        if manifest.provider_mode != self.config.provider_mode:
             problems.append("provider_mode")
-        if manifest.evidence_kind != EvidenceKind.SYNTHETIC:
+        if manifest.evidence_kind != self.config.evidence_kind:
             problems.append("evidence_kind")
         if manifest.benchmark_sha256 != benchmark_hash:
             problems.append("benchmark_sha256")
@@ -543,6 +605,10 @@ class PairRunner:
             problems.append("enhancer.model")
         if manifest.enhancer.template_version != self.config.expected_template_version:
             problems.append("enhancer.template_version")
+        if self.config.metric_adapters and manifest.metric_adapters != self.config.metric_adapters:
+            problems.append("metric_adapters")
+        if self.config.statistics is not None and manifest.statistics != self.config.statistics:
+            problems.append("statistics")
 
         expected_ids = [case.case_id for case in cases]
         if [pair.case_id for pair in manifest.pairs] != expected_ids:
@@ -596,7 +662,14 @@ class PairRunner:
         enhancement_id = _required_identifier(response, "id", "prompt enhancement")
         enhanced_prompt = _required_text(response, "enhanced", "prompt enhancement")
         components = response.get("components")
-        if not isinstance(components, dict) or components.get("provider") != "mock":
+        if not isinstance(components, dict):
+            raise EvaluationRunnerError(
+                f"Enhancement {case.case_id} did not return a components object"
+            )
+        if (
+            self.config.provider_mode == ProviderMode.MOCK
+            and components.get("provider") != "mock"
+        ):
             raise EvaluationRunnerError(
                 f"Enhancement {case.case_id} did not report components.provider=mock"
             )
@@ -1177,7 +1250,7 @@ def _git_metadata() -> tuple[str, bool]:
     if sha.returncode != 0 or not sha.stdout.strip():
         raise EvaluationRunnerError("Unable to determine Git SHA for run manifest")
     status = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=no"],
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,

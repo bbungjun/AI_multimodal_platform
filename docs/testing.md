@@ -106,6 +106,36 @@ about 10GB of public model snapshots. See
 `docs/runbooks/prompt-enhancement-offline-scorers.md` for the exact commands,
 minimum CPU memory, GPU limitation, expected artifacts, and failure handling.
 
+## Prompt Enhancement Vertex Pilot Contract
+
+Issue #66의 자동 테스트는 fake HTTP boundary와 fake real scorer만 사용한다. 다음 명령은
+Vertex, Gemini, Imagen을 호출하지 않는다.
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+python -m pytest tests/test_vertex_pilot.py tests/test_real_pair_scoring.py -q
+python -m pilot --output runs/issue66-preflight/preflight.json
+```
+
+테스트는 20-case 영어/한국어/category 균형과 입력 hash, `$20` budget 계산, 20/40/80 request
+hard cap, 21번째 enhancement 사전 거부, prompt를 남기지 않는 usage ledger, 별도 post-mock
+실행 승인, real score 240개의 resume, 실제 evidence report, TIFA 비열등성 판정과 최종 artifact
+hash를 검증한다. 실제 provider 실행은 CI와 기본 local quality gate에 포함하지 않는다.
+
+비용이 없는 실제 Compose dry-run은 v2 benchmark를 명시한다.
+
+```powershell
+cd evals/prompt_enhancement
+$env:AI_PROVIDER = "mock"
+$envFile = (Resolve-Path ..\..\.env.example).Path
+python run_mock_e2e.py --compose --env-file $envFile `
+  --benchmark benchmark.v2.jsonl --run-id issue66-mock-dry-run
+```
+
+유료 실행과 real scorer/final report 절차는
+`docs/runbooks/prompt-enhancement-vertex-pilot.md`에서만 인수한다.
+
 ## Local Quality Gate
 
 Run the local quality gate from the repository root before handing off a change:

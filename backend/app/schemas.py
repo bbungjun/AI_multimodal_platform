@@ -61,6 +61,7 @@ class HealthResponse(BaseModel):
     ready: bool
     service: str
     db: Literal["up", "down"]
+    provider_retry_max_attempts: int = Field(ge=1)
     vertex: VertexReadinessResponse
 
 

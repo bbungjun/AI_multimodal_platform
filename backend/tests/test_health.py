@@ -95,6 +95,7 @@ async def test_health_reports_mock_provider_without_credentials(monkeypatch):
     body = response.json()
     assert body["ok"] is True
     assert body["ready"] is True
+    assert body["provider_retry_max_attempts"] == 3
     assert body["vertex"]["status"] == "mock_provider"
     assert body["vertex"]["credentials"] == "not_required"
 
