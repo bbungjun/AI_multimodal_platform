@@ -1,0 +1,25 @@
+[project]
+name = "creativeops-prompt-enhancement-evals"
+version = "0.1.0"
+description = "Versioned prompt-enhancement benchmark and artifact contracts"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["schemas"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"

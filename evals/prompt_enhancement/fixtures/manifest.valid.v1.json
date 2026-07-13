@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "run_id": "mock-20260713-001",
+  "lifecycle": "generating_enhanced",
+  "started_at": "2026-07-13T07:00:00Z",
+  "updated_at": "2026-07-13T07:03:00Z",
+  "completed_at": null,
+  "git_sha": "541d93f",
+  "dirty_worktree": false,
+  "provider_mode": "mock",
+  "evidence_kind": "synthetic",
+  "benchmark_path": "fixtures/benchmark.valid.v1.jsonl",
+  "benchmark_sha256": "5a1e2db16b46adbbef6f512227c10c95c7ffdff3d8a0d3599c3be63d5eb1b597",
+  "enhancer": {
+    "model": "mock-gemini",
+    "template_version": "v1",
+    "template_sha256": "2589d1a79ce38200afcff4c8a0e966ffe3c8fc37f2afe330eb1130a7c5e03f65"
+  },
+  "generation_models": [
+    "imagen-4.0-fast-generate-001"
+  ],
+  "metric_adapters": [
+    {
+      "metric": "vqascore",
+      "adapter": "mock_vqascore",
+      "model_revision": "deterministic-v1",
+      "evidence_kind": "synthetic",
+      "settings": {
+        "seed": 6101
+      }
+    },
+    {
+      "metric": "image_reward",
+      "adapter": "mock_image_reward",
+      "model_revision": "deterministic-v1",
+      "evidence_kind": "synthetic",
+      "settings": {
+        "seed": 6102
+      }
+    },
+    {
+      "metric": "tifa",
+      "adapter": "mock_tifa",
+      "model_revision": "deterministic-v1",
+      "evidence_kind": "synthetic",
+      "settings": {
+        "seed": 6103
+      }
+    }
+  ],
+  "statistics": {
+    "bootstrap_seed": 6100,
+    "bootstrap_resamples": 1000,
+    "tie_thresholds": {
+      "vqascore": 0.0,
+      "image_reward": 0.0,
+      "tifa": 0.0
+    }
+  },
+  "order_policy": "alternating_by_case",
+  "pairs": [
+    {
+      "schema_version": 1,
+      "run_id": "mock-20260713-001",
+      "case_id": "en-short-subject-001",
+      "language": "en",
+      "category": "short_subject",
+      "evaluation_prompt_sha256": "9cd448ef6bc011be3d71f66c58b264c8f59306e4498861058549bde8d8ebe05a",
+      "arm_order": "raw_first",
+      "raw": {
+        "arm": "raw",
+        "status": "completed",
+        "request_order": 0,
+        "execution_prompt": "a small blue cup on a desk",
+        "execution_prompt_sha256": "9cd448ef6bc011be3d71f66c58b264c8f59306e4498861058549bde8d8ebe05a",
+        "enhancement_id": null,
+        "job_id": "job-raw-001",
+        "target_model": "imagen-4.0-fast-generate-001",
+        "aspect_ratio": "1:1",
+        "requested_samples": 2,
+        "generation_parameters": {
+          "aspect_ratio": "1:1",
+          "number_of_images": 2
+        },
+        "retry_count": 0,
+        "assets": [
+          {
+            "asset_id": "asset-raw-001-0",
+            "job_id": "job-raw-001",
+            "sample_index": 0,
+            "relative_path": "images/en-short-subject-001/raw-0.png",
+            "sha256": "4322103da485b3765d8a977904a48f2a557eb5a41ca899c9dd6630fed8016942",
+            "media_type": "image/png",
+            "byte_size": 128
+          },
+          {
+            "asset_id": "asset-raw-001-1",
+            "job_id": "job-raw-001",
+            "sample_index": 1,
+            "relative_path": "images/en-short-subject-001/raw-1.png",
+            "sha256": "d882931a66f452e1349632500c0568dc23c05f919dc2afd678bc7b1589e798ea",
+            "media_type": "image/png",
+            "byte_size": 128
+          }
+        ],
+        "failure": null
+      },
+      "enhanced": {
+        "arm": "enhanced",
+        "status": "planned",
+        "request_order": 1,
+        "execution_prompt": null,
+        "execution_prompt_sha256": null,
+        "enhancement_id": null,
+        "job_id": null,
+        "target_model": "imagen-4.0-fast-generate-001",
+        "aspect_ratio": "1:1",
+        "requested_samples": 2,
+        "generation_parameters": {
+          "aspect_ratio": "1:1",
+          "number_of_images": 2
+        },
+        "retry_count": 0,
+        "assets": [],
+        "failure": null
+      }
+    }
+  ],
+  "artifact_hashes": {},
+  "last_error": null
+}

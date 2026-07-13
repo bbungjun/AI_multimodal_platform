@@ -20,6 +20,10 @@ data/assets/
 uploads/
 *.log
 
+# Local prompt-enhancement evaluation artifacts and model cache
+evals/prompt_enhancement/runs/
+evals/prompt_enhancement/.model-cache/
+
 # Environment and credentials
 .env
 .env.*
