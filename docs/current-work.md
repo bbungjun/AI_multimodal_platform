@@ -89,7 +89,7 @@ and run artifact contracts on branch `codex/issue-61-eval-artifact-schemas`:
   `runs/` and `.model-cache/` are ignored; versioned schemas, fixtures, and
   reviewed aggregate reports remain eligible for source control.
 - `verify_mock.py` requires explicit `AI_PROVIDER=mock`, accepts no `.env`
-  argument, and never imports application/provider clients. Its 17 schema and
+  argument, and never imports application/provider clients. Its 18 schema and
   safety tests pass.
 - Fresh repository verification passed 351 backend tests with one unrelated
   Windows/bash path test deselected, frontend TypeScript lint and production
