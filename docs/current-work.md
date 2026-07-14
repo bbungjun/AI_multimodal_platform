@@ -113,10 +113,31 @@ As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
   full run passed 351 tests and failed only the previously documented Windows
   `/bin/bash` path conversion test
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
-- No Gemini, Imagen, Veo, or Vertex request was made in this work; no credential
-  was read and no provider cost was incurred. Actual execution remains **No-Go**
-  until the clean merged revision repeats preflight/mock, the user explicitly
-  approves that exact plan SHA, and the personal GCP/readiness guards pass.
+- On 2026-07-15, fresh preflight on clean merged commit `6f2f0ce` returned
+  approved plan SHA-256
+  `ba908930c1e07ed6f07ea6ec3e5ed756e58162210539becbeacc6b063fc1133c`.
+  The fresh 20-case mock gate completed 20 pairs, 40 arms, 80 synthetic PNGs,
+  240 synthetic scores, and 60 case-statistic rows; the controlled failure run
+  ended with `mock_provider_failure` and no downstream score/report artifacts.
+- The actual mounted ADC was verified as `youngjun3108@gmail.com` against
+  project `krafton-vertex-live-3108`; the three required permission checks
+  returned allowed. Vertex readiness was `ready=true` with retry cap `3`.
+- After explicit execution approval, real run
+  `issue66-vertex-main-6f2f0ce-002` made two enhancement HTTP requests and two
+  generation HTTP requests (four requested images). One Raw/Enhanced pair and
+  its four asset records completed. The second enhancement failed with public
+  provider code `prompt_enhancement_invalid_response`; the prompt-free ledger
+  records one failed HTTP request (`HttpRequestError`). No automatic retry or
+  replacement run was started.
+- The failed real-run manifest remains at `lifecycle=enhancing` with no
+  persisted `last_error`, while the usage ledger is correct. Preserve this
+  artifact and treat failure-state persistence as an implementation follow-up;
+  do not rewrite it to appear complete. Vertex Compose was stopped after
+  diagnosis without deleting persistent volumes.
+- Further paid execution is **No-Go** until the invalid-response failure and
+  manifest persistence are addressed, the partial run's ledger is reconciled,
+  and a new request/cost scope is explicitly approved. The partial result is
+  not quality evidence and must not be finalized or scored as a benchmark.
 
 ## Last Completed Work
 
