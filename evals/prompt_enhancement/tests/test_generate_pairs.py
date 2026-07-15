@@ -10,14 +10,17 @@ import pytest
 
 import generate_pairs
 from generate_pairs import (
+    HttpClient,
     EvaluationRunnerError,
     GenerationFailedError,
+    HttpRequestTimeoutError,
     RunnerConfig,
     arm_orders_for_cases,
     require_mock_provider,
     run_pairs,
     validate_mock_env_file,
 )
+from urllib.error import URLError
 from schemas import (
     ArmOrder,
     ArmStatus,
@@ -44,6 +47,29 @@ from schemas import (
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+def test_http_client_classifies_socket_timeout_without_raw_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def timeout(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise URLError(TimeoutError("timed out"))
+
+    monkeypatch.setattr(generate_pairs, "urlopen", timeout)
+    client = HttpClient("http://127.0.0.1:8000", timeout_sec=60.0)
+
+    with pytest.raises(HttpRequestTimeoutError, match="timed out after 60s") as caught:
+        client.request_json(
+            "POST",
+            "/api/prompts/enhance",
+            expected_status=201,
+            step_name="Enhance delayed-case",
+            payload={"prompt": "must-not-persist"},
+        )
+
+    assert caught.value.timeout_sec == 60.0
+    assert str(caught.value) == "Enhance delayed-case request timed out after 60s"
 
 
 class IncrementingClock:

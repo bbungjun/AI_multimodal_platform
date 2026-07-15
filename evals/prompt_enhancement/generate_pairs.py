@@ -59,6 +59,7 @@ DEFAULT_BENCHMARK = PACKAGE_ROOT / "benchmark.v1.jsonl"
 DEFAULT_RUNS_DIR = PACKAGE_ROOT / "runs"
 TERMINAL_STATES = {"completed", "failed", "cancelled"}
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+DEFAULT_HTTP_TIMEOUT_SEC = 60.0
 MIME_EXTENSIONS = {
     "image/png": ".png",
     "image/jpeg": ".jpg",
@@ -94,6 +95,14 @@ class HttpRequestError(EvaluationRunnerError):
         self.public_error_reason = public_error_reason
         self.public_error_field = public_error_field
         self.public_error_source = public_error_source
+
+
+class HttpRequestTimeoutError(HttpRequestError):
+    """Raised when the evaluation client reaches its HTTP deadline."""
+
+    def __init__(self, message: str, *, timeout_sec: float) -> None:
+        super().__init__(message)
+        self.timeout_sec = timeout_sec
 
 
 class GenerationFailedError(EvaluationRunnerError):
@@ -174,7 +183,14 @@ class RunnerConfig:
 
 
 class HttpClient:
-    def __init__(self, base_url: str, *, timeout_sec: float = 10.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        timeout_sec: float = DEFAULT_HTTP_TIMEOUT_SEC,
+    ) -> None:
+        if timeout_sec <= 0:
+            raise ValueError("timeout_sec must be positive")
         self.base_url = base_url.rstrip("/") + "/"
         self.timeout_sec = timeout_sec
 
@@ -249,7 +265,22 @@ class HttpClient:
                 public_error_field=public_error["field"],
                 public_error_source=public_error["source"],
             ) from exc
-        except (URLError, RemoteDisconnected, ConnectionResetError, TimeoutError) as exc:
+        except (RemoteDisconnected, ConnectionResetError) as exc:
+            raise HttpRequestError(f"{step_name} request failed: {exc}") from exc
+        except TimeoutError as exc:
+            raise HttpRequestTimeoutError(
+                f"{step_name} request timed out after {self.timeout_sec:g}s",
+                timeout_sec=self.timeout_sec,
+            ) from exc
+        except URLError as exc:
+            if isinstance(exc.reason, TimeoutError) or str(exc.reason).lower() in {
+                "timed out",
+                "timeout",
+            }:
+                raise HttpRequestTimeoutError(
+                    f"{step_name} request timed out after {self.timeout_sec:g}s",
+                    timeout_sec=self.timeout_sec,
+                ) from exc
             raise HttpRequestError(f"{step_name} request failed: {exc}") from exc
         if status not in expected:
             public_error = _public_error_metadata(body)

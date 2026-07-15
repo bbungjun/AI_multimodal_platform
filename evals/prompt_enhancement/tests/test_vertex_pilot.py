@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from pilot import build_preflight, decide_pilot, load_pilot_policy
-from generate_pairs import HttpRequestError
+from generate_pairs import HttpRequestError, HttpRequestTimeoutError
 from run_vertex_pilot import (
     BudgetedVertexClient,
     VertexPilotError,
@@ -70,6 +70,7 @@ def test_pilot_v2_is_balanced_hash_bound_and_below_approved_budget() -> None:
 
     assert preflight["limits"]["max_cases"] == 20
     assert preflight["limits"]["max_generated_images"] == 80
+    assert preflight["limits"]["http_timeout_sec"] == 60.0
     assert preflight["budget"]["approved_usd"] == "20.000000"
     assert preflight["budget"]["normal_estimate_usd"] == "1.728000"
     assert preflight["budget"]["conservative_retry_envelope_usd"] == "5.952000"
@@ -140,6 +141,45 @@ def test_budgeted_client_persists_safe_public_http_failure_metadata(tmp_path: Pa
     assert event.failure_field == "enhanced"
     assert event.failure_source == "parsed"
     assert "must-not-appear" not in (tmp_path / "pilot_usage.json").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_budgeted_client_persists_client_timeout_metadata(tmp_path: Path) -> None:
+    policy = load_pilot_policy()
+
+    class TimeoutHttpClient(FakeHttpClient):
+        def request_json(self, *args: object, **kwargs: object) -> dict[str, object]:
+            del args, kwargs
+            raise HttpRequestTimeoutError(
+                "Enhance delayed-case request timed out after 60s",
+                timeout_sec=60.0,
+            )
+
+    client = BudgetedVertexClient(
+        TimeoutHttpClient(),
+        policy=policy,
+        run_id="vertex-pilot-timeout",
+        ledger_path=tmp_path / "pilot_usage.json",
+        approved_plan_sha256="a" * 64,
+    )
+
+    with pytest.raises(HttpRequestTimeoutError):
+        client.request_json(
+            "POST",
+            "/api/prompts/enhance",
+            expected_status=201,
+            step_name="Enhance delayed-case",
+            payload={"prompt": "must-not-persist"},
+        )
+
+    event = client.ledger.events[0]
+    assert event.status == "failed"
+    assert event.failure_type == "HttpRequestTimeoutError"
+    assert event.failure_reason == "client_timeout"
+    assert event.timeout_sec == 60.0
+    assert event.http_status is None
+    assert "must-not-persist" not in (tmp_path / "pilot_usage.json").read_text(
         encoding="utf-8"
     )
 

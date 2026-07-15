@@ -55,6 +55,7 @@ class PilotLimits(ArtifactModel):
     max_generated_images: int = Field(gt=0)
     samples_per_arm: int = Field(ge=1, le=4)
     max_provider_retry_attempts: int = Field(ge=1)
+    http_timeout_sec: float = Field(ge=30, le=600)
     max_enhancement_call_groups_per_case: int = Field(ge=1)
     max_gemini_input_tokens_per_call: int = Field(gt=0)
     max_gemini_output_tokens_per_call: int = Field(gt=0)
