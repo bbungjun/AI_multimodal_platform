@@ -15,7 +15,7 @@ Vertex 요청을 보내지 않는다.
 | `tifa_questions.v2.jsonl` | 80 QA | `460cd20d02b75ba737a685b770922f366d75ff4590fb92c37dd67391f2fe14d0` |
 | `canonical_prompt_reviews.v2.json` | 한국어 10 case | `c42aa2ce408fa100f52c6cb3132faa2b7175b3f4c2d943ed2c7e9b08040fdc94` |
 | `scorer_profile.v2.json` | 세 real scorer | `85415dd3394000b093bcc215c2a82a58ec1f536804a74cd92cfc13c25d692093` |
-| `pilot_policy.v1.json` | 비용·요청·판정 정책 | `4a662e0d7379a8c6433a8143540a894e52b6d8e406d686a935688dcd3b42e9e5` |
+| `pilot_policy.v1.json` | 비용·요청·판정·HTTP deadline 정책 | `eb3b40195e28af97f2394bde09b62e63654b58c307d0a3a9bc9f5ab1ae76972d` |
 
 Benchmark는 영어 10개와 한국어 10개다. `short_subject`, `detailed_subject`,
 `multi_object`, `count_spatial`, `style_lighting` category별 4개이며 각 언어/category
