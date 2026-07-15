@@ -146,6 +146,16 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   suite passed 67 tests in mock mode. See
   `docs/troubleshooting/vertex-prompt-enhancement-invalid-response.md` before
   considering a new paid attempt.
+- On 2026-07-16, timeout follow-up commit `4fe3887` added a policy-bound
+  `http_timeout_sec=60.0` to the Vertex pilot. `HttpClient` now classifies
+  socket deadlines as `HttpRequestTimeoutError`; the prompt-free ledger records
+  `failure_reason=client_timeout` and `timeout_sec` without raw exception text.
+  The evaluation suite passed 69 tests. A fresh mock gate completed 20 pairs,
+  40 arms, 240 synthetic scores, and 60 case-statistic rows; its controlled
+  failure ended as `mock_provider_failure` without scores. Clean preflight was
+  READY with no provider calls; regenerate its exact SHA after any subsequent
+  revision. No live canary was run after this code change; new Vertex execution
+  remains pending explicit approval for the revised plan.
 
 ## Last Completed Work
 

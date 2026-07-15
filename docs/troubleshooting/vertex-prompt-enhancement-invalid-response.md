@@ -61,3 +61,15 @@ requests, two generation requests, four requested images, and one failed HTTP
 request. The original runner left its manifest in `enhancing` without
 `last_error`; this document and the accompanying persistence fix track that
 gap. This partial run is not benchmark-quality evidence.
+
+## 2026-07-16 timeout fix
+
+Commit `4fe3887` adds `limits.http_timeout_sec=60.0` to the hash-bound pilot
+policy. The runner passes this value to `HttpClient`; a socket deadline is now
+classified as `HttpRequestTimeoutError` and records only
+`failure_reason=client_timeout` plus `timeout_sec` in `pilot_usage.json`.
+
+The delayed-timeout unit test, 69-test evaluation suite, clean preflight, and
+fresh 20-case mock gate all passed. No live Vertex canary was attempted after
+the change. A new preflight-specific approval is required before any paid
+request.

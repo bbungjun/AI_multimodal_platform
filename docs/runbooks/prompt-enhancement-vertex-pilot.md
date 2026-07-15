@@ -40,6 +40,12 @@ Benchmark는 영어 10개와 한국어 10개다. `short_subject`, `detailed_subj
 provider retry 3회를 넘기기 전에 중단한다. 요청을 보내기 전에 ledger에 reserve하여 process
 중단 뒤 같은 단계를 무심코 재요청하지 않는다.
 
+파일럿 policy의 `limits.http_timeout_sec`는 `60.0`초다. 이는 backend가 provider retry와
+응답 검증을 완료할 시간을 확보하기 위한 evaluation client deadline이며, preflight hash에
+포함된다. timeout이 발생하면 ledger에는 `failure_type=HttpRequestTimeoutError`,
+`failure_reason=client_timeout`, `timeout_sec`만 남고 prompt나 raw exception text는 저장하지
+않는다.
+
 `$20` 가드는 이 파일럿이 요청하는 workload의 보수적 추정치다. Google Cloud Billing
 account의 결제 hard stop이 아니며 같은 project의 다른 사용량, 세금, 환율, credit, 지연
 반영 비용은 포함하지 않는다. Cloud Billing budget/alert도 일반적으로 알림 수단이지 즉시
