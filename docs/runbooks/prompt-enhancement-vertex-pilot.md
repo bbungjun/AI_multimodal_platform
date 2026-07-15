@@ -15,7 +15,7 @@ Vertex 요청을 보내지 않는다.
 | `tifa_questions.v2.jsonl` | 80 QA | `460cd20d02b75ba737a685b770922f366d75ff4590fb92c37dd67391f2fe14d0` |
 | `canonical_prompt_reviews.v2.json` | 한국어 10 case | `c42aa2ce408fa100f52c6cb3132faa2b7175b3f4c2d943ed2c7e9b08040fdc94` |
 | `scorer_profile.v2.json` | 세 real scorer | `85415dd3394000b093bcc215c2a82a58ec1f536804a74cd92cfc13c25d692093` |
-| `pilot_policy.v1.json` | 비용·요청·판정·HTTP deadline 정책 | `eb3b40195e28af97f2394bde09b62e63654b58c307d0a3a9bc9f5ab1ae76972d` |
+| `pilot_policy.v1.json` | 비용·요청·판정·HTTP deadline 정책 | `d5ee6ae733d8a2501e43f0df40bf3bbdb18d9dfd49bb4fb2b86355524598a1dd` |
 
 Benchmark는 영어 10개와 한국어 10개다. `short_subject`, `detailed_subject`,
 `multi_object`, `count_spatial`, `style_lighting` category별 4개이며 각 언어/category
@@ -40,9 +40,9 @@ Benchmark는 영어 10개와 한국어 10개다. `short_subject`, `detailed_subj
 provider retry 3회를 넘기기 전에 중단한다. 요청을 보내기 전에 ledger에 reserve하여 process
 중단 뒤 같은 단계를 무심코 재요청하지 않는다.
 
-파일럿 policy의 `limits.http_timeout_sec`는 `60.0`초다. 이는 backend가 provider retry와
-응답 검증을 완료할 시간을 확보하기 위한 evaluation client deadline이며, preflight hash에
-포함된다. timeout이 발생하면 ledger에는 `failure_type=HttpRequestTimeoutError`,
+파일럿 policy의 `limits.http_timeout_sec`는 `180.0`초다. 이는 초기 응답, STRICT JSON
+repair, 마지막 CONTRACT REPAIR의 최대 세 provider call group과 응답 검증을 수용하기 위한
+evaluation client deadline이며, preflight hash에 포함된다. timeout이 발생하면 ledger에는 `failure_type=HttpRequestTimeoutError`,
 `failure_reason=client_timeout`, `timeout_sec`만 남고 prompt나 raw exception text는 저장하지
 않는다.
 

@@ -70,7 +70,7 @@ def test_pilot_v2_is_balanced_hash_bound_and_below_approved_budget() -> None:
 
     assert preflight["limits"]["max_cases"] == 20
     assert preflight["limits"]["max_generated_images"] == 80
-    assert preflight["limits"]["http_timeout_sec"] == 60.0
+    assert preflight["limits"]["http_timeout_sec"] == 180.0
     assert preflight["budget"]["approved_usd"] == "20.000000"
     assert preflight["budget"]["normal_estimate_usd"] == "1.728000"
     assert preflight["budget"]["conservative_retry_envelope_usd"] == "5.952000"

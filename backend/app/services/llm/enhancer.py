@@ -265,9 +265,11 @@ async def enhance_prompt(
         temperature=temperature,
         prompt_language=prompt_language,
         strict_json_retry=False,
+        contract_repair_retry=False,
         language_retry=False,
         retry_policy=retry_policy,
     )
+    validation_call_groups = 1
 
     try:
         payload = _parse_response_payload(response)
@@ -295,13 +297,55 @@ async def enhance_prompt(
             temperature=temperature,
             prompt_language=prompt_language,
             strict_json_retry=True,
+            contract_repair_retry=False,
             language_retry=False,
             retry_policy=retry_policy,
         )
-        payload = _parse_response_payload(retry_response)
+        validation_call_groups += 1
+        try:
+            payload = _parse_response_payload(retry_response)
+        except PromptEnhancementResponseError as repair_exc:
+            if not _should_retry_invalid_response(repair_exc):
+                raise
+            logger.warning(
+                (
+                    "Retrying prompt enhancement with contract repair: "
+                    "target_mode=%s target_model=%s reason=%s field=%s source=%s"
+                ),
+                mode.value,
+                target_model,
+                repair_exc.reason,
+                repair_exc.field,
+                repair_exc.source,
+            )
+            retry_response = await _generate_prompt_enhancement_with_retry(
+                vertex_client,
+                llm_model=selected_llm_model,
+                prompt=prompt,
+                target_mode=mode,
+                target_model=target_model,
+                creativity_preset=preset,
+                temperature=temperature,
+                prompt_language=prompt_language,
+                strict_json_retry=True,
+                contract_repair_retry=True,
+                language_retry=False,
+                retry_policy=retry_policy,
+            )
+            validation_call_groups += 1
+            payload = _parse_response_payload(retry_response)
         response = retry_response
 
     if _should_retry_language_mismatch(payload, prompt_language):
+        if validation_call_groups >= 3:
+            _raise_response_error(
+                "language_mismatch",
+                field="enhanced",
+                source="response",
+                expected_language=prompt_language,
+                target_mode=mode.value,
+                target_model=target_model,
+            )
         logger.warning(
             (
                 "Retrying prompt enhancement after language mismatch: "
@@ -321,9 +365,11 @@ async def enhance_prompt(
             temperature=temperature,
             prompt_language=prompt_language,
             strict_json_retry=False,
+            contract_repair_retry=False,
             language_retry=True,
             retry_policy=retry_policy,
         )
+        validation_call_groups += 1
         payload = _parse_response_payload(retry_response)
         response = retry_response
         if _should_retry_language_mismatch(payload, prompt_language):
@@ -416,6 +462,7 @@ async def _generate_prompt_enhancement_with_retry(
     temperature: float,
     prompt_language: PromptLanguage,
     strict_json_retry: bool,
+    contract_repair_retry: bool,
     language_retry: bool,
     retry_policy: RetryPolicy,
 ) -> Any:
@@ -430,6 +477,7 @@ async def _generate_prompt_enhancement_with_retry(
             temperature=temperature,
             prompt_language=prompt_language,
             strict_json_retry=strict_json_retry,
+            contract_repair_retry=contract_repair_retry,
             language_retry=language_retry,
         ),
         policy=retry_policy,
@@ -447,6 +495,7 @@ async def _generate_prompt_enhancement(
     temperature: float,
     prompt_language: PromptLanguage,
     strict_json_retry: bool,
+    contract_repair_retry: bool,
     language_retry: bool,
 ) -> Any:
     config = types.GenerateContentConfig(
@@ -468,6 +517,7 @@ async def _generate_prompt_enhancement(
                     creativity_preset=creativity_preset,
                     prompt_language=prompt_language,
                     strict_json_retry=strict_json_retry,
+                    contract_repair_retry=contract_repair_retry,
                     language_retry=language_retry,
                 )
             ],
@@ -496,6 +546,7 @@ def _build_prompt(
     creativity_preset: CreativityPreset,
     prompt_language: PromptLanguage,
     strict_json_retry: bool = False,
+    contract_repair_retry: bool = False,
     language_retry: bool = False,
 ) -> str:
     mode_guidance = _mode_guidance_for(target_mode)
@@ -571,6 +622,18 @@ def _build_prompt(
                 "only, using exactly these top-level keys: \"enhanced\" and "
                 '"components". Do not include arrays, markdown, comments, '
                 "or text outside the JSON object."
+            )
+        )
+
+    if contract_repair_retry:
+        sections.append(
+            (
+                "## CONTRACT REPAIR\n"
+                "Two previous responses failed schema validation. Return a compact "
+                "JSON object only. enhanced must be a non-empty string. components "
+                "must be a non-empty object with string keys and non-empty string "
+                "values, including provider_prompt_en. Do not add any other top-level "
+                "keys or explanatory text."
             )
         )
 

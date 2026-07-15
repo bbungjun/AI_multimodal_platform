@@ -170,6 +170,16 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   volumes. Paid execution remains **No-Go** until the invalid-response contract
   failure is reproducible with a safe fixture and fixed, then a new scope is
   explicitly approved.
+- The contract-repair follow-up now uses all three policy-permitted provider
+  call groups: initial structured response, STRICT JSON repair, then one final
+  compact CONTRACT REPAIR. The policy-bound HTTP deadline is `180.0` seconds
+  (policy SHA-256 `d5ee6ae733d8a2501e43f0df40bf3bbdb18d9dfd49bb4fb2b86355524598a1dd`)
+  so the full bounded path can return its public result. Safe fixtures cover
+  two invalid schema payloads followed by recovery and three invalid payloads
+  followed by a public contract failure. Focused backend tests passed 24 and
+  the evaluation suite passed 69 tests in mock mode. No provider call was made
+  after this code change; generate new clean preflight/mock evidence and obtain
+  a new explicit approval before a further paid run.
 
 ## Last Completed Work
 

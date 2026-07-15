@@ -480,9 +480,46 @@ def test_parse_response_payload_logs_truncated_json_safe_diagnostics(caplog):
     )
 
 
-async def test_enhance_prompt_rejects_schema_invalid_response_after_repair_retry():
+async def test_enhance_prompt_recovers_with_contract_repair_after_two_invalid_responses():
     models = FakeGenerateContentModels(
         responses=[
+            SimpleNamespace(parsed={"enhanced": "", "components": {}}),
+            SimpleNamespace(parsed={"enhanced": "", "components": {}}),
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "A compact desk lamp prompt with soft side light.",
+                    "components": {
+                        "subject": "desk lamp",
+                        "provider_prompt_en": "desk lamp with soft side light",
+                    },
+                }
+            ),
+        ]
+    )
+
+    result = await enhancer.enhance_prompt(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+
+    assert result.enhanced == "A compact desk lamp prompt with soft side light."
+    assert len(models.calls) == 3
+    assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
+    assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
+    assert "CONTRACT REPAIR" in models.calls[2]["contents"][0]
+
+
+async def test_enhance_prompt_rejects_schema_invalid_response_after_contract_repair():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                parsed={
+                    "enhanced": "",
+                    "components": {},
+                }
+            ),
             SimpleNamespace(
                 parsed={
                     "enhanced": "",
@@ -510,9 +547,10 @@ async def test_enhance_prompt_rejects_schema_invalid_response_after_repair_retry
     assert exc_info.value.reason == "schema_validation_failed"
     assert exc_info.value.source == "parsed"
     assert exc_info.value.field == "enhanced"
-    assert len(models.calls) == 2
+    assert len(models.calls) == 3
     assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
     assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
+    assert "CONTRACT REPAIR" in models.calls[2]["contents"][0]
 
 
 async def test_enhance_prompt_retries_provider_rate_limit_then_succeeds(monkeypatch):

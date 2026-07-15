@@ -64,9 +64,10 @@ gap. This partial run is not benchmark-quality evidence.
 
 ## 2026-07-16 timeout fix
 
-Commit `4fe3887` adds `limits.http_timeout_sec=60.0` to the hash-bound pilot
-policy. The runner passes this value to `HttpClient`; a socket deadline is now
-classified as `HttpRequestTimeoutError` and records only
+Commit `4fe3887` adds a policy-bound evaluation HTTP deadline to the pilot.
+The later contract-repair follow-up raises `limits.http_timeout_sec` to `180.0`
+to allow all three permitted provider call groups to finish. The runner
+classifies a socket deadline as `HttpRequestTimeoutError` and records only
 `failure_reason=client_timeout` plus `timeout_sec` in `pilot_usage.json`.
 
 The delayed-timeout unit test, 69-test evaluation suite, clean preflight, and
@@ -87,3 +88,18 @@ cause: the delayed backend request still reached Gemini response-contract
 validation. Do not retry this prompt automatically. Reproduce the invalid
 response with a prompt-free fixture, preserve an operator-safe validation
 reason, and fix the contract path before another paid run.
+
+## Contract-repair fixture and path
+
+The enhancement path now allows the policy's three permitted provider call
+groups: the initial structured response, a STRICT JSON repair, and one final
+CONTRACT REPAIR. The last repair requires a compact object with non-empty
+`enhanced` text and non-empty string-valued `components`, including
+`provider_prompt_en`. A safe fake client reproduces two schema-invalid payloads
+followed by a valid third payload; a separate fixture proves three invalid
+payloads still terminate as `prompt_enhancement_invalid_response` without raw
+response text.
+
+This is a bounded recovery path, not an automatic replacement run. Fresh
+preflight and mock evidence plus explicit approval remain required before any
+future paid execution.
