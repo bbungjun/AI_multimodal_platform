@@ -7,10 +7,12 @@ from pathlib import Path
 import pytest
 
 from pilot import build_preflight, decide_pilot, load_pilot_policy
+from generate_pairs import HttpRequestError
 from run_vertex_pilot import (
     BudgetedVertexClient,
     VertexPilotError,
     _require_execution_approval,
+    _persist_vertex_failure,
     _verify_preflight,
 )
 from schemas import (
@@ -47,6 +49,19 @@ class FakeHttpClient:
     def request_bytes(self, *args: object, **kwargs: object) -> tuple[bytes, dict[str, str], int]:
         del args, kwargs
         return b"", {}, 204
+
+
+class FailingHttpClient(FakeHttpClient):
+    def request_json(self, *args: object, **kwargs: object) -> dict[str, object]:
+        del args, kwargs
+        raise HttpRequestError(
+            "safe test failure",
+            status_code=502,
+            public_error_code="prompt_enhancement_invalid_response",
+            public_error_reason="schema_validation_failed",
+            public_error_field="enhanced",
+            public_error_source="parsed",
+        )
 
 
 def test_pilot_v2_is_balanced_hash_bound_and_below_approved_budget() -> None:
@@ -96,6 +111,71 @@ def test_budgeted_client_stops_before_twenty_first_enhancement(tmp_path: Path) -
     assert "not-recorded" not in (tmp_path / "pilot_usage.json").read_text(
         encoding="utf-8"
     )
+
+
+def test_budgeted_client_persists_safe_public_http_failure_metadata(tmp_path: Path) -> None:
+    policy = load_pilot_policy()
+    client = BudgetedVertexClient(
+        FailingHttpClient(),
+        policy=policy,
+        run_id="vertex-pilot-http-failure",
+        ledger_path=tmp_path / "pilot_usage.json",
+        approved_plan_sha256="a" * 64,
+    )
+
+    with pytest.raises(HttpRequestError):
+        client.request_json(
+            "POST",
+            "/api/prompts/enhance",
+            expected_status=201,
+            step_name="Enhance safe-case",
+            payload={"prompt": "must-not-appear"},
+        )
+
+    event = client.ledger.events[0]
+    assert event.status == "failed"
+    assert event.http_status == 502
+    assert event.provider_failure_code == "prompt_enhancement_invalid_response"
+    assert event.failure_reason == "schema_validation_failed"
+    assert event.failure_field == "enhanced"
+    assert event.failure_source == "parsed"
+    assert "must-not-appear" not in (tmp_path / "pilot_usage.json").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_persist_vertex_failure_marks_manifest_failed_without_raw_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    class FakeManifest:
+        def model_copy(self, *, update: dict[str, object]) -> dict[str, object]:
+            captured["update"] = update
+            return update
+
+    monkeypatch.setattr("run_vertex_pilot.load_run_manifest", lambda _: FakeManifest())
+    monkeypatch.setattr(
+        "run_vertex_pilot.write_run_manifest",
+        lambda _, manifest: captured.setdefault("manifest", manifest),
+    )
+
+    _persist_vertex_failure(
+        tmp_path,
+        HttpRequestError(
+            "raw provider text must not persist",
+            status_code=502,
+            public_error_code="prompt_enhancement_invalid_response",
+        ),
+    )
+
+    update = captured["update"]
+    assert isinstance(update, dict)
+    assert update["lifecycle"].value == "failed"
+    assert update["last_error"].code == "prompt_enhancement_invalid_response"
+    assert "raw provider text" not in update["last_error"].message
 
 
 def test_execution_still_requires_post_mock_approval_and_guard() -> None:

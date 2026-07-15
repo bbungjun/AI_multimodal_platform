@@ -19,6 +19,7 @@ from generate_pairs import (
     EvaluationClient,
     EvaluationRunnerError,
     HttpClient,
+    HttpRequestError,
     RunnerConfig,
     run_pairs,
 )
@@ -33,6 +34,7 @@ from pilot import (
 from schemas import (
     ArtifactModel,
     EvidenceKind,
+    FailureRecord,
     MetricName,
     ProviderMode,
     RunLifecycle,
@@ -40,6 +42,7 @@ from schemas import (
     file_sha256,
     load_run_manifest,
     load_summary,
+    write_run_manifest,
 )
 
 
@@ -70,7 +73,11 @@ class UsageEvent(ArtifactModel):
     vertex_charged: bool | None = None
     job_state: str | None = None
     job_latency_ms: int | None = None
+    http_status: int | None = None
     provider_failure_code: str | None = None
+    failure_reason: str | None = None
+    failure_field: str | None = None
+    failure_source: str | None = None
     failure_type: str | None = None
 
 
@@ -145,11 +152,13 @@ class BudgetedVertexClient:
             )
         except Exception as exc:
             if event_index is not None:
+                failure_metadata = _http_failure_metadata(exc)
                 self._finish(
                     event_index,
                     status="failed",
                     http_latency_ms=_elapsed_ms(started),
                     failure_type=type(exc).__name__,
+                    **failure_metadata,
                 )
             raise
         if event_index is not None:
@@ -374,9 +383,65 @@ def run_vertex_pilot(
         ledger_path=run_dir / "pilot_usage.json",
         approved_plan_sha256=approved_plan_sha256,
     )
-    manifest = run_pairs(config, client=budgeted_client, environ=environ)
+    try:
+        manifest = run_pairs(config, client=budgeted_client, environ=environ)
+    except (EvaluationRunnerError, VertexPilotError) as exc:
+        _write_usage_summary(run_dir, budgeted_client.ledger, policy)
+        _persist_vertex_failure(run_dir, exc)
+        raise
     _write_usage_summary(run_dir, budgeted_client.ledger, policy)
     return manifest
+
+
+def _http_failure_metadata(exc: Exception) -> dict[str, Any]:
+    if not isinstance(exc, HttpRequestError):
+        return {}
+    return {
+        "http_status": exc.status_code,
+        "provider_failure_code": exc.public_error_code,
+        "failure_reason": exc.public_error_reason,
+        "failure_field": exc.public_error_field,
+        "failure_source": exc.public_error_source,
+    }
+
+
+def _persist_vertex_failure(run_dir: Path, exc: Exception) -> None:
+    """Close an existing real-run manifest without persisting raw API text."""
+
+    manifest_path = run_dir / "manifest.json"
+    if not manifest_path.is_file():
+        return
+    try:
+        manifest = load_run_manifest(manifest_path)
+    except (OSError, ValueError) as manifest_error:
+        raise VertexPilotError(
+            "Vertex pilot failed and its manifest could not be loaded for failure persistence"
+        ) from manifest_error
+
+    public_code = (
+        exc.public_error_code
+        if isinstance(exc, HttpRequestError) and exc.public_error_code
+        else "vertex_pilot_request_failed"
+    )
+    message = (
+        "Prompt enhancement response failed validation."
+        if public_code == "prompt_enhancement_invalid_response"
+        else "Vertex pilot request failed; inspect prompt-free usage metadata."
+    )
+    failed = manifest.model_copy(
+        update={
+            "lifecycle": RunLifecycle.FAILED,
+            "updated_at": _utc_now(),
+            "completed_at": None,
+            "last_error": FailureRecord(
+                code=public_code,
+                message=message,
+                retry_count=0,
+                retryable=False,
+            ),
+        }
+    )
+    write_run_manifest(manifest_path, failed)
 
 
 def _require_execution_approval(

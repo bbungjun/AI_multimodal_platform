@@ -138,6 +138,13 @@ As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
   manifest persistence are addressed, the partial run's ledger is reconciled,
   and a new request/cost scope is explicitly approved. The partial result is
   not quality evidence and must not be finalized or scored as a benchmark.
+- Follow-up implementation now records only normalized public HTTP failure
+  metadata (`http_status`, code, reason, field, and source) in the prompt-free
+  usage ledger and atomically closes an existing real-run manifest as `failed`.
+  Raw API bodies, prompts, and credentials remain excluded. The evaluation
+  suite passed 67 tests in mock mode. See
+  `docs/troubleshooting/vertex-prompt-enhancement-invalid-response.md` before
+  considering a new paid attempt.
 
 ## Last Completed Work
 
