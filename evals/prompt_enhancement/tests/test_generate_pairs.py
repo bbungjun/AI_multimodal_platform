@@ -488,6 +488,24 @@ def test_process_environment_requires_mock_without_echoing_value():
     assert "AI_PROVIDER=mock" in str(exc_info.value)
 
 
+def test_public_error_metadata_keeps_only_normalized_detail_fields():
+    body = (
+        b'{"detail":{"code":"prompt_enhancement_invalid_response",'
+        b'"reason":"schema_validation_failed","field":"enhanced",'
+        b'"source":"parsed","message":"raw prompt must never persist"}}'
+    )
+
+    metadata = generate_pairs._public_error_metadata(body)
+
+    assert metadata == {
+        "code": "prompt_enhancement_invalid_response",
+        "reason": "schema_validation_failed",
+        "field": "enhanced",
+        "source": "parsed",
+    }
+    assert "raw prompt" not in str(metadata)
+
+
 def test_runner_does_not_import_production_or_vertex_modules():
     source = Path(generate_pairs.__file__).read_text(encoding="utf-8")
 

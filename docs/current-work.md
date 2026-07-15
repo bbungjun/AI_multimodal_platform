@@ -114,37 +114,38 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   full run passed 351 tests and failed only the previously documented Windows
   `/bin/bash` path conversion test
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
-- Clean merged-main preflight generated approved plan SHA-256
+- On 2026-07-15, fresh preflight on clean merged commit `6f2f0ce` returned
+  approved plan SHA-256
   `ba908930c1e07ed6f07ea6ec3e5ed756e58162210539becbeacc6b063fc1133c`.
-  The normal estimate remained `$1.728000`, the conservative retry envelope
-  `$5.952000`, and the workload-local stop `$20`. Fresh mock run
-  `issue66-main-mock-6f2f0ce` again completed exact 20 pairs, 40 jobs, 80
-  images, 240 synthetic scores, and 60 case-statistic rows with no failed or
-  missing case.
-- After the user approved actual validation, live run
-  `issue66-vertex-main-6f2f0ce-001` sent one Gemini enhancement HTTP request.
-  It failed before Imagen submission with public error
-  `vertex_permission_denied` (`403`), so generation requests and generated
-  images both remained `0`. The prompt-free usage ledger records exactly one
-  failed enhancement request; no automatic retry or replacement run was
-  started. The failure also exposed a runner follow-up: `manifest.json` remains
-  at `lifecycle=enhancing` with no persisted `last_error` even though the usage
-  ledger correctly records the failed HTTP step. Preserve this artifact as-is
-  and harden failure-state persistence separately instead of rewriting history.
-- Vertex AI API and billing are enabled, and the Terraform-managed service
-  accounts retain `roles/aiplatform.user`. A read-only `testIamPermissions`
-  check using the credential actually mounted in the backend returned `false`
-  for `aiplatform.endpoints.predict`, `aiplatform.locations.get`, and
-  `serviceusage.services.use`. The guarded gcloud operator account remains the
-  project owner, so the local Docker ADC is not aligned with that authorized
-  account. No credential file or credential value was read or printed.
-- Actual execution is **No-Go** until the operator intentionally refreshes ADC,
-  the mounted credential passes the three permission checks, and the user
-  separately approves how to account for the already consumed failed request.
-  A fresh complete run would make the cross-attempt enhancement-request total
-  `21`, exceeding the previously approved total of `20`, even though the
-  conservative cost envelope remains below `$20`. The local Vertex Compose
-  stack was stopped after diagnosis without deleting persistent volumes.
+  The fresh 20-case mock gate completed 20 pairs, 40 arms, 80 synthetic PNGs,
+  240 synthetic scores, and 60 case-statistic rows; the controlled failure run
+  ended with `mock_provider_failure` and no downstream score/report artifacts.
+- The actual mounted ADC was verified as `youngjun3108@gmail.com` against
+  project `krafton-vertex-live-3108`; the three required permission checks
+  returned allowed. Vertex readiness was `ready=true` with retry cap `3`.
+- After explicit execution approval, real run
+  `issue66-vertex-main-6f2f0ce-002` made two enhancement HTTP requests and two
+  generation HTTP requests (four requested images). One Raw/Enhanced pair and
+  its four asset records completed. The second enhancement failed with public
+  provider code `prompt_enhancement_invalid_response`; the prompt-free ledger
+  records one failed HTTP request (`HttpRequestError`). No automatic retry or
+  replacement run was started.
+- The failed real-run manifest remains at `lifecycle=enhancing` with no
+  persisted `last_error`, while the usage ledger is correct. Preserve this
+  artifact and treat failure-state persistence as an implementation follow-up;
+  do not rewrite it to appear complete. Vertex Compose was stopped after
+  diagnosis without deleting persistent volumes.
+- Further paid execution is **No-Go** until the invalid-response failure and
+  manifest persistence are addressed, the partial run's ledger is reconciled,
+  and a new request/cost scope is explicitly approved. The partial result is
+  not quality evidence and must not be finalized or scored as a benchmark.
+- Follow-up implementation now records only normalized public HTTP failure
+  metadata (`http_status`, code, reason, field, and source) in the prompt-free
+  usage ledger and atomically closes an existing real-run manifest as `failed`.
+  Raw API bodies, prompts, and credentials remain excluded. The evaluation
+  suite passed 67 tests in mock mode. See
+  `docs/troubleshooting/vertex-prompt-enhancement-invalid-response.md` before
+  considering a new paid attempt.
 
 ## Last Completed Work
 

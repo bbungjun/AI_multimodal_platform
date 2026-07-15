@@ -71,7 +71,29 @@ class EvaluationRunnerError(RuntimeError):
 
 
 class HttpRequestError(EvaluationRunnerError):
-    """Raised when the backend HTTP boundary is unavailable or malformed."""
+    """Raised when the backend HTTP boundary is unavailable or malformed.
+
+    Only normalized public API error metadata belongs on this exception.  Raw
+    response bodies can contain user-provided text and must not be copied into
+    a run ledger or a manifest.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        public_error_code: str | None = None,
+        public_error_reason: str | None = None,
+        public_error_field: str | None = None,
+        public_error_source: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.public_error_code = public_error_code
+        self.public_error_reason = public_error_reason
+        self.public_error_field = public_error_field
+        self.public_error_source = public_error_source
 
 
 class GenerationFailedError(EvaluationRunnerError):
@@ -213,13 +235,37 @@ class HttpClient:
             body = exc.read()
             if exc.code in expected:
                 return body, dict(exc.headers.items()), exc.code
+            public_error = _public_error_metadata(body)
             raise HttpRequestError(
-                _http_status_message(step_name, exc.code, expected, body)
+                _http_status_message(
+                    step_name,
+                    exc.code,
+                    expected,
+                    public_error_code=public_error["code"],
+                ),
+                status_code=exc.code,
+                public_error_code=public_error["code"],
+                public_error_reason=public_error["reason"],
+                public_error_field=public_error["field"],
+                public_error_source=public_error["source"],
             ) from exc
         except (URLError, RemoteDisconnected, ConnectionResetError, TimeoutError) as exc:
             raise HttpRequestError(f"{step_name} request failed: {exc}") from exc
         if status not in expected:
-            raise HttpRequestError(_http_status_message(step_name, status, expected, body))
+            public_error = _public_error_metadata(body)
+            raise HttpRequestError(
+                _http_status_message(
+                    step_name,
+                    status,
+                    expected,
+                    public_error_code=public_error["code"],
+                ),
+                status_code=status,
+                public_error_code=public_error["code"],
+                public_error_reason=public_error["reason"],
+                public_error_field=public_error["field"],
+                public_error_source=public_error["source"],
+            )
         return body, response_headers, status
 
 
@@ -227,14 +273,41 @@ def _http_status_message(
     step_name: str,
     actual: int,
     expected: set[int],
-    body: bytes,
+    *,
+    public_error_code: str | None,
 ) -> str:
-    snippet = body.decode("utf-8", errors="replace").strip()
-    if len(snippet) > 500:
-        snippet = snippet[:500] + "..."
     expected_text = "/".join(str(status) for status in sorted(expected))
-    detail = f": {snippet}" if snippet else ""
+    detail = f" ({public_error_code})" if public_error_code else ""
     return f"{step_name} expected HTTP {expected_text}, got {actual}{detail}"
+
+
+_PUBLIC_ERROR_VALUE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+
+
+def _public_error_metadata(body: bytes) -> dict[str, str | None]:
+    """Extract only safe, schema-shaped detail fields from an API error body."""
+
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError):
+        return {"code": None, "reason": None, "field": None, "source": None}
+    if not isinstance(payload, dict) or not isinstance(payload.get("detail"), dict):
+        return {"code": None, "reason": None, "field": None, "source": None}
+
+    detail = payload["detail"]
+
+    def safe_value(name: str) -> str | None:
+        value = detail.get(name)
+        if isinstance(value, str) and _PUBLIC_ERROR_VALUE.fullmatch(value):
+            return value
+        return None
+
+    return {
+        "code": safe_value("code"),
+        "reason": safe_value("reason"),
+        "field": safe_value("field"),
+        "source": safe_value("source"),
+    }
 
 
 def require_mock_provider(environ: Mapping[str, str]) -> None:
