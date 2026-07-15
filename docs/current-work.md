@@ -70,8 +70,9 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
-`codex/issue-66-vertex-pilot-guard`:
+As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
+PR #74 at `6f2f0ce`. Live validation is being recorded on branch
+`codex/issue-66-vertex-validation`:
 
 - Added `benchmark.v2.jsonl` with exactly 20 enabled cases: English 10/Korean
   10, five categories with four cases each, and two cases in every
@@ -113,10 +114,37 @@ As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
   full run passed 351 tests and failed only the previously documented Windows
   `/bin/bash` path conversion test
   `test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
-- No Gemini, Imagen, Veo, or Vertex request was made in this work; no credential
-  was read and no provider cost was incurred. Actual execution remains **No-Go**
-  until the clean merged revision repeats preflight/mock, the user explicitly
-  approves that exact plan SHA, and the personal GCP/readiness guards pass.
+- Clean merged-main preflight generated approved plan SHA-256
+  `ba908930c1e07ed6f07ea6ec3e5ed756e58162210539becbeacc6b063fc1133c`.
+  The normal estimate remained `$1.728000`, the conservative retry envelope
+  `$5.952000`, and the workload-local stop `$20`. Fresh mock run
+  `issue66-main-mock-6f2f0ce` again completed exact 20 pairs, 40 jobs, 80
+  images, 240 synthetic scores, and 60 case-statistic rows with no failed or
+  missing case.
+- After the user approved actual validation, live run
+  `issue66-vertex-main-6f2f0ce-001` sent one Gemini enhancement HTTP request.
+  It failed before Imagen submission with public error
+  `vertex_permission_denied` (`403`), so generation requests and generated
+  images both remained `0`. The prompt-free usage ledger records exactly one
+  failed enhancement request; no automatic retry or replacement run was
+  started. The failure also exposed a runner follow-up: `manifest.json` remains
+  at `lifecycle=enhancing` with no persisted `last_error` even though the usage
+  ledger correctly records the failed HTTP step. Preserve this artifact as-is
+  and harden failure-state persistence separately instead of rewriting history.
+- Vertex AI API and billing are enabled, and the Terraform-managed service
+  accounts retain `roles/aiplatform.user`. A read-only `testIamPermissions`
+  check using the credential actually mounted in the backend returned `false`
+  for `aiplatform.endpoints.predict`, `aiplatform.locations.get`, and
+  `serviceusage.services.use`. The guarded gcloud operator account remains the
+  project owner, so the local Docker ADC is not aligned with that authorized
+  account. No credential file or credential value was read or printed.
+- Actual execution is **No-Go** until the operator intentionally refreshes ADC,
+  the mounted credential passes the three permission checks, and the user
+  separately approves how to account for the already consumed failed request.
+  A fresh complete run would make the cross-attempt enhancement-request total
+  `21`, exceeding the previously approved total of `20`, even though the
+  conservative cost envelope remains below `$20`. The local Vertex Compose
+  stack was stopped after diagnosis without deleting persistent volumes.
 
 ## Last Completed Work
 
@@ -1354,9 +1382,12 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #66 guard PR. Then show the fixed plan SHA, mock
-  result, `$1.728000` normal estimate, `$5.952000` retry envelope and `$20`
-  limitation to the user. Run Vertex only after a separate explicit approval.
+- For Issue #66, refresh local ADC only through an intentional interactive
+  `gcloud auth application-default login`, then verify the mounted credential
+  with non-generative permission checks before another Vertex call. Do not
+  reuse the failed ledger or silently open a replacement run. A complete retry
+  needs explicit approval for the cross-attempt enhancement-request total to
+  increase from `20` to `21`; preserve the failed run alongside the final run.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
