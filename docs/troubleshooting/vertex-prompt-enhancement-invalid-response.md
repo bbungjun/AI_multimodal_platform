@@ -70,6 +70,20 @@ classified as `HttpRequestTimeoutError` and records only
 `failure_reason=client_timeout` plus `timeout_sec` in `pilot_usage.json`.
 
 The delayed-timeout unit test, 69-test evaluation suite, clean preflight, and
-fresh 20-case mock gate all passed. No live Vertex canary was attempted after
-the change. A new preflight-specific approval is required before any paid
-request.
+fresh 20-case mock gate all passed.
+
+## 2026-07-16 revised-deadline evidence
+
+User-approved run `issue66-vertex-timeout-594fdf3-001` completed seven pairs
+before its next enhancement ended at `60,006 ms`. Its ledger safely recorded
+`HttpRequestTimeoutError`, `failure_reason=client_timeout`, and
+`timeout_sec=60.0`; no HTTP response reached the runner.
+
+The backend and worker both had `OOMKilled=false` and restart count `0`.
+Before the stack was stopped, the backend recorded safe provider code
+`prompt_enhancement_invalid_response` with no provider status. The longer
+deadline therefore rules out the prior 10-second runner setting as the only
+cause: the delayed backend request still reached Gemini response-contract
+validation. Do not retry this prompt automatically. Reproduce the invalid
+response with a prompt-free fixture, preserve an operator-safe validation
+reason, and fix the contract path before another paid run.

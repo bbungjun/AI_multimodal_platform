@@ -154,8 +154,22 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   40 arms, 240 synthetic scores, and 60 case-statistic rows; its controlled
   failure ended as `mock_provider_failure` without scores. Clean preflight was
   READY with no provider calls; regenerate its exact SHA after any subsequent
-  revision. No live canary was run after this code change; new Vertex execution
-  remains pending explicit approval for the revised plan.
+  revision.
+- After explicit approval on 2026-07-16, revised-policy run
+  `issue66-vertex-timeout-594fdf3-001` completed seven Raw/Enhanced pairs
+  (14 arms), eight enhancement HTTP requests, 14 generation HTTP requests, and
+  28 requested images. The next enhancement timed out at the configured
+  60-second client deadline (`60,006 ms`), leaving safe ledger fields
+  `HttpRequestTimeoutError`, `client_timeout`, and `timeout_sec=60.0`.
+  Backend and worker remained `OOMKilled=false` with restart count `0`.
+  Before shutdown, the backend emitted the safe provider failure log
+  `prompt_enhancement_invalid_response` with no provider status. Thus the
+  client timeout masks a delayed response, but the underlying observed backend
+  failure is again Gemini response-contract validation, not an OOM condition.
+  No replacement run was started; Vertex Compose was stopped without deleting
+  volumes. Paid execution remains **No-Go** until the invalid-response contract
+  failure is reproducible with a safe fixture and fixed, then a new scope is
+  explicitly approved.
 
 ## Last Completed Work
 
