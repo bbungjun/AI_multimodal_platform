@@ -70,8 +70,9 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #66 prepares the bounded real Vertex pilot on branch
-`codex/issue-66-vertex-pilot-guard`:
+As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
+PR #74 at `6f2f0ce`. Live validation is being recorded on branch
+`codex/issue-66-vertex-validation`:
 
 - Added `benchmark.v2.jsonl` with exactly 20 enabled cases: English 10/Korean
   10, five categories with four cases each, and two cases in every
@@ -1382,9 +1383,12 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
-- Review and merge the Issue #66 guard PR. Then show the fixed plan SHA, mock
-  result, `$1.728000` normal estimate, `$5.952000` retry envelope and `$20`
-  limitation to the user. Run Vertex only after a separate explicit approval.
+- For Issue #66, refresh local ADC only through an intentional interactive
+  `gcloud auth application-default login`, then verify the mounted credential
+  with non-generative permission checks before another Vertex call. Do not
+  reuse the failed ledger or silently open a replacement run. A complete retry
+  needs explicit approval for the cross-attempt enhancement-request total to
+  increase from `20` to `21`; preserve the failed run alongside the final run.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
