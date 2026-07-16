@@ -146,6 +146,21 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   suite passed 67 tests in mock mode. See
   `docs/troubleshooting/vertex-prompt-enhancement-invalid-response.md` before
   considering a new paid attempt.
+- On 2026-07-15, a new clean-main preflight at `5c87022` produced approval SHA
+  `aceb4ccef2d593ad58fd018a22cf489f8e9ccf382e48dacbe4c03f03b0e2bc89`.
+  Its fresh `benchmark.v2.jsonl` mock gate completed 20 pairs, 40 arms, 240
+  synthetic scores, and 60 case-statistic rows; the controlled failure again
+  ended as `mock_provider_failure` without score output. Vertex readiness and
+  the three required permission checks passed before the user-approved retry.
+- The retry `issue66-vertex-main-5c87022-001` completed two Raw/Enhanced pairs,
+  then stopped after three enhancement HTTP requests, four generation HTTP
+  requests, and eight requested images. Its seventh ledger event is an
+  `HttpRequestError`: it began at `00:59:26.491Z` and ended at
+  `00:59:36.504Z`, matching the runner's hard-coded 10-second `HttpClient`
+  deadline. No HTTP response metadata was received, and no third enhancement
+  row was persisted during the following minute. The runner correctly persisted
+  `lifecycle=failed` with generic public error `vertex_pilot_request_failed`;
+  no retry run was started. This partial artifact is not benchmark evidence.
 - On 2026-07-16, timeout follow-up commit `4fe3887` added a policy-bound
   `http_timeout_sec=60.0` to the Vertex pilot. `HttpClient` now classifies
   socket deadlines as `HttpRequestTimeoutError`; the prompt-free ledger records

@@ -62,6 +62,23 @@ request. The original runner left its manifest in `enhancing` without
 `last_error`; this document and the accompanying persistence fix track that
 gap. This partial run is not benchmark-quality evidence.
 
+## 2026-07-15 retry evidence: unclassified HTTP request failure
+
+After the persistence fix was merged, a fresh clean-main preflight and the
+20-case `benchmark.v2.jsonl` mock gate passed. The user-approved retry
+`issue66-vertex-main-5c87022-001` completed two Raw/Enhanced pairs, using three
+enhancement HTTP requests, four generation HTTP requests, and eight requested
+images. The seventh ledger event had `failure_type=HttpRequestError`.
+
+The normalized HTTP status, public provider code, reason, field, and source
+were all absent because this was not an HTTP error response. The ledger records
+the request from `00:59:26.491Z` to `00:59:36.504Z`, which matches the
+evaluation runner's hard-coded 10-second `HttpClient` deadline. `run_vertex_pilot`
+constructed that client without overriding the default. No third enhancement
+row was persisted in Postgres during the following minute. The runner correctly
+closed the manifest as `failed` with generic public code
+`vertex_pilot_request_failed`; it did not make a replacement request.
+
 ## 2026-07-16 timeout fix
 
 Commit `4fe3887` adds a policy-bound evaluation HTTP deadline to the pilot.
