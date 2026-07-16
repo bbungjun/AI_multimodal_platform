@@ -503,6 +503,10 @@ async def _generate_prompt_enhancement(
         response_schema=PromptEnhancementPayload,
         temperature=temperature,
         max_output_tokens=PROMPT_ENHANCEMENT_MAX_OUTPUT_TOKENS,
+        # Prompt enhancement needs a compact structured response, not reasoning.
+        # Gemini 2.5 Flash otherwise allocates an automatic thinking budget that
+        # can exhaust the response budget before a complete JSON object is sent.
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     )
 
     try:

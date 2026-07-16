@@ -101,7 +101,13 @@ async def test_enhance_prompt_parses_schema_payload_without_vertex_client():
     call = models.calls[0]
     assert call["model"] == enhancer.DEFAULT_LLM_MODEL
     assert "a quiet desk lamp" in call["contents"][0]
-    assert getattr(call["config"], "temperature") == 0.2
+    config = call["config"]
+    assert getattr(config, "temperature") == 0.2
+    assert (
+        getattr(config, "max_output_tokens")
+        == enhancer.PROMPT_ENHANCEMENT_MAX_OUTPUT_TOKENS
+    )
+    assert getattr(getattr(config, "thinking_config"), "thinking_budget") == 0
 
 
 async def test_enhance_prompt_uses_configured_model_by_default(monkeypatch):

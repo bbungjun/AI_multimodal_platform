@@ -195,6 +195,27 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   the evaluation suite passed 69 tests in mock mode. No provider call was made
   after this code change; generate new clean preflight/mock evidence and obtain
   a new explicit approval before a further paid run.
+- On 2026-07-16, PR #78 merged at `fbf03c1`. Its clean preflight returned
+  approval SHA-256 `f2257bf15e80449444181bf2af03682db039d020969fa910cb63b9af5129e85c`,
+  and the new 20-case mock gate completed 40 arms, 240 synthetic scores, and
+  60 case-statistic rows; the separate controlled failure ended as
+  `mock_provider_failure`. The user-approved real run
+  `issue66-vertex-fbf03c1-001` completed four Raw/Enhanced pairs (eight arms),
+  four successful enhancement HTTP requests, eight successful generation HTTP
+  requests, and 16 requested images. Its next enhancement reached all three
+  bounded call groups, then failed once with public code
+  `prompt_enhancement_invalid_response`, HTTP status `502`, and safe reason
+  `malformed_json`. The backend reported `finish_reason=MAX_TOKENS` for every
+  response in that call group. Backend and worker remained `OOMKilled=false`
+  with restart count `0`; this is not a host-capacity/OOM failure. No replacement
+  run was started and Vertex Compose was stopped without deleting volumes.
+- Issue #79 branch `codex/issue-79-disable-gemini-thinking` fixes that path by
+  setting Gemini 2.5 Flash `thinking_budget=0` for compact structured prompt
+  enhancement JSON, retaining the 1,600 output-token cap and three-call-group
+  policy. Focused backend tests passed 24 and the evaluation suite passed 69 in
+  mock mode. No provider call was made after this code change; merge it, then
+  regenerate the clean preflight and mock gate and obtain a new explicit paid
+  execution approval.
 
 ## Last Completed Work
 
