@@ -74,13 +74,49 @@ The normalized HTTP status, public provider code, reason, field, and source
 were all absent because this was not an HTTP error response. The ledger records
 the request from `00:59:26.491Z` to `00:59:36.504Z`, which matches the
 evaluation runner's hard-coded 10-second `HttpClient` deadline. `run_vertex_pilot`
-constructs that client without overriding the default. No third enhancement
+constructed that client without overriding the default. No third enhancement
 row was persisted in Postgres during the following minute. The runner correctly
 closed the manifest as `failed` with generic public code
 `vertex_pilot_request_failed`; it did not make a replacement request.
 
-Treat this as a client-deadline defect. Before any future paid retry, make the
-evaluation HTTP deadline explicit and compatible with the provider retry
-envelope, then reproduce a delayed mock response and verify that the ledger
-distinguishes a client timeout from a normalized API failure without recording
-prompts, response bodies, credentials, or headers.
+## 2026-07-16 timeout fix
+
+Commit `4fe3887` adds a policy-bound evaluation HTTP deadline to the pilot.
+The later contract-repair follow-up raises `limits.http_timeout_sec` to `180.0`
+to allow all three permitted provider call groups to finish. The runner
+classifies a socket deadline as `HttpRequestTimeoutError` and records only
+`failure_reason=client_timeout` plus `timeout_sec` in `pilot_usage.json`.
+
+The delayed-timeout unit test, 69-test evaluation suite, clean preflight, and
+fresh 20-case mock gate all passed.
+
+## 2026-07-16 revised-deadline evidence
+
+User-approved run `issue66-vertex-timeout-594fdf3-001` completed seven pairs
+before its next enhancement ended at `60,006 ms`. Its ledger safely recorded
+`HttpRequestTimeoutError`, `failure_reason=client_timeout`, and
+`timeout_sec=60.0`; no HTTP response reached the runner.
+
+The backend and worker both had `OOMKilled=false` and restart count `0`.
+Before the stack was stopped, the backend recorded safe provider code
+`prompt_enhancement_invalid_response` with no provider status. The longer
+deadline therefore rules out the prior 10-second runner setting as the only
+cause: the delayed backend request still reached Gemini response-contract
+validation. Do not retry this prompt automatically. Reproduce the invalid
+response with a prompt-free fixture, preserve an operator-safe validation
+reason, and fix the contract path before another paid run.
+
+## Contract-repair fixture and path
+
+The enhancement path now allows the policy's three permitted provider call
+groups: the initial structured response, a STRICT JSON repair, and one final
+CONTRACT REPAIR. The last repair requires a compact object with non-empty
+`enhanced` text and non-empty string-valued `components`, including
+`provider_prompt_en`. A safe fake client reproduces two schema-invalid payloads
+followed by a valid third payload; a separate fixture proves three invalid
+payloads still terminate as `prompt_enhancement_invalid_response` without raw
+response text.
+
+This is a bounded recovery path, not an automatic replacement run. Fresh
+preflight and mock evidence plus explicit approval remain required before any
+future paid execution.

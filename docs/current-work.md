@@ -158,14 +158,43 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   `HttpRequestError`: it began at `00:59:26.491Z` and ended at
   `00:59:36.504Z`, matching the runner's hard-coded 10-second `HttpClient`
   deadline. No HTTP response metadata was received, and no third enhancement
-  row was persisted during the following minute. This is a client-side API
-  timeout, not evidence of another invalid Gemini response. The runner
-  correctly persisted `lifecycle=failed` with generic public error
-  `vertex_pilot_request_failed`; no retry run was started. Vertex Compose was
-  stopped without deleting volumes. This partial artifact is not benchmark
-  evidence; paid execution remains **No-Go** until the HTTP deadline is made
-  compatible with provider retries, tested in mock mode, and a new scope is
+  row was persisted during the following minute. The runner correctly persisted
+  `lifecycle=failed` with generic public error `vertex_pilot_request_failed`;
+  no retry run was started. This partial artifact is not benchmark evidence.
+- On 2026-07-16, timeout follow-up commit `4fe3887` added a policy-bound
+  `http_timeout_sec=60.0` to the Vertex pilot. `HttpClient` now classifies
+  socket deadlines as `HttpRequestTimeoutError`; the prompt-free ledger records
+  `failure_reason=client_timeout` and `timeout_sec` without raw exception text.
+  The evaluation suite passed 69 tests. A fresh mock gate completed 20 pairs,
+  40 arms, 240 synthetic scores, and 60 case-statistic rows; its controlled
+  failure ended as `mock_provider_failure` without scores. Clean preflight was
+  READY with no provider calls; regenerate its exact SHA after any subsequent
+  revision.
+- After explicit approval on 2026-07-16, revised-policy run
+  `issue66-vertex-timeout-594fdf3-001` completed seven Raw/Enhanced pairs
+  (14 arms), eight enhancement HTTP requests, 14 generation HTTP requests, and
+  28 requested images. The next enhancement timed out at the configured
+  60-second client deadline (`60,006 ms`), leaving safe ledger fields
+  `HttpRequestTimeoutError`, `client_timeout`, and `timeout_sec=60.0`.
+  Backend and worker remained `OOMKilled=false` with restart count `0`.
+  Before shutdown, the backend emitted the safe provider failure log
+  `prompt_enhancement_invalid_response` with no provider status. Thus the
+  client timeout masks a delayed response, but the underlying observed backend
+  failure is again Gemini response-contract validation, not an OOM condition.
+  No replacement run was started; Vertex Compose was stopped without deleting
+  volumes. Paid execution remains **No-Go** until the invalid-response contract
+  failure is reproducible with a safe fixture and fixed, then a new scope is
   explicitly approved.
+- The contract-repair follow-up now uses all three policy-permitted provider
+  call groups: initial structured response, STRICT JSON repair, then one final
+  compact CONTRACT REPAIR. The policy-bound HTTP deadline is `180.0` seconds
+  (policy SHA-256 `d5ee6ae733d8a2501e43f0df40bf3bbdb18d9dfd49bb4fb2b86355524598a1dd`)
+  so the full bounded path can return its public result. Safe fixtures cover
+  two invalid schema payloads followed by recovery and three invalid payloads
+  followed by a public contract failure. Focused backend tests passed 24 and
+  the evaluation suite passed 69 tests in mock mode. No provider call was made
+  after this code change; generate new clean preflight/mock evidence and obtain
+  a new explicit approval before a further paid run.
 
 ## Last Completed Work
 

@@ -20,6 +20,7 @@ from generate_pairs import (
     EvaluationRunnerError,
     HttpClient,
     HttpRequestError,
+    HttpRequestTimeoutError,
     RunnerConfig,
     run_pairs,
 )
@@ -79,6 +80,7 @@ class UsageEvent(ArtifactModel):
     failure_field: str | None = None
     failure_source: str | None = None
     failure_type: str | None = None
+    timeout_sec: float | None = None
 
 
 class UsageLedger(ArtifactModel):
@@ -377,7 +379,11 @@ def run_vertex_pilot(
     )
     run_dir = runs_dir / run_id
     budgeted_client = BudgetedVertexClient(
-        client or HttpClient(base_url),
+        client
+        or HttpClient(
+            base_url,
+            timeout_sec=policy.model.limits.http_timeout_sec,
+        ),
         policy=policy,
         run_id=run_id,
         ledger_path=run_dir / "pilot_usage.json",
@@ -396,6 +402,11 @@ def run_vertex_pilot(
 def _http_failure_metadata(exc: Exception) -> dict[str, Any]:
     if not isinstance(exc, HttpRequestError):
         return {}
+    if isinstance(exc, HttpRequestTimeoutError):
+        return {
+            "failure_reason": "client_timeout",
+            "timeout_sec": exc.timeout_sec,
+        }
     return {
         "http_status": exc.status_code,
         "provider_failure_code": exc.public_error_code,

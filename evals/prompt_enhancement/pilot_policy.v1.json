@@ -18,6 +18,7 @@
     "max_generated_images": 80,
     "samples_per_arm": 2,
     "max_provider_retry_attempts": 3,
+    "http_timeout_sec": 180.0,
     "max_enhancement_call_groups_per_case": 3,
     "max_gemini_input_tokens_per_call": 8000,
     "max_gemini_output_tokens_per_call": 1600
