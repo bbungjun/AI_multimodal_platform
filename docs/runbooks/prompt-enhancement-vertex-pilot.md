@@ -46,6 +46,12 @@ evaluation client deadline이며, preflight hash에 포함된다. timeout이 발
 `failure_reason=client_timeout`, `timeout_sec`만 남고 prompt나 raw exception text는 저장하지
 않는다.
 
+Gemini 2.5 Flash prompt enhancement는 `ThinkingConfig(thinking_budget=0)`으로
+호출한다. 이 경로는 reasoning이 아니라 compact structured JSON을 요구한다. Automatic
+thinking budget을 그대로 두면 `max_output_tokens=1600` 안에서 thinking이 예산을 소비해
+응답 JSON이 `MAX_TOKENS`로 잘릴 수 있다. 이 설정은 call-group/HTTP/image 상한을 늘리지
+않는다.
+
 `$20` 가드는 이 파일럿이 요청하는 workload의 보수적 추정치다. Google Cloud Billing
 account의 결제 hard stop이 아니며 같은 project의 다른 사용량, 세금, 환율, credit, 지연
 반영 비용은 포함하지 않는다. Cloud Billing budget/alert도 일반적으로 알림 수단이지 즉시

@@ -120,3 +120,31 @@ response text.
 This is a bounded recovery path, not an automatic replacement run. Fresh
 preflight and mock evidence plus explicit approval remain required before any
 future paid execution.
+
+## 2026-07-16 structured-output truncation evidence
+
+After PR #78 merged at `fbf03c1`, the clean preflight SHA was
+`f2257bf15e80449444181bf2af03682db039d020969fa910cb63b9af5129e85c` and the
+fresh 20-case mock gate passed. User-approved real run
+`issue66-vertex-fbf03c1-001` then completed four Raw/Enhanced pairs: four
+successful enhancement HTTP requests, eight successful Imagen generation HTTP
+requests, and 16 requested images.
+
+The next enhancement HTTP request spent `29,627 ms` and returned public HTTP
+status `502` with `prompt_enhancement_invalid_response`. Its prompt-free ledger
+records `failure_reason=malformed_json` and `failure_source=text`. Backend logs
+show that the initial structured response, STRICT JSON repair, and CONTRACT
+REPAIR each ended with `finish_reason=MAX_TOKENS`; every candidate was an
+incomplete JSON object. The runner closed the manifest as `failed` and made no
+replacement request.
+
+This rules out the 180-second evaluation-client deadline, host OOM, and worker
+restart as the cause: both backend and worker had `OOMKilled=false` and restart
+count `0`. Gemini 2.5 Flash uses an automatic thinking budget unless configured
+otherwise, so the response budget could be consumed before the JSON object was
+closed even with the existing 1,600-token output cap.
+
+Issue #79 sets `ThinkingConfig(thinking_budget=0)` for prompt enhancement,
+which is a compact structured-output path rather than a reasoning task. The
+output cap and three-call-group limit stay unchanged. This requires a fresh
+clean preflight, mock evidence, and explicit approval before another paid run.
