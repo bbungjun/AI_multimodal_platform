@@ -196,6 +196,10 @@ VQAScore는 `(image, prompt)` batch를 지원하고 TIFA는 한 이미지의 fro
 지원한다. GPU VRAM마다 VQAScore batch size를 `1`, `2`, `4` 순으로 실제 smoke에서 측정한
 뒤 성공한 최대값만 사용한다. OOM 뒤 batch size를 자동으로 키우거나 건너뛰지 않는다.
 
+현재 v2 scorer profile은 CUDA에 최소 12GiB VRAM을 요구한다. 8GiB GPU는 CUDA container가
+인식되더라도 real scorer 실행 대상으로 승인하지 않는다. 그런 host에서는 CPU batch 경로를
+사용하고, 실제 benchmark artifact와 별도로 batch throughput을 기록한다.
+
 기존 score checkpoint가 있는 run에 batch size를 바꿔 재개할 수 없다. 기존 model execution과
 새 batch/GPU execution을 섞으면 `score_real_pairs.py`가 실패한다. 실제 생성 asset은 그대로
 두고, 의도적으로 재채점할 경우에만 `--reset-existing-scores`를 명시한다.
