@@ -300,3 +300,13 @@ def test_docker_boundary_uses_hash_locks_narrow_packages_and_non_root_user() -> 
     assert "--hash=sha256:" in runtime_lock
     assert "image-reward==1.5" in adapter_lock
     assert "t2v-metrics==3.0" in adapter_lock
+
+
+def test_cuda_docker_boundary_keeps_a_pinned_cuda_torch_base() -> None:
+    dockerfile = (OFFLINE_ROOT / "Dockerfile.cuda").read_text(encoding="utf-8")
+
+    assert "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime@sha256:" in dockerfile
+    assert "--require-hashes" in dockerfile
+    assert "USER scorer" in dockerfile
+    assert "torch 2.5.1 with CUDA 12.4" in dockerfile
+    assert "torchvision$/d" in dockerfile
