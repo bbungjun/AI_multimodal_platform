@@ -19,7 +19,8 @@ Imagen, Veo 또는 Vertex API를 호출하지 않는다.
 
 ## 고정된 경계
 
-`evals/prompt_enhancement/offline/scorer_profile.v1.json`이 source of truth다.
+Issue #66 real pilot에는 `evals/prompt_enhancement/offline/scorer_profile.v2.json`이
+source of truth다. 이전 v1 fixture smoke는 historical adapter evidence로만 유지한다.
 
 - Base image: Python 3.11.13 slim-bookworm digest 고정
 - Runtime: CPU PyTorch 2.5.1, Transformers 4.49.0과 모든 transitive wheel hash 고정
@@ -56,7 +57,7 @@ Repository root에서 실행한다.
 
 ```powershell
 cd evals/prompt_enhancement
-docker build -f offline/Dockerfile -t creativeops-offline-scorers:v1 .
+docker build -f offline/Dockerfile -t creativeops-offline-scorers:v2 .
 ```
 
 빌드는 `requirements-runtime.lock.txt`와 `requirements-adapters.lock.txt`의 모든 hash를
@@ -73,8 +74,11 @@ cd evals/prompt_enhancement
 New-Item -ItemType Directory -Force .model-cache | Out-Null
 docker run --rm `
   -v "${PWD}/.model-cache:/model-cache" `
-  creativeops-offline-scorers:v1 `
-  python -m offline.run_smoke --prepare-models --prepare-only
+  creativeops-offline-scorers:v2 `
+  python -m offline.run_smoke `
+    --profile offline/scorer_profile.v2.json `
+    --benchmark benchmark.v2.jsonl `
+    --prepare-models --prepare-only
 ```
 
 중단되면 같은 명령을 재실행한다. 완료 marker가 맞는 snapshot은 재사용하고 미완료 snapshot만
@@ -89,7 +93,7 @@ New-Item -ItemType Directory -Force runs/issue65-all-scorers-smoke | Out-Null
 docker run --rm `
   -v "${PWD}/.model-cache:/model-cache" `
   -v "${PWD}/runs/issue65-all-scorers-smoke:/runs" `
-  creativeops-offline-scorers:v1 `
+  creativeops-offline-scorers:v2 `
   python -m offline.run_smoke --device cpu --output-dir /runs
 ```
 
@@ -175,3 +179,23 @@ git diff --cached --name-only
 
 실제 Vertex 파일럿은 이 runbook 완료만으로 허용되지 않는다. 사용자 비용/요청 한도 승인과
 개인 GCP account/project guard를 별도로 통과해야 한다.
+
+## CUDA scorer와 batch 정책
+
+CPU image는 fallback이다. NVIDIA GPU가 있는 WSL Docker Desktop 환경에서는 별도 CUDA
+image를 사용한다. CPU image를 CUDA wheel로 바꾸지 않는다.
+
+```powershell
+cd evals/prompt_enhancement
+docker build -f offline/Dockerfile.cuda -t creativeops-offline-scorers:v2-cuda .
+docker run --rm --gpus all creativeops-offline-scorers:v2-cuda `
+  python -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0))"
+```
+
+VQAScore는 `(image, prompt)` batch를 지원하고 TIFA는 한 이미지의 frozen question batch를
+지원한다. GPU VRAM마다 VQAScore batch size를 `1`, `2`, `4` 순으로 실제 smoke에서 측정한
+뒤 성공한 최대값만 사용한다. OOM 뒤 batch size를 자동으로 키우거나 건너뛰지 않는다.
+
+기존 score checkpoint가 있는 run에 batch size를 바꿔 재개할 수 없다. 기존 model execution과
+새 batch/GPU execution을 섞으면 `score_real_pairs.py`가 실패한다. 실제 생성 asset은 그대로
+두고, 의도적으로 재채점할 경우에만 `--reset-existing-scores`를 명시한다.
