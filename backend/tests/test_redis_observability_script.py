@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import sys
 from pathlib import Path
 
@@ -148,3 +149,172 @@ def test_redis_sample_summary_marks_decreased_counter_as_reset():
         "delta": None,
         "counter_reset": True,
     }
+
+
+def test_monitoring_series_normalization_is_secret_safe_and_time_ordered():
+    module = load_redis_observability_module()
+
+    normalized = module.normalize_monitoring_series(
+        {
+            "type": "redis.googleapis.com/instance/clients/connected",
+            "metricKind": "GAUGE",
+            "valueType": "DOUBLE",
+            "unit": "1",
+        },
+        {
+            "metric": {
+                "type": "redis.googleapis.com/instance/clients/connected",
+                "labels": {"node_id": "node-1", "shard": "primary"},
+            },
+            "resource": {
+                "type": "redis_instance",
+                "labels": {
+                    "project_id": "krafton-vertex-live-3108",
+                    "region": "asia-northeast3",
+                    "instance_id": "creativeops-portfolio-redis",
+                    "node_id": "node-1",
+                    "host": "must-not-survive",
+                },
+            },
+            "points": [
+                {
+                    "interval": {
+                        "endTime": "2026-07-27T00:00:20Z",
+                    },
+                    "value": {"doubleValue": 3.5},
+                },
+                {
+                    "interval": {
+                        "endTime": "2026-07-27T00:00:10Z",
+                    },
+                    "value": {"int64Value": "2"},
+                },
+                {
+                    "interval": {
+                        "endTime": "2026-07-27T00:00:30Z",
+                    },
+                    "value": {"boolValue": True},
+                },
+            ],
+            "request": "https://monitoring.googleapis.com/v3/secret",
+            "authorization": "Bearer secret",
+        },
+    )
+
+    assert normalized["metric_type"] == "redis.googleapis.com/instance/clients/connected"
+    assert normalized["metric_kind"] == "GAUGE"
+    assert normalized["value_type"] == "DOUBLE"
+    assert normalized["metric_labels"] == {"node_id": "node-1", "shard": "primary"}
+    assert normalized["resource"] == {
+        "type": "redis_instance",
+        "labels": {
+            "project_id": "krafton-vertex-live-3108",
+            "region": "asia-northeast3",
+            "instance_id": "creativeops-portfolio-redis",
+            "node_id": "node-1",
+        },
+    }
+    assert normalized["points"] == [
+        {"start": None, "end": "2026-07-27T00:00:10Z", "value": 2},
+        {"start": None, "end": "2026-07-27T00:00:20Z", "value": 3.5},
+        {"start": None, "end": "2026-07-27T00:00:30Z", "value": True},
+    ]
+    assert "authorization" not in repr(normalized).lower()
+    assert "bearer" not in repr(normalized).lower()
+    assert "monitoring.googleapis.com" not in repr(normalized)
+    assert "host" not in repr(normalized)
+
+
+def test_monitoring_series_normalization_preserves_empty_series_metadata():
+    module = load_redis_observability_module()
+
+    normalized = module.normalize_monitoring_series(
+        {
+            "type": "redis.googleapis.com/instance/never-observed",
+            "metricKind": "DELTA",
+            "valueType": "INT64",
+        },
+        {
+            "metric": {"labels": {}},
+            "resource": {"type": "redis_instance", "labels": {}},
+            "points": [],
+        },
+    )
+
+    assert normalized["metric_type"] == "redis.googleapis.com/instance/never-observed"
+    assert normalized["metric_kind"] == "DELTA"
+    assert normalized["points"] == []
+
+
+def test_monitoring_segments_use_half_open_boundaries_and_preserve_observed_zero(tmp_path):
+    module = load_redis_observability_module()
+    series = [
+        {
+            "metric_type": "redis.googleapis.com/instance/commands/total",
+            "metric_kind": "DELTA",
+            "value_type": "INT64",
+            "unit": "1",
+            "metric_labels": {},
+            "resource": {"type": "redis_instance", "labels": {}},
+            "points": [
+                {"start": "2026-07-27T00:00:00Z", "end": "2026-07-27T00:00:30Z", "value": 0},
+                {"start": "2026-07-27T00:00:30Z", "end": "2026-07-27T00:01:00Z", "value": 5},
+                {"start": "2026-07-27T00:01:00Z", "end": "2026-07-27T00:01:30Z", "value": 7},
+            ],
+        },
+        {
+            "metric_type": "redis.googleapis.com/instance/memory/usage_ratio",
+            "metric_kind": "GAUGE",
+            "value_type": "DOUBLE",
+            "unit": "1",
+            "metric_labels": {},
+            "resource": {"type": "redis_instance", "labels": {}},
+            "points": [
+                {"start": None, "end": "2026-07-27T00:00:30Z", "value": 1.0},
+                {"start": None, "end": "2026-07-27T00:01:00Z", "value": 3.0},
+            ],
+        },
+        {
+            "metric_type": "redis.googleapis.com/instance/never-observed",
+            "metric_kind": "GAUGE",
+            "value_type": "DOUBLE",
+            "unit": "1",
+            "metric_labels": {},
+            "resource": {"type": "redis_instance", "labels": {}},
+            "points": [],
+        },
+    ]
+    segments = [
+        {"name": "idle", "start": "2026-07-27T00:00:00Z", "end": "2026-07-27T00:01:00Z"},
+        {"name": "benchmark", "start": "2026-07-27T00:01:00Z", "end": "2026-07-27T00:02:00Z"},
+        {"name": "recovery", "start": "2026-07-27T00:02:00Z", "end": "2026-07-27T00:03:00Z"},
+    ]
+
+    summary = module.summarize_monitoring_segments(series, segments)
+
+    idle_delta = summary["segments"]["idle"]["metrics"][
+        "redis.googleapis.com/instance/commands/total"
+    ]
+    assert idle_delta["delta_sum"] == 0
+    assert idle_delta["observed_zero"] is True
+    assert summary["segments"]["benchmark"]["metrics"][
+        "redis.googleapis.com/instance/commands/total"
+    ]["delta_sum"] == 12
+    assert summary["segments"]["idle"]["metrics"][
+        "redis.googleapis.com/instance/memory/usage_ratio"
+    ]["gauge"]["p50"] == pytest.approx(1.0)
+    assert summary["segments"]["idle"]["metrics"][
+        "redis.googleapis.com/instance/memory/usage_ratio"
+    ]["gauge"]["p95"] == pytest.approx(1.0)
+    assert summary["segments"]["idle"]["metrics"][
+        "redis.googleapis.com/instance/memory/usage_ratio"
+    ]["gauge"]["max"] == pytest.approx(1.0)
+    assert "redis.googleapis.com/instance/never-observed" in summary["segments"][
+        "recovery"
+    ]["not_observed_metric_names"]
+
+    artifact = tmp_path / "monitoring.json"
+    artifact.write_text('{"safe": true}\n', encoding="utf-8")
+    assert module.sha256_file(artifact) == hashlib.sha256(
+        b'{"safe": true}\n'
+    ).hexdigest()

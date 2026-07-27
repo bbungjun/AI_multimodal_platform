@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+import hashlib
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
@@ -366,3 +367,223 @@ def summarize_redis_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
         "cache_hit_ratio": cache_hit_ratio,
         "commands": command_summary,
     }
+
+
+_MONITORING_RESOURCE_LABELS = ("project_id", "region", "instance_id", "node_id")
+_MONITORING_FORBIDDEN_LABELS = {
+    "authorization",
+    "bearer",
+    "credential",
+    "host",
+    "password",
+    "port",
+    "secret",
+    "token",
+    "url",
+}
+
+
+def _canonical_monitoring_time(value: Any) -> str:
+    parsed = _parse_sample_time(value)
+    return parsed.isoformat().replace("+00:00", "Z")
+
+
+def _monitoring_value(value: Any) -> int | float | bool | None:
+    if not isinstance(value, Mapping):
+        return None
+    if "int64Value" in value:
+        try:
+            return int(value["int64Value"])
+        except (TypeError, ValueError):
+            return None
+    if "uint64Value" in value:
+        try:
+            parsed = int(value["uint64Value"])
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed >= 0 else None
+    if "doubleValue" in value:
+        try:
+            parsed = float(value["doubleValue"])
+        except (TypeError, ValueError):
+            return None
+        return parsed if math.isfinite(parsed) else None
+    if "boolValue" in value and isinstance(value["boolValue"], bool):
+        return value["boolValue"]
+    return None
+
+
+def _safe_monitoring_labels(value: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        return {}
+    labels: dict[str, str] = {}
+    for name, label_value in value.items():
+        if not isinstance(name, str) or not isinstance(label_value, str):
+            continue
+        if name.lower() in _MONITORING_FORBIDDEN_LABELS:
+            continue
+        if len(name) <= 128 and len(label_value) <= 256:
+            labels[name] = label_value
+    return dict(sorted(labels.items()))
+
+
+def normalize_monitoring_series(
+    descriptor: Mapping[str, Any],
+    series: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Normalize one Monitoring time series without copying request metadata."""
+
+    metric_type = descriptor.get("type")
+    metric_kind = descriptor.get("metricKind")
+    value_type = descriptor.get("valueType")
+    if not isinstance(metric_type, str) or not metric_type.startswith("redis.googleapis.com/"):
+        raise ValueError("Monitoring descriptor is not a Redis metric")
+    if metric_kind not in {"GAUGE", "DELTA", "CUMULATIVE"}:
+        raise ValueError("Monitoring descriptor has an unsupported metric kind")
+    if value_type not in {"INT64", "UINT64", "DOUBLE", "BOOL"}:
+        raise ValueError("Monitoring descriptor has an unsupported value type")
+    if not isinstance(series, Mapping):
+        raise ValueError("Monitoring series must be an object")
+
+    resource = series.get("resource")
+    resource_labels = resource.get("labels") if isinstance(resource, Mapping) else {}
+    normalized_resource = {
+        name: resource_labels[name]
+        for name in _MONITORING_RESOURCE_LABELS
+        if isinstance(resource_labels, Mapping)
+        and isinstance(resource_labels.get(name), str)
+        and len(resource_labels[name]) <= 256
+    }
+    points: list[dict[str, Any]] = []
+    raw_points = series.get("points")
+    if isinstance(raw_points, list):
+        for point in raw_points:
+            if not isinstance(point, Mapping):
+                continue
+            interval = point.get("interval")
+            if not isinstance(interval, Mapping):
+                continue
+            end = interval.get("endTime")
+            if not isinstance(end, str):
+                continue
+            value = _monitoring_value(point.get("value"))
+            if value is None:
+                continue
+            start = interval.get("startTime")
+            points.append(
+                {
+                    "start": _canonical_monitoring_time(start) if start else None,
+                    "end": _canonical_monitoring_time(end),
+                    "value": value,
+                }
+            )
+    points.sort(key=lambda point: point["end"])
+    metric = series.get("metric")
+    metric_labels = metric.get("labels") if isinstance(metric, Mapping) else {}
+    return {
+        "metric_type": metric_type,
+        "metric_kind": metric_kind,
+        "value_type": value_type,
+        "unit": descriptor.get("unit", "")
+        if isinstance(descriptor.get("unit", ""), str)
+        else "",
+        "metric_labels": _safe_monitoring_labels(metric_labels),
+        "resource": {
+            "type": "redis_instance",
+            "labels": dict(sorted(normalized_resource.items())),
+        },
+        "points": points,
+    }
+
+
+def _monitoring_point_in_segment(point: Mapping[str, Any], start: datetime, end: datetime) -> bool:
+    point_end = _parse_sample_time(point["end"])
+    return start <= point_end < end
+
+
+def summarize_monitoring_segments(
+    series: list[dict[str, Any]],
+    segments: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Summarize normalized Redis Monitoring series by named half-open segments."""
+
+    segment_output: dict[str, Any] = {}
+    all_metric_names = {
+        item.get("metric_type")
+        for item in series
+        if isinstance(item, Mapping) and isinstance(item.get("metric_type"), str)
+    }
+    observed_any: set[str] = set()
+    for segment in segments:
+        name = segment.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError("Monitoring segment name is required")
+        if name in segment_output:
+            raise ValueError(f"Duplicate Monitoring segment: {name}")
+        start = _parse_sample_time(segment.get("start"))
+        end = _parse_sample_time(segment.get("end"))
+        if end <= start:
+            raise ValueError(f"Monitoring segment must have positive duration: {name}")
+        metrics: dict[str, Any] = {}
+        observed: set[str] = set()
+        for item in series:
+            metric_name = item.get("metric_type")
+            if not isinstance(metric_name, str):
+                continue
+            points = [
+                point
+                for point in item.get("points", [])
+                if isinstance(point, Mapping)
+                and _monitoring_point_in_segment(point, start, end)
+            ]
+            if not points:
+                continue
+            observed.add(metric_name)
+            observed_any.add(metric_name)
+            metric = metrics.setdefault(
+                metric_name,
+                {
+                    "metric_kind": item.get("metric_kind"),
+                    "value_type": item.get("value_type"),
+                    "unit": item.get("unit", ""),
+                    "point_count": 0,
+                    "series_count": 0,
+                    "values": [],
+                },
+            )
+            metric["point_count"] += len(points)
+            metric["series_count"] += 1
+            metric["values"].extend(point["value"] for point in points)
+
+        for metric_name, metric in metrics.items():
+            values = [float(value) for value in metric.pop("values")]
+            if metric["metric_kind"] == "DELTA":
+                delta_sum = sum(values)
+                metric["delta_sum"] = delta_sum
+                metric["observed_zero"] = delta_sum == 0
+            else:
+                metric["gauge"] = _series_stats(values)
+        segment_output[name] = {
+            "start": _canonical_monitoring_time(segment.get("start")),
+            "end": _canonical_monitoring_time(segment.get("end")),
+            "metrics": metrics,
+            "observed_metric_names": sorted(observed),
+            "not_observed_metric_names": sorted(all_metric_names - observed),
+        }
+
+    return {
+        "alignment": "60s",
+        "boundary_rule": "[start,end)",
+        "point_assignment": "point end timestamp",
+        "segments": segment_output,
+        "observed_metric_names": sorted(observed_any),
+        "not_observed_metric_names": sorted(all_metric_names - observed_any),
+    }
+
+
+def sha256_file(path: Any) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as file_handle:
+        for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
