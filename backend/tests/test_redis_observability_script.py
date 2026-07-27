@@ -166,6 +166,33 @@ def test_redis_sample_summary_marks_decreased_counter_as_reset():
     }
 
 
+def test_command_counter_missing_from_first_sample_uses_zero_baseline():
+    module = load_redis_observability_module()
+
+    summary = module.summarize_redis_samples(
+        [
+            {
+                "at": "2026-07-27T00:00:00Z",
+                "redis": {"queue_depth": 0, "commands": {}},
+            },
+            {
+                "at": "2026-07-27T00:00:10Z",
+                "redis": {
+                    "queue_depth": 0,
+                    "commands": {"lpush": {"calls": 10, "usec": 40}},
+                },
+            },
+        ]
+    )
+
+    assert summary["commands"]["lpush"] == {
+        "calls_delta": 10,
+        "total_usec_delta": 40,
+        "weighted_usec_per_call": pytest.approx(4.0),
+        "counter_reset": False,
+    }
+
+
 def test_monitoring_series_normalization_is_secret_safe_and_time_ordered():
     module = load_redis_observability_module()
 

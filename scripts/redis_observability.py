@@ -321,8 +321,10 @@ def summarize_redis_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
             item["redis"]["commands"].get(command_name, {})
             for item in prepared
         ]
-        calls = [value["calls"] for value in command_values if "calls" in value]
-        usec = [value["usec"] for value in command_values if "usec" in value]
+        calls_present = any("calls" in value for value in command_values)
+        usec_present = any("usec" in value for value in command_values)
+        calls = [value.get("calls", 0) for value in command_values] if calls_present else []
+        usec = [value.get("usec", 0) for value in command_values] if usec_present else []
         calls_delta = (calls[-1] - calls[0]) if calls else None
         usec_delta = (usec[-1] - usec[0]) if usec else None
         reset = (
