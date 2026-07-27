@@ -37,6 +37,10 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
+- GCP portfolio deployment: as of 2026-07-27, the personal Seoul GKE cluster
+  `creativeops-portfolio` is running in mock mode with API `2`, frontend `2`,
+  dispatcher `1`, worker `1`, and two nodes. Redis is a READY Basic 1 GiB
+  Memorystore instance. Recheck live state before relying on this snapshot.
 - AWS portfolio deployment: no live AWS stack is currently running. The Sydney
   `ap-southeast-2` portfolio stack under AWS account `827913617635` was
   intentionally destroyed on 2026-06-19.
@@ -69,6 +73,39 @@ values empty. In Vertex mode, configure credentials locally and never commit or
 paste credential contents.
 
 ## Active Work
+
+As of 2026-07-27, Issue
+[#83](https://github.com/bbungjun/AI_multimodal_platform/issues/83) is active on
+branch `codex/issue-83-redis-celery-baseline`:
+
+- The goal is to compare the current Postgres outbox -> Redis/Celery -> worker
+  path with a future PostgreSQL worker path on both fixed infrastructure cost
+  and measured orchestration performance.
+- The primary A/B uses `AI_PROVIDER=mock`. It can support API, claim latency,
+  completion latency, throughput, queue/backlog, resource, failure, duplicate,
+  and recovery claims, but not real Imagen/Veo latency, quality, quota, or
+  provider-cost claims.
+- Issue #83 fixes the deployed workload at warm-up 20, steady 100, and five
+  200-job bursts: 1,120 total jobs and 1,100 aggregate jobs.
+- `scripts/benchmark_mock_orchestration.py` now has dry-run by default, personal
+  GCP release-profile guards, mock/celery/idle/rate-limit guards, concurrent
+  public API workload generation, paginated polling, p50/p95/p99 calculation,
+  GKE CPU/memory and Redis queue sampling, secret-safe evidence, and terminal
+  job/asset cleanup.
+- `docs/runbooks/mock-orchestration-benchmark.md` records the temporary
+  worker-only rate-limit override and mandatory rollback. The override removes
+  mock throttling from the architecture comparison; replica and worker
+  concurrency remain unchanged.
+- A local 3-job mock run passed submit, Celery processing, state collection,
+  aggregation, and cleanup. Its small sample is harness verification only and
+  must not be used as portfolio performance evidence.
+- The focused harness suite passes 11 tests. A Python 3.11 container with the
+  repository mounted read-only passes the full backend suite: 364 tests, with
+  only read-only pytest-cache warnings.
+- Next: commit/push the harness, apply and verify the temporary worker rate
+  override in the personal GKE cluster, run the full deployed baseline, inspect
+  the ignored raw artifact, write a secret-free aggregate evidence document,
+  remove the override, and verify mock health plus idle cleanup.
 
 As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
 PR #74 at `6f2f0ce`. Live validation is being recorded on branch
@@ -1461,10 +1498,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   increase from `20` to `21`; preserve the failed run alongside the final run.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
-- The live GCP stack is currently in temporary demo pause mode: app replicas
-  `0`, node pool `0`, and `ai_provider=mock`. Before live autoscaling, HPA, or
-  provider failure evidence, intentionally scale the stack back up with the
-  personal GCP guard.
+- The live GCP stack was observed running in mock mode on 2026-07-27. Do not
+  rely on the older demo-pause note; re-run the personal GCP guard and inspect
+  deployment/node readiness before any live work.
 - After Issue #49 merges, use a dedicated live observability rollout issue:
   resume the proven mock baseline, build and deploy the new backend image,
   review a Terraform plan with alerts disabled, verify `PodMonitoring` scrape

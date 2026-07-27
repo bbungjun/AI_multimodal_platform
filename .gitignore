@@ -24,6 +24,9 @@ uploads/
 evals/prompt_enhancement/runs/
 evals/prompt_enhancement/.model-cache/
 
+# Local orchestration benchmark artifacts
+benchmarks/orchestration/runs/
+
 # Environment and credentials
 .env
 .env.*
