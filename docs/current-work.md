@@ -142,6 +142,22 @@ branch `codex/issue-83-redis-celery-baseline`:
 - A post-hardening live GKE dry-run passed the exact release-profile base URL,
   kubectl context, mock provider, Celery, deployment readiness, idle queue, and
   restored worker rate limit 5 guards without creating jobs.
+- Redis observability follow-up now has a safe `INFO` snapshot contract and
+  aggregation in `scripts/redis_observability.py`. Future GKE samples collect
+  Redis runtime metrics at the existing 2-second cadence in
+  `samples[*].redis`; the legacy `resource_summary.peak_celery_queue_depth`
+  field remains available for report compatibility.
+- The Cloud Monitoring exporter is guarded to the personal Redis instance,
+  defaults to dry-run, and retries only 429/5xx with five bounded attempts.
+  Focused Redis/benchmark/profile verification currently passes 44 tests.
+- Historical backfill for `redis-celery-20260727T0626Z` is complete without new
+  workload or Vertex calls: 192 descriptors, 39 observed metrics, 153
+  not-observed metrics, and 0 query errors. The ignored raw artifact is
+  `benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json`
+  with SHA-256
+  `6161928608842ea3dd2cb34704c5132ccbdb75f172ef1351b42c4e95705d7916`;
+  committed aggregates are in
+  `docs/evidence/issue-83-redis-monitoring-backfill.json`.
 - Draft PR
   [#85](https://github.com/bbungjun/AI_multimodal_platform/pull/85) contains the
   baseline harness, evidence, failure reconstruction, and runbook. Independent

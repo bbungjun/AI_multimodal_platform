@@ -101,8 +101,59 @@ python3 scripts/benchmark_mock_orchestration.py \
 
 dry-run은 GCP account/project, release profile의 public base URL과 Celery mode,
 현재 kubectl context의 exact GKE cluster, deployment, mock provider, rate-limit,
-resource metrics, Redis queue를 확인한다. 하나라도 다르면 public workload를 보내기
-전에 중단한다. job은 만들지 않는다.
+resource metrics, Redis safe snapshot을 확인한다. 하나라도 다르면 public workload를
+보내기 전에 중단한다. job은 만들지 않는다.
+
+GKE 실행 시 sampler는 기존 2초 주기로 worker Pod 내부에서 Redis `INFO`,
+`INFO commandstats`, `INFO keyspace`, queue `LLEN`을 한 번의 safe probe로 수집한다.
+report의 `preflight.gke.initial_redis`, `samples[*].redis`, `redis_summary`만 사용하며
+host, port, broker URL, password, connection kwargs, token/header와 whitelist 밖의
+INFO field는 artifact에 기록하지 않는다. `sample_error`가 하나라도 있으면 결과를
+채택하지 않는다.
+
+## 4-1. 기존 실행의 Cloud Monitoring backfill
+
+이 단계는 새 job을 만들지 않고 기존 `redis-celery-20260727T0626Z` 시간창을
+read-only 복원한다. exporter는 기본 dry-run이며, 실제 historical query와 raw 파일
+생성에는 명시적인 `--execute`가 필요하다. 모든 GCP 명령은 personal profile과
+project guard를 명시한다.
+
+```bash
+export CLOUDSDK_CONFIG=/mnt/c/Users/young/.gcloud-creativeops-personal
+export KUBECONFIG=/mnt/c/Users/young/.kube/creativeops-personal
+export GOOGLE_CLOUD_PROJECT=krafton-vertex-live-3108
+export CLOUDSDK_CORE_PROJECT=krafton-vertex-live-3108
+export GCP_PROJECT_ID=krafton-vertex-live-3108
+
+python3 scripts/export_redis_monitoring_metrics.py \
+  --profile infra/gcp/release-profile.json \
+  --start 2026-07-27T06:21:00Z \
+  --end 2026-07-27T06:32:00Z \
+  --segment idle,2026-07-27T06:21:00Z,2026-07-27T06:24:00Z \
+  --segment benchmark,2026-07-27T06:24:00Z,2026-07-27T06:27:00Z \
+  --segment recovery,2026-07-27T06:27:00Z,2026-07-27T06:32:00Z \
+  --output benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json
+```
+
+실제 복원 시에만 위 명령에 `--execute`를 추가한다. Cloud Monitoring 기본 해상도는
+60초이므로 결과는 point end timestamp 기준의 half-open `[start,end)` segment에
+배정한다. descriptor retry는 429/5xx에 한해 1, 2, 4, 8초 bounded backoff 후 총
+5회에서 멈춘다. query error, no-series, observed zero를 서로 섞지 않는다.
+
+복원 후에는 다음을 확인한다.
+
+```bash
+raw=benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json
+rg -ni 'authorization|bearer|password|private_key|client_secret|redis://|rediss://|access_token' "$raw"
+git check-ignore "$raw"
+sha256sum "$raw"
+python3 -m json.tool docs/evidence/issue-83-redis-monitoring-backfill.json >/dev/null
+```
+
+raw에 secret scan 결과가 있거나, committed evidence의 SHA와 다르거나, query error가
+0이 아니면 evidence를 publish하지 않는다. 이 backfill은 Cloud Monitoring 운영
+시계열을 보강할 뿐이며 새 stress workload, Redis write, deployment mutation, 실제
+Vertex 호출을 수행하지 않는다.
 
 ## 5. 기준선 실행
 

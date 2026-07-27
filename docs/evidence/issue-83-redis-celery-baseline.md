@@ -135,6 +135,51 @@ worker CPU는 1 CPU limit에 근접했다. 이는 steady 처리량과 긴 claim 
 병목 신호다. 반면 burst HTTP 500과 pending 고립의 직접 원인은 API/worker 로그로
 확인한 DB connection 고갈이다.
 
+## Redis service metric backfill
+
+기존 harness는 Redis queue depth만 직접 수집했고 Memorystore 자체 지표는 저장하지
+않았다. 원 실행 시간대의 Cloud Monitoring 이력을 별도 read-only exporter로 복원했다.
+이 값은 **Cloud Monitoring post-hoc, 60s-aligned**이며 GKE sampler의 직접 계측값이나
+phase-exact attribution으로 해석하지 않는다.
+
+| 구간 | UTC half-open window | 관측 metric | not observed |
+| --- | --- | ---: | ---: |
+| idle | `[06:21:00, 06:24:00)` | 39 | 153 |
+| benchmark/immediate failure | `[06:24:00, 06:27:00)` | 39 | 153 |
+| recovery | `[06:27:00, 06:32:00)` | 39 | 153 |
+
+descriptor 192개 중 대상 `redis_instance`에서 실제 시계열이 있던 metric은 39개였고,
+query error는 0이었다. 137개는 Cluster/ClusterNode resource descriptor라 대상
+instance query를 생략했고, 나머지 16개는 대상 시간창에 시계열이 없었다. 둘 다 0으로
+대체하지 않고 `not_observed`로 보존했다. 전체 metric 이름과 집계값은
+`docs/evidence/issue-83-redis-monitoring-backfill.json`에, 원본은
+`benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json`에
+보존하며 raw SHA-256은
+`6161928608842ea3dd2cb34704c5132ccbdb75f172ef1351b42c4e95705d7916`이다.
+
+benchmark/immediate-failure bucket에서 확인된 Redis service 신호는 다음과 같다.
+
+- parent CPU peak는 60초 bucket 기준 `0.244535 CPU-seconds`, main-thread CPU peak는
+  `0.218762 CPU-seconds`였다. peak bucket end는 `06:27:00Z`이며 half-open 규칙상
+  benchmark segment에 배정된다.
+- memory usage max는 `4,710,536 bytes`, usage ratio max는 `0.004387`(약 0.439%),
+  maxmemory는 `1 GiB`였다.
+- connected clients max는 `17`, blocked clients max는 `1`이었다.
+- command calls delta 합계는 `1,354`, total command time delta는 `24,355 us`,
+  weighted command latency는 `17.987445 us/call`이었다.
+- network delta는 input `395,742 bytes`, output `405,093 bytes`였다.
+- cache hit ratio는 p50 `0.141668`, max `0.884149`; keyspace hits/misses delta는
+  `13/25`였다.
+- keyspace keys max는 `6`, expiration keys max와 avg TTL은 `0`이었다.
+- evicted keys, expired keys, rejected connections delta는 모두 `0`이었다.
+- RDB/persistence 진행 신호는 관측 구간에서 `0`, replication role은 primary 값으로
+  유지됐다.
+
+이 복원값은 Redis가 병목이 아니었다는 독립적인 인과 증명이 아니다. 기존 직접 계측과
+같이 보면 Redis queue backlog는 관찰됐지만, burst 실패의 직접 원인은 여전히 Cloud SQL
+connection exhaustion이다. Issue #84의 deployment-wide DB connection budget과 worker
+transient DB failure recovery를 먼저 고친 뒤 동일 workload의 A/B를 재실행해야 한다.
+
 ## 복구와 원복
 
 1. Redis queue가 0인데 Postgres pending이 20인 것을 확인했다.
