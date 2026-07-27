@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -9,12 +10,26 @@ import pytest
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "redis_observability.py"
+EXPORTER_PATH = Path(__file__).resolve().parents[2] / "scripts" / "export_redis_monitoring_metrics.py"
 
 
 def load_redis_observability_module():
     spec = importlib.util.spec_from_file_location(
         "redis_observability",
         SCRIPT_PATH,
+    )
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_monitoring_exporter_module():
+    spec = importlib.util.spec_from_file_location(
+        "export_redis_monitoring_metrics",
+        EXPORTER_PATH,
     )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -318,3 +333,206 @@ def test_monitoring_segments_use_half_open_boundaries_and_preserve_observed_zero
     assert module.sha256_file(artifact) == hashlib.sha256(
         b'{"safe": true}\n'
     ).hexdigest()
+
+
+def test_monitoring_export_defaults_to_dry_run_and_plans_only_valid_segments(tmp_path, capsys):
+    module = load_monitoring_exporter_module()
+    profile = {
+        "account": "youngjun3108@gmail.com",
+        "project_id": "krafton-vertex-live-3108",
+        "region": "asia-northeast3",
+        "redis_instance_name": "creativeops-portfolio-redis",
+    }
+    profile_path = tmp_path / "release-profile.json"
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    output_path = tmp_path / "raw.json"
+
+    exit_code = module.main(
+        [
+            "--profile",
+            str(profile_path),
+            "--start",
+            "2026-07-27T06:21:00Z",
+            "--end",
+            "2026-07-27T06:32:00Z",
+            "--segment",
+            "idle,2026-07-27T06:21:00Z,2026-07-27T06:24:00Z",
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert not output_path.exists()
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["dry_run"] is True
+    assert planned["descriptor_query_count"] == 1
+    assert planned["time_series_query_count"] == "one per Redis descriptor"
+
+
+def test_monitoring_export_rejects_invalid_project_before_token(monkeypatch, tmp_path):
+    module = load_monitoring_exporter_module()
+    profile = {
+        "account": "youngjun3108@gmail.com",
+        "project_id": "wrong-project",
+        "region": "asia-northeast3",
+        "redis_instance_name": "creativeops-portfolio-redis",
+    }
+    profile_path = tmp_path / "release-profile.json"
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    args = module.build_parser().parse_args(
+        [
+            "--profile",
+            str(profile_path),
+            "--start",
+            "2026-07-27T06:21:00Z",
+            "--end",
+            "2026-07-27T06:32:00Z",
+            "--execute",
+        ]
+    )
+    token_calls = []
+    monkeypatch.setattr(module, "_access_token", lambda: token_calls.append(True))
+
+    with pytest.raises(module.ExportError, match="project"):
+        module.run_export(args)
+
+    assert token_calls == []
+
+
+def test_monitoring_client_retries_429_with_bounded_backoff():
+    module = load_monitoring_exporter_module()
+    attempts = 0
+    delays = []
+
+    def transport(path, params):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise module.MonitoringHttpError(429)
+        return {"ok": True}
+
+    client = module.MonitoringClient(
+        token_provider=lambda: "opaque-token",
+        transport=transport,
+        sleep_fn=delays.append,
+    )
+
+    assert client.request_json("projects/p/test", {}) == {"ok": True}
+    assert attempts == 2
+    assert delays == [1]
+
+
+def test_monitoring_client_stops_after_five_retryable_responses():
+    module = load_monitoring_exporter_module()
+    attempts = 0
+    delays = []
+
+    def transport(path, params):
+        nonlocal attempts
+        attempts += 1
+        raise module.MonitoringHttpError(500)
+
+    client = module.MonitoringClient(
+        token_provider=lambda: "opaque-token",
+        transport=transport,
+        sleep_fn=delays.append,
+    )
+
+    with pytest.raises(module.ExportError, match="bounded retries"):
+        client.request_json("projects/p/test", {})
+    assert attempts == 5
+    assert delays == [1, 2, 4, 8]
+
+
+def test_monitoring_export_paginates_descriptors_and_time_series():
+    module = load_monitoring_exporter_module()
+    descriptors = [
+        {
+            "type": "redis.googleapis.com/instance/observed",
+            "metricKind": "GAUGE",
+            "valueType": "DOUBLE",
+            "unit": "1",
+        },
+        {
+            "type": "redis.googleapis.com/instance/no-series",
+            "metricKind": "GAUGE",
+            "valueType": "DOUBLE",
+            "unit": "1",
+        },
+        {
+            "type": "redis.googleapis.com/instance/second-no-series",
+            "metricKind": "DELTA",
+            "valueType": "INT64",
+            "unit": "1",
+        },
+    ]
+
+    def descriptor_page(page_token):
+        if page_token is None:
+            return {"metricDescriptors": descriptors[:2], "nextPageToken": "page-2"}
+        return {"metricDescriptors": descriptors[2:]}
+
+    def transport(path, params):
+        if path.endswith("metricDescriptors"):
+            return descriptor_page(params.get("pageToken"))
+        metric_type = params["filter"].split('metric.type = "', 1)[1].split('"', 1)[0]
+        if metric_type == descriptors[0]["type"]:
+            if params.get("pageToken"):
+                return {
+                    "timeSeries": [
+                        {
+                            "metric": {"labels": {}},
+                            "resource": {"type": "redis_instance", "labels": {}},
+                            "points": [
+                                {
+                                    "interval": {"endTime": "2026-07-27T06:22:30Z"},
+                                    "value": {"doubleValue": 2.0},
+                                }
+                            ],
+                        }
+                    ]
+                }
+            return {
+                "timeSeries": [
+                    {
+                        "metric": {"labels": {}},
+                        "resource": {"type": "redis_instance", "labels": {}},
+                        "points": [
+                            {
+                                "interval": {"endTime": "2026-07-27T06:21:30Z"},
+                                "value": {"doubleValue": 1.0},
+                            }
+                        ],
+                    }
+                ],
+                "nextPageToken": "series-2",
+            }
+        return {"timeSeries": []}
+
+    client = module.MonitoringClient(
+        token_provider=lambda: "opaque-token",
+        transport=transport,
+        sleep_fn=lambda _: None,
+    )
+    request = {
+        "project_id": "krafton-vertex-live-3108",
+        "region": "asia-northeast3",
+        "redis_instance_name": "creativeops-portfolio-redis",
+        "resource_name": "projects/krafton-vertex-live-3108/locations/asia-northeast3/instances/creativeops-portfolio-redis",
+        "start": "2026-07-27T06:21:00Z",
+        "end": "2026-07-27T06:24:00Z",
+        "segments": [
+            {"name": "idle", "start": "2026-07-27T06:21:00Z", "end": "2026-07-27T06:24:00Z"}
+        ],
+    }
+
+    result = module.collect_redis_monitoring(request, client)
+
+    assert result["descriptor_count"] == 3
+    assert result["available_metric_count"] == 1
+    assert result["not_observed_metric_count"] == 2
+    assert result["query_error_count"] == 0
+    assert len(result["series"]) == 4
+    assert "authorization" not in repr(result).lower()
+    assert "opaque-token" not in repr(result)
