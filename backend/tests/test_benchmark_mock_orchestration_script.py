@@ -45,6 +45,43 @@ def test_default_workload_is_20_warmup_100_steady_and_five_200_bursts():
     assert all(phase["include_in_aggregate"] for phase in phases[1:])
 
 
+def test_submit_phase_collects_all_successes_and_failures_without_early_abort():
+    module = load_benchmark_module()
+
+    class FakeClient:
+        def request_json(self, method, path, *, expected_status, payload=None):
+            assert method == "POST"
+            assert path == "/api/generations"
+            index = int(payload["prompt"].rsplit(" ", 1)[-1])
+            if index == 2:
+                raise module.BenchmarkError("HTTP 500")
+            return {
+                "id": f"job-{index}",
+                "state": "pending",
+                "created_at": "2026-07-27T01:00:00Z",
+            }
+
+    result = module.submit_phase(
+        FakeClient(),
+        run_id="run-1",
+        phase={
+            "name": "burst-1",
+            "jobs": 3,
+            "submit_concurrency": 3,
+            "include_in_aggregate": True,
+        },
+    )
+
+    assert sorted(result["submitted"]) == ["job-1", "job-3"]
+    assert result["failures"] == [
+        {
+            "phase": "burst-1",
+            "index": 2,
+            "error": "HTTP 500",
+        }
+    ]
+
+
 def test_percentile_uses_linear_interpolation_and_rejects_empty_input():
     module = load_benchmark_module()
 
@@ -380,6 +417,14 @@ def test_whitelist_worker_environment_never_includes_broker_or_credentials():
         "CELERY_WORKER_CONCURRENCY": "2",
         "CELERY_DEFAULT_QUEUE": "generation",
     }
+
+
+def test_parser_defaults_cleanup_to_low_db_safe_concurrency():
+    module = load_benchmark_module()
+
+    args = module.build_parser().parse_args([])
+
+    assert args.cleanup_concurrency == 2
 
 
 def test_iso_timestamp_accepts_z_and_returns_utc_datetime():

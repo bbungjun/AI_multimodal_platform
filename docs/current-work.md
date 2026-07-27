@@ -99,13 +99,42 @@ branch `codex/issue-83-redis-celery-baseline`:
 - A local 3-job mock run passed submit, Celery processing, state collection,
   aggregation, and cleanup. Its small sample is harness verification only and
   must not be used as portfolio performance evidence.
-- The focused harness suite passes 11 tests. A Python 3.11 container with the
+- The focused harness suite passes 13 tests. A Python 3.11 container with the
   repository mounted read-only passes the full backend suite: 364 tests, with
   only read-only pytest-cache warnings.
-- Next: commit/push the harness, apply and verify the temporary worker rate
-  override in the personal GKE cluster, run the full deployed baseline, inspect
-  the ignored raw artifact, write a secret-free aggregate evidence document,
-  remove the override, and verify mock health plus idle cleanup.
+- Deployed run `redis-celery-20260727T0626Z` passed warm-up 20 and steady 100.
+  Steady completed 100/100 at `1.730095 jobs/s`; submit p95 was `51.200 ms`,
+  claim p95 `52.148 s`, execution p95 `1.388 s`, and end-to-end p95
+  `53.306 s`. Failure, duplicate, and rate-limit wait counts were all zero.
+- The first 200-job burst at submit concurrency 50 was the stress boundary:
+  146 requests returned 201 and 54 returned 500. API and worker logs both show
+  `asyncpg.exceptions.TooManyConnectionsError`. Cloud SQL exposes 25 total
+  connections with 3 reserved, while process-level SQLAlchemy pools have no
+  deployment-wide connection budget.
+- Twenty accepted Celery tasks failed before DB claim and were acknowledged,
+  leaving Postgres jobs `pending` with `published` outbox events and an empty
+  Redis queue. Existing repair selected/dispatched all 20; all completed.
+- The harness initially deleted 109 known jobs and hit the same DB limit for
+  11 concurrent deletes. After recovery, all 157 exact run-id jobs were
+  terminal and were deleted at concurrency 2 with zero failures.
+- The worker rate-limit override was removed. Final read-back is rate limit 5,
+  mock provider, active job 0, Redis queue 0, API 2/2, dispatcher 1/1, worker
+  1/1, and workload Pod restart 0. The three pre-existing jobs remain.
+- Outbox rows do not have a job FK and therefore remain after job cleanup. The
+  run added 266 published rows, so the final total is 270 with pending 0 and
+  failed 0.
+- Evidence is in `docs/evidence/issue-83-redis-celery-baseline.md`; root cause
+  and recovery are in
+  `docs/troubleshooting/gke-burst-db-connection-exhaustion.md`.
+- The harness follow-up now collects every concurrent submit success/failure
+  instead of aborting on the first failed future, and defaults cleanup
+  concurrency to 2.
+- Follow-up Issue
+  [#84](https://github.com/bbungjun/AI_multimodal_platform/issues/84) tracks
+  deployment-wide DB connection budgeting and bounded Celery claim
+  retry/reconciliation. Do not switch to a PostgreSQL polling worker before
+  that reliability boundary is fixed; it would increase dependence on the
+  exhausted resource.
 
 As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
 PR #74 at `6f2f0ce`. Live validation is being recorded on branch

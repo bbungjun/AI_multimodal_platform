@@ -765,26 +765,41 @@ def submit_phase(
     *,
     run_id: str,
     phase: dict[str, Any],
-) -> dict[str, tuple[dict[str, Any], float]]:
+) -> dict[str, Any]:
     submitted: dict[str, tuple[dict[str, Any], float]] = {}
+    failures: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=int(phase["submit_concurrency"])) as executor:
-        futures = [
+        futures = {
             executor.submit(
                 _submit_one,
                 client,
                 run_id=run_id,
                 phase_name=str(phase["name"]),
                 index=index,
-            )
+            ): index
             for index in range(1, int(phase["jobs"]) + 1)
-        ]
+        }
         for future in as_completed(futures):
-            response, latency_ms = future.result()
+            index = futures[future]
+            try:
+                response, latency_ms = future.result()
+            except BenchmarkError as exc:
+                failures.append(
+                    {
+                        "phase": str(phase["name"]),
+                        "index": index,
+                        "error": str(exc),
+                    }
+                )
+                continue
             job_id = response.get("id")
             if not isinstance(job_id, str) or not job_id:
                 raise BenchmarkError("Generation submit response did not include id.")
             submitted[job_id] = (response, latency_ms)
-    return submitted
+    return {
+        "submitted": submitted,
+        "failures": sorted(failures, key=lambda item: int(item["index"])),
+    }
 
 
 def poll_jobs(
@@ -991,6 +1006,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             "gke": gke_evidence,
         },
         "records": [],
+        "submission_failures": [],
         "samples": [],
         "cleanup": {"requested": bool(args.cleanup), "failures": []},
     }
@@ -1018,13 +1034,19 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 f"{phase['jobs']} jobs @ concurrency {phase['submit_concurrency']}",
                 flush=True,
             )
-            submitted = submit_phase(client, run_id=run_id, phase=phase)
+            submission_result = submit_phase(client, run_id=run_id, phase=phase)
+            submitted = submission_result["submitted"]
+            report["submission_failures"].extend(submission_result["failures"])
             all_job_ids.extend(submitted)
-            terminal = poll_jobs(
-                client,
-                job_ids=set(submitted),
-                timeout_sec=args.phase_timeout_sec,
-                interval_sec=args.poll_interval_sec,
+            terminal = (
+                poll_jobs(
+                    client,
+                    job_ids=set(submitted),
+                    timeout_sec=args.phase_timeout_sec,
+                    interval_sec=args.poll_interval_sec,
+                )
+                if submitted
+                else {}
             )
             phase_records = []
             for job_id, (_, submit_latency_ms) in submitted.items():
@@ -1043,13 +1065,15 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 flush=True,
             )
             if (
-                phase_result["failed"]
+                submission_result["failures"]
+                or not submitted
+                or phase_result["failed"]
                 or phase_result["duplicate_execution"]
                 or phase_result["rate_limit_wait"]["jobs"]
             ):
                 raise BenchmarkError(
-                    f"Phase {phase['name']} observed failures, duplicate execution, "
-                    "or rate-limit wait."
+                    f"Phase {phase['name']} observed submission/job failures, "
+                    "duplicate execution, or rate-limit wait."
                 )
     except BaseException as exc:
         run_failure = exc
@@ -1126,7 +1150,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--phase-timeout-sec", type=float, default=900)
     parser.add_argument("--request-timeout-sec", type=float, default=20)
     parser.add_argument("--sample-interval-sec", type=float, default=2)
-    parser.add_argument("--cleanup-concurrency", type=int, default=20)
+    parser.add_argument("--cleanup-concurrency", type=int, default=2)
     parser.add_argument("--run-id")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--kubectl", default="kubectl")
