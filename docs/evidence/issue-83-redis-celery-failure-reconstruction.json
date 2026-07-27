@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "run_id": "redis-celery-20260727T0626Z",
+  "measurement_window_utc": {
+    "start": "2026-07-27T06:24:00Z",
+    "end": "2026-07-27T06:31:00Z"
+  },
+  "harness_commit": "dd6c930cadf1d01af42336d786c59a85b63a7b1c",
+  "raw_report": {
+    "path": "benchmarks/orchestration/runs/redis-celery-20260727T0626Z.json",
+    "git_ignored": true,
+    "sha256": "abe5b638359458eea4aeda79247bdf7c2a8bbbfbf2beddbd4aff2bb275d84463",
+    "captured_records": 120,
+    "captured_submission_failures": null,
+    "run_error": "POST /api/generations returned HTTP 500",
+    "scope": "Direct harness evidence stops after warm-up and steady records because the pre-fix collector stopped reading futures after the first burst error."
+  },
+  "direct_harness_evidence": {
+    "warmup_jobs": 20,
+    "steady_jobs": 100,
+    "steady_completed": 100,
+    "steady_failures": 0,
+    "steady_throughput_jobs_sec": 1.730095,
+    "steady_p95_ms": {
+      "submit": 51.2,
+      "claim": 52148.0,
+      "execution": 1388.0,
+      "end_to_end": 53306.0
+    },
+    "resource_samples": 14,
+    "resource_sample_errors": 0
+  },
+  "post_hoc_reconstruction": {
+    "outbox_total_before": 4,
+    "outbox_total_after": 270,
+    "outbox_increase": 266,
+    "warmup_and_steady_accepted": 120,
+    "burst_accepted": {
+      "calculation": "266 - 120",
+      "value": 146
+    },
+    "burst_attempted": 200,
+    "burst_http_500": {
+      "calculation": "200 - 146",
+      "value": 54,
+      "api_pod_error_counts": [
+        28,
+        26
+      ],
+      "api_pod_error_sum": 54
+    },
+    "stranded_pending_jobs": {
+      "value": 20,
+      "cross_checks": {
+        "active_jobs_before_repair": 20,
+        "pending_jobs_before_repair": 20,
+        "outbox_pending_before_repair": 0,
+        "redis_queue_depth_before_repair": 0,
+        "repair_selected": 20,
+        "repair_dispatched": 20,
+        "repair_failed": 0
+      }
+    },
+    "cleanup": {
+      "initial_known_jobs": 120,
+      "initial_deleted": 109,
+      "initial_delete_http_500": 11,
+      "exact_run_id_jobs_after_repair": 157,
+      "final_deleted": 157,
+      "final_delete_failures": 0
+    }
+  },
+  "scope_limits": {
+    "ai_provider": "mock",
+    "real_vertex_calls": 0,
+    "supports": [
+      "orchestration latency",
+      "throughput",
+      "queue and backlog",
+      "resource peaks",
+      "failure and recovery"
+    ],
+    "does_not_support": [
+      "Vertex generation latency",
+      "generation quality",
+      "provider quota behavior",
+      "provider cost"
+    ]
+  }
+}

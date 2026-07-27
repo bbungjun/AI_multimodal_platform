@@ -37,6 +37,10 @@ at the end of every meaningful work session.
 - Ops visibility: `/api/ops/health` and the frontend `/ops` route expose DB
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
+- GCP portfolio deployment: as of 2026-07-27, the personal Seoul GKE cluster
+  `creativeops-portfolio` is running in mock mode with API `2`, frontend `2`,
+  dispatcher `1`, worker `1`, and two nodes. Redis is a READY Basic 1 GiB
+  Memorystore instance. Recheck live state before relying on this snapshot.
 - AWS portfolio deployment: no live AWS stack is currently running. The Sydney
   `ap-southeast-2` portfolio stack under AWS account `827913617635` was
   intentionally destroyed on 2026-06-19.
@@ -69,6 +73,101 @@ values empty. In Vertex mode, configure credentials locally and never commit or
 paste credential contents.
 
 ## Active Work
+
+As of 2026-07-27, Issue
+[#83](https://github.com/bbungjun/AI_multimodal_platform/issues/83) is active on
+branch `codex/issue-83-redis-celery-baseline`:
+
+- The goal is to compare the current Postgres outbox -> Redis/Celery -> worker
+  path with a future PostgreSQL worker path on both fixed infrastructure cost
+  and measured orchestration performance.
+- The primary A/B uses `AI_PROVIDER=mock`. It can support API, claim latency,
+  completion latency, throughput, queue/backlog, resource, failure, duplicate,
+  and recovery claims, but not real Imagen/Veo latency, quality, quota, or
+  provider-cost claims.
+- Issue #83 fixes the deployed workload at warm-up 20, steady 100, and five
+  200-job bursts: 1,120 total jobs and 1,100 aggregate jobs.
+- `scripts/benchmark_mock_orchestration.py` now has dry-run by default, personal
+  GCP release-profile guards, exact public base URL/kubectl context/Celery
+  binding, mock/idle/rate-limit guards, concurrent public API workload
+  generation, paginated polling, p50/p95/p99 calculation, GKE CPU/memory and
+  Redis queue sampling, secret-safe evidence, and verified terminal job/asset
+  cleanup.
+- `docs/runbooks/mock-orchestration-benchmark.md` records the temporary
+  worker-only rate-limit override and mandatory rollback. The override removes
+  mock throttling from the architecture comparison; replica and worker
+  concurrency remain unchanged.
+- A local 3-job mock run passed submit, Celery processing, state collection,
+  aggregation, and cleanup. Its small sample is harness verification only and
+  must not be used as portfolio performance evidence.
+- The focused harness suite now covers direct HTTP/subprocess timeout,
+  pagination, poll timeout, unexpected cleanup errors, sampler errors, exact
+  GKE target guards, and interrupt-time partial artifact persistence. Fresh
+  verification passes 24 focused tests and all 377 backend tests in Python
+  3.11.
+- Deployed run `redis-celery-20260727T0626Z` passed warm-up 20 and steady 100.
+  Steady completed 100/100 at `1.730095 jobs/s`; submit p95 was `51.200 ms`,
+  claim p95 `52.148 s`, execution p95 `1.388 s`, and end-to-end p95
+  `53.306 s`. Failure, duplicate, and rate-limit wait counts were all zero.
+- The first 200-job burst at submit concurrency 50 was the stress boundary:
+  146 requests returned 201 and 54 returned 500. API and worker logs both show
+  `asyncpg.exceptions.TooManyConnectionsError`. Cloud SQL exposes 25 total
+  connections with 3 reserved, while process-level SQLAlchemy pools have no
+  deployment-wide connection budget.
+- Twenty accepted Celery tasks failed before DB claim and were acknowledged,
+  leaving Postgres jobs `pending` with `published` outbox events and an empty
+  Redis queue. Existing repair selected/dispatched all 20; all completed.
+- The harness initially deleted 109 known jobs and hit the same DB limit for
+  11 concurrent deletes. After recovery, all 157 exact run-id jobs were
+  terminal and were deleted at concurrency 2 with zero failures.
+- The worker rate-limit override was removed. Final read-back is rate limit 5,
+  mock provider, active job 0, Redis queue 0, API 2/2, dispatcher 1/1, worker
+  1/1, and workload Pod restart 0. The three pre-existing jobs remain.
+- Outbox rows do not have a job FK and therefore remain after job cleanup. The
+  run added 266 published rows, so the final total is 270 with pending 0 and
+  failed 0.
+- Evidence is in `docs/evidence/issue-83-redis-celery-baseline.md`; root cause
+  and recovery are in
+  `docs/troubleshooting/gke-burst-db-connection-exhaustion.md`.
+- The harness follow-up now collects every concurrent submit success/failure
+  instead of aborting on the first failed future, marks response-lost POSTs as
+  ambiguous, re-discovers exact run-id jobs on every exit path, deletes only
+  terminal jobs, verifies cleanup by read-back, fails on sampler errors, and
+  defaults cleanup concurrency to 2.
+- The committed failure reconstruction separates the 120 records directly
+  captured by the original harness from the burst values reconstructed from
+  outbox deltas, API Pod error counts, run-id queries, repair, and cleanup
+  read-backs. The ignored raw report is hash-bound by SHA-256 in
+  `docs/evidence/issue-83-redis-celery-failure-reconstruction.json`.
+- A post-hardening live GKE dry-run passed the exact release-profile base URL,
+  kubectl context, mock provider, Celery, deployment readiness, idle queue, and
+  restored worker rate limit 5 guards without creating jobs.
+- Redis observability follow-up now has a safe `INFO` snapshot contract and
+  aggregation in `scripts/redis_observability.py`. Future GKE samples collect
+  Redis runtime metrics at the existing 2-second cadence in
+  `samples[*].redis`; the legacy `resource_summary.peak_celery_queue_depth`
+  field remains available for report compatibility.
+- The Cloud Monitoring exporter is guarded to the personal Redis instance,
+  defaults to dry-run, and retries only 429/5xx with five bounded attempts.
+  Focused Redis/benchmark/profile verification currently passes 45 tests.
+- Historical backfill for `redis-celery-20260727T0626Z` is complete without new
+  workload or Vertex calls: 192 descriptors, 39 observed metrics, 153
+  not-observed metrics, and 0 query errors. The ignored raw artifact is
+  `benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json`
+  with SHA-256
+  `6161928608842ea3dd2cb34704c5132ccbdb75f172ef1351b42c4e95705d7916`;
+  committed aggregates are in
+  `docs/evidence/issue-83-redis-monitoring-backfill.json`.
+- Draft PR
+  [#85](https://github.com/bbungjun/AI_multimodal_platform/pull/85) contains the
+  baseline harness, evidence, failure reconstruction, and runbook. Independent
+  re-review returned `READY`.
+- Follow-up Issue
+  [#84](https://github.com/bbungjun/AI_multimodal_platform/issues/84) tracks
+  deployment-wide DB connection budgeting and bounded Celery claim
+  retry/reconciliation. Do not switch to a PostgreSQL polling worker before
+  that reliability boundary is fixed; it would increase dependence on the
+  exhausted resource.
 
 As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
 PR #74 at `6f2f0ce`. Live validation is being recorded on branch
@@ -1461,10 +1560,9 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
   increase from `20` to `21`; preserve the failed run alongside the final run.
 - Review the Issue #49 managed Prometheus and alert-policy draft PR after
   GitHub checks pass, then merge it into `main`.
-- The live GCP stack is currently in temporary demo pause mode: app replicas
-  `0`, node pool `0`, and `ai_provider=mock`. Before live autoscaling, HPA, or
-  provider failure evidence, intentionally scale the stack back up with the
-  personal GCP guard.
+- The live GCP stack was observed running in mock mode on 2026-07-27. Do not
+  rely on the older demo-pause note; re-run the personal GCP guard and inspect
+  deployment/node readiness before any live work.
 - After Issue #49 merges, use a dedicated live observability rollout issue:
   resume the proven mock baseline, build and deploy the new backend image,
   review a Terraform plan with alerts disabled, verify `PodMonitoring` scrape

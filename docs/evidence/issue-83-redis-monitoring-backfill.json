@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "source": {
+    "type": "Cloud Monitoring post-hoc",
+    "alignment": "60s-aligned",
+    "boundary_rule": "[start,end)",
+    "point_assignment": "point end timestamp"
+  },
+  "export_window": {
+    "start": "2026-07-27T06:21:00Z",
+    "end": "2026-07-27T06:32:00Z"
+  },
+  "segments": {
+    "idle": {
+      "start": "2026-07-27T06:21:00Z",
+      "end": "2026-07-27T06:24:00Z",
+      "observed_metric_count": 39,
+      "not_observed_metric_count": 153
+    },
+    "benchmark": {
+      "start": "2026-07-27T06:24:00Z",
+      "end": "2026-07-27T06:27:00Z",
+      "observed_metric_count": 39,
+      "not_observed_metric_count": 153
+    },
+    "recovery": {
+      "start": "2026-07-27T06:27:00Z",
+      "end": "2026-07-27T06:32:00Z",
+      "observed_metric_count": 39,
+      "not_observed_metric_count": 153
+    }
+  },
+  "raw_artifact": {
+    "path": "benchmarks/orchestration/runs/redis-celery-20260727T0626Z-redis-monitoring.json",
+    "sha256": "6161928608842ea3dd2cb34704c5132ccbdb75f172ef1351b42c4e95705d7916"
+  },
+  "counts": {
+    "descriptor_count": 192,
+    "available_metric_count": 39,
+    "not_observed_metric_count": 153,
+    "skipped_non_instance_descriptor_count": 137,
+    "query_error_count": 0
+  },
+  "available_metric_names": [
+    "redis.googleapis.com/clients/blocked",
+    "redis.googleapis.com/clients/connected",
+    "redis.googleapis.com/commands/calls",
+    "redis.googleapis.com/commands/total_time",
+    "redis.googleapis.com/commands/usec_per_call",
+    "redis.googleapis.com/keyspace/avg_ttl",
+    "redis.googleapis.com/keyspace/keys",
+    "redis.googleapis.com/keyspace/keys_with_expiration",
+    "redis.googleapis.com/persistence/rdb/bgsave_in_progress",
+    "redis.googleapis.com/rdb/enabled",
+    "redis.googleapis.com/rdb/recovery/attempts_since_last_success",
+    "redis.googleapis.com/rdb/recovery/elapsed_time",
+    "redis.googleapis.com/rdb/recovery/estimated_remaining_time",
+    "redis.googleapis.com/rdb/recovery/in_progress",
+    "redis.googleapis.com/rdb/recovery/loaded_bytes_count",
+    "redis.googleapis.com/rdb/recovery/total_bytes_count",
+    "redis.googleapis.com/rdb/snapshot/attempt_count",
+    "redis.googleapis.com/rdb/snapshot/elapsed_time",
+    "redis.googleapis.com/rdb/snapshot/in_progress",
+    "redis.googleapis.com/rdb/snapshot/time_until_next_run",
+    "redis.googleapis.com/replication/master_repl_offset",
+    "redis.googleapis.com/replication/role",
+    "redis.googleapis.com/server/uptime",
+    "redis.googleapis.com/stats/cache_hit_ratio",
+    "redis.googleapis.com/stats/connections/total",
+    "redis.googleapis.com/stats/cpu_utilization",
+    "redis.googleapis.com/stats/cpu_utilization_main_thread",
+    "redis.googleapis.com/stats/evicted_keys",
+    "redis.googleapis.com/stats/expired_keys",
+    "redis.googleapis.com/stats/keyspace_hits",
+    "redis.googleapis.com/stats/keyspace_misses",
+    "redis.googleapis.com/stats/memory/maxmemory",
+    "redis.googleapis.com/stats/memory/system_memory_usage_ratio",
+    "redis.googleapis.com/stats/memory/usage",
+    "redis.googleapis.com/stats/memory/usage_ratio",
+    "redis.googleapis.com/stats/network_traffic",
+    "redis.googleapis.com/stats/pubsub/channels",
+    "redis.googleapis.com/stats/pubsub/patterns",
+    "redis.googleapis.com/stats/reject_connections_count"
+  ],
+  "aggregates": {
+    "cpu": {
+      "parent": {
+        "peak_60s_bucket_end": "2026-07-27T06:27:00Z",
+        "peak_cpu_seconds_per_60s": 0.244535,
+        "parent_segment_sum": {
+          "idle": 0.37412,
+          "benchmark": 0.605855,
+          "recovery": 1.018182
+        }
+      },
+      "main_thread": {
+        "peak_60s_bucket_end": "2026-07-27T06:27:00Z",
+        "peak_cpu_seconds_per_60s": 0.218762,
+        "parent_segment_sum": {
+          "idle": 0.322312,
+          "benchmark": 0.52958,
+          "recovery": 0.88802
+        }
+      }
+    },
+    "memory": {
+      "idle": {
+        "usage_bytes": {"p50": 4609728.0, "p95": 4609728.0, "max": 4609728.0, "last": 4609728.0},
+        "usage_ratio": {"p50": 0.004293, "p95": 0.004293, "max": 0.004293, "last": 0.004293},
+        "maxmemory_bytes": 1073741824.0
+      },
+      "benchmark": {
+        "usage_bytes": {"p50": 4630200.0, "p95": 4702502.4, "max": 4710536.0, "last": 4710536.0},
+        "usage_ratio": {"p50": 0.004312, "p95": 0.00438, "max": 0.004387, "last": 0.004387},
+        "maxmemory_bytes": 1073741824.0
+      },
+      "recovery": {
+        "usage_bytes": {"p50": 4654776.0, "p95": 4708459.2, "max": 4721880.0, "last": 4653784.0},
+        "usage_ratio": {"p50": 0.004335, "p95": 0.004385, "max": 0.004398, "last": 0.004334},
+        "maxmemory_bytes": 1073741824.0
+      }
+    },
+    "clients": {
+      "idle": {"connected_max": 17.0, "blocked_max": 1.0},
+      "benchmark": {"connected_max": 17.0, "blocked_max": 1.0},
+      "recovery": {"connected_max": 17.0, "blocked_max": 1.0}
+    },
+    "commands": {
+      "idle": {"calls_delta_sum": 194.0, "total_time_usec_delta_sum": 8436.0, "weighted_usec_per_call": 43.484536},
+      "benchmark": {"calls_delta_sum": 1354.0, "total_time_usec_delta_sum": 24355.0, "weighted_usec_per_call": 17.987445},
+      "recovery": {"calls_delta_sum": 2280.0, "total_time_usec_delta_sum": 41978.0, "weighted_usec_per_call": 18.411404}
+    },
+    "network_bytes": {
+      "in": {"idle": 65666.0, "benchmark": 395742.0, "recovery": 615119.0},
+      "out": {"idle": 191642.0, "benchmark": 405093.0, "recovery": 688065.0}
+    },
+    "cache": {
+      "idle": {"hit_ratio": {"p50": 0.5, "p95": 0.5, "max": 0.5, "last": 0.5}, "hits_delta": 1.0, "misses_delta": 1.0},
+      "benchmark": {"hit_ratio": {"p50": 0.141668, "p95": 0.809901, "max": 0.884149, "last": 0.884149}, "hits_delta": 13.0, "misses_delta": 25.0},
+      "recovery": {"hit_ratio": {"p50": 0.333333, "p95": 0.917042, "max": 1.0, "last": 0.043478}, "hits_delta": 8.0, "misses_delta": 28.0}
+    },
+    "keyspace": {
+      "idle": {"keys": {"p50": 3.0, "p95": 3.0, "max": 3.0, "last": 3.0}, "keys_with_expiration_max": 0.0, "avg_ttl_ms_max": 0.0},
+      "benchmark": {"keys": {"p50": 3.0, "p95": 5.7, "max": 6.0, "last": 6.0}, "keys_with_expiration_max": 0.0, "avg_ttl_ms_max": 0.0},
+      "recovery": {"keys": {"p50": 3.0, "p95": 5.4, "max": 6.0, "last": 3.0}, "keys_with_expiration_max": 0.0, "avg_ttl_ms_max": 0.0}
+    },
+    "evictions_rejects": {
+      "idle": {"evicted_keys_delta": 0.0, "expired_keys_delta": 0.0, "rejected_connections_delta": 0.0},
+      "benchmark": {"evicted_keys_delta": 0.0, "expired_keys_delta": 0.0, "rejected_connections_delta": 0.0},
+      "recovery": {"evicted_keys_delta": 0.0, "expired_keys_delta": 0.0, "rejected_connections_delta": 0.0}
+    },
+    "persistence": {
+      "idle": {"rdb_enabled_max": 0.0, "bgsave_in_progress_max": 0.0, "snapshot_in_progress_max": 0.0, "recovery_in_progress_max": 0.0},
+      "benchmark": {"rdb_enabled_max": 0.0, "bgsave_in_progress_max": 0.0, "snapshot_in_progress_max": 0.0, "recovery_in_progress_max": 0.0},
+      "recovery": {"rdb_enabled_max": 0.0, "bgsave_in_progress_max": 0.0, "snapshot_in_progress_max": 0.0, "recovery_in_progress_max": 0.0}
+    },
+    "replication": {
+      "idle": {"role_last": 1.0, "master_repl_offset_max": 0.0},
+      "benchmark": {"role_last": 1.0, "master_repl_offset_max": 0.0},
+      "recovery": {"role_last": 1.0, "master_repl_offset_max": 0.0}
+    }
+  },
+  "limitations": [
+    "Values are Cloud Monitoring post-hoc 60-second aligned buckets, not direct harness samples.",
+    "The benchmark segment includes background activity before 06:24:00Z and cleanup or recovery through 06:27:00Z.",
+    "137 descriptors support Cluster or ClusterNode resources and are classified not_observed for the redis_instance target; they are not converted to zero.",
+    "The Redis live INFO contract is separate from this historical export and will be collected at the GKE sampler cadence on future runs.",
+    "This evidence does not establish Redis causality for the DB connection exhaustion; Issue #84 must be fixed before the A/B is repeated."
+  ]
+}

@@ -98,6 +98,8 @@ def test_release_profile_is_non_secret_and_matches_personal_live_topology():
     assert profile["schema_version"] == 1
     assert profile["account"] == "youngjun3108@gmail.com"
     assert profile["project_id"] == "krafton-vertex-live-3108"
+    assert profile["redis_instance_name"] == "creativeops-portfolio-redis"
+    assert profile["expected_dispatch"] == "celery"
     assert profile["terraform_vars"]["ai_provider"] == "mock"
     assert profile["terraform_vars"]["monitoring_alerts_enabled"] is True
     assert profile["terraform_vars"]["monitoring_dashboard_slo_enabled"] is True
