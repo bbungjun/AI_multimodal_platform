@@ -20,6 +20,20 @@ from urllib.request import Request, urlopen
 from uuid import uuid4
 
 
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from redis_observability import (  # noqa: E402
+    REDIS_COMMAND_FIELDS,
+    REDIS_COUNTER_FIELDS,
+    REDIS_GAUGE_FIELDS,
+    REDIS_STATE_FIELDS,
+    validate_redis_snapshot,
+    summarize_redis_samples,
+)
+
+
 TERMINAL_STATES = {"completed", "failed", "cancelled"}
 WORKER_ENVIRONMENT_KEYS = (
     "AI_PROVIDER",
@@ -509,6 +523,7 @@ def _load_release_profile(path: Path) -> dict[str, Any]:
         "cluster_name",
         "cluster_zone",
         "namespace",
+        "redis_instance_name",
         "health_url",
         "expected_vertex_status",
         "expected_dispatch",
@@ -737,11 +752,12 @@ def collect_gke_preflight(
     if not initial_resources:
         raise BenchmarkError("kubectl top did not return CreativeOps workload samples.")
 
-    queue_depth = _redis_queue_depth(
+    initial_redis = _redis_runtime_snapshot(
         kubectl=kubectl,
         namespace=namespace,
         worker_pod=worker_pod,
     )
+    queue_depth = initial_redis["queue_depth"]
     if queue_depth != 0:
         raise BenchmarkError(
             f"Deployed benchmark requires an empty Celery queue, got {queue_depth}."
@@ -756,28 +772,123 @@ def collect_gke_preflight(
         "cluster_status": cluster_status,
         "deployments": deployments,
         "initial_resources": initial_resources,
+        "initial_redis": initial_redis,
         "initial_celery_queue_depth": queue_depth,
     }
     return evidence, worker_env, worker_pod
 
 
-def _redis_queue_depth(*, kubectl: str, namespace: str, worker_pod: str) -> int:
-    probe = (
-        "from app.config import get_settings;"
-        "from redis import Redis;"
-        "s=get_settings();"
-        "r=Redis.from_url(s.celery_broker_url,socket_timeout=2);"
-        "print(r.llen(s.celery_default_queue));"
-        "r.close()"
-    )
-    output = _command_output(
-        [kubectl, "exec", "-n", namespace, worker_pod, "--", "python", "-c", probe],
-        timeout_sec=15,
-    )
+def _redis_runtime_snapshot(*, kubectl: str, namespace: str, worker_pod: str) -> dict[str, Any]:
+    probe = f"""
+import json
+from app.config import get_settings
+from redis import Redis
+
+def number(value):
+    if isinstance(value, bool):
+        return None
     try:
-        return int(output)
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(parsed) if parsed.is_integer() else parsed
+
+settings = get_settings()
+redis_client = Redis.from_url(settings.celery_broker_url, socket_timeout=2)
+try:
+    info = redis_client.info()
+    commandstats = redis_client.info("commandstats")
+    keyspace = redis_client.info("keyspace")
+    queue_depth = redis_client.llen(settings.celery_default_queue)
+    gauges = {{}}
+    counters = {{}}
+    states = {{}}
+
+    for output_name, info_name in {dict((name, name) for name in REDIS_GAUGE_FIELDS if name not in {"key_count", "expiration_key_count", "average_ttl"})!r}.items():
+        parsed = number(info.get(info_name))
+        if parsed is not None:
+            gauges[output_name] = parsed
+    for output_name, info_name in {{
+        "total_connections_received": "total_connections_received",
+        "total_commands_processed": "total_commands_processed",
+        "total_net_input_bytes": "total_net_input_bytes",
+        "total_net_output_bytes": "total_net_output_bytes",
+        "keyspace_hits": "keyspace_hits",
+        "keyspace_misses": "keyspace_misses",
+        "expired_keys": "expired_keys",
+        "evicted_keys": "evicted_keys",
+        "rejected_connections": "rejected_connections",
+        "cpu_user_seconds": "used_cpu_user",
+        "cpu_sys_seconds": "used_cpu_sys",
+        "main_thread_cpu_user_seconds": "used_cpu_user_main_thread",
+        "main_thread_cpu_sys_seconds": "used_cpu_sys_main_thread",
+    }}.items():
+        parsed = number(info.get(info_name))
+        if parsed is not None:
+            counters[output_name] = parsed
+    for name in {list(REDIS_STATE_FIELDS)!r}:
+        parsed = info.get(name)
+        if isinstance(parsed, (str, int, float)) and not isinstance(parsed, bool):
+            states[name] = parsed
+
+    safe_keyspace = {{}}
+    for database, values in keyspace.items():
+        if not database.startswith("db") or not isinstance(values, dict):
+            continue
+        safe_values = {{}}
+        for name in ("keys", "expires", "avg_ttl"):
+            parsed = number(values.get(name))
+            if parsed is not None:
+                safe_values[name] = parsed
+        if safe_values:
+            safe_keyspace[database] = safe_values
+    database_values = list(safe_keyspace.values())
+    if database_values:
+        gauges["key_count"] = sum(value.get("keys", 0) for value in database_values)
+        gauges["expiration_key_count"] = sum(value.get("expires", 0) for value in database_values)
+        gauges["average_ttl"] = sum(value.get("avg_ttl", 0) for value in database_values) / len(database_values)
+
+    safe_commands = {{}}
+    for command_name, values in commandstats.items():
+        if not isinstance(command_name, str) or not command_name.startswith("cmdstat_"):
+            continue
+        command_name = command_name[len("cmdstat_"):]
+        if not isinstance(values, dict):
+            continue
+        command_values = {{}}
+        for name in {list(REDIS_COMMAND_FIELDS)!r}:
+            parsed = number(values.get(name))
+            if parsed is not None:
+                command_values[name] = parsed
+        if command_values:
+            safe_commands[command_name] = command_values
+
+    print(json.dumps({{
+        "queue_depth": number(queue_depth),
+        "gauges": gauges,
+        "counters": counters,
+        "states": states,
+        "keyspace": safe_keyspace,
+        "commands": safe_commands,
+    }}, separators=(",", ":")))
+finally:
+    redis_client.close()
+"""
+    try:
+        output = _command_output(
+            [kubectl, "exec", "-n", namespace, worker_pod, "--", "python", "-c", probe],
+            timeout_sec=15,
+        )
+    except BenchmarkError as exc:
+        raise BenchmarkError("Redis runtime probe command failed.") from exc
+    try:
+        raw_snapshot = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise BenchmarkError("Redis runtime probe returned invalid JSON.") from exc
+    try:
+        return validate_redis_snapshot(raw_snapshot)
     except ValueError as exc:
-        raise BenchmarkError(f"Redis queue depth was not an integer: {output!r}.") from exc
+        raise BenchmarkError("Redis runtime probe returned an unsafe snapshot.") from exc
 
 
 class GkeSampler:
@@ -836,7 +947,7 @@ class GkeSampler:
                 timeout_sec=15,
             )
             sample["resources"] = parse_kubectl_top(top_output)
-            sample["celery_queue_depth"] = _redis_queue_depth(
+            sample["redis"] = _redis_runtime_snapshot(
                 kubectl=self.kubectl,
                 namespace=self.namespace,
                 worker_pod=self.worker_pod,
@@ -1071,9 +1182,10 @@ def _phase_summary(records: list[dict[str, Any]], phase_name: str) -> dict[str, 
 
 def _resource_summary(samples: list[dict[str, Any]]) -> dict[str, Any]:
     queue_values = [
-        int(sample["celery_queue_depth"])
+        int(sample["redis"]["queue_depth"])
         for sample in samples
-        if isinstance(sample.get("celery_queue_depth"), int)
+        if isinstance(sample.get("redis"), dict)
+        and isinstance(sample["redis"].get("queue_depth"), int)
     ]
     active_values = [
         int(sample["active_jobs"])
@@ -1395,6 +1507,15 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             str(phase["name"]): _phase_summary(report["records"], str(phase["name"]))
             for phase in phases
         }
+        redis_samples = [
+            sample
+            for sample in report["samples"]
+            if isinstance(sample.get("redis"), dict)
+        ]
+        report["redis_summary"] = summarize_redis_samples(redis_samples)
+        report["redis_summary"]["sample_errors"] = sum(
+            "sample_error" in sample for sample in report["samples"]
+        )
         report["resource_summary"] = _resource_summary(report["samples"])
         if report["resource_summary"]["sample_errors"] and run_failure is None:
             run_failure = BenchmarkError(

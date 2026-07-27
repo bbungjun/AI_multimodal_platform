@@ -289,6 +289,95 @@ def test_sampler_records_command_timeout_as_sample_error(monkeypatch):
     assert sample["sample_error"] == "Command timed out"
 
 
+def test_redis_runtime_snapshot_keeps_only_safe_probe_fields(monkeypatch):
+    module = load_benchmark_module()
+    expected = {
+        "queue_depth": 0,
+        "gauges": {"connected_clients": 6},
+        "counters": {"total_commands_processed": 10},
+        "states": {"role": "master"},
+        "keyspace": {},
+        "commands": {},
+        "broker_url": "redis://must-not-survive",
+    }
+    monkeypatch.setattr(module, "_command_output", lambda *args, **kwargs: json.dumps(expected))
+
+    snapshot = module._redis_runtime_snapshot(
+        kubectl="kubectl",
+        namespace="creativeops-portfolio",
+        worker_pod="worker-1",
+    )
+
+    assert snapshot["queue_depth"] == 0
+    assert snapshot["gauges"]["connected_clients"] == 6
+    assert "broker" not in repr(snapshot).lower()
+    assert "redis://" not in repr(snapshot)
+
+
+def test_sampler_stores_redis_snapshot_and_uses_one_probe(monkeypatch):
+    module = load_benchmark_module()
+    commands = []
+
+    def fake_command_output(command, **kwargs):
+        commands.append(command)
+        if "top" in command:
+            return "creativeops-worker-abc worker 10m 64Mi"
+        return json.dumps(
+            {
+                "queue_depth": 0,
+                "gauges": {"connected_clients": 6},
+                "counters": {},
+                "states": {"role": "master"},
+                "keyspace": {},
+                "commands": {},
+            }
+        )
+
+    class FakeClient:
+        def request_json(self, method, path, *, expected_status, payload=None):
+            assert method == "GET"
+            assert path == "/api/ops/health"
+            return {"jobs": {"active": 0}, "outbox": {"pending": 0}}
+
+    monkeypatch.setattr(module, "_command_output", fake_command_output)
+    sampler = module.GkeSampler(
+        client=FakeClient(),
+        kubectl="kubectl",
+        namespace="creativeops-portfolio",
+        worker_pod="worker-1",
+        interval_sec=1,
+    )
+
+    sample = sampler.sample_once()
+
+    assert sample["redis"]["queue_depth"] == 0
+    assert sample["redis"]["gauges"]["connected_clients"] == 6
+    assert "celery_queue_depth" not in sample
+    assert sum("python" in command for command in commands) == 1
+
+
+def test_sampler_records_malformed_redis_probe_as_sample_error(monkeypatch):
+    module = load_benchmark_module()
+
+    def fake_command_output(command, **kwargs):
+        if "top" in command:
+            return "creativeops-worker-abc worker 10m 64Mi"
+        return "not-json"
+
+    monkeypatch.setattr(module, "_command_output", fake_command_output)
+    sampler = module.GkeSampler(
+        client=object(),
+        kubectl="kubectl",
+        namespace="creativeops-portfolio",
+        worker_pod="worker-1",
+        interval_sec=1,
+    )
+
+    sample = sampler.sample_once()
+
+    assert "invalid JSON" in sample["sample_error"]
+
+
 def test_run_benchmark_writes_partial_report_after_keyboard_interrupt(
     monkeypatch,
     tmp_path,
@@ -610,7 +699,7 @@ def test_resource_summary_uses_peak_sum_across_replicas_per_container():
     module = load_benchmark_module()
     samples = [
         {
-            "celery_queue_depth": 10,
+            "redis": {"queue_depth": 10},
             "active_jobs": 12,
             "outbox_pending": 4,
             "resources": [
@@ -635,7 +724,7 @@ def test_resource_summary_uses_peak_sum_across_replicas_per_container():
             ],
         },
         {
-            "celery_queue_depth": 7,
+            "redis": {"queue_depth": 7},
             "active_jobs": 8,
             "outbox_pending": 1,
             "resources": [

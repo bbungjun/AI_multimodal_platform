@@ -6,6 +6,7 @@
   "cluster_name": "creativeops-portfolio",
   "cluster_zone": "asia-northeast3-a",
   "namespace": "creativeops-portfolio",
+  "redis_instance_name": "creativeops-portfolio-redis",
   "state_bucket": "creativeops-terraform-state-krafton-vertex-live-3108",
   "health_url": "http://34.50.26.152/api/health",
   "expected_vertex_status": "mock_provider",
