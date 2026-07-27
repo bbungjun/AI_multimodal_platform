@@ -463,8 +463,9 @@ def test_monitoring_export_paginates_descriptors_and_time_series():
         {
             "type": "redis.googleapis.com/instance/second-no-series",
             "metricKind": "DELTA",
-            "valueType": "INT64",
+            "valueType": "DISTRIBUTION",
             "unit": "1",
+            "monitoredResourceTypes": ["redis.googleapis.com/Cluster"],
         },
     ]
 
@@ -508,6 +509,8 @@ def test_monitoring_export_paginates_descriptors_and_time_series():
                 ],
                 "nextPageToken": "series-2",
             }
+        if metric_type == descriptors[2]["type"]:
+            raise AssertionError("non-instance descriptor must not be queried")
         return {"timeSeries": []}
 
     client = module.MonitoringClient(

@@ -275,6 +275,24 @@ def _list_time_series(
     )
 
 
+def _empty_series_for_descriptor(descriptor: dict[str, Any]) -> dict[str, Any]:
+    metric_type = descriptor.get("type")
+    metric_kind = descriptor.get("metricKind")
+    if not isinstance(metric_type, str) or not isinstance(metric_kind, str):
+        raise ExportError("Cloud Monitoring returned an invalid descriptor.")
+    return {
+        "metric_type": metric_type,
+        "metric_kind": metric_kind,
+        "value_type": descriptor.get("valueType"),
+        "unit": descriptor.get("unit", "")
+        if isinstance(descriptor.get("unit", ""), str)
+        else "",
+        "metric_labels": {},
+        "resource": {"type": "redis_instance", "labels": {}},
+        "points": [],
+    }
+
+
 def collect_redis_monitoring(
     request: dict[str, Any],
     client: MonitoringClient,
@@ -282,8 +300,18 @@ def collect_redis_monitoring(
     descriptors = _list_descriptors(client, request["project_id"])
     normalized_series: list[dict[str, Any]] = []
     query_errors: list[dict[str, str]] = []
+    skipped_non_instance = 0
     for descriptor in descriptors:
         metric_type = descriptor["type"]
+        resource_types = descriptor.get("monitoredResourceTypes")
+        if (
+            isinstance(resource_types, list)
+            and resource_types
+            and "redis_instance" not in resource_types
+        ):
+            skipped_non_instance += 1
+            normalized_series.append(_empty_series_for_descriptor(descriptor))
+            continue
         try:
             raw_series = _list_time_series(client, request, metric_type)
         except ExportError as exc:
@@ -292,13 +320,8 @@ def collect_redis_monitoring(
             )
             continue
         if not raw_series:
-            raw_series = [
-                {
-                    "metric": {"labels": {}},
-                    "resource": {"type": "redis_instance", "labels": {}},
-                    "points": [],
-                }
-            ]
+            normalized_series.append(_empty_series_for_descriptor(descriptor))
+            continue
         for raw in raw_series:
             try:
                 normalized_series.append(normalize_monitoring_series(descriptor, raw))
@@ -323,6 +346,7 @@ def collect_redis_monitoring(
         "descriptor_count": len(descriptors),
         "available_metric_count": len(segment_summary["observed_metric_names"]),
         "not_observed_metric_count": len(segment_summary["not_observed_metric_names"]),
+        "skipped_non_instance_descriptor_count": skipped_non_instance,
         "query_error_count": len(query_errors),
         "query_errors": query_errors,
         "series": normalized_series,
