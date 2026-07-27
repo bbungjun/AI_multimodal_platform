@@ -149,7 +149,7 @@ branch `codex/issue-83-redis-celery-baseline`:
   field remains available for report compatibility.
 - The Cloud Monitoring exporter is guarded to the personal Redis instance,
   defaults to dry-run, and retries only 429/5xx with five bounded attempts.
-  Focused Redis/benchmark/profile verification currently passes 44 tests.
+  Focused Redis/benchmark/profile verification currently passes 45 tests.
 - Historical backfill for `redis-celery-20260727T0626Z` is complete without new
   workload or Vertex calls: 192 descriptors, 39 observed metrics, 153
   not-observed metrics, and 0 query errors. The ignored raw artifact is
