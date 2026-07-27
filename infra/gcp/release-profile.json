@@ -9,6 +9,7 @@
   "state_bucket": "creativeops-terraform-state-krafton-vertex-live-3108",
   "health_url": "http://34.50.26.152/api/health",
   "expected_vertex_status": "mock_provider",
+  "expected_dispatch": "celery",
   "terraform_vars": {
     "api_replicas": 2,
     "frontend_replicas": 2,

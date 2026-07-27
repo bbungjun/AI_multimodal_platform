@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -36,6 +37,10 @@ WORKLOAD_PREFIXES = (
 
 class BenchmarkError(RuntimeError):
     """Expected benchmark failure with an operator-facing message."""
+
+
+class AmbiguousSubmissionError(BenchmarkError):
+    """A generation POST may have committed before the client lost its response."""
 
 
 def build_phase_specs(
@@ -437,8 +442,19 @@ class HttpClient:
                 f"{method} {path} expected HTTP {expected_status}, "
                 f"got {exc.code}: {snippet}"
             ) from exc
-        except (URLError, RemoteDisconnected, ConnectionResetError) as exc:
-            raise BenchmarkError(f"{method} {path} failed: {exc}") from exc
+        except (
+            URLError,
+            RemoteDisconnected,
+            ConnectionError,
+            TimeoutError,
+        ) as exc:
+            detail = str(exc) or type(exc).__name__
+            error_type = (
+                AmbiguousSubmissionError
+                if method.upper() == "POST" and path == "/api/generations"
+                else BenchmarkError
+            )
+            raise error_type(f"{method} {path} failed: {detail}") from exc
 
         if status != expected_status:
             snippet = body.decode("utf-8", errors="replace")[:500]
@@ -455,16 +471,27 @@ class HttpClient:
 
 
 def _command_output(command: list[str], *, timeout_sec: float = 30) -> str:
-    completed = subprocess.run(
-        command,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=timeout_sec,
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=timeout_sec,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise BenchmarkError(
+            f"Command timed out after {timeout_sec:g}s "
+            f"({' '.join(command[:3])})."
+        ) from exc
+    except OSError as exc:
+        raise BenchmarkError(
+            f"Command could not start ({' '.join(command[:3])}): "
+            f"{str(exc) or type(exc).__name__}"
+        ) from exc
     if completed.returncode != 0:
         detail = completed.stderr.strip() or completed.stdout.strip()
         raise BenchmarkError(f"Command failed ({' '.join(command[:3])}): {detail[:500]}")
@@ -482,7 +509,9 @@ def _load_release_profile(path: Path) -> dict[str, Any]:
         "cluster_name",
         "cluster_zone",
         "namespace",
+        "health_url",
         "expected_vertex_status",
+        "expected_dispatch",
     }
     missing = sorted(required - set(profile))
     if missing:
@@ -491,7 +520,79 @@ def _load_release_profile(path: Path) -> dict[str, Any]:
         )
     if profile["expected_vertex_status"] != "mock_provider":
         raise BenchmarkError("Release profile must expect mock_provider.")
+    if profile["expected_dispatch"] != "celery":
+        raise BenchmarkError("GKE release profile must pin expected_dispatch to celery.")
     return profile
+
+
+def validate_gke_target(
+    profile: dict[str, Any],
+    *,
+    base_url: str,
+    expected_dispatch: str,
+) -> None:
+    health_url = profile.get("health_url")
+    if not isinstance(health_url, str) or not health_url.endswith("/api/health"):
+        raise BenchmarkError(
+            "Release profile health_url must end with /api/health."
+        )
+    profile_base_url = health_url[: -len("/api/health")].rstrip("/")
+    if base_url.rstrip("/") != profile_base_url:
+        raise BenchmarkError(
+            "GKE benchmark base URL does not match the release profile: "
+            f"expected {profile_base_url!r}, got {base_url.rstrip('/')!r}."
+        )
+    profile_dispatch = profile.get("expected_dispatch")
+    if expected_dispatch != profile_dispatch:
+        raise BenchmarkError(
+            "GKE benchmark dispatch does not match the release profile: "
+            f"expected {profile_dispatch!r}, got {expected_dispatch!r}."
+        )
+
+
+def validate_kube_context(
+    profile: dict[str, Any],
+    config: dict[str, Any],
+) -> str:
+    expected = (
+        f"gke_{profile['project_id']}_{profile['cluster_zone']}_"
+        f"{profile['cluster_name']}"
+    )
+    current_context = config.get("current-context")
+    contexts = config.get("contexts")
+    clusters = config.get("clusters")
+    if not isinstance(contexts, list) or not isinstance(clusters, list):
+        raise BenchmarkError("kubectl context guard received malformed config.")
+
+    matching_context = next(
+        (
+            item
+            for item in contexts
+            if isinstance(item, dict) and item.get("name") == current_context
+        ),
+        None,
+    )
+    context_cluster = (
+        (matching_context.get("context") or {}).get("cluster")
+        if isinstance(matching_context, dict)
+        else None
+    )
+    cluster_names = {
+        item.get("name")
+        for item in clusters
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    if (
+        current_context != expected
+        or context_cluster != expected
+        or expected not in cluster_names
+    ):
+        raise BenchmarkError(
+            "kubectl context guard failed: "
+            f"expected {expected!r}, current_context={current_context!r}, "
+            f"context_cluster={context_cluster!r}."
+        )
+    return expected
 
 
 def _deployment_metadata(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -547,6 +648,17 @@ def collect_gke_preflight(
         raise BenchmarkError(
             f"GCP project guard failed: expected {profile['project_id']!r}, got {project!r}."
         )
+
+    kube_config_body = _command_output(
+        [kubectl, "config", "view", "--minify", "-o", "json"]
+    )
+    try:
+        kube_config = json.loads(kube_config_body)
+    except json.JSONDecodeError as exc:
+        raise BenchmarkError("kubectl context guard returned invalid JSON.") from exc
+    if not isinstance(kube_config, dict):
+        raise BenchmarkError("kubectl context guard returned unexpected JSON.")
+    kube_context = validate_kube_context(profile, kube_config)
 
     cluster_status = _command_output(
         [
@@ -639,6 +751,7 @@ def collect_gke_preflight(
         "project_id": project,
         "cluster_name": profile["cluster_name"],
         "cluster_zone": profile["cluster_zone"],
+        "kubectl_context": kube_context,
         "namespace": namespace,
         "cluster_status": cluster_status,
         "deployments": deployments,
@@ -693,41 +806,56 @@ class GkeSampler:
     def stop(self) -> list[dict[str, Any]]:
         self._stop.set()
         if self._thread is not None:
-            self._thread.join(timeout=max(5.0, self.interval_sec * 2))
+            join_timeout = min(
+                55.0,
+                max(5.0, 32.0 + self.client.timeout_sec),
+            )
+            self._thread.join(timeout=join_timeout)
+            if self._thread.is_alive():
+                self.samples.append(
+                    {
+                        "at": _utc_now(),
+                        "sample_error": "GKE sampler thread did not stop before timeout.",
+                    }
+                )
         return list(self.samples)
+
+    def sample_once(self) -> dict[str, Any]:
+        sample: dict[str, Any] = {"at": _utc_now()}
+        try:
+            top_output = _command_output(
+                [
+                    self.kubectl,
+                    "top",
+                    "pod",
+                    "-n",
+                    self.namespace,
+                    "--containers",
+                    "--no-headers",
+                ],
+                timeout_sec=15,
+            )
+            sample["resources"] = parse_kubectl_top(top_output)
+            sample["celery_queue_depth"] = _redis_queue_depth(
+                kubectl=self.kubectl,
+                namespace=self.namespace,
+                worker_pod=self.worker_pod,
+            )
+            ops = self.client.request_json(
+                "GET",
+                "/api/ops/health",
+                expected_status=200,
+            )
+            if isinstance(ops, dict):
+                sample["active_jobs"] = (ops.get("jobs") or {}).get("active")
+                sample["outbox_pending"] = (ops.get("outbox") or {}).get("pending")
+        except Exception as exc:
+            sample["sample_error"] = str(exc) or type(exc).__name__
+        return sample
 
     def _run(self) -> None:
         while not self._stop.is_set():
-            sample: dict[str, Any] = {"at": _utc_now()}
-            try:
-                top_output = _command_output(
-                    [
-                        self.kubectl,
-                        "top",
-                        "pod",
-                        "-n",
-                        self.namespace,
-                        "--containers",
-                        "--no-headers",
-                    ],
-                    timeout_sec=15,
-                )
-                sample["resources"] = parse_kubectl_top(top_output)
-                sample["celery_queue_depth"] = _redis_queue_depth(
-                    kubectl=self.kubectl,
-                    namespace=self.namespace,
-                    worker_pod=self.worker_pod,
-                )
-                ops = self.client.request_json(
-                    "GET",
-                    "/api/ops/health",
-                    expected_status=200,
-                )
-                if isinstance(ops, dict):
-                    sample["active_jobs"] = (ops.get("jobs") or {}).get("active")
-                    sample["outbox_pending"] = (ops.get("outbox") or {}).get("pending")
-            except (BenchmarkError, TypeError, AttributeError) as exc:
-                sample["sample_error"] = str(exc)
+            sample = self.sample_once()
             self.samples.append(sample)
             self._stop.wait(self.interval_sec)
 
@@ -783,6 +911,16 @@ def submit_phase(
             index = futures[future]
             try:
                 response, latency_ms = future.result()
+            except AmbiguousSubmissionError as exc:
+                failures.append(
+                    {
+                        "phase": str(phase["name"]),
+                        "index": index,
+                        "error": str(exc),
+                        "ambiguous": True,
+                    }
+                )
+                continue
             except BenchmarkError as exc:
                 failures.append(
                     {
@@ -800,6 +938,51 @@ def submit_phase(
         "submitted": submitted,
         "failures": sorted(failures, key=lambda item: int(item["index"])),
     }
+
+
+def discover_run_jobs(
+    client: HttpClient,
+    *,
+    run_id: str,
+    max_pages: int,
+) -> dict[str, dict[str, Any]]:
+    if max_pages < 1:
+        raise BenchmarkError("Run reconciliation requires at least one page.")
+    prompt_prefix = f"benchmark {run_id} "
+    discovered: dict[str, dict[str, Any]] = {}
+    for page in range(max_pages):
+        body = client.request_json(
+            "GET",
+            f"/api/generations?limit=100&offset={page * 100}",
+            expected_status=200,
+        )
+        if not isinstance(body, list):
+            raise BenchmarkError("Generation list expected a JSON array.")
+        for item in body:
+            if not isinstance(item, dict):
+                continue
+            job_id = item.get("id")
+            prompt = item.get("prompt")
+            if (
+                isinstance(job_id, str)
+                and isinstance(prompt, str)
+                and prompt.startswith(prompt_prefix)
+            ):
+                discovered[job_id] = item
+        if len(body) < 100:
+            return discovered
+    raise BenchmarkError(
+        "Run reconciliation reached its pagination limit before the final page."
+    )
+
+
+def validate_run_id(run_id: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", run_id):
+        raise BenchmarkError(
+            "Benchmark run-id must be 1-128 letters, numbers, dots, "
+            "underscores, or hyphens."
+        )
+    return run_id
 
 
 def poll_jobs(
@@ -867,9 +1050,14 @@ def cleanup_jobs(
             job_id = futures[future]
             try:
                 future.result()
-            except BenchmarkError as exc:
-                failures.append({"job_id": job_id, "error": str(exc)})
-    return failures
+            except Exception as exc:
+                failures.append(
+                    {
+                        "job_id": job_id,
+                        "error": str(exc) or type(exc).__name__,
+                    }
+                )
+    return sorted(failures, key=lambda item: item["job_id"])
 
 
 def _phase_summary(records: list[dict[str, Any]], phase_name: str) -> dict[str, Any]:
@@ -952,6 +1140,10 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _exception_message(exc: BaseException) -> str:
+    return str(exc) or type(exc).__name__
+
+
 def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     phases = build_phase_specs(
         warmup_jobs=args.warmup_jobs,
@@ -961,6 +1153,15 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         steady_concurrency=args.steady_concurrency,
         burst_concurrency=args.burst_concurrency,
     )
+    gke_profile = None
+    if args.gke_profile is not None:
+        gke_profile = _load_release_profile(Path(args.gke_profile))
+        validate_gke_target(
+            gke_profile,
+            base_url=args.base_url,
+            expected_dispatch=args.expected_dispatch,
+        )
+
     client = HttpClient(args.base_url, timeout_sec=args.request_timeout_sec)
     health = client.request_json("GET", "/api/health", expected_status=200)
     ops_before = client.request_json("GET", "/api/ops/health", expected_status=200)
@@ -970,7 +1171,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     gke_evidence = None
     worker_env = None
     worker_pod = None
-    if args.gke_profile is not None:
+    if gke_profile is not None:
         gke_evidence, worker_env, worker_pod = collect_gke_preflight(
             Path(args.gke_profile),
             kubectl=args.kubectl,
@@ -985,7 +1186,10 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         require_idle=gke_evidence is not None,
     )
 
-    run_id = args.run_id or f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid4().hex[:8]}"
+    run_id = validate_run_id(
+        args.run_id
+        or f"{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid4().hex[:8]}"
+    )
     report: dict[str, Any] = {
         "schema_version": 1,
         "run_id": run_id,
@@ -1007,8 +1211,20 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         },
         "records": [],
         "submission_failures": [],
+        "phase_submissions": {},
         "samples": [],
-        "cleanup": {"requested": bool(args.cleanup), "failures": []},
+        "reconciliation": {
+            "attempted": False,
+            "discovered": 0,
+            "unresolved_active": [],
+        },
+        "cleanup": {
+            "requested": bool(args.cleanup),
+            "attempted": 0,
+            "succeeded": 0,
+            "failures": [],
+            "remaining_run_jobs": None,
+        },
     }
     if not args.execute:
         report["dry_run"] = True
@@ -1025,8 +1241,13 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         )
         sampler.start()
 
-    all_job_ids: list[str] = []
+    known_job_ids: set[str] = set()
+    terminal_job_ids: set[str] = set()
     run_failure: BaseException | None = None
+    reconciliation_pages = max(
+        5,
+        math.ceil(int(report["workload"]["total_jobs"]) / 100) + 5,
+    )
     try:
         for phase in phases:
             print(
@@ -1036,8 +1257,18 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             )
             submission_result = submit_phase(client, run_id=run_id, phase=phase)
             submitted = submission_result["submitted"]
-            report["submission_failures"].extend(submission_result["failures"])
-            all_job_ids.extend(submitted)
+            submission_failures = submission_result["failures"]
+            report["submission_failures"].extend(submission_failures)
+            report["phase_submissions"][str(phase["name"])] = {
+                "planned": int(phase["jobs"]),
+                "submitted": len(submitted),
+                "submission_failures": len(submission_failures),
+                "ambiguous_submissions": sum(
+                    failure.get("ambiguous") is True
+                    for failure in submission_failures
+                ),
+            }
+            known_job_ids.update(submitted)
             terminal = (
                 poll_jobs(
                     client,
@@ -1048,6 +1279,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 if submitted
                 else {}
             )
+            terminal_job_ids.update(terminal)
             phase_records = []
             for job_id, (_, submit_latency_ms) in submitted.items():
                 record = analyze_job(
@@ -1080,13 +1312,74 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     finally:
         if sampler is not None:
             report["samples"] = sampler.stop()
-        if args.cleanup and all_job_ids:
-            print(f"[benchmark] cleanup {len(all_job_ids)} terminal jobs", flush=True)
-            report["cleanup"]["failures"] = cleanup_jobs(
+
+        discovered: dict[str, dict[str, Any]] = {}
+        report["reconciliation"]["attempted"] = True
+        try:
+            discovered = discover_run_jobs(
                 client,
-                all_job_ids,
-                concurrency=args.cleanup_concurrency,
+                run_id=run_id,
+                max_pages=reconciliation_pages,
             )
+            report["reconciliation"]["discovered"] = len(discovered)
+            report["reconciliation"]["not_captured_during_submit"] = sorted(
+                set(discovered) - known_job_ids
+            )
+            discovered_terminal_ids = {
+                job_id
+                for job_id, job in discovered.items()
+                if job.get("state") in TERMINAL_STATES
+            }
+            terminal_job_ids.update(discovered_terminal_ids)
+            unresolved_active = sorted(set(discovered) - discovered_terminal_ids)
+            report["reconciliation"]["unresolved_active"] = unresolved_active
+        except Exception as exc:
+            report["reconciliation"]["error"] = _exception_message(exc)
+            if run_failure is None:
+                run_failure = BenchmarkError(
+                    "Could not reconcile jobs created by the benchmark run."
+                )
+
+        cleanup_ids = sorted(terminal_job_ids)
+        if args.cleanup and cleanup_ids:
+            print(f"[benchmark] cleanup {len(cleanup_ids)} terminal jobs", flush=True)
+            report["cleanup"]["attempted"] = len(cleanup_ids)
+            try:
+                report["cleanup"]["failures"] = cleanup_jobs(
+                    client,
+                    cleanup_ids,
+                    concurrency=args.cleanup_concurrency,
+                )
+            except Exception as exc:
+                report["cleanup"]["runner_error"] = _exception_message(exc)
+                if run_failure is None:
+                    run_failure = BenchmarkError(
+                        "Cleanup runner failed before all terminal jobs were checked."
+                    )
+
+            try:
+                remaining = discover_run_jobs(
+                    client,
+                    run_id=run_id,
+                    max_pages=reconciliation_pages,
+                )
+                remaining_ids = set(remaining)
+                report["cleanup"]["remaining_run_jobs"] = sorted(remaining_ids)
+                report["cleanup"]["succeeded"] = len(
+                    set(cleanup_ids) - remaining_ids
+                )
+                report["cleanup"]["failures"] = [
+                    failure
+                    for failure in report["cleanup"]["failures"]
+                    if failure["job_id"] in remaining_ids
+                ]
+            except Exception as exc:
+                report["cleanup"]["verification_error"] = _exception_message(exc)
+                if run_failure is None:
+                    run_failure = BenchmarkError(
+                        "Could not verify benchmark cleanup."
+                    )
+
         try:
             ops_after = client.request_json(
                 "GET",
@@ -1103,10 +1396,22 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             for phase in phases
         }
         report["resource_summary"] = _resource_summary(report["samples"])
+        if report["resource_summary"]["sample_errors"] and run_failure is None:
+            run_failure = BenchmarkError(
+                "GKE resource sampling observed one or more errors."
+            )
+        if (
+            args.cleanup
+            and report["cleanup"]["remaining_run_jobs"]
+            and run_failure is None
+        ):
+            run_failure = BenchmarkError(
+                "Cleanup left jobs from this benchmark run in the deployment."
+            )
         report["completed_at"] = _utc_now()
         report["dry_run"] = False
         if run_failure is not None:
-            report["run_error"] = str(run_failure)
+            report["run_error"] = _exception_message(run_failure)
         if args.output is not None:
             _write_report(Path(args.output), report)
 

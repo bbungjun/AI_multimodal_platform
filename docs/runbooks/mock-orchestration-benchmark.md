@@ -99,8 +99,10 @@ python3 scripts/benchmark_mock_orchestration.py \
   --minimum-imagen-rate-limit 5000
 ```
 
-dry-run은 GCP, cluster, deployment, mock provider, dispatch, rate-limit, resource metrics,
-Redis queue probe만 확인한다. job은 만들지 않는다.
+dry-run은 GCP account/project, release profile의 public base URL과 Celery mode,
+현재 kubectl context의 exact GKE cluster, deployment, mock provider, rate-limit,
+resource metrics, Redis queue를 확인한다. 하나라도 다르면 public workload를 보내기
+전에 중단한다. job은 만들지 않는다.
 
 ## 5. 기준선 실행
 
@@ -122,6 +124,13 @@ python3 scripts/benchmark_mock_orchestration.py \
 job별 prompt, credential, broker URL을 포함하지 않는다. 성공 후 public DELETE API로
 1,120개 job과 asset을 정리한다. 현재 outbox event에는 job FK가 없으므로 published event
 row는 남으며, `ops_before`와 `ops_after` 증가량을 결과에 기록한다.
+
+POST 응답이 timeout/disconnect되면 서버 commit 여부를 알 수 없으므로
+`ambiguous_submissions`로 기록한다. 종료 경로는 성공, 실패, 사용자 interrupt와
+관계없이 prompt의 exact run-id prefix로 job을 다시 조회한다. terminal job만 삭제하고
+active/pending job은 `reconciliation.unresolved_active`에 남겨 operator가 복구한 뒤
+정리하게 한다. cleanup 후에는 run-id를 다시 조회해 실제 잔여 job이 0인지 검증한다.
+resource sampler 오류나 종료되지 않은 sampler thread도 benchmark 실패로 처리한다.
 
 ## 6. 반드시 원복
 
@@ -173,7 +182,9 @@ PY
 - completed가 집계 대상 1,100보다 작음
 - failure, duplicate execution, cleanup failure가 하나라도 있음
 - resource sample error가 있음
+- ambiguous submission 또는 unresolved active job이 있음
+- release profile의 base URL/Celery mode와 실행 인자가 다름
+- 현재 kubectl context가 release profile의 GKE cluster와 다름
 - mock provider 또는 celery dispatch guard가 report와 다름
 - rate-limit wait가 발생했거나 임시 설정이 원복되지 않음
 - 실제 Vertex 호출이나 비용이 발생함
-

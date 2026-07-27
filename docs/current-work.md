@@ -88,10 +88,11 @@ branch `codex/issue-83-redis-celery-baseline`:
 - Issue #83 fixes the deployed workload at warm-up 20, steady 100, and five
   200-job bursts: 1,120 total jobs and 1,100 aggregate jobs.
 - `scripts/benchmark_mock_orchestration.py` now has dry-run by default, personal
-  GCP release-profile guards, mock/celery/idle/rate-limit guards, concurrent
-  public API workload generation, paginated polling, p50/p95/p99 calculation,
-  GKE CPU/memory and Redis queue sampling, secret-safe evidence, and terminal
-  job/asset cleanup.
+  GCP release-profile guards, exact public base URL/kubectl context/Celery
+  binding, mock/idle/rate-limit guards, concurrent public API workload
+  generation, paginated polling, p50/p95/p99 calculation, GKE CPU/memory and
+  Redis queue sampling, secret-safe evidence, and verified terminal job/asset
+  cleanup.
 - `docs/runbooks/mock-orchestration-benchmark.md` records the temporary
   worker-only rate-limit override and mandatory rollback. The override removes
   mock throttling from the architecture comparison; replica and worker
@@ -99,9 +100,11 @@ branch `codex/issue-83-redis-celery-baseline`:
 - A local 3-job mock run passed submit, Celery processing, state collection,
   aggregation, and cleanup. Its small sample is harness verification only and
   must not be used as portfolio performance evidence.
-- The focused harness suite passes 13 tests. A Python 3.11 container with the
-  repository mounted read-only passes the full backend suite: 364 tests, with
-  only read-only pytest-cache warnings.
+- The focused harness suite now covers direct HTTP/subprocess timeout,
+  pagination, poll timeout, unexpected cleanup errors, sampler errors, exact
+  GKE target guards, and interrupt-time partial artifact persistence. Fresh
+  verification passes 24 focused tests and all 377 backend tests in Python
+  3.11.
 - Deployed run `redis-celery-20260727T0626Z` passed warm-up 20 and steady 100.
   Steady completed 100/100 at `1.730095 jobs/s`; submit p95 was `51.200 ms`,
   claim p95 `52.148 s`, execution p95 `1.388 s`, and end-to-end p95
@@ -127,8 +130,15 @@ branch `codex/issue-83-redis-celery-baseline`:
   and recovery are in
   `docs/troubleshooting/gke-burst-db-connection-exhaustion.md`.
 - The harness follow-up now collects every concurrent submit success/failure
-  instead of aborting on the first failed future, and defaults cleanup
-  concurrency to 2.
+  instead of aborting on the first failed future, marks response-lost POSTs as
+  ambiguous, re-discovers exact run-id jobs on every exit path, deletes only
+  terminal jobs, verifies cleanup by read-back, fails on sampler errors, and
+  defaults cleanup concurrency to 2.
+- The committed failure reconstruction separates the 120 records directly
+  captured by the original harness from the burst values reconstructed from
+  outbox deltas, API Pod error counts, run-id queries, repair, and cleanup
+  read-backs. The ignored raw report is hash-bound by SHA-256 in
+  `docs/evidence/issue-83-redis-celery-failure-reconstruction.json`.
 - Follow-up Issue
   [#84](https://github.com/bbungjun/AI_multimodal_platform/issues/84) tracks
   deployment-wide DB connection budgeting and bounded Celery claim

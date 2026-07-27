@@ -1,5 +1,4 @@
 # Redis/Celery 오케스트레이션 기준선 설계
-
 **Issue:** [#83](https://github.com/bbungjun/AI_multimodal_platform/issues/83)
 
 ## 목적
@@ -90,4 +89,3 @@ API replica, GKE node 조건으로 비교한다. 다음 조건을 모두 만족�
 2. claim latency와 end-to-end latency의 p95가 기준선보다 악화되지 않고 목표 개선폭을 보인다.
 3. 처리량이 기준선보다 악화되지 않는다.
 4. 실패, 중복 실행, crash recovery에서 현재의 at-least-once 안전성을 유지한다.
-

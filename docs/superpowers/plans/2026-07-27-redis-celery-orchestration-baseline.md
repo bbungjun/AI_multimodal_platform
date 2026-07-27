@@ -1,5 +1,4 @@
 # Redis/Celery 오케스트레이션 기준선 구현 계획
-
 > Issue [#83](https://github.com/bbungjun/AI_multimodal_platform/issues/83)의
 > GKE mock 기준선을 재현 가능하게 측정한다.
 
@@ -67,4 +66,3 @@
 5. aggregate, peak resource, queue/backlog, 실패/중복을 evidence 문서에 기록한다.
 6. 임시 override를 제거하고 worker rollout, mock health, job cleanup을 확인한다.
 7. fresh verification 후 결과 문서를 커밋하고 push한다.
-

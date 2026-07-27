@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,6 +82,276 @@ def test_submit_phase_collects_all_successes_and_failures_without_early_abort():
             "error": "HTTP 500",
         }
     ]
+
+
+def test_http_client_normalizes_direct_timeout_as_ambiguous_submission(monkeypatch):
+    module = load_benchmark_module()
+
+    def raise_timeout(*args, **kwargs):
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(module, "urlopen", raise_timeout)
+
+    with pytest.raises(module.AmbiguousSubmissionError, match="timed out"):
+        module.HttpClient("http://example.test").request_json(
+            "POST",
+            "/api/generations",
+            expected_status=201,
+            payload={"prompt": "benchmark run-1 steady 0001"},
+        )
+
+
+def test_command_output_normalizes_subprocess_timeout(monkeypatch):
+    module = load_benchmark_module()
+
+    def raise_timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=["kubectl", "top"], timeout=15)
+
+    monkeypatch.setattr(module.subprocess, "run", raise_timeout)
+
+    with pytest.raises(module.BenchmarkError, match="timed out"):
+        module._command_output(["kubectl", "top"], timeout_sec=15)
+
+
+def test_command_output_normalizes_missing_executable(monkeypatch):
+    module = load_benchmark_module()
+
+    def raise_missing(*args, **kwargs):
+        raise FileNotFoundError("kubectl was not found")
+
+    monkeypatch.setattr(module.subprocess, "run", raise_missing)
+
+    with pytest.raises(module.BenchmarkError, match="could not start"):
+        module._command_output(["kubectl", "top"])
+
+
+def test_gke_target_guard_binds_base_url_and_dispatch_to_release_profile():
+    module = load_benchmark_module()
+    profile = {
+        "health_url": "http://34.50.26.152/api/health",
+        "expected_dispatch": "celery",
+    }
+
+    module.validate_gke_target(
+        profile,
+        base_url="http://34.50.26.152/",
+        expected_dispatch="celery",
+    )
+
+    with pytest.raises(module.BenchmarkError, match="base URL"):
+        module.validate_gke_target(
+            profile,
+            base_url="http://127.0.0.1:8000",
+            expected_dispatch="celery",
+        )
+    with pytest.raises(module.BenchmarkError, match="dispatch"):
+        module.validate_gke_target(
+            profile,
+            base_url="http://34.50.26.152",
+            expected_dispatch="in-process",
+        )
+
+
+def test_kube_context_guard_requires_profile_cluster():
+    module = load_benchmark_module()
+    profile = {
+        "project_id": "krafton-vertex-live-3108",
+        "cluster_zone": "asia-northeast3-a",
+        "cluster_name": "creativeops-portfolio",
+    }
+    expected = (
+        "gke_krafton-vertex-live-3108_"
+        "asia-northeast3-a_creativeops-portfolio"
+    )
+    config = {
+        "current-context": expected,
+        "contexts": [{"name": expected, "context": {"cluster": expected}}],
+        "clusters": [{"name": expected, "cluster": {"server": "https://example.test"}}],
+    }
+
+    assert module.validate_kube_context(profile, config) == expected
+
+    wrong = json.loads(json.dumps(config))
+    wrong["contexts"][0]["context"]["cluster"] = "gke_other_project_zone_cluster"
+    with pytest.raises(module.BenchmarkError, match="kubectl context"):
+        module.validate_kube_context(profile, wrong)
+
+
+def test_discover_run_jobs_paginates_and_matches_exact_prompt_prefix():
+    module = load_benchmark_module()
+
+    class FakeClient:
+        def request_json(self, method, path, *, expected_status, payload=None):
+            assert method == "GET"
+            if "offset=0" in path:
+                return [
+                    {
+                        "id": f"other-{index}",
+                        "prompt": "not this benchmark",
+                    }
+                    for index in range(100)
+                ]
+            if "offset=100" in path:
+                return [
+                    {
+                        "id": "job-1",
+                        "prompt": "benchmark run-1 steady 0001",
+                    },
+                    {
+                        "id": "job-other-run",
+                        "prompt": "benchmark run-10 steady 0001",
+                    },
+                ]
+            raise AssertionError(path)
+
+    discovered = module.discover_run_jobs(
+        FakeClient(),
+        run_id="run-1",
+        max_pages=3,
+    )
+
+    assert discovered == {
+        "job-1": {
+            "id": "job-1",
+            "prompt": "benchmark run-1 steady 0001",
+        }
+    }
+
+
+def test_run_id_rejects_whitespace_that_would_make_reconciliation_ambiguous():
+    module = load_benchmark_module()
+
+    assert module.validate_run_id("redis-celery-20260727T0626Z") == (
+        "redis-celery-20260727T0626Z"
+    )
+    with pytest.raises(module.BenchmarkError, match="run-id"):
+        module.validate_run_id("run 1")
+
+
+def test_poll_jobs_reports_timeout_without_making_a_request(monkeypatch):
+    module = load_benchmark_module()
+    monotonic_values = iter([0.0, 2.0])
+    monkeypatch.setattr(module.time, "monotonic", lambda: next(monotonic_values))
+
+    class FakeClient:
+        def request_json(self, *args, **kwargs):
+            raise AssertionError("request should not be made after deadline")
+
+    with pytest.raises(module.BenchmarkError, match="Timed out"):
+        module.poll_jobs(
+            FakeClient(),
+            job_ids={"job-1"},
+            timeout_sec=1,
+            interval_sec=0,
+        )
+
+
+def test_cleanup_collects_unexpected_client_errors_instead_of_aborting():
+    module = load_benchmark_module()
+
+    class FakeClient:
+        def request_json(self, method, path, *, expected_status, payload=None):
+            if path.endswith("job-2"):
+                raise RuntimeError("unexpected disconnect")
+            return {}
+
+    failures = module.cleanup_jobs(
+        FakeClient(),
+        ["job-1", "job-2", "job-3"],
+        concurrency=3,
+    )
+
+    assert failures == [
+        {
+            "job_id": "job-2",
+            "error": "unexpected disconnect",
+        }
+    ]
+
+
+def test_sampler_records_command_timeout_as_sample_error(monkeypatch):
+    module = load_benchmark_module()
+
+    def raise_timeout(*args, **kwargs):
+        raise module.BenchmarkError("Command timed out")
+
+    monkeypatch.setattr(module, "_command_output", raise_timeout)
+    sampler = module.GkeSampler(
+        client=object(),
+        kubectl="kubectl",
+        namespace="creativeops-portfolio",
+        worker_pod="worker-1",
+        interval_sec=1,
+    )
+
+    sample = sampler.sample_once()
+
+    assert sample["sample_error"] == "Command timed out"
+
+
+def test_run_benchmark_writes_partial_report_after_keyboard_interrupt(
+    monkeypatch,
+    tmp_path,
+):
+    module = load_benchmark_module()
+    output = tmp_path / "partial.json"
+    args = module.build_parser().parse_args(
+        [
+            "--execute",
+            "--output",
+            str(output),
+            "--warmup-jobs",
+            "1",
+            "--steady-jobs",
+            "1",
+            "--burst-jobs",
+            "1",
+            "--burst-rounds",
+            "1",
+        ]
+    )
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def request_json(self, method, path, *, expected_status, payload=None):
+            if path == "/api/health":
+                return {
+                    "ok": True,
+                    "ready": True,
+                    "db": "up",
+                    "vertex": {
+                        "status": "mock_provider",
+                        "credentials": "not_required",
+                    },
+                }
+            if path == "/api/ops/health":
+                return {
+                    "ok": True,
+                    "db": "up",
+                    "dispatch": {"mode": "celery"},
+                    "jobs": {"active": 0},
+                    "outbox": {"pending": 0},
+                }
+            if path.startswith("/api/generations?"):
+                return []
+            raise AssertionError(path)
+
+    monkeypatch.setattr(module, "HttpClient", FakeClient)
+    monkeypatch.setattr(
+        module,
+        "submit_phase",
+        lambda *args, **kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        module.run_benchmark(args)
+
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["run_error"] == "KeyboardInterrupt"
+    assert report["completed_at"] is not None
+    assert report["reconciliation"]["attempted"] is True
 
 
 def test_percentile_uses_linear_interpolation_and_rejects_empty_input():

@@ -1,8 +1,8 @@
 # Issue #83 Redis/Celery GKE 기준선
 
-**측정 시각:** 2026-07-27 06:24~06:31 UTC  
-**Harness commit:** `dd6c930cadf1d01af42336d786c59a85b63a7b1c`  
-**Run ID:** `redis-celery-20260727T0626Z`  
+**측정 시각:** 2026-07-27 06:24~06:31 UTC
+**Harness commit:** `dd6c930cadf1d01af42336d786c59a85b63a7b1c`
+**Run ID:** `redis-celery-20260727T0626Z`
 **결과:** steady phase 통과, 첫 burst phase에서 Cloud SQL connection 고갈로 중단
 
 ## 증거 범위
@@ -14,8 +14,24 @@ Redis/Celery, worker, storage를 포함한 오케스트레이션 기준선이다
 
 raw report는 Git에서 제외된
 `benchmarks/orchestration/runs/redis-celery-20260727T0626Z.json`에 보존했다.
-아래 수치는 raw report, 두 API Pod와 worker Pod의 오류 로그, DB read-only 진단,
-복구 후 ops read-back을 함께 대조했다.
+SHA-256은
+`abe5b638359458eea4aeda79247bdf7c2a8bbbfbf2beddbd4aff2bb275d84463`이다.
+secret-safe 사후 복원 계산은
+`docs/evidence/issue-83-redis-celery-failure-reconstruction.json`에 별도로 고정했다.
+
+증거의 출처를 다음처럼 구분한다.
+
+- **Harness 직접 계측:** warm-up/steady 120개 record, latency/throughput, resource
+  sample, 첫 HTTP 500, 최초 cleanup 결과
+- **사후 복원:** burst HTTP 201/500 수, pending 고립 수, 수동 복구와 최종 cleanup
+- **운영 진단:** API/worker 오류 로그, DB read-only 설정, 최종 ops/deployment
+  read-back
+
+burst 수치는 수정 전 harness가 첫 실패 future에서 결과 수집을 중단한 뒤 생성된
+raw report만으로 직접 집계한 값이 아니다. 당시 executor는 예약한 200개 요청의 완료를
+기다렸지만 raw report에는 warm-up/steady 120개 record와 첫 HTTP 500만 남았다. 따라서
+아래 burst 수치는 outbox 전후값, API Pod별 오류 집계, run-id 조회를 교차 검증해
+복원한 값이다.
 
 ## 환경
 
@@ -35,7 +51,7 @@ raw report는 Git에서 제외된
 benchmark 전에는 active job 0, outbox pending 0, Redis queue 0이었다. API 2,
 dispatcher 1, worker 1은 모두 desired=ready였고 restart 0이었다.
 
-## Steady 결과
+## Harness 직접 계측: Steady 결과
 
 warm-up 20건은 최종 aggregate에서 제외했다. steady phase는 submit concurrency 2로
 100건을 생성했고 100건 모두 완료했다.
@@ -56,10 +72,10 @@ submit latency는 낮았지만 worker 처리량보다 job 생성 속도가 높�
 따라서 end-to-end p95의 대부분은 provider가 아니라 worker claim 전 대기
 `52.148 s`였다.
 
-## Burst failure
+## 사후 복원: Burst failure
 
-첫 burst는 200건을 submit concurrency 50으로 시작했다. 모든 client future가 요청을
-보냈으며 그 결과는 다음과 같다.
+첫 burst는 200건을 submit concurrency 50으로 예약했다. 사후 복원 결과는 다음과
+같다.
 
 | 결과 | 건수 | 비율 |
 | --- | ---: | ---: |
@@ -67,8 +83,11 @@ submit latency는 낮았지만 worker 처리량보다 job 생성 속도가 높�
 | HTTP 500 | 54 | 27.0% |
 | accepted 후 pending 고립 | 20 | accepted burst의 13.7% |
 
-정확한 accepted 수는 benchmark 전후 outbox `4 -> 270` 증가량 266에서 warm-up/steady
-120건을 뺀 값이다. 두 API Pod 로그의 burst HTTP 500 합계는 54건과 일치한다.
+accepted 수는 benchmark 전후 outbox `4 -> 270` 증가량 `266`에서 harness가 직접
+계측한 warm-up/steady `120`건을 뺀 `146`건이다. 예약한 burst 요청 `200`건에서 이를
+빼면 HTTP 500은 `54`건이다. 두 API Pod 오류 집계 `28 + 26 = 54`와도 일치한다.
+pending 고립 `20`건은 복구 직전 `active=20`, `pending=20`, `outbox pending=0`,
+Redis queue `0` read-back과 repair 결과 `selected=20`을 대조했다.
 
 API와 worker의 첫 구체적 예외는 모두 다음과 같았다.
 
@@ -155,4 +174,3 @@ event row가 남아 최종 total은 270이다. Secret, credential, broker URL은
 다음 A/B는 DB connection budget과 worker transient DB failure 복구를 별도 Issue에서
 먼저 해결한 후, 동일한 20 + 100 + 200x5 workload를 다시 실행해야 한다. 개선 후에도
 같은 concurrency, replica, worker concurrency, mock media 조건을 유지한다.
-

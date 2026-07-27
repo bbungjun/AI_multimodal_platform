@@ -109,4 +109,3 @@ rollout, rate limit 5, mock health, active 0, queue 0, desired=ready, restart 0�
 Cloud SQL tier를 올리는 것만으로 통과시키면 process별 connection budget 부재와 task
 recovery 결함이 남는다. 반대로 pool만 지나치게 줄이면 API queueing과 worker 처리량이
 악화될 수 있으므로 latency, failure, connection peak를 함께 비교해야 한다.
-
