@@ -139,6 +139,13 @@ branch `codex/issue-83-redis-celery-baseline`:
   outbox deltas, API Pod error counts, run-id queries, repair, and cleanup
   read-backs. The ignored raw report is hash-bound by SHA-256 in
   `docs/evidence/issue-83-redis-celery-failure-reconstruction.json`.
+- A post-hardening live GKE dry-run passed the exact release-profile base URL,
+  kubectl context, mock provider, Celery, deployment readiness, idle queue, and
+  restored worker rate limit 5 guards without creating jobs.
+- Draft PR
+  [#85](https://github.com/bbungjun/AI_multimodal_platform/pull/85) contains the
+  baseline harness, evidence, failure reconstruction, and runbook. Independent
+  re-review returned `READY`.
 - Follow-up Issue
   [#84](https://github.com/bbungjun/AI_multimodal_platform/issues/84) tracks
   deployment-wide DB connection budgeting and bounded Celery claim
