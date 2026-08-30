@@ -18,6 +18,8 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
+- Latest merged `main`: `ec86e91` (PR #80, Gemini structured-JSON thinking
+  disabled). No paid Vertex request has been run after that fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
   `frontend`, and `worker`.
@@ -38,8 +40,11 @@ at the end of every meaningful work session.
   backed job counts, outbox counts, resumable polling count, dispatch settings,
   and recent failed jobs.
 - AWS portfolio deployment: no live AWS stack is currently running. The Sydney
-  `ap-southeast-2` portfolio stack under AWS account `827913617635` was
-  intentionally destroyed on 2026-06-19.
+  `ap-southeast-2` portfolio stack was intentionally destroyed on 2026-06-19.
+- GCP portfolio deployment: the GKE workloads and general node pool are paused
+  at replica/node count `0` in mock mode for cost control. Historical live GKE
+  evidence remains valid for its recorded revisions but does not mean the stack
+  is currently serving traffic.
 - AWS Terraform: `infra/aws/` contains the Terraform baseline for recreating the
   portfolio stack. The committed defaults keep ECS desired counts at `0`; use
   local ignored tfvars when intentionally enabling live services. The previous
@@ -70,9 +75,29 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-07-13, Issue #66's bounded real Vertex pilot guard merged through
-PR #74 at `6f2f0ce`. Live validation is being recorded on branch
-`codex/issue-66-vertex-validation`:
+As of 2026-08-31, Issue #87 is active on branch
+`codex/issue-87-platform-evidence`:
+
+- Added the portfolio recording requirement to `AGENTS.md`.
+- Designed the platform-first README information architecture and evidence
+  classification in `docs/portfolio/issue-87-platform-evidence.md`.
+- Implemented the platform-first README, capability/evidence index, reusable
+  Issue template, and current-state cleanup without cloud or Vertex writes.
+- Link validation checked 56 local links and eight external links with no
+  missing target. Compose config, frontend lint/build, and 352 backend tests
+  passed. The only deselected backend test is the previously documented
+  Windows `/bin/bash` path-conversion failure in the release-script syntax
+  check.
+- GitHub's Markdown API rendered the platform architecture before the product
+  flow, two tables, the architecture code block, and all four product images.
+  `npm audit --omit=dev` separately reported three moderate React Router
+  production-dependency advisories with fixes available; keep that dependency
+  work out of this docs-only branch and track it with Issue #89 supply-chain
+  follow-up.
+
+Issue #66's bounded real Vertex pilot guard merged through PR #74 at `6f2f0ce`.
+The following retained evidence explains the paid-run No-Go and subsequent
+fixes; it is historical evidence rather than the current working branch:
 
 - Added `benchmark.v2.jsonl` with exactly 20 enabled cases: English 10/Korean
   10, five categories with four cases each, and two cases in every
@@ -209,13 +234,12 @@ PR #74 at `6f2f0ce`. Live validation is being recorded on branch
   response in that call group. Backend and worker remained `OOMKilled=false`
   with restart count `0`; this is not a host-capacity/OOM failure. No replacement
   run was started and Vertex Compose was stopped without deleting volumes.
-- Issue #79 branch `codex/issue-79-disable-gemini-thinking` fixes that path by
-  setting Gemini 2.5 Flash `thinking_budget=0` for compact structured prompt
-  enhancement JSON, retaining the 1,600 output-token cap and three-call-group
-  policy. Focused backend tests passed 24 and the evaluation suite passed 69 in
-  mock mode. No provider call was made after this code change; merge it, then
-  regenerate the clean preflight and mock gate and obtain a new explicit paid
-  execution approval.
+- Issue #79 merged through PR #80 at `ec86e91`. It sets Gemini 2.5 Flash
+  `thinking_budget=0` for compact structured prompt enhancement JSON while
+  retaining the 1,600 output-token cap and three-call-group policy. Focused
+  backend tests passed 24 and the evaluation suite passed 69 in mock mode. No
+  provider call was made after this code change; a future paid run still needs
+  a new clean preflight/mock gate and explicit execution approval.
 
 ## Last Completed Work
 
@@ -1453,27 +1477,29 @@ Redis/Celery/outbox runtime and the shared multi-machine workflow:
 
 ## Next Suggested Work
 
+- On 2026-08-31, portfolio-polishing tracking issues were opened in execution
+  order: #87 for the platform-engineering README and evidence index (P0), #88
+  for live GKE observability/autoscaling/incident evidence (P1), #89 for a
+  cost-bounded GPU operations exercise and CI/CD supply-chain evidence (P2),
+  and #90 for capacity, recovery, dependency-failure, and cost records (P3).
+  Keep implementation work in bounded child issues where needed, and preserve
+  problem, diagnosis, solution, verification, outcome, and remaining-risk
+  evidence under the new `AGENTS.md` portfolio recording rules.
 - For Issue #66, refresh local ADC only through an intentional interactive
   `gcloud auth application-default login`, then verify the mounted credential
   with non-generative permission checks before another Vertex call. Do not
   reuse the failed ledger or silently open a replacement run. A complete retry
   needs explicit approval for the cross-attempt enhancement-request total to
   increase from `20` to `21`; preserve the failed run alongside the final run.
-- Review the Issue #49 managed Prometheus and alert-policy draft PR after
-  GitHub checks pass, then merge it into `main`.
 - The live GCP stack is currently in temporary demo pause mode: app replicas
   `0`, node pool `0`, and `ai_provider=mock`. Before live autoscaling, HPA, or
   provider failure evidence, intentionally scale the stack back up with the
   personal GCP guard.
-- After Issue #49 merges, use a dedicated live observability rollout issue:
-  resume the proven mock baseline, build and deploy the new backend image,
-  review a Terraform plan with alerts disabled, verify `PodMonitoring` scrape
-  ingestion in Cloud Monitoring, then explicitly enable the two alert policies.
-- Follow that with a bounded prompt-enhancement provider failure validation
-  run: use low-rate Vertex prompt traffic, verify both
-  `/api/ops/metrics.provider_failures.by_code` and the managed Prometheus
-  provider-failure series, and keep public error/log safety intact. This can
-  incur Vertex cost and must use the personal GCP guard.
+- Managed Prometheus, alert-policy, dashboard/SLO, HPA, node autoscaling, and
+  rollback implementation and historical live validation are already merged.
+  Issue #88 should reference those results and run only the missing current-
+  revision evidence after a guarded resume; it must not recreate Issue #49 or
+  silently make a paid Vertex call.
 - Issue #3 remains the umbrella for the GCP GKE Terraform deployment path. Most
   child deployment issues through Vertex readiness are complete; keep future GCP
   work one issue and one branch at a time.

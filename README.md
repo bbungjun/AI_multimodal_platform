@@ -1,6 +1,97 @@
 # CreativeOps Studio
 
-CreativeOps Studio는 이미지, 비디오, 이미지 기반 비디오 파이프라인을 만들고 각 작업의 운영 상태까지 확인할 수 있는 개인용 AI 크리에이티브 워크스페이스입니다. 겉으로는 생성 스튜디오처럼 쓰고, 내부는 상태 기반 job 처리와 Vertex AI 연동을 갖춘 FastAPI 백엔드로 동작합니다.
+CreativeOps Studio는 Gemini, Imagen, Veo 기반 생성 경험을 Kubernetes에서 안전하게
+운영하기 위한 개인용 멀티모달 AI 플랫폼입니다. 사용자는 프롬프트를 검토한 뒤 이미지와
+영상을 생성하고, 운영자는 durable job, provider failure, queue, rollout과 SLO를 추적할
+수 있습니다.
+
+이 프로젝트의 핵심은 AI API 호출 자체보다 비용과 실패가 있는 장시간 생성 작업을
+PostgreSQL source of truth, transactional outbox, Redis/Celery worker, 좁은 provider
+boundary로 운영하는 것입니다. GKE/Terraform, Workload Identity, 부하테스트, 관리형
+Prometheus, digest release와 자동 rollback을 실제 운영 문제와 연결합니다.
+
+## 운영 아키텍처
+
+```text
+React/Vite Studio
+  -> FastAPI API
+    -> PostgreSQL: jobs, state history, assets, prompt provenance, outbox
+    -> transactional outbox
+      -> dispatcher -> Redis/Celery -> worker
+        -> mock provider or Vertex AI through google-genai
+        -> GCS FUSE mounted DATA_DIR / local DATA_DIR
+
+Operator surfaces
+  -> /api/health and /api/health/live
+  -> /api/ops/health and /api/ops/metrics
+  -> /metrics -> GKE Managed Prometheus -> alerts, dashboard, SLO
+
+Delivery
+  -> CI/test -> Trivy/SBOM -> Cloud Build provenance
+  -> Artifact Registry digest -> Terraform rollout -> health gate
+  -> success or automatic digest rollback
+```
+
+프론트엔드는 Vertex AI나 credential을 직접 다루지 않습니다. API는 job과 outbox를 같은
+DB transaction에 저장하고, dispatcher는 `job_id`만 큐에 발행합니다. Worker는 최신
+job을 다시 읽고 [state machine](backend/app/state_machine.py)을 통해서만 상태를
+변경합니다. 자세한 설계는 [Architecture](docs/architecture.md)와
+[Job lifecycle](docs/job-lifecycle.md)에 있습니다.
+
+## 플랫폼 신뢰성 설계
+
+- **Durable dispatch:** Postgres job/outbox가 source of truth이며 Celery result state에
+  사용자 상태를 맡기지 않습니다.
+- **Failure-aware provider boundary:** 429, 5xx, timeout, malformed response를 안전한
+  public error로 변환하고 bounded retry/backoff와 rate limit을 적용합니다.
+- **Recoverable video work:** late ack, worker-lost rejection, prefetch `1`, resumable Veo
+  polling으로 긴 작업의 중복·유실 위험을 제한합니다.
+- **Safe Kubernetes rollout:** readiness/liveness, PDB, resource request/limit,
+  multi-replica precondition과 health-gated rollback을 사용합니다.
+- **Observable operation:** DB-backed job/outbox/backlog 상태와 Prometheus HTTP latency,
+  error rate, provider failure code를 함께 노출합니다.
+- **Supply-chain guard:** runtime image 취약점 차단, SPDX SBOM, provenance가 있는 build,
+  digest-only release를 사용합니다.
+- **Cost-safe validation:** 기본 검증은 deterministic mock provider로 실행하며 실제
+  Vertex 요청은 별도의 승인, 요청 상한과 사용량 ledger를 요구합니다.
+
+## 구현과 검증 수준
+
+| Capability | Evidence level | 검증 근거 | 현재 상태 |
+|---|---|---|---|
+| Mock 생성·asset·정리 golden path | `Live Verified` | [Mock runbook](docs/runbooks/local-mock.md), [smoke workflow](.github/workflows/smoke-mock-golden-path.yml) | 로컬 기본 모드 |
+| Postgres outbox와 Redis/Celery worker | `Live Verified` | [Job lifecycle](docs/job-lifecycle.md), [testing](docs/testing.md) | Compose/GKE 검증 |
+| GKE, managed data, Workload Identity | `Live Verified` | [GCP Terraform](infra/gcp/README.md), [GKE runbook](docs/runbooks/gcp-gke.md) | 비용 관리 pause |
+| HPA, node autoscaling, k6 | `Live Verified` | [k6 runbook](docs/runbooks/k6-gcp-load-test.md), [operation record](docs/current-work.md) | HPA off, node pool paused |
+| Managed Prometheus, alerts, dashboard, SLO | `Live Verified` | [monitoring.tf](infra/gcp/monitoring.tf), [operation record](docs/current-work.md) | workload paused |
+| Image scan, SBOM, digest rollout, rollback | `Live Verified` | [supply-chain workflow](.github/workflows/image-supply-chain.yml), [release script](scripts/deploy_gcp_release.sh) | CI 구현 유지 |
+| Vertex provider boundary | `Live Verified` | [Vertex pilot runbook](docs/runbooks/prompt-enhancement-vertex-pilot.md), [provider modes](docs/provider-modes.md) | post-fix 유료 재검증 전 |
+| Paired prompt evaluation | `Implemented` | [evaluation gate](docs/runbooks/prompt-enhancement-evaluation-gate.md), [evaluation package](evals/prompt_enhancement) | mock 검증 완료, post-fix live 미검증 |
+| GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
+| 분산학습 운영 | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
+
+`Live Verified`는 특정 날짜와 revision에서 실제 runtime으로 확인했다는 뜻이며 현재
+상시 운영 중이라는 뜻은 아닙니다. 전체 판정 기준과 근거는
+[Portfolio Evidence Index](docs/portfolio/README.md)에 있습니다.
+
+## 대표 운영 증거
+
+- **HPA 검증:** GKE mock 환경에서 k6 590 iterations, 1,770 HTTP requests, checks
+  100%, HTTP failure rate 0%, request-duration p95 53 ms를 기록했습니다. HPA 제거 후
+  health와 Terraform no-drift를 다시 확인했습니다.
+- **Alert 검증:** 통제된 provider failure에서 20 requests, HTTP 5xx 3건, 5xx ratio
+  15%, 동일 코드 provider failure 3건을 관측했습니다. 두 alert가 firing된 뒤 mock
+  복구 후 resolved됐습니다.
+- **자동 rollback:** 의도적으로 health 조건을 불일치시킨 candidate rollout에서 API,
+  worker, dispatcher, frontend 네 workload가 이전 digest로 복구되고 readiness를
+  회복했습니다.
+- **Provider incident:** 실제 Vertex 파일럿에서 structured-response failure와 timeout을
+  관측했습니다. 새 실행으로 덮지 않고 prompt-free ledger와 failed manifest를 보존한 뒤
+  No-Go로 중단하고 contract repair를 구현했습니다.
+
+현재 AWS 포트폴리오 stack은 검증 후 제거된 `Destroyed` 상태이고, 개인 GCP stack은
+비용 관리를 위해 workload replica와 node pool을 0으로 둔 `Paused` 상태입니다. GPU
+node pool과 분산학습은 실제 구현 전이므로 완료 경험으로 주장하지 않습니다.
 
 ## 실제 생성 흐름
 
@@ -30,23 +121,6 @@ CreativeOps Studio는 이미지, 비디오, 이미지 기반 비디오 파이프
 - Gemini 기반 prompt enhancement 초안 생성
 - T2I -> I2V 파이프라인 job
 - job history, 상세 timeline, 생성 asset preview, provider readiness 확인
-
-## 아키텍처
-
-```text
-React/Vite frontend
-  -> FastAPI backend
-    -> PostgreSQL jobs, assets, prompt records, and outbox events
-    -> Local DATA_DIR file streaming
-Outbox dispatcher process
-  -> publishes job ids from Postgres outbox to Redis/Celery
-Celery worker process
-  -> claims pending jobs from Postgres
-    -> Local DATA_DIR asset storage
-    -> Vertex AI through google-genai
-```
-
-프론트엔드는 Vertex AI를 직접 호출하지 않습니다. provider 접근은 백엔드 service boundary 안에 격리되어 있습니다. 로컬 개발에서는 deterministic mock provider를 사용할 수 있어 테스트와 smoke check가 실제 AI 비용을 만들지 않습니다.
 
 ## 기술 스택
 
@@ -196,6 +270,7 @@ docker compose config
 ## 문서
 
 - [Architecture](docs/architecture.md)
+- [Portfolio evidence](docs/portfolio/README.md)
 - [Provider modes](docs/provider-modes.md)
 - [Job lifecycle](docs/job-lifecycle.md)
 - [Storage and assets](docs/storage-and-assets.md)
