@@ -158,6 +158,7 @@ Kubernetes 운영, 비동기 job 신뢰성, IaC, 관측성, 배포 rollback, pro
 |---|---|---|
 | Markdown local-link 검사 | 수정 문서 6개, local 56개와 external 8개 확인, missing 0개 | Pass |
 | GitHub Markdown API render | architecture heading, tables 2개, code block, product images 4개 렌더링; 플랫폼 설명이 제품 흐름보다 먼저 배치됨 | Pass |
+| GitHub Actions CI run `33332531974` | Linux `verify` job이 dependency install과 repository quality gate를 33초에 완료 | Pass |
 | `git diff --check` | whitespace 오류 없음 | Pass |
 | `python scripts/verify_local.py` | Compose 통과, backend 352 통과 후 기존 Windows `/bin/bash` 경로 테스트 1개 실패 | Known environment failure |
 | `AI_PROVIDER=mock python -m pytest -k "not test_release_script_guards_plan_scope_and_uses_terraform_rollback"` | 352 passed, 1 deselected | Pass |

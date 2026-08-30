@@ -73,7 +73,7 @@ Issue 단위로 보존한다. 제품 기능 목록보다 어떤 운영 문제가
 
 | Issue | Record | Status |
 |---|---|---|
-| [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | Implemented on issue branch |
+| [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | [Draft PR #91](https://github.com/bbungjun/AI_multimodal_platform/pull/91), CI passed |
 | [#88](https://github.com/bbungjun/AI_multimodal_platform/issues/88) | GKE observability, autoscaling, and incident evidence | Planned |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |

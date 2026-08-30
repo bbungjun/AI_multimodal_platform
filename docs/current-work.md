@@ -90,6 +90,8 @@ As of 2026-08-31, Issue #87 is active on branch
   check.
 - GitHub's Markdown API rendered the platform architecture before the product
   flow, two tables, the architecture code block, and all four product images.
+  Draft PR #91 was opened, and Linux CI run `33332531974` passed its complete
+  `verify` job in 33 seconds.
   `npm audit --omit=dev` separately reported three moderate React Router
   production-dependency advisories with fixes available; keep that dependency
   work out of this docs-only branch and track it with Issue #89 supply-chain
