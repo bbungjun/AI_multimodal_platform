@@ -96,7 +96,8 @@ def test_user_checks_lock_origin_status_and_timestamp_invariants() -> None:
         "email_verified",
         "oauth",
         "synthetic",
-        "master",
+        "role",
+        "user",
     ))
     assert "suspended_at" in checks["ck_users_suspension_state"]
     assert "signed_up_at" in checks["ck_users_updated_after_signup"]
