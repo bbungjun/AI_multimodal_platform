@@ -18,8 +18,9 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
-- Latest merged `main`: `ec86e91` (PR #80, Gemini structured-JSON thinking
-  disabled). No paid Vertex request has been run after that fix.
+- Latest merged `main`: `d650369` (PR #91, platform-first portfolio evidence
+  and documentation policy). No paid Vertex request has been run after the
+  earlier Gemini structured-JSON fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
   `frontend`, and `worker`.
@@ -75,27 +76,31 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-08-31, Issue #87 is active on branch
-`codex/issue-87-platform-evidence`:
+As of 2026-08-31, Issue #88 is active on branch
+`codex/issue-88-mock-ops-evidence`:
 
-- Added the portfolio recording requirement to `AGENTS.md`.
-- Designed the platform-first README information architecture and evidence
-  classification in `docs/portfolio/issue-87-platform-evidence.md`.
-- Implemented the platform-first README, capability/evidence index, reusable
-  Issue template, and current-state cleanup without cloud or Vertex writes.
-- Link validation checked 56 local links and eight external links with no
-  missing target. Compose config, frontend lint/build, and 352 backend tests
-  passed. The only deselected backend test is the previously documented
-  Windows `/bin/bash` path-conversion failure in the release-script syntax
-  check.
-- GitHub's Markdown API rendered the platform architecture before the product
-  flow, two tables, the architecture code block, and all four product images.
-  Draft PR #91 was opened, and Linux CI run `33332531974` passed its complete
-  `verify` job in 33 seconds.
-  `npm audit --omit=dev` separately reported three moderate React Router
-  production-dependency advisories with fixes available; keep that dependency
-  work out of this docs-only branch and track it with Issue #89 supply-chain
-  follow-up.
+- Issue #87 merged through PR #91 at `d650369`. Its platform-first README,
+  evidence index, reusable Issue record and `AGENTS.md` portfolio documentation
+  policy are now the `main` baseline.
+- Issue #88 was narrowed to mock-first local operations evidence. It must not
+  create or change cloud resources, call Vertex/Gemini/Imagen/Veo, or read
+  credentials.
+- The implementation design is recorded in
+  `docs/portfolio/issue-88-mock-ops-evidence.md`. It separates an opt-in local
+  Prometheus/Grafana/Alertmanager override, typed mock-only fault settings,
+  mock-only k6 profiles, alert evidence, and worker interruption recovery.
+- Current code investigation found that late acknowledgement alone does not
+  recover every worker interruption. A redelivered `queued/generating` job is
+  currently rejected as `not_pending`; only Veo `polling` with a saved operation
+  is explicitly resumable. Implementation must lock this gap with a failing
+  integration test before choosing lease-based recovery or a bounded stale-job
+  repair path.
+- All Issue #88 functionality and runtime results remain `Planned`. No local
+  observability stack or fault drill has been executed on this branch yet.
+- Issue #87 validation remains historical: Linux CI run `33332531974` passed,
+  and the docs-only branch's Compose config, frontend lint/build, and 352 backend
+  tests passed. The separately observed three moderate React Router advisories
+  remain outside Issue #88.
 
 Issue #66's bounded real Vertex pilot guard merged through PR #74 at `6f2f0ce`.
 The following retained evidence explains the paid-run No-Go and subsequent
