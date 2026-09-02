@@ -37,7 +37,6 @@ RESET_SQL = (
     "DROP SCHEMA public CASCADE",
     "CREATE SCHEMA public AUTHORIZATION CURRENT_USER",
 )
-RESET_TABLES = ("assets", "jobs", "outbox_events", "prompt_enhancements")
 
 
 class SchemaErrorCode(StrEnum):
@@ -211,18 +210,25 @@ async def _current_reset_snapshot() -> _ResetSnapshot:
             elif values:
                 current_revision = "multiple"
 
-        row_counts: list[tuple[str, int]] = []
-        for table_name in RESET_TABLES:
-            exists = await connection.scalar(
-                text("SELECT to_regclass(:table_name)"),
-                {"table_name": f"public.{table_name}"},
+        tables = await connection.execute(
+            text(
+                "SELECT tablename FROM pg_tables "
+                "WHERE schemaname='public' AND tablename <> 'alembic_version' "
+                "ORDER BY tablename"
             )
-            count = 0
-            if exists is not None:
-                count = int(
-                    await connection.scalar(text(f'SELECT count(*) FROM "{table_name}"'))
-                    or 0
+        )
+        table_names = tuple(str(row[0]) for row in tables.all())
+        row_counts: list[tuple[str, int]] = []
+        for table_name in table_names:
+            quoted_table = connection.dialect.identifier_preparer.quote_identifier(
+                table_name
+            )
+            count = int(
+                await connection.scalar(
+                    text(f"SELECT count(*) FROM {quoted_table}")
                 )
+                or 0
+            )
             row_counts.append((table_name, count))
         return _ResetSnapshot(database, current_revision, tuple(row_counts))
 

@@ -212,6 +212,77 @@ def test_reset_preview_inventory_is_catalog_driven_and_not_a_fixed_table_list() 
     assert "quote_identifier" in source
 
 
+@pytest.mark.asyncio
+async def test_reset_snapshot_counts_catalog_tables_with_dialect_quoting(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    statements: list[str] = []
+
+    class Result:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def all(self):
+            return self._rows
+
+    class IdentifierPreparer:
+        @staticmethod
+        def quote_identifier(identifier):
+            return '"' + identifier.replace('"', '""') + '"'
+
+    class Connection:
+        dialect = type("Dialect", (), {"identifier_preparer": IdentifierPreparer()})()
+
+        async def scalar(self, statement, parameters=None):
+            sql = str(statement)
+            statements.append(sql)
+            if "current_database" in sql:
+                return "multimodal"
+            if "to_regclass" in sql:
+                return "alembic_version"
+            counts = {
+                'SELECT count(*) FROM "odd""name"': 4,
+                'SELECT count(*) FROM "user_sessions"': 3,
+                'SELECT count(*) FROM "users"': 2,
+            }
+            return counts[sql]
+
+        async def execute(self, statement):
+            sql = str(statement)
+            statements.append(sql)
+            if "SELECT version_num" in sql:
+                return Result([("0002_user_session_persistence",)])
+            if "FROM pg_tables" in sql:
+                return Result([('odd"name',), ("user_sessions",), ("users",)])
+            raise AssertionError(f"unexpected statement: {sql}")
+
+    class ConnectionContext:
+        async def __aenter__(self):
+            return Connection()
+
+        async def __aexit__(self, *_args):
+            return None
+
+    class Engine:
+        def connect(self):
+            return ConnectionContext()
+
+    monkeypatch.setattr(module, "engine", Engine())
+
+    snapshot = await module._current_reset_snapshot()
+
+    assert snapshot.database == "multimodal"
+    assert snapshot.current_revision == "0002_user_session_persistence"
+    assert snapshot.row_counts == (
+        ('odd"name', 4),
+        ("user_sessions", 3),
+        ("users", 2),
+    )
+    assert 'SELECT count(*) FROM "odd""name"' in statements
+    assert all("alembic_version" not in sql for sql in statements if "count(*)" in sql)
+
+
 def test_schema_control_cli_help_is_available_without_database_access(capsys) -> None:
     module = _schema_control()
 
