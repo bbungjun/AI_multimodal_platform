@@ -5,6 +5,10 @@
 - Status: `Accepted / Planning Only`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
+- Issue: [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
+- Branch: `codex/issue-94-schema-control`
+- Goal plan: `.omo/plans/issue-94-g1-schema-control-goal.md`
+- Goal plan SHA-256: `a76850315a4ddcd03ec3a7f4e2d01e059024b67884c8ebc0029a568eafd90acb`
 - Implementation status: `Planned`
 - Provider mode for all verification: `AI_PROVIDER=mock`
 
@@ -167,6 +171,12 @@ backend ─ worker ─ dispatcher
 - Each process independently calls `require_current_schema()` before serving,
   polling, consuming, or dispatching work. Compose ordering is not treated as
   the only correctness mechanism.
+- The Celery container uses a fixed startup command that runs the schema-check
+  CLI and `exec`s Celery only after success. It does not rely on a Celery signal
+  exception to abort startup. The official
+  [Celery worker-signal documentation](https://docs.celeryq.dev/en/stable/userguide/signals.html#worker-signals)
+  defines lifecycle timing, but G1 keeps process-abort behavior in an explicit,
+  directly testable command contract.
 - `Base.metadata.create_all()` and handwritten startup DDL are removed.
 - The existing manual retry-column and I2V-index repair SQL moves into the
   baseline revision and is deleted from runtime code.
@@ -227,7 +237,6 @@ Production and configuration zones:
 - new `backend/app/schema_control.py`
 - `backend/app/main.py`
 - `backend/app/worker.py`
-- `backend/app/celery_app.py` only if needed for the worker readiness hook
 - `backend/app/services/jobs/outbox_dispatcher.py`
 - `backend/app/config.py`
 - `.env.example`
@@ -238,7 +247,7 @@ Focused test zones:
 - new `backend/tests/test_alembic_schema.py`
 - new `backend/tests/test_schema_control.py`
 - existing startup and Compose contract tests directly invalidated by the
-  interface rename
+  interface rename or worker command guard
 
 Documentation zones at closeout:
 
