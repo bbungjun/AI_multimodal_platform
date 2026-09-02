@@ -24,7 +24,7 @@ async def test_flow_is_consumed_once_and_expires():
     assert 'n' * 43 not in repr(flow)
 
 
-@pytest.mark.parametrize('payload', [b'null', b'[]', b'{}', b'x' * 9000, b'not-json'], ids=['null', 'list', 'empty', 'oversized', 'invalid'])
+@pytest.mark.parametrize('payload', [b'null', b'[]', b'{}', b'x' * 9000, b'not-json', b'[' * 2000 + b']' * 2000], ids=['null', 'list', 'empty', 'oversized', 'invalid', 'nested'])
 def test_flow_decode_rejects_malformed_values(payload):
     assert flow_module().decode_flow(payload) is None
 
@@ -82,5 +82,10 @@ async def test_real_redis_flow_and_outage():
         assert await store.consume(key, now) is None
         await store.put(key, flow)
         assert await store.consume(key, now + timedelta(seconds=600)) is None
+        if os.environ.get('AUTH_TEST_FLOW_METRICS_PATH'):
+            import json
+            Path(os.environ['AUTH_TEST_FLOW_METRICS_PATH']).write_text(json.dumps({
+                'flow_consume_requests': 12, 'flow_consumed': 1,
+                'flow_replay_refusals': 12, 'expired_flow_refusals': 1}))
     finally:
         await client.aclose()

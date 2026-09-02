@@ -49,12 +49,12 @@ def decode_flow(payload: bytes | str | None) -> OAuthFlow | None:
                 or safe_return_path(data['return_to']) != data['return_to']):
             return None
         return OAuthFlow(state, data['nonce'], data['verifier'], data['return_to'], created)
-    except (ValueError, TypeError, KeyError, OverflowError):
+    except (ValueError, TypeError, KeyError, OverflowError, RecursionError):
         return None
 
 
 def usable(flow: OAuthFlow | None, now: datetime) -> OAuthFlow | None:
-    if flow and flow.created_at <= now < flow.created_at + timedelta(seconds=FLOW_TTL_SECONDS):
+    if flow and timedelta(0) <= now - flow.created_at < timedelta(seconds=FLOW_TTL_SECONDS):
         return flow
     return None
 

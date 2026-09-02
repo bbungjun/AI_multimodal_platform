@@ -16,7 +16,8 @@ RECEIPT_FIELDS = {'project', 'provider', 'commit', 'revision', 'postgres', 'redi
                   'redis_outage_recovery', 'metrics', 'cleanup'}
 METRIC_FIELDS = {'concurrent_admissions', 'active_sessions_after_race', 'concurrent_touch_requests',
                  'effective_touch_writes', 'first_signup_race_requests', 'authentication_requests',
-                 'authentication_p95_ms'}
+                 'authentication_p95_ms', 'flow_consume_requests', 'flow_consumed',
+                 'flow_replay_refusals', 'expired_flow_refusals'}
 
 
 def validate_project(project: str) -> str:
@@ -78,6 +79,7 @@ def verify(env_file: Path):
             'redis': {'ports': ['127.0.0.1::6379']}}}), encoding='utf-8')
         compose = ['docker', 'compose', '--project-directory', str(ROOT), '--env-file', str(env_file),
                    '-p', project, '-f', str(ROOT / 'docker-compose.yml'), '-f', str(override)]
+        failure = None
         try:
             run(compose + ['up', '-d', '--wait', 'db', 'redis'], env=env)
             db_port = port(run(compose + ['port', 'db', '5432'], env=env))
@@ -86,15 +88,17 @@ def verify(env_file: Path):
             env['AUTH_TEST_DATABASE_URL'] = env['DATABASE_URL']
             env['AUTH_TEST_REDIS_URL'] = f'redis://127.0.0.1:{redis_port}/1'
             env['AUTH_TEST_METRICS_PATH'] = str(folder / 'metrics.json')
+            env['AUTH_TEST_FLOW_METRICS_PATH'] = str(folder / 'flow-metrics.json')
             run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], env=env, cwd=ROOT / 'backend')
             current = run([sys.executable, '-m', 'alembic', 'current'], env=env, cwd=ROOT / 'backend')
             if '0002_user_session_persistence (head)' not in current:
                 raise VerificationError('unexpected_schema_revision')
             print('phase=postgres_and_redis', flush=True)
             run([sys.executable, '-m', 'pytest', 'tests/test_auth_service.py',
-                 'tests/test_oauth_flow_store.py', '-q', '--tb=short'], env=env, cwd=ROOT / 'backend')
+                 'tests/test_oauth_flow_store.py', 'tests/test_auth_api.py', '-q', '--tb=short'], env=env, cwd=ROOT / 'backend')
             receipt['postgres'] = receipt['redis'] = 'pass'
             receipt['metrics'] = json.loads((folder / 'metrics.json').read_text())
+            receipt['metrics'].update(json.loads((folder / 'flow-metrics.json').read_text()))
             if (set(receipt['metrics']) != METRIC_FIELDS
                     or any(type(v) not in (int, float) or v < 0 for v in receipt['metrics'].values())):
                 raise VerificationError('unsafe_metrics')
@@ -112,11 +116,18 @@ def verify(env_file: Path):
             run([sys.executable, '-m', 'pytest', 'tests/test_oauth_flow_store.py', '-k', 'real_redis',
                  '-q', '--tb=short'], env=env, cwd=ROOT / 'backend')
             receipt['redis_outage_recovery'] = 'pass'
+        except VerificationError as error:
+            failure = error
         finally:
-            run(compose + ['down', '--volumes', '--remove-orphans'], env=env)
-            if resources(project):
-                raise VerificationError('cleanup_incomplete')
-            receipt['cleanup'] = 'pass'
+            try:
+                run(compose + ['down', '--volumes', '--remove-orphans'], env=env)
+                if resources(project):
+                    raise VerificationError('cleanup_incomplete')
+                receipt['cleanup'] = 'pass'
+            except VerificationError:
+                failure = VerificationError(str(failure) + '; cleanup_failed' if failure else 'cleanup_failed')
+        if failure:
+            raise failure from None
     if set(receipt) != RECEIPT_FIELDS:
         raise VerificationError('unsafe_receipt')
     evidence = ROOT / '.omo/evidence/auth'

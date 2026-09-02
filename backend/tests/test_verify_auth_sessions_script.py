@@ -66,3 +66,20 @@ def test_exact_cleanup_and_receipt_allowlists():
     assert 'set(receipt) != RECEIPT_FIELDS' in source
     assert 'METRIC_FIELDS' in source
     assert source.count("port(run(compose + ['port', 'redis', '6379']") == 2
+
+
+def test_first_failure_survives_cleanup_failure(monkeypatch):
+    m = verifier()
+    monkeypatch.setattr(m, 'resources', lambda project: False)
+    calls = []
+    def run(args, **kwargs):
+        calls.append(args)
+        if args[:2] == ['git', 'rev-parse']:
+            return 'test-checkpoint'
+        if 'down' in args:
+            raise m.VerificationError('cleanup_failed')
+        raise m.VerificationError('original_failure')
+    monkeypatch.setattr(m, 'run', run)
+    with pytest.raises(m.VerificationError, match='^original_failure; cleanup_failed$'):
+        m.verify(m.ROOT / '.env.example')
+    assert any('down' in args for args in calls)

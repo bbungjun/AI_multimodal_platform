@@ -20,7 +20,7 @@ def test_authorization_contract():
     assert query['response_type'] == ['code']
 
 
-@pytest.mark.parametrize('field,value', [('iss', 'evil'), ('aud', 'other'), ('exp', 0), ('nonce', 'wrong'), ('sub', ''), ('email_verified', False), ('email', None)])
+@pytest.mark.parametrize('field,value', [('iss', 'evil'), ('aud', 'other'), ('exp', 0), ('exp', float('nan')), ('exp', float('inf')), ('iat', float('nan')), ('nonce', 'wrong'), ('sub', ''), ('email_verified', False), ('email', None)])
 def test_rejects_invalid_identity_claims(field, value):
     m = google_module()
     claims = dict(iss='https://accounts.google.com', aud='client', exp=2000, iat=900,
@@ -59,7 +59,7 @@ async def test_real_signature_verification_with_generated_test_key_and_mock_tran
         await adapter.exchange_code('code', 'verifier', 'wrong-nonce')
 
 
-@pytest.mark.parametrize('mode', ['timeout', 'redirect', '400', '500', 'malformed', 'oversized', 'missing', 'signature'])
+@pytest.mark.parametrize('mode', ['timeout', 'redirect', '400', '500', 'malformed', 'nested', 'oversized', 'missing', 'signature'])
 async def test_provider_failures_are_safe(mode):
     import httpx
     m = google_module()
@@ -72,6 +72,8 @@ async def test_provider_failures_are_safe(mode):
             return httpx.Response(302, headers={'location': 'https://evil.test'})
         if mode == 'malformed':
             return httpx.Response(200, text='secret-sentinel')
+        if mode == 'nested':
+            return httpx.Response(200, content=b'[' * 2000 + b']' * 2000)
         if mode == 'oversized':
             return httpx.Response(200, content=b'x' * 70000)
         return httpx.Response(200, json={'id_token': 'bad-signature'} if mode == 'signature' else {})

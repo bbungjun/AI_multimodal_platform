@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import secrets
 import time
 from urllib.parse import urlencode, urlsplit
@@ -23,8 +24,8 @@ def identity_from_claims(claims: dict, client_id: str, nonce: str, now: float) -
         if (claims['iss'] not in ('accounts.google.com', 'https://accounts.google.com')
                 or claims['aud'] != client_id
                 or ('azp' in claims and claims['azp'] != client_id)
-                or type(claims['exp']) not in (int, float) or claims['exp'] <= now
-                or type(claims['iat']) not in (int, float) or claims['iat'] > now + 30
+                or type(claims['exp']) not in (int, float) or not math.isfinite(claims['exp']) or claims['exp'] <= now
+                or type(claims['iat']) not in (int, float) or not math.isfinite(claims['iat']) or claims['iat'] > now + 30
                 or not isinstance(claims['nonce'], str)
                 or not secrets.compare_digest(claims['nonce'].encode(), nonce.encode())
                 or claims['email_verified'] is not True):
@@ -42,7 +43,7 @@ def identity_from_claims(claims: dict, client_id: str, nonce: str, now: float) -
                                     or urlsplit(picture).scheme != 'https'):
             raise ValueError
         return VerifiedIdentity(sub, email, name, picture)
-    except (ValueError, TypeError, KeyError, UnicodeError):
+    except (ValueError, TypeError, KeyError, UnicodeError, OverflowError):
         raise AuthError('oauth_identity_rejected') from None
 
 
@@ -105,7 +106,7 @@ class GoogleIdentityAdapter:
             raise
         except (httpx.HTTPError, TimeoutError, OSError):
             raise AuthError('oauth_provider_unavailable') from None
-        except (ValueError, TypeError, UnicodeError):
+        except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError):
             raise AuthError('oauth_identity_rejected') from None
 
 

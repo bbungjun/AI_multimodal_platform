@@ -109,3 +109,62 @@ def test_oauth_compose_values_are_backend_only():
     for name in ('AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET', 'AUTH_GOOGLE_REDIRECT_URI'):
         assert len(re.findall(r'^\s+' + name + ':', text, flags=re.MULTILINE)) == 1
         assert name + ':' in text.split('  backend:')[1].split('  worker:')[0]
+
+
+async def test_real_postgres_redis_http_lifecycle(monkeypatch):
+    """Full HTTP-to-storage seam, with only external identity replaced."""
+    import os
+    from urllib.parse import parse_qs, urlencode, urlsplit
+    from uuid import uuid4
+    import httpx
+    from fastapi import FastAPI
+    from redis.asyncio import Redis
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from app.api import auth_dependencies as deps
+    from app.auth.flow_store import RedisFlowStore
+    from app.auth.service import AuthService, VerifiedIdentity
+    from app.config import Settings
+    db_url, redis_url = os.environ.get('AUTH_TEST_DATABASE_URL'), os.environ.get('AUTH_TEST_REDIS_URL')
+    if not db_url or not redis_url:
+        pytest.skip('requires guarded isolated Postgres and Redis verifier')
+    assert urlsplit(db_url).hostname == '127.0.0.1' and urlsplit(db_url).path == '/auth_verify'
+    assert urlsplit(redis_url).hostname == '127.0.0.1' and urlsplit(redis_url).path == '/1'
+    m = api_module()
+    settings = Settings(_env_file=None, ai_provider='mock', app_env='test',
+                        auth_frontend_origin='https://studio.test', cors_origins=['https://studio.test'])
+    monkeypatch.setattr(m, 'get_settings', lambda: settings)
+    monkeypatch.setattr(deps, 'get_settings', lambda: settings)
+    engine = create_async_engine(db_url, hide_parameters=True)
+    redis = Redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+    subject = 'http-' + uuid4().hex
+    class Google:
+        def authorization_url(self, state, nonce, challenge):
+            return 'https://identity.test/?' + urlencode({'state': state})
+        async def exchange_code(self, *args):
+            return VerifiedIdentity(subject, 'fixture@example.test')
+    service = AuthService(async_sessionmaker(engine, expire_on_commit=False), RedisFlowStore(redis), Google())
+    app = FastAPI()
+    app.include_router(m.router)
+    app.dependency_overrides[deps.get_auth_service] = lambda: service
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                     base_url='https://studio.test', follow_redirects=False) as client:
+            assert (await client.get('/api/auth/me')).status_code == 401
+            start = await client.get('/api/auth/google/start', params={'return_to': '/library'})
+            assert start.status_code == 307
+            state = parse_qs(urlsplit(start.headers['location']).query)['state'][0]
+            callback = await client.get('/api/auth/google/callback', params={'state': state, 'code': 'test-only-code'})
+            assert callback.status_code == 303 and callback.headers['location'] == 'https://studio.test/library'
+            assert m.FLOW_COOKIE not in client.cookies and m.SESSION_COOKIE in client.cookies
+            assert (await client.get('/api/auth/me')).status_code == 200
+            replay = await client.get('/api/auth/google/callback', params={'state': state, 'code': 'test-only-code'})
+            assert replay.headers['location'].endswith('auth_error=oauth_flow_invalid')
+            assert (await client.post('/api/auth/logout')).status_code == 403
+            assert (await client.get('/api/auth/me')).status_code == 200
+            headers = {'origin': 'https://studio.test'}
+            assert (await client.post('/api/auth/logout', headers=headers)).status_code == 204
+            assert (await client.get('/api/auth/me')).json() == {'detail': 'authentication_required'}
+            assert (await client.post('/api/auth/logout', headers=headers)).status_code == 204
+    finally:
+        await redis.aclose()
+        await engine.dispose()
