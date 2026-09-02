@@ -85,7 +85,7 @@ command instead of reporting a rollback or success.
 
 ## Verification Evidence
 
-Tested implementation checkpoint: `6c037b2` and later documentation-only
+Tested implementation checkpoint: `e24ddb4` and later documentation-only
 changes on the same branch.
 
 | Verification | Result | Evidence boundary |

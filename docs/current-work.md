@@ -91,7 +91,7 @@ As of 2026-09-02, Issue #94 is active on branch
   `.omo/plans/issue-94-g1-schema-control-goal.md` with SHA-256
   `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`.
   It contains eight sequential Todos and four final verifiers. Implementation
-  through guarded reset is complete at `6c037b2`: the packaged head is
+  through guarded reset is complete at `e24ddb4`: the packaged head is
   `0001_generation_baseline`, focused readiness/startup checks passed 25, reset
   and verifier checks passed 27, Compose config passed, frontend lint/build
   passed, and full backend pytest passed 383 with only the pre-existing Windows
