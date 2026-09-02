@@ -22,6 +22,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY --from=build /install /usr/local
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 RUN python -m pip uninstall -y pip setuptools wheel jaraco.context
 
 EXPOSE 8000
