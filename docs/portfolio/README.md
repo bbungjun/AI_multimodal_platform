@@ -78,7 +78,7 @@
 |---|---|---|
 | [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | [PR #91](https://github.com/bbungjun/AI_multimodal_platform/pull/91) merged, CI passed |
 | [#88](https://github.com/bbungjun/AI_multimodal_platform/issues/88) | [Mock-first operations evidence design](issue-88-mock-ops-evidence.md) | Design complete, implementation planned |
-| [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94) | [Schema control and safe local reset](issue-94-schema-control.md) | Mock Verified at `6aa8a1f`; [draft PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) open |
+| [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94) | [Schema control and safe local reset](issue-94-schema-control.md) | Mock Verified at `6aa8a1f`; [PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) merged |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

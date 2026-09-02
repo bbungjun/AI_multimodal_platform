@@ -301,7 +301,8 @@ statuses and the following fresh checks pass in mock mode:
 
 ## Next Goal
 
-G1 is `Mock Verified` on branch `codex/issue-94-schema-control`; its tracker is
-[Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94).
-After its draft PR is reviewed and merged, G2 may begin from current `main` and
-must consume only G1's documented interface rather than its internals.
+G1 is `Mock Verified` and merged through
+[PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) at
+`91cf903`; its tracker [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
+is closed. G2 may now begin from current `main` and must consume only G1's
+documented interface rather than its internals.

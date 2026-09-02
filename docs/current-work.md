@@ -18,9 +18,9 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
-- Latest merged `main`: `d650369` (PR #91, platform-first portfolio evidence
-  and documentation policy). No paid Vertex request has been run after the
-  earlier Gemini structured-JSON fix.
+- Latest merged `main`: `91cf903` (PR #95, G1 Alembic schema control and safe
+  local reset). No paid Vertex request has been run after the earlier Gemini
+  structured-JSON fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
   `frontend`, and `worker`.
@@ -76,8 +76,7 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-09-02, Issue #94 is active on branch
-`codex/issue-94-schema-control`:
+As of 2026-09-02, Issue #94 is complete and merged through PR #95:
 
 - On 2026-09-02, the initiative and accepted G1 specification merged through
   PR #93 at `fd96acc`. Issue #94 now tracks G1 schema control, and branch
@@ -101,9 +100,10 @@ As of 2026-09-02, Issue #94 is active on branch
   Focused schema tests passed 33; full backend pytest passed 385 with only the
   pre-existing Windows Bash path-conversion failure; frontend lint/build,
   mock and placeholder-only Vertex Compose config, and
-  `verify_local.py --skip-backend` passed. Draft PR
-  [#95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) is open;
-  G2 remains planned until G1 is reviewed and merged.
+  `verify_local.py --skip-backend` passed. CI verify and backend/frontend
+  Scan·SBOM checks passed, and PR
+  [#95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) merged at
+  `91cf903`. G2 User/Session persistence is now the next planned slice.
 - The initiative-wide source of truth remains
   `docs/initiatives/auth-credits-master-console.md`. Identity, OAuth, ownership,
   credit, usage, and Master-console capabilities remain `Planned`; only G1
