@@ -124,6 +124,12 @@ async def test_real_postgres_lifecycle():
         moment[0] += timedelta(seconds=1)
         await asyncio.gather(*[service.authenticate(chosen.session_secret) for _ in range(20)])
         assert len(touches) == 1
+        from time import perf_counter
+        durations = []
+        for _ in range(50):
+            started = perf_counter()
+            await service.authenticate(chosen.session_secret)
+            durations.append((perf_counter() - started) * 1000)
         await service.logout(chosen.session_secret)
         await service.logout(chosen.session_secret)
         with pytest.raises(m.AuthError, match='authentication_required'):
@@ -150,5 +156,12 @@ async def test_real_postgres_lifecycle():
         subject = 'race-' + uuid4().hex
         new_signups = await asyncio.gather(*[login() for _ in range(8)])
         assert len({item.user.id for item in new_signups}) == 1
+        if os.environ.get('AUTH_TEST_METRICS_PATH'):
+            import json
+            Path(os.environ['AUTH_TEST_METRICS_PATH']).write_text(json.dumps({
+                'concurrent_admissions': len(admitted), 'active_sessions_after_race': len(live),
+                'concurrent_touch_requests': 20, 'effective_touch_writes': len(touches),
+                'first_signup_race_requests': len(new_signups), 'authentication_requests': len(durations),
+                'authentication_p95_ms': round(sorted(durations)[47], 3)}))
     finally:
         await engine.dispose()

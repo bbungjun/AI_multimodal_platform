@@ -51,3 +51,36 @@ async def test_redis_contract_ttl_digest_key_atomic_consume_and_outage():
     client.set.side_effect = ConnectionError('sensitive sentinel')
     with pytest.raises(m.AuthError, match='oauth_provider_unavailable'):
         await store.put(b'f' * 32, flow)
+
+
+async def test_real_redis_flow_and_outage():
+    import os
+    from urllib.parse import urlsplit
+    from redis.asyncio import Redis
+    from app.auth.service import new_secret, digest
+    url = os.environ.get('AUTH_TEST_REDIS_URL')
+    if not url:
+        pytest.skip('requires guarded isolated Redis verifier')
+    assert urlsplit(url).hostname == '127.0.0.1' and urlsplit(url).path == '/1'
+    m = flow_module()
+    client = Redis.from_url(url, socket_connect_timeout=0.2, socket_timeout=0.2)
+    store = m.RedisFlowStore(client)
+    key = digest(new_secret())
+    now = datetime.now(timezone.utc)
+    flow = m.OAuthFlow(digest(new_secret()), new_secret(), new_secret(), '/', now)
+    try:
+        if os.environ.get('AUTH_TEST_REDIS_DOWN') == '1':
+            with pytest.raises(m.AuthError, match='oauth_provider_unavailable'):
+                await store.put(key, flow)
+            with pytest.raises(m.AuthError, match='oauth_provider_unavailable'):
+                await store.consume(key, now)
+            return
+        await store.put(key, flow)
+        assert 590 <= await client.ttl(store.key(key)) <= 600
+        results = await asyncio.gather(*[store.consume(key, now) for _ in range(12)])
+        assert sum(item is not None for item in results) == 1
+        assert await store.consume(key, now) is None
+        await store.put(key, flow)
+        assert await store.consume(key, now + timedelta(seconds=600)) is None
+    finally:
+        await client.aclose()
