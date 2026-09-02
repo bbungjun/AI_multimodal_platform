@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from dataclasses import FrozenInstanceError, is_dataclass
+from dataclasses import is_dataclass
 from pathlib import Path
 
 import pytest
@@ -70,6 +70,90 @@ def test_schema_control_results_are_immutable_and_errors_are_typed() -> None:
     assert "postgresql" not in str(error)
 
 
+async def test_require_current_schema_returns_the_single_current_revision(monkeypatch) -> None:
+    module = _schema_control()
+    monkeypatch.setattr(
+        module,
+        "_resolve_code_heads",
+        lambda: ("0001_generation_baseline",),
+    )
+
+    async def read_database_revisions():
+        return ("0001_generation_baseline",)
+
+    monkeypatch.setattr(module, "_read_database_revisions", read_database_revisions)
+
+    readiness = await module.require_current_schema()
+
+    assert readiness.current_revision == "0001_generation_baseline"
+    assert readiness.expected_revision == "0001_generation_baseline"
+
+
+@pytest.mark.parametrize(
+    ("database_revisions", "expected_code"),
+    [
+        (None, "schema_version_table_missing"),
+        ((), "schema_revision_missing"),
+        (("old_revision",), "schema_revision_outdated"),
+        (("head_a", "head_b"), "schema_multiple_heads"),
+    ],
+)
+async def test_require_current_schema_maps_revision_failures(
+    monkeypatch,
+    database_revisions,
+    expected_code,
+) -> None:
+    module = _schema_control()
+    monkeypatch.setattr(
+        module,
+        "_resolve_code_heads",
+        lambda: ("0001_generation_baseline",),
+    )
+
+    async def read_database_revisions():
+        return database_revisions
+
+    monkeypatch.setattr(module, "_read_database_revisions", read_database_revisions)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.require_current_schema()
+
+    assert exc_info.value.code == expected_code
+
+
+async def test_require_current_schema_fails_closed_without_leaking_connection_error(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    monkeypatch.setattr(
+        module,
+        "_resolve_code_heads",
+        lambda: ("0001_generation_baseline",),
+    )
+    secret = "postgresql+asyncpg://app:do-not-leak@remote.example/prod"
+
+    async def read_database_revisions():
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr(module, "_read_database_revisions", read_database_revisions)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.require_current_schema()
+
+    assert exc_info.value.code == "schema_unreachable"
+    assert secret not in str(exc_info.value)
+
+
+async def test_require_current_schema_rejects_multiple_code_heads(monkeypatch) -> None:
+    module = _schema_control()
+    monkeypatch.setattr(module, "_resolve_code_heads", lambda: ("head_a", "head_b"))
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.require_current_schema()
+
+    assert exc_info.value.code == "schema_multiple_heads"
+
+
 def test_runtime_processes_check_schema_without_mutating_it() -> None:
     runtime_paths = (
         REPO_ROOT / "backend" / "app" / "db.py",
@@ -122,4 +206,3 @@ def test_schema_control_cli_help_is_available_without_database_access(capsys) ->
     assert "check" in output
     assert "reset" in output
     assert "--expected-database" not in output
-

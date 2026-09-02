@@ -9,7 +9,8 @@ from contextlib import suppress
 from typing import Any, Callable
 
 from app.config import Settings, get_settings
-from app.db import close_db_connection, init_db_schema
+from app.db import close_db_connection
+from app.schema_control import require_current_schema
 from app.services.jobs.runner import InProcessJobRunner
 
 
@@ -100,7 +101,7 @@ async def run_worker() -> None:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     validate_worker_environment(settings)
     try:
-        await init_db_schema()
+        await require_current_schema()
         await InProcessJobRunner().run_forever()
     finally:
         await close_db_connection()

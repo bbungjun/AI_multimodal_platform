@@ -31,8 +31,8 @@ async def test_lifespan_skips_runner_when_auto_start_disabled(monkeypatch, tmp_p
     calls: list[str] = []
     data_dir = tmp_path / "assets"
 
-    async def fake_init_db_schema() -> None:
-        calls.append("init_db_schema")
+    async def fake_require_current_schema() -> None:
+        calls.append("require_current_schema")
 
     async def fake_close_db_connection() -> None:
         calls.append("close_db_connection")
@@ -46,7 +46,7 @@ async def test_lifespan_skips_runner_when_auto_start_disabled(monkeypatch, tmp_p
             raise
 
     monkeypatch.setattr(main, "settings", _settings(data_dir=data_dir, job_runner_auto_start=False))
-    monkeypatch.setattr(main, "init_db_schema", fake_init_db_schema)
+    monkeypatch.setattr(main, "require_current_schema", fake_require_current_schema)
     monkeypatch.setattr(main, "close_db_connection", fake_close_db_connection)
     monkeypatch.setattr(main, "job_runner", fake_job_runner)
 
@@ -55,7 +55,7 @@ async def test_lifespan_skips_runner_when_auto_start_disabled(monkeypatch, tmp_p
         await asyncio.sleep(0)
 
     assert data_dir.exists()
-    assert calls == ["init_db_schema", "yield", "close_db_connection"]
+    assert calls == ["require_current_schema", "yield", "close_db_connection"]
 
 
 async def test_lifespan_starts_runner_when_auto_start_enabled(monkeypatch, tmp_path):
@@ -63,8 +63,8 @@ async def test_lifespan_starts_runner_when_auto_start_enabled(monkeypatch, tmp_p
     calls: list[str] = []
     data_dir = tmp_path / "assets"
 
-    async def fake_init_db_schema() -> None:
-        calls.append("init_db_schema")
+    async def fake_require_current_schema() -> None:
+        calls.append("require_current_schema")
 
     async def fake_close_db_connection() -> None:
         assert calls.count("job_runner_started") == 1
@@ -80,7 +80,7 @@ async def test_lifespan_starts_runner_when_auto_start_enabled(monkeypatch, tmp_p
             raise
 
     monkeypatch.setattr(main, "settings", _settings(data_dir=data_dir, job_runner_auto_start=True))
-    monkeypatch.setattr(main, "init_db_schema", fake_init_db_schema)
+    monkeypatch.setattr(main, "require_current_schema", fake_require_current_schema)
     monkeypatch.setattr(main, "close_db_connection", fake_close_db_connection)
     monkeypatch.setattr(main, "job_runner", fake_job_runner)
 
@@ -90,7 +90,7 @@ async def test_lifespan_starts_runner_when_auto_start_enabled(monkeypatch, tmp_p
 
     assert data_dir.exists()
     assert calls == [
-        "init_db_schema",
+        "require_current_schema",
         "yield",
         "job_runner_started",
         "job_runner_cancelled",
@@ -103,8 +103,8 @@ async def test_lifespan_always_closes_db_connection(monkeypatch, tmp_path):
     calls: list[str] = []
     data_dir = tmp_path / "assets"
 
-    async def fake_init_db_schema() -> None:
-        calls.append("init_db_schema")
+    async def fake_require_current_schema() -> None:
+        calls.append("require_current_schema")
 
     async def fake_close_db_connection() -> None:
         calls.append("close_db_connection")
@@ -114,7 +114,7 @@ async def test_lifespan_always_closes_db_connection(monkeypatch, tmp_path):
         await asyncio.Event().wait()
 
     monkeypatch.setattr(main, "settings", _settings(data_dir=data_dir, job_runner_auto_start=False))
-    monkeypatch.setattr(main, "init_db_schema", fake_init_db_schema)
+    monkeypatch.setattr(main, "require_current_schema", fake_require_current_schema)
     monkeypatch.setattr(main, "close_db_connection", fake_close_db_connection)
     monkeypatch.setattr(main, "job_runner", fake_job_runner)
 
@@ -122,4 +122,4 @@ async def test_lifespan_always_closes_db_connection(monkeypatch, tmp_path):
         async with main.lifespan(object()):
             raise RuntimeError("lifespan body failed")
 
-    assert calls == ["init_db_schema", "close_db_connection"]
+    assert calls == ["require_current_schema", "close_db_connection"]
