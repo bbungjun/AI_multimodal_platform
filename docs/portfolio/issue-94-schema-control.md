@@ -85,7 +85,7 @@ command instead of reporting a rollback or success.
 
 ## Verification Evidence
 
-Tested implementation checkpoint: `7d3ce8a` and later documentation-only
+Tested implementation checkpoint: `6c037b2` and later documentation-only
 changes on the same branch.
 
 | Verification | Result | Evidence boundary |
@@ -96,7 +96,7 @@ changes on the same branch.
 | Readiness/startup focused suite | PASS | 25 tests |
 | Reset and isolated-verifier unit suite | PASS | 27 tests |
 | Compose config with `.env.example` | PASS | No provider or credential dependency in `migrate` |
-| Backend full pytest | PARTIAL | 382 passed; one pre-existing Windows Bash path-conversion failure |
+| Backend full pytest | PARTIAL | 383 passed; one pre-existing Windows Bash path-conversion failure |
 | Frontend typecheck/lint | PASS | Exit 0 |
 | Frontend production build | PASS | 95 modules transformed |
 | Runtime image build and isolated Postgres round trip | BLOCKED | Docker Linux engine did not answer; `docker-desktop` WSL distribution was stopped |

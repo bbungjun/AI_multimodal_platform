@@ -23,7 +23,7 @@ target_metadata = Base.metadata
 def _configured_section() -> dict[str, str]:
     section = config.get_section(config.config_ini_section) or {}
     database_url = get_settings().database_url
-    section["sqlalchemy.url"] = database_url.replace("%", "%%")
+    section["sqlalchemy.url"] = database_url
     return section
 
 

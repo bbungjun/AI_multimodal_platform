@@ -419,6 +419,29 @@ async def test_reset_upgrade_failure_reports_partial_reset_and_recovery(
     assert "database URL" not in str(exc_info.value)
 
 
+async def test_reset_ddl_failure_is_typed_and_does_not_leak_raw_error(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    plan = _reset_plan(module)
+
+    async def fresh_plan(_expected_database):
+        return plan
+
+    async def failed_reset():
+        raise RuntimeError("postgresql://app:do-not-leak@db/multimodal")
+
+    monkeypatch.setattr(module, "plan_local_reset", fresh_plan)
+    monkeypatch.setattr(module, "_reset_public_schema", failed_reset)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.execute_local_reset(plan, confirmation="RESET:multimodal")
+
+    assert exc_info.value.code == "reset_partial_failure"
+    assert exc_info.value.recovery_command == "python -m alembic upgrade head"
+    assert "do-not-leak" not in str(exc_info.value)
+
+
 async def test_reset_cli_without_execute_is_preview_only(monkeypatch, capsys) -> None:
     module = _schema_control()
     plan = _reset_plan(module)

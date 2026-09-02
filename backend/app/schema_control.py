@@ -143,7 +143,7 @@ async def require_current_schema() -> SchemaReadiness:
     if len(database_revisions) != 1:
         raise SchemaControlError(
             SchemaErrorCode.SCHEMA_MULTIPLE_HEADS,
-            current_revision=",".join(database_revisions),
+            current_revision="multiple",
             expected_revision=expected_revision,
         )
 
@@ -197,7 +197,7 @@ async def _current_reset_snapshot() -> _ResetSnapshot:
             if len(values) == 1:
                 current_revision = values[0]
             elif values:
-                current_revision = ",".join(values)
+                current_revision = "multiple"
 
         row_counts: list[tuple[str, int]] = []
         for table_name in RESET_TABLES:
@@ -276,7 +276,14 @@ async def execute_local_reset(
     ):
         raise SchemaControlError(SchemaErrorCode.RESET_TARGET_FORBIDDEN)
 
-    await _reset_public_schema()
+    try:
+        await _reset_public_schema()
+    except Exception:
+        raise SchemaControlError(
+            SchemaErrorCode.RESET_PARTIAL_FAILURE,
+            expected_revision=plan.target_revision,
+            recovery_command="python -m alembic upgrade head",
+        ) from None
     try:
         await asyncio.to_thread(_upgrade_to_head)
         readiness = await require_current_schema()

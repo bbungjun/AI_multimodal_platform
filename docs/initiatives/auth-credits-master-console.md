@@ -218,7 +218,7 @@ document or inherit the full design interview.
 
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
-| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Implemented / Runtime Verification Pending | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), implementation `7d3ce8a` | Restore Docker engine; run two isolated cycles, drift refusal, and mock golden path |
+| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Implemented / Runtime Verification Pending | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), implementation `6c037b2` | Restore Docker engine; run two isolated cycles, drift refusal, and mock golden path |
 | G2 | User and Session persistence | Planned | None | Blocked by G1 |
 | G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
