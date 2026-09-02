@@ -24,6 +24,30 @@ async def test_flow_is_consumed_once_and_expires():
     assert 'n' * 43 not in repr(flow)
 
 
-@pytest.mark.parametrize('payload', [b'null', b'[]', b'{}', b'x' * 9000, b'not-json'])
+@pytest.mark.parametrize('payload', [b'null', b'[]', b'{}', b'x' * 9000, b'not-json'], ids=['null', 'list', 'empty', 'oversized', 'invalid'])
 def test_flow_decode_rejects_malformed_values(payload):
     assert flow_module().decode_flow(payload) is None
+
+
+async def test_redis_contract_ttl_digest_key_atomic_consume_and_outage():
+    from unittest.mock import AsyncMock
+    from redis.exceptions import ConnectionError
+    m = flow_module()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    flow = m.OAuthFlow(b'x' * 32, 'n' * 43, 'v' * 43, '/', now)
+    client = AsyncMock()
+    store = m.RedisFlowStore(client)
+    await store.put(b'f' * 32, flow)
+    args, kwargs = client.set.call_args
+    assert args[0] == 'creativeops:oauth:flow:' + (b'f' * 32).hex()
+    assert kwargs == {'ex': 600, 'nx': True}
+    client.getdel.return_value = m.encode_flow(flow)
+    assert await store.consume(b'f' * 32, now) == flow
+    client.getdel.assert_awaited_once()
+    client.getdel.side_effect = ConnectionError('sensitive sentinel')
+    with pytest.raises(m.AuthError) as error:
+        await store.consume(b'f' * 32, now)
+    assert str(error.value) == 'oauth_provider_unavailable'
+    client.set.side_effect = ConnectionError('sensitive sentinel')
+    with pytest.raises(m.AuthError, match='oauth_provider_unavailable'):
+        await store.put(b'f' * 32, flow)
