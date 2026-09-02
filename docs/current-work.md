@@ -77,6 +77,31 @@ paste credential contents.
 
 ## Active Work
 
+### G3.1 accepted planning handoff — 2026-09-03
+
+- G3 PR #100 is merged at `edd7208`; Issue #98 is closed.
+- [G3.1 UX spec](initiatives/g3-1-authenticated-workspace-ux-spec.md) is accepted,
+  not implemented. User approved all six choices, including existing UI/CSS reuse.
+- Synced `main` at `edd7208`; created [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101)
+  and branch `codex/issue-101-authenticated-workspace-ux`. Restored all three
+  design documents with content verification; existing local `.omo` is preserved.
+- The accepted spec covers login/check/error/gate/account/logout states, the hidden mobile
+  footer, no idle `/me` heartbeat, auth-epoch cache isolation, safe return paths,
+  input-loss notice and mock-only browser tests. It approves one opt-in `ui=1`
+  start error redirect while preserving existing G3 JSON errors.
+- Predicted implementation scope: 17 non-document paths, zero migrations;
+  no ownership, credits, Master operation, real Google, provider or cloud work.
+- This step changes documentation only. No implementation or new UX verification
+  result is claimed. Goal execution requires a new explicit request.
+- Fresh design checks: frontend `npm run lint` and `npm run build` pass;
+  draft path count is 17, local Markdown links have zero missing targets,
+  new-spec safety scan and `git diff --check` pass. These are baseline/document
+  checks, not implemented G3.1 browser evidence.
+- Next: freeze the bounded execution Goal and provide its SHA-256. Execution
+  delivery ends at Draft PR plus required CI, without ready/merge/auto-merge.
+
+### Completed G1–G3 context
+
 As of 2026-09-03, G1/G2 are merged and G3's implementation and local verification
 are complete; strict-CI delivery is tracked by PR #100:
 

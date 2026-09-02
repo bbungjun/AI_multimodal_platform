@@ -227,7 +227,7 @@ document or inherit the full design interview.
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
 | G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
-| G3.1 | Authenticated workspace entry and browser Session UX | Planned | G3 interface available | Consume `/me`, logout, host-only cookie and redirect contracts; no OAuth/SQL internals |
+| G3.1 | Authenticated workspace entry and browser Session UX | Planned — Spec Accepted | [Accepted spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), branch `codex/issue-101-authenticated-workspace-ux` from `edd7208` | Prepare frozen Goal; execution not started; first check is baseline lint/build and collection-safe failing contracts |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -296,6 +296,8 @@ At the end of a Goal:
 | 2026-09-02 | Split backend authentication, browser UX, and Master operations across G3, G3.1, and G10, producing twelve delivery slices. | Combining three interfaces would exceed one reliable Goal and obscure OAuth/session security review. |
 | 2026-09-02 | Accepted the G3 backend OAuth/Session specification and created Issue #98 from merged `main` at `58f405b`. | The deep module, security policy, 17-path prediction, no-migration rule, and real Postgres+Redis verification gates are fixed before implementation. |
 | 2026-09-02 | Froze the Issue #98 G3 Goal plan at SHA-256 `95dd3c9…da6c`. | Eight sequential Todos and four final reviewers now bind implementation, real-runtime proof, documentation, strict CI, and auto-merge without reopening scope. |
+| 2026-09-03 | User chose existing UI/UX and CSS reuse for G3.1 rather than a redesign. | Keep the current shell, generation layout and shared UI; extend only auth/account styles. Behavior and implementation remain subject to the G3.1 draft approval. |
+| 2026-09-03 | Accepted all G3.1 draft choices and created Issue #101 from synced `main` at `edd7208`. | Preserve existing UI/CSS, explicitly handle unsaved-input loss, add only opt-in start error redirect, and prove activity/cache/race/browser contracts in a 17-path, zero-migration Goal. Execution and merge are not implied by plan preparation. |
 
 ## Initiative Completion Gate
 
@@ -325,3 +327,11 @@ are not yet protected, and there is no product mock-login bypass. Live operation
 remains blocked by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
 and later browser/proxy verification. No Plan/Credit or Master mutation is
 delivered by G3.
+
+G3 merged at `edd7208`. The [G3.1 specification](g3-1-authenticated-workspace-ux-spec.md)
+is accepted, including the existing-CSS constraint, auth UI states, mobile account
+access, activity/cache/race policies, `ui=1` start error redirect and unsaved-input
+reset. Issue #101 and its branch exist with a 17-path/zero-migration prediction.
+The next step is the frozen Goal's explicit execution request, not further
+feature design or automatic implementation. Delivery ends at a Draft PR with
+passing required CI; ready/merge/auto-merge needs separate authorization.
