@@ -2,8 +2,10 @@
 
 ## 1. 상태와 목적
 
-- 상태: **Implemented / local Mock Verified — 2026-09-03**. Todo 1-7 구현·검증 완료;
-  Todo 8의 문서/최종 review와 Draft PR 필수 CI delivery 진행 중이다. Live Verified가 아니다.
+- 상태: **Mock Verified — 2026-09-03**. Todo 1-8 / F1-F4 APPROVE;
+  [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)의 구현 head
+  `3b82c12`에서 필수 verify 및 backend/frontend Scan·SBOM 모두 통과했다.
+  최종 문서-only head의 CI도 확인한다. merge/Live Verified는 아니다.
 - Tracker: [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101).
 - Branch: `codex/issue-101-authenticated-workspace-ux`, synced `main` `edd7208` 기반.
 - Accepted spec checkpoint: `928743c`.

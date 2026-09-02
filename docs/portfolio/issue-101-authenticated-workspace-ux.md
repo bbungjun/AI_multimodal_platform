@@ -1,7 +1,8 @@
 # Issue #101 — 기존 UI를 유지하는 로그인·Session UX
 
 - Issue: [#101](https://github.com/bbungjun/AI_multimodal_platform/issues/101)
-- 상태: **local Mock Verified**, Draft PR/필수 CI delivery 진행 중. Live Verified 아님.
+- 상태: **Mock Verified**, [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
+  전달. 구현 head `3b82c12` 필수 CI 모두 PASS; merge/Live Verified 아님.
 - 기준: G3 병합 `edd7208`; 구현/브라우저 검증 `58542f5`; CI 연결 `6aaf3ad`.
 - 범위: non-document 17개, 상한 20개 중 여유 미사용, migration 0개.
 - 설계: [accepted spec](../initiatives/g3-1-authenticated-workspace-ux-spec.md).
@@ -110,8 +111,8 @@ GitHub에서 다운로드할 수 있는 artifact가 아니다. 공유 문서에�
   공개 배포를 허용할 수준의 사용자별 보호가 아니다.
 - 실제 Google 로그인·cookie/proxy 환경 검증, 긴급 폐기 #99, 비용/크레딧/Master는 별도다.
 - 입력 초안 영속화는 의도적으로 제외했다. 불확실한 logout은 명시적으로 재확인해야 한다.
-- npm install의 기존 dependency advisory 9개는 광범위 업그레이드로 숨기지 않았다.
-  runtime image의 required security scans와 구분한다. 최종 CI 결과는 PR에 기록한다.
+- npm audit의 advisory는 현재/기존 `edd7208` 모두 9개, 신규 advisory 패키지 0개였다.
+  광범위 업그레이드로 숨기지 않았으며 runtime image의 required security scans와 구분한다.
 - 로컬 F1-F4는 아래 근거로 APPROVE했다. Draft PR의 current-head 필수 CI가 완료돼야
   Goal을 종료한다. 이번 Goal은 ready/auto-merge/merge 권한을 포함하지 않는다.
 
@@ -124,5 +125,15 @@ GitHub에서 다운로드할 수 있는 artifact가 아니다. 공유 문서에�
 | F3 runtime/UX | APPROVE (local) — Chromium 34, 네 viewport와 keyboard 직접 검토, Linux 467/3 conditional skip, isolated golden과 cleanup 통과 |
 | F4 documentation | APPROVE — 문제/실패/수정/검증/한계와 local-only artifact를 spec/runbook/testing/current-work에 구분 기록 |
 
-Remote current-head `verify`, `Scan and SBOM (backend)`, `Scan and SBOM (frontend)`는
-별도 delivery gate다. 이 시점에는 pending이며 이미 통과했다고 주장하지 않는다.
+## Remote CI delivery
+
+구현 head `3b82c12`에서 다음 필수 check가 모두 통과했다.
+
+- [verify](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156208):
+  Linux backend 467 PASS / guarded3 SKIP, module48 PASS, Chromium34 PASS, lint/build PASS.
+- [backend/frontend Scan and SBOM](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156200):
+  두 runtime image 모두 PASS. scan 기준이나 branch protection을 낮추지 않았다.
+
+이 결과를 기록하는 마지막 변경은 문서-only이며 해당 head의 세 required check도 다시
+확인한다. 이후 상태는 [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)의
+current-head checks를 기준으로 한다. Draft 유지, auto-merge off, Issue #101 open이다.

@@ -227,7 +227,7 @@ document or inherit the full design interview.
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
 | G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
-| G3.1 | Authenticated workspace entry and browser Session UX | In Progress — Draft CI delivery | [Spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), [portfolio](../portfolio/issue-101-authenticated-workspace-ux.md); branch `codex/issue-101-authenticated-workspace-ux`; code `58542f5`, CI `6aaf3ad`; module 48, browser 34, Linux backend 467 PASS / 3 conditional SKIP, isolated golden/cleanup PASS | First hash check PASS; G3 `/me`/logout consumed. G4 receives browser Session interface and must enforce backend ownership. 17 paths / zero migrations; current-head required CI pending |
+| G3.1 | Authenticated workspace entry and browser Session UX | Mock Verified — Draft delivered | [Spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102), [portfolio](../portfolio/issue-101-authenticated-workspace-ux.md); `3b82c12` required verify + both scans PASS; module48, browser34, backend467 PASS / 3 conditional SKIP; isolated golden/cleanup PASS | G3 interfaces consumed; G4 receives browser Session interface and must enforce backend ownership. 17 paths / zero migrations; no live login or merge |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -336,7 +336,8 @@ The local/untracked `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.m
 is frozen; its full SHA-256 is recorded in the spec and Issue. Transfer the exact
 file separately for a different machine; the repository does not contain it.
 The Goal was explicitly started and its implementation/local mock verification
-is complete. Todo 8 is delivering docs and a Draft PR with current-head required
-CI. G4 receives `useSession` plus the unchanged G3 server interfaces; browser
+is complete. Todo 8 delivered Draft PR #102 with all required checks passing on
+implementation head `3b82c12`; final evidence-only updates must also pass current-head
+checks before any later merge. G4 receives `useSession` plus unchanged G3 server interfaces; browser
 gate does not implement ownership. Ready/merge/auto-merge still needs separate
 authorization. No live Google/provider/cloud execution occurred.

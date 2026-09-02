@@ -79,9 +79,9 @@ paste credential contents.
 
 ### G3.1 execution handoff — 2026-09-03
 
-- Execution explicitly authorized. Todo 1-6 committed through `58542f5`; Todo 7
-  committed `6aaf3ad` after supported Linux/mock regression; Todo 8 evidence/PR/CI
-  delivery is next. No PR merge or real OAuth/provider/cloud execution authorized.
+- Todo 1-8 and F1-F4 APPROVE. [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
+  delivered on `codex/issue-101-authenticated-workspace-ux`; verified implementation
+  head `3b82c12`. No PR merge or real OAuth/provider/cloud execution occurred.
 - Latest local results: module 48 PASS, Chromium 34 PASS (four widths and keyboard,
   timeout, hidden/idle activity, two-tab and stale-response/mutation cases), npm
   ci/lint/build PASS. Linux full backend 467 PASS / 3 pre-existing conditional SKIP.
@@ -91,41 +91,20 @@ paste credential contents.
   removed and zero remaining verified. Developer resources untouched.
 - Browser review found/fixed 920px panel overflow and outside-click focus loss.
   Masked local artifacts and bounded receipt: `.omo/evidence/issue-101/`.
-- Scope: 17 non-document paths, zero migrations. Local F1-F4 review APPROVE;
-  remote required CI and Draft delivery remain pending, so Goal is not complete.
+- Scope: 17 non-document paths, zero migrations. Required `verify` and both image
+  Scan/SBOM checks PASS at `3b82c12`: [CI](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156208),
+  [image scans](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156200).
+  CI independently confirmed backend 467/3 conditional skip, module48 and browser34.
+- Final evidence updates are documentation-only. Recheck PR current-head checks
+  before any separate merge decision; Draft and auto-merge-disabled are intentional.
+- Next: separately authorize review/merge, then design G4 backend ownership.
+  Frontend gating is not server access control; #99/live OAuth/proxy checks remain.
 - Detailed record: [Issue #101 portfolio](portfolio/issue-101-authenticated-workspace-ux.md).
 
-#### Accepted planning context
-
-- G3 PR #100 is merged at `edd7208`; Issue #98 is closed.
-- [G3.1 UX spec](initiatives/g3-1-authenticated-workspace-ux-spec.md) is accepted,
-  not implemented. User approved all six choices, including existing UI/CSS reuse.
-- Synced `main` at `edd7208`; created [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101)
-  and branch `codex/issue-101-authenticated-workspace-ux`. Restored all three
-  design documents with content verification; existing local `.omo` is preserved.
-- The accepted spec covers login/check/error/gate/account/logout states, the hidden mobile
-  footer, no idle `/me` heartbeat, auth-epoch cache isolation, safe return paths,
-  input-loss notice and mock-only browser tests. It approves one opt-in `ui=1`
-  start error redirect while preserving existing G3 JSON errors.
-- Predicted implementation scope: 17 non-document paths, zero migrations;
-  no ownership, credits, Master operation, real Google, provider or cloud work.
-- This step changes documentation only. No implementation or new UX verification
-  result is claimed. Goal execution requires a new explicit request.
-- Fresh design checks: frontend `npm run lint` and `npm run build` pass;
-  draft path count is 17, local Markdown links have zero missing targets,
-  new-spec safety scan and `git diff --check` pass. These are baseline/document
-  checks, not implemented G3.1 browser evidence.
-- Accepted specification checkpoint: `928743c`. Execution plan is frozen at
+- Base `edd7208`; accepted spec checkpoint `928743c`. Frozen execution plan:
   `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.md` (local/untracked).
   SHA-256: `901da0956fe686fd7fffb1255d91ad4cc811236cb5292c093c6f1c31bf1beb75`.
   Transfer that file separately when changing machines and verify its exact hash.
-- Plan contains Todo 1-8, per-step tests/commits, F1-F4, 17 expected / 20 maximum
-  non-document paths, zero migrations, isolated mock cleanup, four browser
-  viewports and current-head required-CI delivery gates. No new UX tests ran yet.
-- Fresh planning checks: existing frontend lint/build PASS again; plan headings,
-  17-path inventory, tracked-doc links, hash references and diff hygiene checked.
-- Next: explicitly start the frozen Goal. Execution delivery ends at Draft PR
-  plus required CI, without ready/merge/auto-merge. Planning is not implementation.
 
 ### Completed G1–G3 context
 
