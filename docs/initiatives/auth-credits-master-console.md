@@ -218,8 +218,8 @@ document or inherit the full design interview.
 
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
-| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Planned | [Accepted spec](g1-schema-control-spec.md) | Merge the specification, then create the bounded Issue and Goal plan |
-| G2 | User and Session persistence | Planned | None | Blocked by G1 |
+| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
+| G2 | User and Session persistence | Planned | None | Consume G1's three-operation interface; design a single new revision |
 | G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
@@ -240,6 +240,12 @@ Per-Goal soft limits:
   exceeds 20 files or requires a second unrelated module;
 - discovered enhancements go to follow-up Issues rather than expanding the
   active Goal.
+
+G1 has one explicitly approved exception to the general file-count limit: its
+fresh preflight found 15 production/configuration/script paths and 7 test paths
+(22 total). The two additional paths are the isolated Postgres verifier and
+removal of the obsolete runtime-DDL test; the one-module and one-migration
+limits remain unchanged.
 
 ## Goal Update Protocol
 
@@ -272,8 +278,11 @@ At the end of a Goal:
 | 2026-09-02 | Accepted the complete initiative scope and ten-Goal execution model. | A single Goal would exceed a reliable context and verification surface. |
 | 2026-09-02 | Narrowed G1 to schema control and moved User/Session persistence to G2, producing eleven Goals. | Repository inspection showed runtime DDL and process-startup migration concerns form a separate deep module from identity persistence. |
 | 2026-09-02 | Accepted the G1 schema-control specification. | The scope, interface, reset guards, verification, rollback, and stop conditions are explicit enough to create a bounded execution Goal. |
+| 2026-09-02 | Created Issue #94 and the G1 branch from merged `main` revision `fd96acc`. | G1 planning now has an isolated execution context and must not absorb G2 identity persistence. |
 | 2026-09-02 | Replaced legacy ownership backfill with a clean database reset while retaining Alembic. | Existing data is disposable; schema reproducibility remains portfolio-relevant. |
 | 2026-09-02 | Named the elevated role `master` and removed `admin`. | The product will expose only `user` and `master` RBAC roles. |
+| 2026-09-02 | Approved a G1-only changed-path limit of 22 while retaining one module and one migration. | Fresh preflight found that the isolated Postgres verifier and removal of the obsolete runtime-DDL test were missing from the initial 20-path estimate. |
+| 2026-09-02 | Promoted G1 to `Mock Verified`. | Two fresh isolated migration/reset cycles, three-process stale-revision refusal and recovery, and the mock product golden path passed at `6aa8a1f`; no cloud or provider call was made. |
 
 ## Initiative Completion Gate
 
@@ -292,8 +301,7 @@ statuses and the following fresh checks pass in mock mode:
 
 ## Next Goal
 
-G1 is the only authorized next implementation slice. Its proposed specification
-is [G1 Schema Control Specification](g1-schema-control-spec.md). Implementation
-must remain blocked until the specification is reviewed, a bounded Issue and
-fresh branch exist, and the executable Goal plan fixes allowed paths, tests,
-rollback, and stop conditions.
+G1 is `Mock Verified` on branch `codex/issue-94-schema-control`; its tracker is
+[Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94).
+After its draft PR is reviewed and merged, G2 may begin from current `main` and
+must consume only G1's documented interface rather than its internals.

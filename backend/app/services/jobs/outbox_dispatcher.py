@@ -11,8 +11,9 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
-from app.db import AsyncSessionLocal, close_db_connection, init_db_schema
+from app.db import AsyncSessionLocal, close_db_connection
 from app.models import OutboxEvent, OutboxEventStatus, utc_now
+from app.schema_control import require_current_schema
 from app.services.jobs.enqueue import DispatchResult, dispatch_job, exception_code
 from app.services.jobs.outbox import pending_job_dispatch_events_statement
 
@@ -90,7 +91,7 @@ async def run_dispatcher_loop(
     once: bool = False,
     session_factory: SessionFactory = AsyncSessionLocal,
     dispatcher: Dispatcher = dispatch_job,
-    initialize_schema: SchemaInitializer = init_db_schema,
+    initialize_schema: SchemaInitializer = require_current_schema,
 ) -> None:
     resolved_settings = settings or get_settings()
     await initialize_schema()

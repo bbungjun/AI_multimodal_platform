@@ -12,6 +12,7 @@ Set mock mode in `.env`:
 
 ```env
 AI_PROVIDER=mock
+APP_ENV=local
 POSTGRES_USER=app
 POSTGRES_PASSWORD=changeme
 POSTGRES_DB=multimodal
@@ -57,6 +58,7 @@ docker compose ps
 Expected services:
 
 - `db` healthy
+- `migrate` exits successfully after `alembic upgrade head`
 - `redis` healthy and used only as the Celery broker
 - `backend` on `http://127.0.0.1:8000`
 - `dispatcher` running `python -m app.services.jobs.outbox_dispatcher`
@@ -71,6 +73,71 @@ dispatcher publishes job ids to Celery.
 The default worker has an internal Celery ping healthcheck, a stable
 `worker@%h` hostname, explicit `SIGTERM` stop handling, and a configurable
 Compose grace period through `CELERY_WORKER_SHUTDOWN_GRACE_SEC`.
+Before Celery starts, its fixed command runs `python -m app.schema_control
+check`; an incompatible revision exits before work is consumed.
+
+## Schema Migration and Readiness
+
+Inspect the packaged and database revisions without printing the database URL:
+
+```powershell
+docker compose run --rm migrate python -m alembic heads
+docker compose run --rm migrate python -m alembic current
+docker compose run --rm migrate python -m app.schema_control check
+```
+
+Normal `docker compose up` runs the finite migration first. Backend, worker,
+and dispatcher require its successful completion and also perform their own
+read-only check. Do not use application startup as a migration command.
+
+For an isolated upgrade/downgrade/re-upgrade proof, use:
+
+```powershell
+python scripts/verify_schema_migrations.py --env-file .env.example
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+```
+
+The verifier owns and removes only its generated `g1-schema-*` project. Never
+substitute the default project or an existing volume.
+
+The reset form also verifies preview immutability, exact confirmation, empty
+post-reset tables, restored head, and fail-closed stale-revision behavior for
+backend, worker, and dispatcher. Run it twice with fresh generated project
+names when collecting release evidence.
+
+## Guarded Local Database Reset
+
+Reset is destructive and intended only for the disposable local/test database.
+Always preview first:
+
+```powershell
+docker compose run --rm -e APP_ENV=local migrate `
+  python -m app.schema_control reset `
+  --expected-database multimodal
+```
+
+Review the redacted environment, host, port, database, revision, and fixed-table
+row counts. Execution additionally requires the exact database name and exact
+confirmation:
+
+```powershell
+docker compose run --rm -e APP_ENV=local migrate `
+  python -m app.schema_control reset `
+  --expected-database multimodal `
+  --execute `
+  --confirm RESET:multimodal
+```
+
+The command refuses non-local/test environments, non-allowlisted hosts, URL or
+live database-name mismatches, and wrong confirmation. It resets only the
+selected database's `public` schema; it does not drop the database, remove
+volumes or asset files, or invoke a cloud command. If upgrade fails after the
+reset, recover with:
+
+```powershell
+docker compose run --rm migrate python -m alembic upgrade head
+docker compose run --rm migrate python -m app.schema_control check
+```
 
 ## Local Quality Gate
 

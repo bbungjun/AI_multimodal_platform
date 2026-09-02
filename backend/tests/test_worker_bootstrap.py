@@ -65,8 +65,8 @@ async def test_worker_bootstrap_initializes_data_dir_schema_runner_and_db_close(
     calls: list[str] = []
     data_dir = tmp_path / "assets"
 
-    async def fake_init_db_schema() -> None:
-        calls.append("init_db_schema")
+    async def fake_require_current_schema() -> None:
+        calls.append("require_current_schema")
 
     async def fake_close_db_connection() -> None:
         calls.append("close_db_connection")
@@ -79,7 +79,7 @@ async def test_worker_bootstrap_initializes_data_dir_schema_runner_and_db_close(
             calls.append("runner.run_forever")
 
     monkeypatch.setattr(worker, "get_settings", lambda: _settings(data_dir=data_dir))
-    monkeypatch.setattr(worker, "init_db_schema", fake_init_db_schema)
+    monkeypatch.setattr(worker, "require_current_schema", fake_require_current_schema)
     monkeypatch.setattr(worker, "close_db_connection", fake_close_db_connection)
     monkeypatch.setattr(worker, "InProcessJobRunner", FakeRunner)
 
@@ -87,7 +87,7 @@ async def test_worker_bootstrap_initializes_data_dir_schema_runner_and_db_close(
 
     assert data_dir.exists()
     assert calls == [
-        "init_db_schema",
+        "require_current_schema",
         "runner.construct",
         "runner.run_forever",
         "close_db_connection",
@@ -99,8 +99,8 @@ async def test_worker_bootstrap_closes_db_after_runner_cancel(monkeypatch, tmp_p
     calls: list[str] = []
     data_dir = tmp_path / "assets"
 
-    async def fake_init_db_schema() -> None:
-        calls.append("init_db_schema")
+    async def fake_require_current_schema() -> None:
+        calls.append("require_current_schema")
 
     async def fake_close_db_connection() -> None:
         calls.append("close_db_connection")
@@ -111,7 +111,7 @@ async def test_worker_bootstrap_closes_db_after_runner_cancel(monkeypatch, tmp_p
             raise asyncio.CancelledError
 
     monkeypatch.setattr(worker, "get_settings", lambda: _settings(data_dir=data_dir))
-    monkeypatch.setattr(worker, "init_db_schema", fake_init_db_schema)
+    monkeypatch.setattr(worker, "require_current_schema", fake_require_current_schema)
     monkeypatch.setattr(worker, "close_db_connection", fake_close_db_connection)
     monkeypatch.setattr(worker, "InProcessJobRunner", CancellingRunner)
 
@@ -120,7 +120,7 @@ async def test_worker_bootstrap_closes_db_after_runner_cancel(monkeypatch, tmp_p
 
     assert data_dir.exists()
     assert calls == [
-        "init_db_schema",
+        "require_current_schema",
         "runner.run_forever",
         "close_db_connection",
     ]

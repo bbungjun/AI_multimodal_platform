@@ -76,32 +76,39 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-08-31, Issue #88 is active on branch
-`codex/issue-88-mock-ops-evidence`:
+As of 2026-09-02, Issue #94 is active on branch
+`codex/issue-94-schema-control`:
 
-- On 2026-09-02, the Google OAuth, per-User ownership, Free/Pro/Max credit,
-  personal usage, and Master console initiative was accepted and subsequently
-  refined into the eleven-Goal sequence described below. The initiative-wide
-  source of truth is
-  `docs/initiatives/auth-credits-master-console.md`; all capabilities remain
-  `Planned`, no product code or database was changed, and G1 is the only next
-  implementation slice. Every Goal must update its single status row here and
-  in the initiative document rather than carrying the full interview forward.
-  The initiative contract check and `git diff --check` passed. The standard
-  local verifier passed 352 backend tests and stopped on the already documented
-  Windows `/bin/bash` path-conversion failure in
-  `test_release_script_guards_plan_scope_and_uses_terraform_rollback`; frontend
-  checks did not run after that fail-fast stop.
-- On 2026-09-02, detailed G1 repository inspection separated schema control
-  from identity persistence. The initiative now has eleven bounded Goals. The
-  proposed G1 source is `docs/initiatives/g1-schema-control-spec.md` and covers
-  only Alembic baseline, fail-closed schema readiness, Compose migration order,
-  and guarded local database reset. User and Session persistence moved to G2.
-  G1 remains `Planned`; no Issue, branch, migration, reset, product code, or
-  database mutation has been created or executed. The G1 spec contract check,
-  `git diff --check`, Compose config, frontend typecheck, and frontend production
-  build passed. The latest backend run remains 352 passed plus the pre-existing
-  Windows Bash path-conversion failure recorded above.
+- On 2026-09-02, the initiative and accepted G1 specification merged through
+  PR #93 at `fd96acc`. Issue #94 now tracks G1 schema control, and branch
+  `codex/issue-94-schema-control` was created from that exact `main` revision.
+  G1 execution started after fresh preflight found 22 required non-document
+  paths. The user approved a G1-only exception from the general 20-path limit;
+  the one-module and one-migration limits remain unchanged.
+  G1 must remain limited to Alembic schema control, fail-closed readiness,
+  Compose ordering, and guarded local reset; User and Session persistence is G2.
+  The completed local Goal plan is
+  `.omo/plans/issue-94-g1-schema-control-goal.md` with SHA-256
+  `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`.
+  It contains eight sequential Todos and four final verifiers. Implementation
+  is `Mock Verified` at `6aa8a1f`: the packaged head is
+  `0001_generation_baseline`; two fresh isolated upgrade/downgrade/re-upgrade,
+  stale-revision refusal/recovery, and guarded-reset cycles passed under
+  `g1-schema-96996ab175ba` and `g1-schema-fa2916314600`. The product mock
+  golden path passed under `g1-schema-golden01`, including generated PNG range
+  serving and cleanup. All three projects and their volumes were removed, and
+  no default project, cloud resource, credential, or provider was touched.
+  Focused schema tests passed 33; full backend pytest passed 385 with only the
+  pre-existing Windows Bash path-conversion failure; frontend lint/build,
+  mock and placeholder-only Vertex Compose config, and
+  `verify_local.py --skip-backend` passed. Draft PR
+  [#95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) is open;
+  G2 remains planned until G1 is reviewed and merged.
+- The initiative-wide source of truth remains
+  `docs/initiatives/auth-credits-master-console.md`. Identity, OAuth, ownership,
+  credit, usage, and Master-console capabilities remain `Planned`; only G1
+  schema control is implemented. User and Session persistence remains G2 and
+  must consume only G1's documented interface.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

@@ -2,10 +2,14 @@
 
 ## Document Status
 
-- Status: `Accepted / Planning Only`
+- Status: `Accepted / Mock Verified`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
-- Implementation status: `Planned`
+- Issue: [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
+- Branch: `codex/issue-94-schema-control`
+- Goal plan: `.omo/plans/issue-94-g1-schema-control-goal.md`
+- Goal plan SHA-256: `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`
+- Implementation status: `Mock Verified` at code checkpoint `6aa8a1f`
 - Provider mode for all verification: `AI_PROVIDER=mock`
 
 This specification is the complete execution input for G1. It intentionally
@@ -167,6 +171,12 @@ backend ─ worker ─ dispatcher
 - Each process independently calls `require_current_schema()` before serving,
   polling, consuming, or dispatching work. Compose ordering is not treated as
   the only correctness mechanism.
+- The Celery container uses a fixed startup command that runs the schema-check
+  CLI and `exec`s Celery only after success. It does not rely on a Celery signal
+  exception to abort startup. The official
+  [Celery worker-signal documentation](https://docs.celeryq.dev/en/stable/userguide/signals.html#worker-signals)
+  defines lifecycle timing, but G1 keeps process-abort behavior in an explicit,
+  directly testable command contract.
 - `Base.metadata.create_all()` and handwritten startup DDL are removed.
 - The existing manual retry-column and I2V-index repair SQL moves into the
   baseline revision and is deleted from runtime code.
@@ -215,7 +225,34 @@ Compose startup, tests against the developer's normal project, or CI.
 
 ## Anticipated Change Map
 
-The executor must confirm the map from the fresh G1 branch before coding.
+Fresh preflight confirmed the following exact 22 non-document paths. The user
+approved this G1-only exception to the initiative's general 20-file soft limit;
+the one-module and one-migration limits remain unchanged.
+
+1. `backend/pyproject.toml`
+2. `backend/Dockerfile`
+3. `backend/alembic.ini`
+4. `backend/migrations/env.py`
+5. `backend/migrations/script.py.mako`
+6. `backend/migrations/versions/0001_generation_baseline.py`
+7. `backend/app/db.py`
+8. `backend/app/schema_control.py`
+9. `backend/app/main.py`
+10. `backend/app/worker.py`
+11. `backend/app/services/jobs/outbox_dispatcher.py`
+12. `backend/app/config.py`
+13. `.env.example`
+14. `docker-compose.yml`
+15. `scripts/verify_schema_migrations.py`
+16. `backend/tests/test_alembic_schema.py`
+17. `backend/tests/test_schema_control.py`
+18. `backend/tests/test_verify_schema_migrations_script.py`
+19. `backend/tests/test_main_lifespan.py`
+20. `backend/tests/test_worker_bootstrap.py`
+21. `backend/tests/test_compose_worker_service.py`
+22. `backend/tests/test_db_schema_sync.py` (remove after its runtime DDL seam is removed)
+
+The zones below explain the ownership of those exact paths.
 
 Production and configuration zones:
 
@@ -227,7 +264,6 @@ Production and configuration zones:
 - new `backend/app/schema_control.py`
 - `backend/app/main.py`
 - `backend/app/worker.py`
-- `backend/app/celery_app.py` only if needed for the worker readiness hook
 - `backend/app/services/jobs/outbox_dispatcher.py`
 - `backend/app/config.py`
 - `.env.example`
@@ -238,7 +274,7 @@ Focused test zones:
 - new `backend/tests/test_alembic_schema.py`
 - new `backend/tests/test_schema_control.py`
 - existing startup and Compose contract tests directly invalidated by the
-  interface rename
+  interface rename or worker command guard
 
 Documentation zones at closeout:
 
@@ -250,7 +286,7 @@ Documentation zones at closeout:
 - one Issue-specific portfolio record after the Issue number exists
 
 If implementation needs a new authentication route, User/Session table,
-frontend file, cloud resource, second migration, or more than 20 non-document
+frontend file, cloud resource, second migration, or more than 22 non-document
 changed paths, stop and split before coding.
 
 ## TDD Execution Order

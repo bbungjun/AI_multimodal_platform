@@ -43,7 +43,7 @@ def test_compose_defines_redis_for_celery_broker():
     assert "image: redis:7-alpine" in _service_block(compose_text, "redis")
 
     worker_block = _service_block(compose_text, "worker")
-    assert "command: celery -A app.celery_app worker" in worker_block
+    assert "command: /bin/sh -c 'python -m app.schema_control check && exec celery" in worker_block
     assert "--hostname=worker@%h" in worker_block
     assert "--queues=${CELERY_DEFAULT_QUEUE:-generation}" in worker_block
     assert "--concurrency=${CELERY_WORKER_CONCURRENCY:-2}" in worker_block
@@ -195,3 +195,42 @@ def test_vertex_compose_mounts_credentials_for_worker_and_backend():
     )
     assert credential_mount in backend_block
     assert credential_mount in worker_block
+
+
+def test_migrate_is_database_only_and_gates_database_processes():
+    compose_text = _compose_text()
+    migrate_block = _service_block(compose_text, "migrate")
+
+    assert "python -m alembic upgrade head" in migrate_block
+    assert "DATABASE_URL:" in migrate_block
+    for forbidden in (
+        "AI_PROVIDER",
+        "GOOGLE_",
+        "GCP_",
+        "CELERY_",
+        "REDIS",
+        "DATA_DIR",
+        "volumes:",
+        "ports:",
+    ):
+        assert forbidden not in migrate_block
+
+    for service_name in ("backend", "worker", "dispatcher"):
+        service_block = _service_block(compose_text, service_name)
+        assert "migrate:" in service_block
+        assert "condition: service_completed_successfully" in service_block
+
+
+def test_celery_preflight_exits_before_worker_when_schema_check_fails():
+    worker_block = _service_block(_compose_text(), "worker")
+    command_line = next(
+        line.strip()
+        for line in worker_block.splitlines()
+        if line.strip().startswith("command:")
+    )
+
+    check_position = command_line.index("python -m app.schema_control check")
+    gate_position = command_line.index("&&")
+    exec_position = command_line.index("exec celery")
+    assert check_position < gate_position < exec_position
+    assert "||" not in command_line

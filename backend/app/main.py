@@ -16,7 +16,8 @@ from app.api.ops import router as ops_router
 from app.api.pipelines import router as pipelines_router
 from app.api.prompts import router as prompts_router
 from app.config import get_settings
-from app.db import close_db_connection, init_db_schema
+from app.db import close_db_connection
+from app.schema_control import require_current_schema
 from app.services.jobs.runner import job_runner
 from app.services.ops.runtime import runtime_metrics
 
@@ -28,7 +29,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    await init_db_schema()
+    await require_current_schema()
     runner_task = None
     if settings.job_runner_auto_start:
         runner_task = asyncio.create_task(job_runner(), name="job-runner")

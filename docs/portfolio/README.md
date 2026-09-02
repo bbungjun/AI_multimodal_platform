@@ -29,7 +29,8 @@
 | Image scan, SBOM, digest release, rollback | `Live Verified` | [Supply-chain workflow](../../.github/workflows/image-supply-chain.yml), [release script](../../scripts/deploy_gcp_release.sh) | CI 구현 유지 |
 | Vertex Gemini/Imagen/Veo boundary | `Live Verified` | [Provider modes](../provider-modes.md), [Vertex pilot runbook](../runbooks/prompt-enhancement-vertex-pilot.md) | 추가 유료 실행 No-Go |
 | Prompt enhancement paired evaluation | `Implemented` | [Evaluation gate](../runbooks/prompt-enhancement-evaluation-gate.md), [evaluation package](../../evals/prompt_enhancement) | post-fix live rerun 미수행 |
-| Google OAuth, per-User credits, and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Ten bounded Goals; G1 not started |
+| Alembic schema control and guarded local reset | `Mock Verified` | [Issue #94 record](issue-94-schema-control.md), [G1 specification](../initiatives/g1-schema-control-spec.md) | Two isolated cycles, drift refusal/recovery, and product golden path passed |
+| Google OAuth, per-User credits, and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Eleven bounded Goals; G2 is next after G1 merge |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
 
@@ -77,6 +78,7 @@
 |---|---|---|
 | [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | [PR #91](https://github.com/bbungjun/AI_multimodal_platform/pull/91) merged, CI passed |
 | [#88](https://github.com/bbungjun/AI_multimodal_platform/issues/88) | [Mock-first operations evidence design](issue-88-mock-ops-evidence.md) | Design complete, implementation planned |
+| [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94) | [Schema control and safe local reset](issue-94-schema-control.md) | Mock Verified at `6aa8a1f`; [draft PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) open |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 
