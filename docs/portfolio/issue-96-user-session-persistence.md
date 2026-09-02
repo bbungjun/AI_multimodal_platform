@@ -10,6 +10,7 @@
 - Existing mock product regression: `Passed`
 - Google OAuth, cookies, and authenticated browser verification: `Planned / G3`
 - Cloud and provider verification: `Deferred / No-Go`
+- Delivery: [Draft PR #97](https://github.com/bbungjun/AI_multimodal_platform/pull/97)
 
 This record proves persistence and database behavior only. It does not claim a
 working login, authenticated request, content ownership, credit enforcement,

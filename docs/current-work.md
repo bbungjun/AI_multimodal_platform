@@ -129,8 +129,9 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   remain. Full backend pytest passed 396 with only the pre-existing Windows
   Bash path-conversion failure; frontend lint/build, Compose config, and
   `verify_local.py --skip-backend` passed. OAuth, cookies, ownership, credits,
-  cloud, and providers were not changed or run. Next, complete F1-F4, push, and
-  open the Issue #96 draft PR; G3 remains planned until G2 merges.
+  cloud, and providers were not changed or run. Draft PR
+  [#97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) is open;
+  G3 remains planned until G2 is reviewed and merged.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable
