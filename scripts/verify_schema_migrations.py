@@ -24,11 +24,11 @@ EXPECTED_ENUMS = {
     "outbox_event_status:pending,published,failed",
 }
 EXPECTED_FOREIGN_KEYS = {
-    "fk_assets_job_id_jobs",
-    "fk_jobs_enhancement_id_prompt_enhancements",
-    "fk_jobs_parent_job_id_jobs",
+    "assets_job_id_fkey",
     "fk_jobs_retry_of_job_id_jobs",
     "fk_jobs_source_asset_id_assets",
+    "jobs_enhancement_id_fkey",
+    "jobs_parent_job_id_fkey",
 }
 EXPECTED_INDEXES = {
     "ix_assets_job_id",
@@ -113,13 +113,17 @@ def compose_command(
 
 
 def subprocess_runner(arguments: Sequence[str]) -> CommandResult:
-    completed = subprocess.run(
-        list(arguments),
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            list(arguments),
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return CommandResult(124)
     return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
@@ -250,8 +254,10 @@ def assert_inventory(
         project_name,
         env_file,
         values,
-        "SELECT indexname FROM pg_indexes WHERE schemaname='public' "
-        "AND indexname NOT LIKE '%_pkey' ORDER BY indexname",
+        "SELECT i.indexname FROM pg_indexes i WHERE i.schemaname='public' "
+        "AND NOT EXISTS (SELECT 1 FROM pg_constraint c "
+        "WHERE c.conname=i.indexname AND c.contype IN ('p','u')) "
+        "ORDER BY i.indexname",
         "index inventory",
     )
     if indexes != EXPECTED_INDEXES:
@@ -303,6 +309,88 @@ def assert_baseline_absent(
     )
     if remaining:
         raise VerificationError("Downgrade left application tables or enum types behind.")
+
+
+def verify_revision_refusal(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+) -> None:
+    expected_revision = "0001_generation_baseline"
+    stale_revision = "0000_stale_revision"
+    update_revision = (
+        "UPDATE alembic_version SET version_num="
+        f"'{stale_revision}'"
+    )
+    restore_revision = (
+        "UPDATE alembic_version SET version_num="
+        f"'{expected_revision}'"
+    )
+    _run(
+        runner,
+        _psql_command(
+            project_name,
+            env_file,
+            user=values["POSTGRES_USER"],
+            database=values["POSTGRES_DB"],
+            sql=update_revision,
+        ),
+        action="stale revision setup",
+    )
+
+    try:
+        for service in ("backend", "worker", "dispatcher"):
+            result = runner(
+                compose_command(
+                    project_name,
+                    env_file,
+                    "run",
+                    "--rm",
+                    "--no-deps",
+                    service,
+                )
+            )
+            output = f"{result.stdout}\n{result.stderr}"
+            if result.returncode == 0 or "schema_revision_outdated" not in output:
+                raise VerificationError(
+                    f"{service} did not fail closed on a stale schema revision."
+                )
+            password = values.get("POSTGRES_PASSWORD", "")
+            if password and password in output:
+                raise VerificationError(
+                    f"{service} stale-revision output exposed environment data."
+                )
+    finally:
+        _run(
+            runner,
+            _psql_command(
+                project_name,
+                env_file,
+                user=values["POSTGRES_USER"],
+                database=values["POSTGRES_DB"],
+                sql=restore_revision,
+            ),
+            action="schema revision recovery",
+        )
+
+    for service in ("backend", "worker", "dispatcher"):
+        _run(
+            runner,
+            compose_command(
+                project_name,
+                env_file,
+                "run",
+                "--rm",
+                "--no-deps",
+                service,
+                "python",
+                "-m",
+                "app.schema_control",
+                "check",
+            ),
+            action=f"{service} schema recovery check",
+        )
 
 
 def reset_command(
@@ -447,6 +535,7 @@ def write_receipt(project_name: str, *, cleanup: bool) -> Path:
         "provider": "mock",
         "revision": "0001_generation_baseline",
         "round_trip": "pass",
+        "revision_refusal": "pass",
         "cleanup": "pass" if cleanup else "fail",
     }
     path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
@@ -504,6 +593,7 @@ def verify(
                 assert_baseline_absent(runner, project_name, env_file, values)
             else:
                 assert_inventory(runner, project_name, env_file, values)
+        verify_revision_refusal(runner, project_name, env_file, values)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)
     finally:

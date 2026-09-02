@@ -143,3 +143,39 @@ def test_reset_commands_are_preview_first_and_exact_target_only(tmp_path):
     assert execute[-3:] == ["--execute", "--confirm", "RESET:multimodal"]
     assert "APP_ENV=test" in preview
     assert project in preview
+
+
+def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
+    module = _load_module()
+    project = "g1-schema-12345678"
+    env_file = tmp_path / ".env.example"
+    values = {
+        "POSTGRES_USER": "app",
+        "POSTGRES_DB": "multimodal",
+    }
+    calls: list[list[str]] = []
+
+    def runner(arguments):
+        command = list(arguments)
+        calls.append(command)
+        if command[-3:] == ["-m", "app.schema_control", "check"]:
+            return module.CommandResult(0, "PASS: schema current")
+        if "run" in command and any(service in command for service in ("backend", "worker", "dispatcher")):
+            return module.CommandResult(1, "", "schema_revision_outdated")
+        return module.CommandResult(0, "")
+
+    module.verify_revision_refusal(runner, project, env_file, values)
+
+    runtime_calls = [
+        command
+        for command in calls
+        if "run" in command and command[-3:] != ["-m", "app.schema_control", "check"]
+    ]
+    assert [command[-1] for command in runtime_calls] == [
+        "backend",
+        "worker",
+        "dispatcher",
+    ]
+    sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
+    assert "0000_stale_revision" in sql_calls[0][-1]
+    assert "0001_generation_baseline" in sql_calls[-1][-1]

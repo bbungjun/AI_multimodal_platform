@@ -57,7 +57,7 @@ def upgrade() -> None:
         sa.Column("tokens_in", sa.Integer(), nullable=True),
         sa.Column("tokens_out", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id", name="pk_prompt_enhancements"),
+        sa.PrimaryKeyConstraint("id"),
     )
 
     op.create_table(
@@ -84,13 +84,11 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["enhancement_id"],
             ["prompt_enhancements.id"],
-            name="fk_jobs_enhancement_id_prompt_enhancements",
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
             ["parent_job_id"],
             ["jobs.id"],
-            name="fk_jobs_parent_job_id_jobs",
             ondelete="SET NULL",
         ),
         sa.ForeignKeyConstraint(
@@ -99,7 +97,7 @@ def upgrade() -> None:
             name="fk_jobs_retry_of_job_id_jobs",
             ondelete="SET NULL",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_jobs"),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_jobs_parent_job_id", "jobs", ["parent_job_id"])
     op.create_index("ix_jobs_retry_of_job_id", "jobs", ["retry_of_job_id"])
@@ -120,10 +118,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["job_id"],
             ["jobs.id"],
-            name="fk_assets_job_id_jobs",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_assets"),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_assets_job_id", "assets", ["job_id"])
     op.create_foreign_key(
@@ -159,7 +156,7 @@ def upgrade() -> None:
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id", name="pk_outbox_events"),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_outbox_events_aggregate_id", "outbox_events", ["aggregate_id"])
     op.create_index("ix_outbox_events_event_type", "outbox_events", ["event_type"])
