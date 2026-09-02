@@ -82,3 +82,19 @@ async def test_provider_failures_are_safe(mode):
         await adapter.exchange_code('code', 'verifier', 'expected')
     assert str(error.value) in ('oauth_identity_rejected', 'oauth_provider_unavailable')
     assert 'secret-sentinel' not in str(error.value)
+
+
+async def test_total_provider_deadline_is_bounded():
+    import asyncio
+    import time
+    import httpx
+    m = google_module()
+    async def slow(request):
+        await asyncio.sleep(10)
+        raise AssertionError('deadline failed')
+    adapter = m.GoogleIdentityAdapter('client', 'opaque', 'https://studio.test/callback',
+                                     transport=httpx.MockTransport(slow), timeout=0.1)
+    started = time.monotonic()
+    with pytest.raises(m.AuthError, match='^oauth_provider_unavailable$'):
+        await adapter.exchange_code('code', 'verifier', 'expected')
+    assert time.monotonic() - started < 1.0

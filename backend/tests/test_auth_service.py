@@ -89,6 +89,13 @@ async def test_real_postgres_lifecycle():
         return await service.complete_google_login(start.flow_secret, state, 'test-only-code')
     try:
         first = await login()
+        async with factory() as db:
+            stored = (await db.execute(select(UserSession).where(UserSession.user_id == first.user.id))).scalar_one()
+            assert stored.token_hash == m.digest(first.session_secret)
+            assert stored.absolute_expires_at - stored.created_at == timedelta(days=7)
+            assert stored.last_seen_at == stored.created_at
+        with pytest.raises(m.AuthError, match='authentication_required'):
+            await service.authenticate(m.new_secret())
         for _ in range(4):
             moment[0] += timedelta(seconds=1)
             await login()
@@ -104,6 +111,25 @@ async def test_real_postgres_lifecycle():
             victim = (await db.execute(select(UserSession).where(UserSession.token_hash == m.digest(first.session_secret)))).scalar_one()
             assert victim.revoke_reason == 'session_limit_eviction'
             original_signup = (await db.get(User, first.user.id)).signed_up_at
+        # Force a unique digest failure after profile refresh/eviction. All SQL
+        # mutations must roll back, while the consumed flow cannot be replayed.
+        async with factory() as db:
+            before_updated = (await db.get(User, first.user.id)).updated_at
+            before_active = set((await db.execute(select(UserSession.id).where(
+                UserSession.user_id == first.user.id, UserSession.revoked_at.is_(None)))).scalars())
+        moment[0] += timedelta(seconds=1)
+        rollback = m.AuthService(factory, MemoryFlowStore(), Google(), clock=lambda: moment[0])
+        start = await rollback.begin_google_login('/')
+        state = parse_qs(urlsplit(start.location).query)['state'][0]
+        rollback._secret = lambda: sixth.session_secret
+        with pytest.raises(m.AuthError, match='^oauth_provider_unavailable$'):
+            await rollback.complete_google_login(start.flow_secret, state, 'test-only-code')
+        with pytest.raises(m.AuthError, match='^oauth_flow_invalid$'):
+            await rollback.complete_google_login(start.flow_secret, state, 'test-only-code')
+        async with factory() as db:
+            assert (await db.get(User, first.user.id)).updated_at == before_updated
+            assert set((await db.execute(select(UserSession.id).where(
+                UserSession.user_id == first.user.id, UserSession.revoked_at.is_(None)))).scalars()) == before_active
         moment[0] += timedelta(seconds=1)
         admitted = await asyncio.gather(*[login() for _ in range(12)])
         async with factory() as db:
@@ -156,6 +182,11 @@ async def test_real_postgres_lifecycle():
         subject = 'race-' + uuid4().hex
         new_signups = await asyncio.gather(*[login() for _ in range(8)])
         assert len({item.user.id for item in new_signups}) == 1
+        assert new_signups[0].user.id != first.user.id  # Same email never merges subjects.
+        async with factory() as db:
+            suspended = await db.get(User, first.user.id)
+            assert suspended.status == UserStatus.SUSPENDED and suspended.role == UserRole.MASTER
+            assert suspended.signed_up_at == original_signup and suspended.suspended_at is not None
         if os.environ.get('AUTH_TEST_METRICS_PATH'):
             import json
             Path(os.environ['AUTH_TEST_METRICS_PATH']).write_text(json.dumps({
