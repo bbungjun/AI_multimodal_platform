@@ -305,6 +305,139 @@ def assert_baseline_absent(
         raise VerificationError("Downgrade left application tables or enum types behind.")
 
 
+def reset_command(
+    project_name: str,
+    env_file: Path,
+    *,
+    database: str,
+    execute: bool,
+) -> list[str]:
+    arguments = [
+        "run",
+        "--rm",
+        "--no-deps",
+        "-e",
+        "APP_ENV=test",
+        "migrate",
+        "python",
+        "-m",
+        "app.schema_control",
+        "reset",
+        "--expected-database",
+        database,
+    ]
+    if execute:
+        arguments.extend(("--execute", "--confirm", f"RESET:{database}"))
+    return compose_command(project_name, env_file, *arguments)
+
+
+def _seed_reset_rows(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+) -> None:
+    sql = """
+INSERT INTO prompt_enhancements
+  (id, original, enhanced, components, target_mode, target_model, llm_model, created_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000001', 'seed', 'seed', '{}', 't2i', 'seed', 'seed', now());
+INSERT INTO jobs
+  (id, mode, model, state, prompt, enhancement_id, blocked, attempts, parameters,
+   state_history, vertex_charged, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000002', 't2i', 'seed', 'pending', 'seed',
+   '00000000-0000-0000-0000-000000000001', false, 0, '{}', '[]', false, now(), now());
+INSERT INTO assets
+  (id, job_id, kind, local_path, mime, size_bytes, created_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000003',
+   '00000000-0000-0000-0000-000000000002', 'image', 'seed.png', 'image/png', 1, now());
+INSERT INTO outbox_events
+  (id, event_type, aggregate_type, aggregate_id, payload, status, attempts, created_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000004', 'seed', 'job',
+   '00000000-0000-0000-0000-000000000002', '{}', 'pending', 0, now(), now());
+"""
+    _run(
+        runner,
+        _psql_command(
+            project_name,
+            env_file,
+            user=values["POSTGRES_USER"],
+            database=values["POSTGRES_DB"],
+            sql=sql,
+        ),
+        action="reset seed",
+    )
+
+
+def _assert_reset_row_counts(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+    *,
+    expected: int,
+) -> None:
+    rows = _query_lines(
+        runner,
+        project_name,
+        env_file,
+        values,
+        "SELECT 'assets:' || count(*) FROM assets UNION ALL "
+        "SELECT 'jobs:' || count(*) FROM jobs UNION ALL "
+        "SELECT 'outbox_events:' || count(*) FROM outbox_events UNION ALL "
+        "SELECT 'prompt_enhancements:' || count(*) FROM prompt_enhancements",
+        "reset row-count check",
+    )
+    expected_rows = {f"{table}:{expected}" for table in ("assets", "jobs", "outbox_events", "prompt_enhancements")}
+    if rows != expected_rows:
+        raise VerificationError("Reset row counts did not match the expected state.")
+
+
+def verify_reset(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+) -> None:
+    database = values["POSTGRES_DB"]
+    _seed_reset_rows(runner, project_name, env_file, values)
+    _assert_reset_row_counts(
+        runner, project_name, env_file, values, expected=1
+    )
+    preview = _run(
+        runner,
+        reset_command(
+            project_name,
+            env_file,
+            database=database,
+            execute=False,
+        ),
+        action="reset preview",
+    )
+    if "PREVIEW:" not in preview.stdout:
+        raise VerificationError("Reset preview did not report preview mode.")
+    _assert_reset_row_counts(
+        runner, project_name, env_file, values, expected=1
+    )
+    _run(
+        runner,
+        reset_command(
+            project_name,
+            env_file,
+            database=database,
+            execute=True,
+        ),
+        action="guarded reset execution",
+    )
+    assert_inventory(runner, project_name, env_file, values)
+    _assert_reset_row_counts(
+        runner, project_name, env_file, values, expected=0
+    )
+
+
 def write_receipt(project_name: str, *, cleanup: bool) -> Path:
     validate_project_name(project_name)
     DEFAULT_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -327,9 +460,6 @@ def verify(
     runner: Runner = subprocess_runner,
     include_reset: bool = False,
 ) -> Path:
-    if include_reset:
-        raise VerificationError("Reset verification is not available until Todo 6.")
-
     values = validate_env_file(env_file)
     project_name = validate_project_name(project_name or generate_project_name())
     refuse_collisions(project_name, runner)
@@ -374,6 +504,8 @@ def verify(
                 assert_baseline_absent(runner, project_name, env_file, values)
             else:
                 assert_inventory(runner, project_name, env_file, values)
+        if include_reset:
+            verify_reset(runner, project_name, env_file, values)
     finally:
         validate_project_name(project_name)
         cleanup = runner(

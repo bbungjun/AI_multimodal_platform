@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from argparse import Namespace
 from dataclasses import is_dataclass
 from pathlib import Path
 
@@ -206,3 +207,243 @@ def test_schema_control_cli_help_is_available_without_database_access(capsys) ->
     assert "check" in output
     assert "reset" in output
     assert "--expected-database" not in output
+
+
+async def test_reset_preview_returns_only_redacted_exact_local_target(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    secret = "do-not-leak"
+    settings = module.Settings(
+        _env_file=None,
+        app_env="local",
+        database_url=f"postgresql+asyncpg://app:{secret}@db:5432/multimodal",
+    )
+    monkeypatch.setattr(module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        module,
+        "_resolve_code_heads",
+        lambda: ("0001_generation_baseline",),
+    )
+
+    async def current_snapshot():
+        return module._ResetSnapshot(
+            "multimodal",
+            "0001_generation_baseline",
+            (("jobs", 2), ("assets", 1)),
+        )
+
+    monkeypatch.setattr(module, "_current_reset_snapshot", current_snapshot)
+
+    plan = await module.plan_local_reset("multimodal")
+
+    assert plan.app_env == "local"
+    assert plan.dialect == "postgresql"
+    assert plan.host == "db"
+    assert plan.database == "multimodal"
+    assert plan.row_counts == (("jobs", 2), ("assets", 1))
+    assert secret not in repr(plan)
+    assert "postgresql+asyncpg" not in repr(plan)
+
+
+@pytest.mark.parametrize(
+    ("app_env", "database_url", "expected_database"),
+    [
+        (
+            "production",
+            "postgresql+asyncpg://app:secret@db:5432/multimodal",
+            "multimodal",
+        ),
+        (
+            "local",
+            "postgresql+asyncpg://app:secret@remote.example:5432/multimodal",
+            "multimodal",
+        ),
+        (
+            "local",
+            "postgresql+asyncpg://app:secret@db:5432/multimodal",
+            "another_database",
+        ),
+    ],
+)
+async def test_reset_preview_refuses_environment_host_and_expected_database(
+    monkeypatch,
+    app_env,
+    database_url,
+    expected_database,
+) -> None:
+    module = _schema_control()
+    settings = module.Settings(
+        _env_file=None,
+        app_env=app_env,
+        database_url=database_url,
+    )
+    snapshot_calls = 0
+
+    async def current_snapshot():
+        nonlocal snapshot_calls
+        snapshot_calls += 1
+        raise AssertionError("forbidden target must fail before connecting")
+
+    monkeypatch.setattr(module, "get_settings", lambda: settings)
+    monkeypatch.setattr(module, "_current_reset_snapshot", current_snapshot)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.plan_local_reset(expected_database)
+
+    assert exc_info.value.code == "reset_target_forbidden"
+    assert snapshot_calls == 0
+    assert "secret" not in str(exc_info.value)
+
+
+async def test_reset_preview_refuses_live_database_name_mismatch(monkeypatch) -> None:
+    module = _schema_control()
+    settings = module.Settings(
+        _env_file=None,
+        app_env="test",
+        database_url="postgresql+asyncpg://app:secret@localhost:5432/multimodal",
+    )
+    monkeypatch.setattr(module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        module,
+        "_resolve_code_heads",
+        lambda: ("0001_generation_baseline",),
+    )
+
+    async def current_snapshot():
+        return module._ResetSnapshot("different", "unversioned", ())
+
+    monkeypatch.setattr(module, "_current_reset_snapshot", current_snapshot)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.plan_local_reset("multimodal")
+
+    assert exc_info.value.code == "reset_target_forbidden"
+
+
+def _reset_plan(module):
+    return module.ResetPlan(
+        app_env="test",
+        dialect="postgresql",
+        host="db",
+        port=5432,
+        database="multimodal",
+        current_revision="0001_generation_baseline",
+        target_revision="0001_generation_baseline",
+        row_counts=(("jobs", 2), ("assets", 1)),
+    )
+
+
+async def test_reset_execution_requires_exact_confirmation_before_mutation(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    plan = _reset_plan(module)
+    mutation_calls = 0
+
+    async def reset_public_schema():
+        nonlocal mutation_calls
+        mutation_calls += 1
+
+    monkeypatch.setattr(module, "_reset_public_schema", reset_public_schema)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.execute_local_reset(plan, confirmation="RESET:another_database")
+
+    assert exc_info.value.code == "reset_confirmation_mismatch"
+    assert mutation_calls == 0
+
+
+async def test_reset_execution_revalidates_target_and_returns_current_head(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    plan = _reset_plan(module)
+    calls: list[str] = []
+
+    async def fresh_plan(_expected_database):
+        calls.append("revalidate")
+        return plan
+
+    async def reset_public_schema():
+        calls.append("reset")
+
+    def upgrade_to_head():
+        calls.append("upgrade")
+
+    async def require_current_schema():
+        calls.append("check")
+        return module.SchemaReadiness(
+            "0001_generation_baseline", "0001_generation_baseline"
+        )
+
+    monkeypatch.setattr(module, "plan_local_reset", fresh_plan)
+    monkeypatch.setattr(module, "_reset_public_schema", reset_public_schema)
+    monkeypatch.setattr(module, "_upgrade_to_head", upgrade_to_head)
+    monkeypatch.setattr(module, "require_current_schema", require_current_schema)
+
+    result = await module.execute_local_reset(
+        plan,
+        confirmation="RESET:multimodal",
+    )
+
+    assert calls == ["revalidate", "reset", "upgrade", "check"]
+    assert result.current_revision == "0001_generation_baseline"
+    assert result.deleted_rows == 3
+
+
+async def test_reset_upgrade_failure_reports_partial_reset_and_recovery(
+    monkeypatch,
+) -> None:
+    module = _schema_control()
+    plan = _reset_plan(module)
+
+    async def fresh_plan(_expected_database):
+        return plan
+
+    async def reset_public_schema():
+        return None
+
+    def failed_upgrade():
+        raise RuntimeError("database URL must not leak")
+
+    monkeypatch.setattr(module, "plan_local_reset", fresh_plan)
+    monkeypatch.setattr(module, "_reset_public_schema", reset_public_schema)
+    monkeypatch.setattr(module, "_upgrade_to_head", failed_upgrade)
+
+    with pytest.raises(module.SchemaControlError) as exc_info:
+        await module.execute_local_reset(plan, confirmation="RESET:multimodal")
+
+    assert exc_info.value.code == "reset_partial_failure"
+    assert exc_info.value.recovery_command == "python -m alembic upgrade head"
+    assert "database URL" not in str(exc_info.value)
+
+
+async def test_reset_cli_without_execute_is_preview_only(monkeypatch, capsys) -> None:
+    module = _schema_control()
+    plan = _reset_plan(module)
+    execute_calls = 0
+
+    async def preview(_expected_database):
+        return plan
+
+    async def execute(*_args, **_kwargs):
+        nonlocal execute_calls
+        execute_calls += 1
+        raise AssertionError("preview must not execute reset")
+
+    monkeypatch.setattr(module, "plan_local_reset", preview)
+    monkeypatch.setattr(module, "execute_local_reset", execute)
+
+    result = await module._run_command(
+        Namespace(
+            command="reset",
+            expected_database="multimodal",
+            execute=False,
+            confirm=None,
+        )
+    )
+
+    assert result == 0
+    assert execute_calls == 0
+    assert "PREVIEW" in capsys.readouterr().out

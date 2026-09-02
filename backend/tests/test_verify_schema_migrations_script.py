@@ -117,3 +117,29 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
     assert secret not in content
     assert "postgresql" not in content
     assert str(tmp_path) not in content
+
+
+def test_reset_commands_are_preview_first_and_exact_target_only(tmp_path):
+    module = _load_module()
+    project = "g1-schema-12345678"
+    env_file = tmp_path / ".env.example"
+
+    preview = module.reset_command(
+        project,
+        env_file,
+        database="multimodal",
+        execute=False,
+    )
+    execute = module.reset_command(
+        project,
+        env_file,
+        database="multimodal",
+        execute=True,
+    )
+
+    assert preview[-2:] == ["--expected-database", "multimodal"]
+    assert "--execute" not in preview
+    assert "--confirm" not in preview
+    assert execute[-3:] == ["--execute", "--confirm", "RESET:multimodal"]
+    assert "APP_ENV=test" in preview
+    assert project in preview
