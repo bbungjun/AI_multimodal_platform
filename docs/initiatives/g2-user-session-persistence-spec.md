@@ -2,13 +2,17 @@
 
 ## Document Status
 
-- Status: `Accepted / Planning`
+- Status: `Accepted / Execution Planned`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
 - Dependency: G1 merged through PR #95 at `91cf903`
 - Provider mode for all verification: `AI_PROVIDER=mock`
-- Tracker, branch, and executable Goal plan: create from the accepted document
-  after the documentation checkpoint reaches `main`
+- Tracker: [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96)
+- Branch: `codex/issue-96-user-session-persistence`
+- Goal plan: `.omo/plans/issue-96-g2-user-session-persistence-goal.md`
+- Goal plan SHA-256:
+  `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311`
+- Base revision: accepted specification on `main` at `eefe939`
 
 This specification narrows G2 to the persistence contract required by later
 identity work. Google authorization, callback handling, cookie issuance,

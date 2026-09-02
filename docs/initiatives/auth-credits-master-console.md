@@ -219,7 +219,7 @@ document or inherit the full design interview.
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
-| G2 | User and Session persistence | Planned / Specification Accepted | [accepted specification](g2-user-session-persistence-spec.md) | Create Issue/branch and freeze the executable Goal plan SHA |
+| G2 | User and Session persistence | In Progress / Planning Complete | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [accepted specification](g2-user-session-persistence-spec.md), plan SHA `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311` | Execute Todo 1-8 on `codex/issue-96-user-session-persistence` with `gpt-5.6-sol` medium |
 | G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
@@ -284,6 +284,7 @@ At the end of a Goal:
 | 2026-09-02 | Approved a G1-only changed-path limit of 22 while retaining one module and one migration. | Fresh preflight found that the isolated Postgres verifier and removal of the obsolete runtime-DDL test were missing from the initial 20-path estimate. |
 | 2026-09-02 | Promoted G1 to `Mock Verified`. | Two fresh isolated migration/reset cycles, three-process stale-revision refusal and recovery, and the mock product golden path passed at `6aa8a1f`; no cloud or provider call was made. |
 | 2026-09-02 | Accepted the G2 User/Session persistence specification and six approval gates. | Keeping OAuth in G3 lets G2 prove identity schema, credential exclusion, migration, reset, and constraint behavior independently. |
+| 2026-09-02 | Created Issue #96 and froze the G2 execution plan from `main` revision `eefe939`. | The 460-line plan bounds execution to one migration, 10 predicted non-document paths, a 12-path hard stop, two isolated Postgres cycles, and four final reviewers. |
 
 ## Initiative Completion Gate
 
