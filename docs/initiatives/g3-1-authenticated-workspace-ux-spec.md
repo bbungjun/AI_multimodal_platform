@@ -5,6 +5,11 @@
 - 상태: **Accepted — 2026-09-03 사용자 승인**. 구현·브라우저 검증은 시작하지 않았다.
 - Tracker: [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101).
 - Branch: `codex/issue-101-authenticated-workspace-ux`, synced `main` `edd7208` 기반.
+- Accepted spec checkpoint: `928743c`.
+- Frozen Goal: `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.md`.
+- Goal SHA-256: `901da0956fe686fd7fffb1255d91ad4cc811236cb5292c093c6f1c31bf1beb75`.
+- Goal 파일은 local/untracked다. 다른 PC에서는 동일 파일을 별도로 전달하고 위 hash를
+  검증한다. Issue의 hash만으로 파일이 복원되지는 않는다.
 - 설계 기준: G3가 병합된 `main` revision `edd7208`, [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100).
 - 전체 합의: [인증·크레딧 initiative](auth-credits-master-console.md).
 - 선행 interface: [G3 spec의 HTTP / Cookie Contract](g3-auth-session-lifecycle-spec.md#http-contract).

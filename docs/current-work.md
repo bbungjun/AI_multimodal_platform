@@ -97,8 +97,17 @@ paste credential contents.
   draft path count is 17, local Markdown links have zero missing targets,
   new-spec safety scan and `git diff --check` pass. These are baseline/document
   checks, not implemented G3.1 browser evidence.
-- Next: freeze the bounded execution Goal and provide its SHA-256. Execution
-  delivery ends at Draft PR plus required CI, without ready/merge/auto-merge.
+- Accepted specification checkpoint: `928743c`. Execution plan is frozen at
+  `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.md` (local/untracked).
+  SHA-256: `901da0956fe686fd7fffb1255d91ad4cc811236cb5292c093c6f1c31bf1beb75`.
+  Transfer that file separately when changing machines and verify its exact hash.
+- Plan contains Todo 1-8, per-step tests/commits, F1-F4, 17 expected / 20 maximum
+  non-document paths, zero migrations, isolated mock cleanup, four browser
+  viewports and current-head required-CI delivery gates. No new UX tests ran yet.
+- Fresh planning checks: existing frontend lint/build PASS again; plan headings,
+  17-path inventory, tracked-doc links, hash references and diff hygiene checked.
+- Next: explicitly start the frozen Goal. Execution delivery ends at Draft PR
+  plus required CI, without ready/merge/auto-merge. Planning is not implementation.
 
 ### Completed G1–G3 context
 

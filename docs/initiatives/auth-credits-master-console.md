@@ -227,7 +227,7 @@ document or inherit the full design interview.
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
 | G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
-| G3.1 | Authenticated workspace entry and browser Session UX | Planned — Spec Accepted | [Accepted spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), branch `codex/issue-101-authenticated-workspace-ux` from `edd7208` | Prepare frozen Goal; execution not started; first check is baseline lint/build and collection-safe failing contracts |
+| G3.1 | Authenticated workspace entry and browser Session UX | Planned — Goal Frozen | [Accepted spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), branch `codex/issue-101-authenticated-workspace-ux` from `edd7208`; accepted checkpoint `928743c`; Goal hash `901da0956fe6…` (full hash in spec) | Await explicit execution; first check is plan hash, baseline lint/build and collection-safe failing contracts; G3 `/me` and logout are input interfaces |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -332,6 +332,9 @@ G3 merged at `edd7208`. The [G3.1 specification](g3-1-authenticated-workspace-ux
 is accepted, including the existing-CSS constraint, auth UI states, mobile account
 access, activity/cache/race policies, `ui=1` start error redirect and unsaved-input
 reset. Issue #101 and its branch exist with a 17-path/zero-migration prediction.
+The local/untracked `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.md`
+is frozen; its full SHA-256 is recorded in the spec and Issue. Transfer the exact
+file separately for a different machine; the repository does not contain it.
 The next step is the frozen Goal's explicit execution request, not further
 feature design or automatic implementation. Delivery ends at a Draft PR with
 passing required CI; ready/merge/auto-merge needs separate authorization.
