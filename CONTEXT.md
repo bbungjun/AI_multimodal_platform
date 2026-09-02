@@ -18,6 +18,11 @@ _Avoid_: Real User, Google account
 하나의 OAuth User가 로그인 상태를 이어가기 위해 서버가 인정하는 제한된 수명의 연결.
 _Avoid_: OAuth token, browser token, login record
 
+**Active Session**:
+명시적으로 폐기되지 않았고, 평가 시점에 12시간 비활성 만료와 7일 절대 만료 중
+어느 것도 지나지 않은 Session. `revoked_at`이 비어 있다는 사실만으로는 Active가 아니다.
+_Avoid_: Non-revoked Session, valid token
+
 **Master**:
 모든 사용자의 운영 상태를 조회하고 플랜, 보너스 크레딧, 계정 상태를 관리할 수 있는
 승격된 User. 별도의 관리자 유형이나 로그인 방식이 아니다.

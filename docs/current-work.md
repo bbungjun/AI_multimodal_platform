@@ -105,18 +105,17 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   [#95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) merged at
   `91cf903`. G2 User/Session persistence is now the next planned slice.
 - The initiative-wide source of truth remains
-  `docs/initiatives/auth-credits-master-console.md`. Identity, OAuth, ownership,
-  credit, usage, and Master-console capabilities remain `Planned`; only G1
-  schema control is implemented. User and Session persistence remains G2 and
-  must consume only G1's documented interface.
+  `docs/initiatives/auth-credits-master-console.md`. G1 schema control and G2
+  User/Session persistence are `Mock Verified`; OAuth, ownership, credit, usage,
+  and Master-console capabilities remain `Planned` or `Proposed`.
 - G2 implementation is `Mock Verified` in
-  `docs/initiatives/g2-user-session-persistence-spec.md`. It proposes one
+  `docs/initiatives/g2-user-session-persistence-spec.md`. It adds one
   `0002_user_session_persistence` revision, dedicated User/Session mappings,
   credential-free session digests, real Postgres constraint verification, and
   an interface-preserving generalization of reset preview inventory. The six
   approval gates are accepted, [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96)
-  is open, and branch `codex/issue-96-user-session-persistence` starts from
-  `eefe939`. The frozen 460-line execution plan is
+  is closed, and its branch started from `eefe939`. The frozen 460-line
+  execution plan is
   `.omo/plans/issue-96-g2-user-session-persistence-goal.md`, SHA-256
   `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311`.
   It predicted 10 non-document paths and implementation used nine, with one
@@ -129,9 +128,18 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   remain. Full backend pytest passed 396 with only the pre-existing Windows
   Bash path-conversion failure; frontend lint/build, Compose config, and
   `verify_local.py --skip-backend` passed. OAuth, cookies, ownership, credits,
-  cloud, and providers were not changed or run. Draft PR
-  [#97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) is open;
-  G3 remains planned until G2 is reviewed and merged.
+  cloud, and providers were not changed or run. PR
+  [#97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) merged at
+  `58f405b`. Repository auto-merge is enabled and `main` now strictly requires
+  `verify`, `Scan and SBOM (backend)`, and `Scan and SBOM (frontend)`.
+- G3 backend Google OAuth and Session lifecycle is accepted and planning is
+  `In Progress` in [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98)
+  on `codex/issue-98-auth-session-lifecycle`. The deep module
+  consumes G2 mappings without a migration, evicts the oldest Active Session on
+  a sixth login, and touches activity at most every five minutes. Browser login
+  UX is split into G3.1 and Master promotion/suspension operations into G10.
+  The Goal plan is not frozen yet; no implementation, OAuth credential, or
+  Google call exists.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable
