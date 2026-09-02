@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "AI Multimodal Content Platform"
+    app_env: str = "local"
     database_url: str = "postgresql+asyncpg://app:changeme@localhost:5432/multimodal"
     data_dir: Path = Path("/data/assets")
     job_runner_concurrency: int = 10

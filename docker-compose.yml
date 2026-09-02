@@ -23,14 +23,27 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m alembic upgrade head
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
+
   backend:
     build: ./backend
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:
+      APP_ENV: ${APP_ENV:-local}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
       AI_PROVIDER: ${AI_PROVIDER:-mock}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
@@ -61,9 +74,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
-    command: celery -A app.celery_app worker --hostname=worker@%h --loglevel=info --queues=${CELERY_DEFAULT_QUEUE:-generation} --concurrency=${CELERY_WORKER_CONCURRENCY:-2}
+    command: /bin/sh -c 'python -m app.schema_control check && exec celery -A app.celery_app worker --hostname=worker@%h --loglevel=info --queues=${CELERY_DEFAULT_QUEUE:-generation} --concurrency=${CELERY_WORKER_CONCURRENCY:-2}'
     stop_signal: SIGTERM
     stop_grace_period: ${CELERY_WORKER_SHUTDOWN_GRACE_SEC:-60}s
     healthcheck:
@@ -73,6 +88,7 @@ services:
       retries: 6
       start_period: 20s
     environment:
+      APP_ENV: ${APP_ENV:-local}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
       AI_PROVIDER: ${AI_PROVIDER:-mock}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
@@ -106,10 +122,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     command: python -m app.services.jobs.outbox_dispatcher
     environment:
+      APP_ENV: ${APP_ENV:-local}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env or pass --env-file .env.example}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or pass --env-file .env.example}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or pass --env-file .env.example}
       AI_PROVIDER: ${AI_PROVIDER:-mock}
       JOB_DISPATCH_MODE: ${JOB_DISPATCH_MODE:-celery}
