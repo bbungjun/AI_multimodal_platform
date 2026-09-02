@@ -102,6 +102,9 @@ evicted, logged-out, inactive, absolute-expired, suspended Session의 같은 공
   3 skipped. 위 격리 verifier에서는 그 3개도 실제 Postgres/Redis로 실행한다.
 - 전체 Windows backend: `python -m pytest -q` — 456 passed, guarded 3 skipped,
   기존 Bash 경로 문제 1 failed, Starlette TestClient deprecation warning 1개.
+- Linux CI [run 33646980917](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33646980917):
+  docs checkpoint `670c7b1`에서 457 passed, guarded 3 skipped, warning 1개.
+  Windows의 기존 실패를 Linux에서 회귀 없이 통과했음을 확인했다.
 - frontend `npm run lint`, `npm run build`, Compose config,
   `verify_local.py --skip-backend`, diff hygiene: PASS. frontend 변경은 없다.
 - generation golden path: `auth-verify-golden0298`, `ec42d61`에서 PASS.
@@ -147,6 +150,9 @@ cloud 배포와 실제 Google·AI provider 호출은 이 작업에 포함되지 
 
 ## Delivery
 
-작은 순차 commit으로 Todo 1–8을 수행했다. F1–F4 검토와 Draft PR의 strict required
-checks (`verify`, backend/frontend Scan and SBOM)를 확인한 뒤 ready 및 squash
-auto-merge로 전달한다. CI/merge 결과는 완료 시 PR 링크와 함께 기록한다.
+작은 순차 commit으로 Todo 1–8을 수행하고
+[Draft PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100)을 생성했다.
+F1–F4 승인 후 ready 및 squash auto-merge로 전달하며 strict required checks
+(`verify`, backend/frontend Scan and SBOM)를 우회하지 않는다. 최신 delivery commit의
+CI 및 최종 merge 상태는 PR의 check/merge 기록을 기준으로 확인한다. 긴급 운영 차단
+이슈 #99는 의도적으로 닫지 않는다.

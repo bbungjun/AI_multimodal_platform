@@ -14,6 +14,8 @@
 - Accepted planning checkpoint: `fa19ae0`
 - Verified code/test checkpoint: `ec42d61`; 17 non-document paths, zero migrations.
 - Evidence: [Issue #98 portfolio record](../portfolio/issue-98-auth-session-lifecycle.md).
+- Delivery: [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100),
+  strict required checks and squash auto-merge; current delivery status is on PR.
 - Fresh Postgres/Redis proofs: `auth-verify-d44013ba240b` and
   `auth-verify-d462709efd3b`; HTTP-to-storage, rollback, concurrency,
   expiry, replay and Redis outage/recovery passed; cleanup passed.

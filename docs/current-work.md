@@ -18,8 +18,9 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
-- Latest merged `main`: `58f405b` (G2 User/Session persistence, PR #97).
-  G3 delivery is tracked below. No paid Vertex request
+- G3 starting `main` baseline: `58f405b` (G2 User/Session persistence, PR #97).
+  G3 delivery and merge status: [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100).
+  No paid Vertex request
   has been run after the earlier Gemini structured-JSON fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
@@ -77,7 +78,7 @@ paste credential contents.
 ## Active Work
 
 As of 2026-09-03, G1/G2 are merged and G3's implementation and local verification
-are complete; strict-CI delivery remains in progress:
+are complete; strict-CI delivery is tracked by PR #100:
 
 - On 2026-09-02, the initiative and accepted G1 specification merged through
   PR #93 at `fd96acc`. Issue #94 now tracks G1 schema control, and branch
@@ -150,8 +151,11 @@ are complete; strict-CI delivery remains in progress:
   pre-existing Bash path-conversion failure; no test was weakened. Frontend
   lint/build, Compose config and `verify_local.py --skip-backend` passed.
   See [portfolio evidence](portfolio/issue-98-auth-session-lifecycle.md).
-  Next: strict CI, F1-F4 approval, ready PR and squash auto-merge, then G3.1
-  browser design. G4 consumes `require_user`; generation remains unauthenticated.
+  Linux CI [run 33646980917](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33646980917)
+  passed 457 tests with the same three guarded skips at docs checkpoint `670c7b1`.
+  Delivery: [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100),
+  required-check squash auto-merge after F1-F4; latest check/merge status is on PR.
+  Next module: G3.1 browser design. G4 consumes `require_user`; generation remains unauthenticated.
   Real Google, browser login, ownership, Master operations, cloud and AI calls
   were not performed. Emergency revocation is a pre-live blocker in
   [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99).

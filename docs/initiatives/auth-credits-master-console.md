@@ -226,7 +226,7 @@ document or inherit the full design interview.
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
-| G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | Delivery CI pending; live readiness blocked by #99 and browser/proxy gates |
+| G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
 | G3.1 | Authenticated workspace entry and browser Session UX | Planned | G3 interface available | Consume `/me`, logout, host-only cookie and redirect contracts; no OAuth/SQL internals |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
@@ -315,8 +315,9 @@ mode:
 
 ## Next Goal
 
-G3's backend interface is mock verified at `ec42d61`; delivery still requires
-strict CI and squash auto-merge. After merge, design G3.1 around `/me`, logout,
+G3's backend interface is mock verified at `ec42d61`; delivery and strict CI /
+squash auto-merge status are tracked in [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100).
+After merge, design G3.1 around `/me`, logout,
 host-only HttpOnly/Lax/Secure cookies and the start/callback redirect contract.
 G3.1 must not duplicate Google verification or Session policy. G4 separately
 consumes `require_user` for ownership enforcement. Existing generation endpoints
