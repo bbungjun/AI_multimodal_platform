@@ -76,6 +76,76 @@ Compose grace period through `CELERY_WORKER_SHUTDOWN_GRACE_SEC`.
 Before Celery starts, its fixed command runs `python -m app.schema_control
 check`; an incompatible revision exits before work is consumed.
 
+## Browser Login UX (G3.1)
+
+The workspace now checks `/api/auth/me` before mounting generation/history/ops
+pages. Without a real session, credential-free development shows `/login`.
+`AI_PROVIDER=mock` does not bypass login. For no-credential authenticated UI
+verification use the [test-only HTTP fixture suites](../testing.md#browser-authentication-verification-g31),
+not a fake product endpoint, manually injected cookie or invented user profile.
+
+Keep `VITE_API_BASE` empty (recommended) or an exact same-origin root. Custom
+prefix/cross-origin values fail closed with a configuration message. Login uses
+full-page `/api/auth/google/start?ui=1&return_to=...`; default API callers retain
+503 JSON while opt-in failures return to the configured frontend `/login`.
+Actual OAuth/proxy/cookie acceptance remains a separate authorized live gate.
+
+Unsaved form input is not persisted and resets on full login navigation, logout,
+account change or a locked authentication gate. Saved server jobs are not
+deleted/cancelled. A timeout does not prove logout succeeded: use the explicit
+retry/logout or state-check action. Ordinary health/job polling is not a session
+heartbeat. Five-minute activity validation runs only on visible user activity or
+focus; successful logout signals other tabs without account/credential payloads.
+
+This is UI gating only. Until G4, existing generation/file APIs still lack
+per-user ownership enforcement. Do not publicly deploy based on the login UI;
+emergency revocation #99 and real browser/proxy readiness remain outstanding.
+
+### Isolated G3.1 generation regression
+
+Use a fresh `g31-verify-<8-32 lowercase alphanumeric>` Compose project, never the
+default developer project. Create a local untracked override with the following
+backend port replacement and mock-only service settings:
+
+```yaml
+services:
+  backend:
+    ports: !override
+      - "127.0.0.1:18102:8000"
+    environment:
+      AI_PROVIDER: mock
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+      AUTH_GOOGLE_CLIENT_ID: ""
+      AUTH_GOOGLE_CLIENT_SECRET: ""
+      AUTH_GOOGLE_REDIRECT_URI: ""
+  worker:
+    environment:
+      AI_PROVIDER: mock
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+  dispatcher:
+    environment:
+      AI_PROVIDER: mock
+```
+
+Before startup, require an unused port and zero matching Compose projects,
+containers and volumes. Pin every Compose command to `-p <fresh-project>`,
+`--env-file .env.example`, `-f docker-compose.yml` and the override. Validate
+`config --quiet`, exactly one loopback18102 mapping and project-prefixed,
+non-external volumes; refuse unsupported `!override`. Start only db/redis/backend/
+dispatcher/worker plus declared dependencies. Then run from repo root:
+
+```powershell
+python scripts/smoke_mock_golden_path.py --env-file .env.example --base-url http://127.0.0.1:18102 --timeout-sec 120
+```
+
+Do not pass `--compose` (it can select a default project) or `--keep-job`.
+In `finally`, verify exact project labels/names before that same pinned Compose
+invocation runs `down --volumes`; assert zero matching resources afterward.
+Do not clean resources with uncertain ownership. The local execution helper
+`.omo/evidence/issue-101/run-isolated-golden.ps1` implements these guards but is
+untracked; recreate it from this protocol on another machine. Its validated
+result is summarized in the [portfolio record](../portfolio/issue-101-authenticated-workspace-ux.md).
+
 ## Backend Authentication (G3)
 
 Leave `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` and

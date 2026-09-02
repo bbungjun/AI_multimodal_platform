@@ -77,6 +77,42 @@ paste credential contents.
 
 ## Active Work
 
+### G3.1 execution handoff — 2026-09-03
+
+- Todo 1-8 and F1-F4 APPROVE. [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
+  delivered on `codex/issue-101-authenticated-workspace-ux`; verified implementation
+  head `3b82c12`. The original Goal stopped before merge; the follow-up approval
+  below governs delivery. No real OAuth/provider/cloud execution occurred.
+- Latest local results: module 48 PASS, Chromium 34 PASS (four widths and keyboard,
+  timeout, hidden/idle activity, two-tab and stale-response/mutation cases), npm
+  ci/lint/build PASS. Linux full backend 467 PASS / 3 pre-existing conditional SKIP.
+- Windows backend/verify_local: 466 PASS / 3 SKIP / 1 existing Bash-path FAIL;
+  reproduced the same failure from `edd7208`. No test suppression or cloud edit.
+- Isolated golden `g31-verify-93f50e9bfa31` PASS; own containers/DB/assets volumes
+  removed and zero remaining verified. Developer resources untouched.
+- Browser review found/fixed 920px panel overflow and outside-click focus loss.
+  Masked local artifacts and bounded receipt: `.omo/evidence/issue-101/`.
+- Scope: 17 non-document paths, zero migrations. Required `verify` and both image
+  Scan/SBOM checks PASS at `3b82c12`: [CI](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156208),
+  [image scans](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156200).
+  CI independently confirmed backend 467/3 conditional skip, module48 and browser34.
+- Follow-up approval on 2026-09-03 authorizes Ready and squash auto-merge after
+  current-head required CI passes, superseding the original Draft-only delivery.
+  Preflight at `93db614`: `verify` and both Scan/SBOM checks SUCCESS; no tracked
+  dirty or staged changes. This authorization update is documentation-only and
+  must pass fresh CI too. PR #102 is the source for the resulting merge status/SHA.
+  The frozen execution plan and its original hash remain unchanged.
+- Next: finish the authorized CI-gated merge, then design G4 backend ownership.
+  Frontend gating is not server access control; #99/live OAuth/proxy checks remain.
+- Detailed record: [Issue #101 portfolio](portfolio/issue-101-authenticated-workspace-ux.md).
+
+- Base `edd7208`; accepted spec checkpoint `928743c`. Frozen execution plan:
+  `.omo/plans/issue-101-g3-1-authenticated-workspace-ux-goal.md` (local/untracked).
+  SHA-256: `901da0956fe686fd7fffb1255d91ad4cc811236cb5292c093c6f1c31bf1beb75`.
+  Transfer that file separately when changing machines and verify its exact hash.
+
+### Completed G1–G3 context
+
 As of 2026-09-03, G1/G2 are merged and G3's implementation and local verification
 are complete; strict-CI delivery is tracked by PR #100:
 

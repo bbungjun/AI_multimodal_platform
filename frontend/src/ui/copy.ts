@@ -1,5 +1,16 @@
 import type { GenerationMode, JobState } from "../api/client";
 
+export const AUTH_COPY = {
+  title: "작업공간에 로그인", description: "Google 계정으로 CreativeOps 작업공간을 시작하세요.",
+  continueGoogle: "Google로 계속하기", checking: "로그인 상태 확인 중", signingOut: "로그아웃 확인 중",
+  unavailable: "로그인 상태를 확인할 수 없습니다.", unconfirmed: "로그아웃 완료를 확인할 수 없습니다.",
+  expired: "로그인이 만료되었거나 종료되었습니다. 다시 로그인해 주세요.",
+  signedOut: "로그아웃되었습니다.", loginError: "로그인을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  retry: "다시 확인", retryLogout: "로그아웃 다시 시도", logout: "로그아웃", account: "계정 정보",
+  configurationError: "API 주소 설정을 확인해 주세요. 같은 origin의 root 주소 또는 빈 VITE_API_BASE만 지원합니다.",
+  noDraft: "입력 중인 내용은 자동 저장되지 않습니다. 로그인 이동·만료·계정 전환 시 초기화됩니다.",
+};
+
 export const APP_COPY = {
   brandName: "Vertex Studio",
   brandMeta: "크리에이티브 작업공간",

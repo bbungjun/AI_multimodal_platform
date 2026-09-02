@@ -45,3 +45,15 @@ jobs:
 
       - name: Verify
         run: python scripts/verify_local.py
+
+      - name: Session module contracts
+        working-directory: frontend
+        run: npm run test:auth
+
+      - name: Install Chromium for mock UI verification
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Mock authenticated workspace browser contracts
+        working-directory: frontend
+        run: npm run test:auth:browser

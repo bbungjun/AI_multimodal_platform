@@ -3747,3 +3747,32 @@ a.brand-lockup:focus-visible {
     justify-content: center;
   }
 }
+
+/* Auth additions follow the existing CreativeOps palette and shared UI. */
+.creative-auth-frame { display: grid; min-height: 55vh; place-items: center; padding: 24px 0; }
+.creative-auth-panel { width: min(100%, 480px); border-color: rgba(167,139,250,.2); background: #100d19; }
+.creative-auth-panel p { line-height: 1.7; overflow-wrap: anywhere; }
+.creative-auth-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0; }
+.creative-auth-actions .button--primary { background: #a78bfa; color: #100d19; }
+.creative-auth-actions .button:focus-visible { outline: 2px solid #d8b4fe; outline-offset: 4px; }
+.creative-auth-note, .creative-auth-notice { color: #a49ab8; font-size: .74rem; line-height: 1.6; }
+.creative-auth-notice { margin: 0 0 8px; }
+.creative-auth-pending { color: #c4b5fd; }
+.creative-account { position: relative; min-width: 0; }
+.creative-account-trigger { width: 100%; border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 6px; color: #fff; text-align: left; cursor: pointer; }
+.creative-account-trigger:hover { background: rgba(139,92,246,.16); }
+.creative-account-trigger:focus-visible, .creative-account-details .button:focus-visible { outline: 2px solid #d8b4fe; outline-offset: 2px; }
+.creative-account-name { min-width: 0; }
+.creative-account-name strong { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.creative-account-details { position: absolute; z-index: 20; bottom: calc(100% + 8px); left: 0; width: 260px; max-width: calc(100vw - 28px); border: 1px solid rgba(167,139,250,.3); border-radius: 10px; background: #171222; padding: 14px; box-shadow: 0 12px 36px #0008; overflow-wrap: anywhere; }
+.creative-account-details p { margin: 8px 0 12px; color: #b7abc9; font-size: .8rem; }
+.creative-account--mobile { display: none; }
+@media (max-width: 920px) {
+  .creative-account--mobile { display: block; }
+  .creative-account--mobile .creative-account-name { display: none; }
+  .creative-account--mobile .creative-account-details { top: calc(100% + 8px); bottom: auto; left: auto; right: 0; width: min(230px, 60vw); }
+}
+@media (max-width: 640px) {
+  .creative-account--mobile .creative-account-details { left: 0; right: auto; }
+  .creative-auth-actions .button { width: 100%; justify-content: center; }
+}

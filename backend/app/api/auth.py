@@ -30,6 +30,13 @@ async def google_start(request: Request, service=Depends(get_auth_service)):
         cookie(response, FLOW_COOKIE, result.flow_secret)
         return response
     except AuthError as error:
+        if request.query_params.getlist('ui') == ['1']:
+            origin = get_settings().auth_frontend_origin.rstrip('/')
+            code = error.code if error.code in AuthError.CODES else 'authentication_required'
+            response = RedirectResponse(origin + '/login?auth_error=' + code, status_code=303,
+                                        headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+            cookie(response, FLOW_COOKIE, delete=True)
+            return response
         return JSONResponse({'detail': error.code}, status_code=503, headers={'Cache-Control': 'no-store'})
 
 
