@@ -97,13 +97,14 @@ python scripts/verify_schema_migrations.py --env-file .env.example
 python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
 ```
 
-The verifier owns and removes only its generated `g1-schema-*` project. Never
+The verifier owns and removes only its generated `schema-verify-*` project. Never
 substitute the default project or an existing volume.
 
 The reset form also verifies preview immutability, exact confirmation, empty
-post-reset tables, restored head, and fail-closed stale-revision behavior for
-backend, worker, and dispatcher. Run it twice with fresh generated project
-names when collecting release evidence.
+post-reset tables, restored head, fail-closed stale-revision behavior for
+backend/worker/dispatcher, User/Session constraints, and downgrade-to-G1
+compatibility. Run it twice with fresh generated project names when collecting
+release evidence.
 
 ## Guarded Local Database Reset
 

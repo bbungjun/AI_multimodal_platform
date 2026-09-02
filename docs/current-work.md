@@ -18,9 +18,9 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
-- Latest merged `main`: `91cf903` (PR #95, G1 Alembic schema control and safe
-  local reset). No paid Vertex request has been run after the earlier Gemini
-  structured-JSON fix.
+- Latest merged `main`: `eefe939` (accepted G2 User/Session persistence
+  specification after PR #95's G1 schema-control merge). No paid Vertex request
+  has been run after the earlier Gemini structured-JSON fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
   `frontend`, and `worker`.
@@ -109,14 +109,29 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   credit, usage, and Master-console capabilities remain `Planned`; only G1
   schema control is implemented. User and Session persistence remains G2 and
   must consume only G1's documented interface.
-- G2 planning is accepted in
+- G2 implementation is `Mock Verified` in
   `docs/initiatives/g2-user-session-persistence-spec.md`. It proposes one
   `0002_user_session_persistence` revision, dedicated User/Session mappings,
   credential-free session digests, real Postgres constraint verification, and
   an interface-preserving generalization of reset preview inventory. The six
-  approval gates are accepted. Next, commit this documentation checkpoint,
-  create the G2 Issue/branch, and freeze an Issue-numbered Goal plan SHA. No G2
-  implementation exists yet.
+  approval gates are accepted, [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96)
+  is open, and branch `codex/issue-96-user-session-persistence` starts from
+  `eefe939`. The frozen 460-line execution plan is
+  `.omo/plans/issue-96-g2-user-session-persistence-goal.md`, SHA-256
+  `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311`.
+  It predicted 10 non-document paths and implementation used nine, with one
+  new migration. Focused schema/model/reset/verifier tests passed 52. Fresh
+  projects `schema-verify-75c5d479eb4a` and
+  `schema-verify-a0f92adacc0f` each passed G2 inventory, 11 invalid-row checks,
+  G1 downgrade preservation, full-chain round trip, three-process drift
+  refusal/recovery, guarded reset, and cleanup. The mock product golden path
+  passed under `schema-verify-golden02`; zero matching projects or volumes
+  remain. Full backend pytest passed 396 with only the pre-existing Windows
+  Bash path-conversion failure; frontend lint/build, Compose config, and
+  `verify_local.py --skip-backend` passed. OAuth, cookies, ownership, credits,
+  cloud, and providers were not changed or run. Draft PR
+  [#97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) is open;
+  G3 remains planned until G2 is reviewed and merged.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

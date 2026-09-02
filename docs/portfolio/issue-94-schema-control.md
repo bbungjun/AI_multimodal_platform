@@ -136,8 +136,9 @@ At the mock-verified evidence level:
 - two independent real Postgres 16 volumes completed the full migration and
   guarded reset contract;
 - the existing mock generation workflow remained operational end to end;
-- G2 can add User and Session persistence as one new revision without changing
-  schema-control internals.
+- G2 added User and Session persistence as one new revision without changing
+  schema-control's external interface. Its internal reset inventory was
+  generalized so preview remains truthful as tables are added.
 
 ## Rollback and Recovery
 

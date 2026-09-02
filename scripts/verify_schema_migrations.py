@@ -14,14 +14,20 @@ from typing import Callable, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
-DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "issue-94"
-PROJECT_PATTERN = re.compile(r"^g1-schema-[a-z0-9]{8,32}$")
-EXPECTED_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
+DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
+PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
+G1_REVISION = "0001_generation_baseline"
+EXPECTED_REVISION = "0002_user_session_persistence"
+G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
+EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions"}
 EXPECTED_ENUMS = {
     "asset_kind:image,video",
     "generation_mode:t2i,t2v,i2v",
     "job_state:pending,enhancing,queued,generating,polling,downloading,completed,failed,cancelled",
     "outbox_event_status:pending,published,failed",
+    "user_origin:oauth,synthetic",
+    "user_role:user,master",
+    "user_status:active,suspended",
 }
 EXPECTED_FOREIGN_KEYS = {
     "assets_job_id_fkey",
@@ -29,6 +35,7 @@ EXPECTED_FOREIGN_KEYS = {
     "fk_jobs_source_asset_id_assets",
     "jobs_enhancement_id_fkey",
     "jobs_parent_job_id_fkey",
+    "fk_user_sessions_user_id_users",
 }
 EXPECTED_INDEXES = {
     "ix_assets_job_id",
@@ -41,6 +48,8 @@ EXPECTED_INDEXES = {
     "ix_outbox_events_status",
     "ix_outbox_events_status_created_at",
     "uq_jobs_active_i2v_source_asset",
+    "ix_user_sessions_absolute_expires_at",
+    "ix_user_sessions_active_user_id",
 }
 
 
@@ -61,13 +70,13 @@ Runner = Callable[[Sequence[str]], CommandResult]
 def validate_project_name(project_name: str) -> str:
     if not PROJECT_PATTERN.fullmatch(project_name):
         raise VerificationError(
-            "Project name must match g1-schema-[a-z0-9]{8,32}."
+            "Project name must match schema-verify-[a-z0-9]{8,32}."
         )
     return project_name
 
 
 def generate_project_name() -> str:
-    return validate_project_name(f"g1-schema-{secrets.token_hex(6)}")
+    return validate_project_name(f"schema-verify-{secrets.token_hex(6)}")
 
 
 def validate_env_file(env_file: Path) -> dict[str, str]:
@@ -287,8 +296,50 @@ def assert_inventory(
         "SELECT version_num FROM alembic_version",
         "Alembic head inventory",
     )
-    if head != {"0001_generation_baseline"}:
+    if head != {EXPECTED_REVISION}:
         raise VerificationError("Database revision did not match the packaged head.")
+
+
+def assert_g1_schema_without_identity(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+) -> None:
+    tables = _query_lines(
+        runner,
+        project_name,
+        env_file,
+        values,
+        "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename",
+        "G1 table inventory",
+    )
+    if tables != G1_TABLES:
+        raise VerificationError("G1 downgrade table inventory was not preserved exactly.")
+
+    identity_types = _query_lines(
+        runner,
+        project_name,
+        env_file,
+        values,
+        "SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace "
+        "WHERE n.nspname='public' AND t.typname IN "
+        "('user_origin','user_role','user_status') ORDER BY t.typname",
+        "G1 identity-type absence check",
+    )
+    if identity_types:
+        raise VerificationError("G2 identity enum types remained after downgrade to G1.")
+
+    head = _query_lines(
+        runner,
+        project_name,
+        env_file,
+        values,
+        "SELECT version_num FROM alembic_version",
+        "G1 revision inventory",
+    )
+    if head != {G1_REVISION}:
+        raise VerificationError("Downgrade did not stop at the G1 revision.")
 
 
 def assert_baseline_absent(
@@ -313,13 +364,205 @@ def assert_baseline_absent(
         raise VerificationError("Downgrade left application tables or enum types behind.")
 
 
+def _execute_sql(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+    sql: str,
+) -> CommandResult:
+    return runner(
+        _psql_command(
+            project_name,
+            env_file,
+            user=values["POSTGRES_USER"],
+            database=values["POSTGRES_DB"],
+            sql=sql,
+        )
+    )
+
+
+def _expect_constraint_rejection(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+    *,
+    sql: str,
+    constraint: str,
+) -> None:
+    result = _execute_sql(runner, project_name, env_file, values, sql)
+    output = f"{result.stdout}\n{result.stderr}"
+    if result.returncode == 0 or constraint not in output:
+        raise VerificationError(
+            f"Postgres did not reject the invalid identity row with {constraint}."
+        )
+    password = values.get("POSTGRES_PASSWORD", "")
+    if password and password in output:
+        raise VerificationError("Constraint rejection output exposed environment data.")
+
+
+def verify_identity_constraints(
+    runner: Runner,
+    project_name: str,
+    env_file: Path,
+    values: dict[str, str],
+) -> None:
+    signed_up = "TIMESTAMPTZ '2026-01-01 00:00:00+00'"
+    oauth_user = "10000000-0000-0000-0000-000000000001"
+    synthetic_user = "10000000-0000-0000-0000-000000000002"
+    valid_seed = f"""
+INSERT INTO users
+  (id, google_sub, email, email_verified, role, status, data_origin,
+   signed_up_at, updated_at)
+VALUES
+  ('{oauth_user}', 'subject-one', 'profile-one' || chr(64) || 'invalid.test',
+   true, 'user', 'active', 'oauth', {signed_up}, {signed_up}),
+  ('{synthetic_user}', NULL, NULL, false, 'user', 'active', 'synthetic',
+   {signed_up}, {signed_up});
+INSERT INTO user_sessions
+  (id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at)
+VALUES
+  ('20000000-0000-0000-0000-000000000001', '{oauth_user}',
+   decode(repeat('01', 32), 'hex'), {signed_up}, {signed_up},
+   {signed_up} + INTERVAL '7 days');
+"""
+    _run(
+        runner,
+        _psql_command(
+            project_name,
+            env_file,
+            user=values["POSTGRES_USER"],
+            database=values["POSTGRES_DB"],
+            sql=valid_seed,
+        ),
+        action="valid identity seed",
+    )
+
+    invalid_cases = (
+        (
+            "INSERT INTO users "
+            "(id, google_sub, email, email_verified, role, status, data_origin, signed_up_at, updated_at) "
+            "VALUES ('10000000-0000-0000-0000-000000000011', 'subject-one', "
+            "'duplicate' || chr(64) || 'invalid.test', true, 'user', 'active', 'oauth', "
+            f"{signed_up}, {signed_up})",
+            "uq_users_google_sub",
+        ),
+        (
+            "INSERT INTO users "
+            "(id, email_verified, role, status, data_origin, signed_up_at, updated_at) "
+            "VALUES ('10000000-0000-0000-0000-000000000012', false, 'user', 'active', 'oauth', "
+            f"{signed_up}, {signed_up})",
+            "ck_users_origin_profile",
+        ),
+        (
+            "INSERT INTO users "
+            "(id, email_verified, role, status, data_origin, signed_up_at, updated_at) "
+            "VALUES ('10000000-0000-0000-0000-000000000013', false, 'master', 'active', 'synthetic', "
+            f"{signed_up}, {signed_up})",
+            "ck_users_origin_profile",
+        ),
+        (
+            "INSERT INTO users "
+            "(id, email_verified, role, status, data_origin, signed_up_at, updated_at) "
+            "VALUES ('10000000-0000-0000-0000-000000000014', false, 'user', 'suspended', 'synthetic', "
+            f"{signed_up}, {signed_up})",
+            "ck_users_suspension_state",
+        ),
+        (
+            "INSERT INTO users "
+            "(id, email_verified, role, status, data_origin, signed_up_at, updated_at) "
+            "VALUES ('10000000-0000-0000-0000-000000000015', false, 'user', 'active', 'synthetic', "
+            f"{signed_up}, {signed_up} - INTERVAL '1 second')",
+            "ck_users_updated_after_signup",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at) "
+            f"VALUES ('20000000-0000-0000-0000-000000000011', '{oauth_user}', "
+            f"decode(repeat('01', 32), 'hex'), {signed_up}, {signed_up}, {signed_up} + INTERVAL '7 days')",
+            "uq_user_sessions_token_hash",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at) "
+            f"VALUES ('20000000-0000-0000-0000-000000000012', '{oauth_user}', "
+            f"decode(repeat('02', 31), 'hex'), {signed_up}, {signed_up}, {signed_up} + INTERVAL '7 days')",
+            "ck_user_sessions_token_hash_length",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at) "
+            f"VALUES ('20000000-0000-0000-0000-000000000013', '{oauth_user}', "
+            f"decode(repeat('03', 32), 'hex'), {signed_up}, {signed_up} - INTERVAL '1 second', "
+            f"{signed_up} + INTERVAL '7 days')",
+            "ck_user_sessions_lifecycle_order",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at) "
+            f"VALUES ('20000000-0000-0000-0000-000000000014', '{oauth_user}', "
+            f"decode(repeat('04', 32), 'hex'), {signed_up}, {signed_up}, {signed_up} + INTERVAL '6 days')",
+            "ck_user_sessions_absolute_lifetime",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at, revoked_at) "
+            f"VALUES ('20000000-0000-0000-0000-000000000015', '{oauth_user}', "
+            f"decode(repeat('05', 32), 'hex'), {signed_up}, {signed_up}, "
+            f"{signed_up} + INTERVAL '7 days', {signed_up})",
+            "ck_user_sessions_revocation",
+        ),
+        (
+            "INSERT INTO user_sessions "
+            "(id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at, revoked_at, revoke_reason) "
+            f"VALUES ('20000000-0000-0000-0000-000000000016', '{oauth_user}', "
+            f"decode(repeat('06', 32), 'hex'), {signed_up}, {signed_up}, "
+            f"{signed_up} + INTERVAL '7 days', {signed_up}, 'Unsafe Reason')",
+            "ck_user_sessions_revoke_reason",
+        ),
+    )
+    for sql, constraint in invalid_cases:
+        _expect_constraint_rejection(
+            runner,
+            project_name,
+            env_file,
+            values,
+            sql=sql,
+            constraint=constraint,
+        )
+
+    counts = _query_lines(
+        runner,
+        project_name,
+        env_file,
+        values,
+        "SELECT 'user_sessions:' || count(*) FROM user_sessions UNION ALL "
+        "SELECT 'users:' || count(*) FROM users",
+        "identity constraint row-count check",
+    )
+    if counts != {"user_sessions:1", "users:2"}:
+        raise VerificationError("Invalid identity rows changed persisted row counts.")
+    _run(
+        runner,
+        _psql_command(
+            project_name,
+            env_file,
+            user=values["POSTGRES_USER"],
+            database=values["POSTGRES_DB"],
+            sql="DELETE FROM users",
+        ),
+        action="identity constraint cleanup",
+    )
+
+
 def verify_revision_refusal(
     runner: Runner,
     project_name: str,
     env_file: Path,
     values: dict[str, str],
 ) -> None:
-    expected_revision = "0001_generation_baseline"
+    expected_revision = EXPECTED_REVISION
     stale_revision = "0000_stale_revision"
     update_revision = (
         "UPDATE alembic_version SET version_num="
@@ -428,6 +671,20 @@ def _seed_reset_rows(
     values: dict[str, str],
 ) -> None:
     sql = """
+INSERT INTO users
+  (id, google_sub, email, email_verified, role, status, data_origin,
+   signed_up_at, updated_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000005', 'reset-subject',
+   'reset-profile' || chr(64) || 'invalid.test', true,
+   'user', 'active', 'oauth', now(), now());
+INSERT INTO user_sessions
+  (id, user_id, token_hash, created_at, last_seen_at, absolute_expires_at)
+VALUES
+  ('00000000-0000-0000-0000-000000000006',
+   '00000000-0000-0000-0000-000000000005', decode(repeat('07', 32), 'hex'),
+   TIMESTAMPTZ '2026-01-01 00:00:00+00', TIMESTAMPTZ '2026-01-01 00:00:00+00',
+   TIMESTAMPTZ '2026-01-08 00:00:00+00');
 INSERT INTO prompt_enhancements
   (id, original, enhanced, components, target_mode, target_model, llm_model, created_at)
 VALUES
@@ -478,10 +735,22 @@ def _assert_reset_row_counts(
         "SELECT 'assets:' || count(*) FROM assets UNION ALL "
         "SELECT 'jobs:' || count(*) FROM jobs UNION ALL "
         "SELECT 'outbox_events:' || count(*) FROM outbox_events UNION ALL "
-        "SELECT 'prompt_enhancements:' || count(*) FROM prompt_enhancements",
+        "SELECT 'prompt_enhancements:' || count(*) FROM prompt_enhancements UNION ALL "
+        "SELECT 'user_sessions:' || count(*) FROM user_sessions UNION ALL "
+        "SELECT 'users:' || count(*) FROM users",
         "reset row-count check",
     )
-    expected_rows = {f"{table}:{expected}" for table in ("assets", "jobs", "outbox_events", "prompt_enhancements")}
+    expected_rows = {
+        f"{table}:{expected}"
+        for table in (
+            "assets",
+            "jobs",
+            "outbox_events",
+            "prompt_enhancements",
+            "user_sessions",
+            "users",
+        )
+    }
     if rows != expected_rows:
         raise VerificationError("Reset row counts did not match the expected state.")
 
@@ -535,8 +804,10 @@ def write_receipt(project_name: str, *, cleanup: bool) -> Path:
     receipt = {
         "project": project_name,
         "provider": "mock",
-        "revision": "0001_generation_baseline",
+        "revision": EXPECTED_REVISION,
         "round_trip": "pass",
+        "g1_downgrade": "pass",
+        "identity_constraints": "pass",
         "revision_refusal": "pass",
         "cleanup": "pass" if cleanup else "fail",
     }
@@ -572,8 +843,10 @@ def verify(
         )
         for command, action in (
             (("upgrade", "head"), "Alembic upgrade"),
-            (("downgrade", "base"), "Alembic downgrade"),
-            (("upgrade", "head"), "Alembic re-upgrade"),
+            (("downgrade", G1_REVISION), "Alembic downgrade to G1"),
+            (("upgrade", "head"), "Alembic re-upgrade from G1"),
+            (("downgrade", "base"), "Alembic full-chain downgrade"),
+            (("upgrade", "head"), "Alembic full-chain re-upgrade"),
         ):
             _run(
                 runner,
@@ -591,10 +864,15 @@ def verify(
                 ),
                 action=action,
             )
-            if command == ("downgrade", "base"):
+            if command == ("downgrade", G1_REVISION):
+                assert_g1_schema_without_identity(
+                    runner, project_name, env_file, values
+                )
+            elif command == ("downgrade", "base"):
                 assert_baseline_absent(runner, project_name, env_file, values)
             else:
                 assert_inventory(runner, project_name, env_file, values)
+        verify_identity_constraints(runner, project_name, env_file, values)
         verify_revision_refusal(runner, project_name, env_file, values)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)

@@ -9,6 +9,7 @@ ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"
 MIGRATIONS_ROOT = BACKEND_ROOT / "migrations"
 VERSIONS_ROOT = MIGRATIONS_ROOT / "versions"
 BASELINE_REVISION = VERSIONS_ROOT / "0001_generation_baseline.py"
+IDENTITY_REVISION = VERSIONS_ROOT / "0002_user_session_persistence.py"
 
 
 def _text(path: Path) -> str:
@@ -26,17 +27,40 @@ def test_alembic_runtime_dependency_and_required_files_exist() -> None:
     assert BASELINE_REVISION.is_file()
 
 
-def test_exactly_one_generation_baseline_revision_is_packaged() -> None:
+def test_exactly_two_ordered_revisions_are_packaged() -> None:
     revisions = sorted(VERSIONS_ROOT.glob("*.py")) if VERSIONS_ROOT.exists() else []
 
-    assert revisions == [BASELINE_REVISION]
-    revision = _text(BASELINE_REVISION)
-    assert 'revision = "0001_generation_baseline"' in revision
-    assert "down_revision = None" in revision
+    assert revisions == [BASELINE_REVISION, IDENTITY_REVISION]
+    baseline = _text(BASELINE_REVISION)
+    identity = _text(IDENTITY_REVISION)
+    assert 'revision = "0001_generation_baseline"' in baseline
+    assert "down_revision = None" in baseline
+    assert 'revision = "0002_user_session_persistence"' in identity
+    assert 'down_revision = "0001_generation_baseline"' in identity
 
     dockerfile = _text(BACKEND_ROOT / "Dockerfile")
     assert "COPY alembic.ini" in dockerfile
     assert "COPY migrations" in dockerfile
+
+
+def test_identity_revision_is_additive_and_credential_free() -> None:
+    revision = _text(IDENTITY_REVISION)
+
+    for table_name in ("users", "user_sessions"):
+        assert f'"{table_name}"' in revision
+    for enum_name in ("user_role", "user_status", "user_origin"):
+        assert f'"{enum_name}"' in revision
+    for generation_table in ("jobs", "assets", "prompt_enhancements", "outbox_events"):
+        assert f'alter_table(\n        "{generation_table}"' not in revision
+    for forbidden in (
+        "password",
+        "access_token",
+        "refresh_token",
+        "id_token",
+        "authorization_code",
+        "raw_session",
+    ):
+        assert forbidden not in revision.lower()
 
 
 def test_baseline_is_current_generation_schema_only() -> None:
@@ -76,5 +100,4 @@ def test_alembic_configuration_uses_application_settings_without_committed_url()
     assert "database_url" in env
     assert "compare_type=True" in env
     assert "Base.metadata" in env
-
 
