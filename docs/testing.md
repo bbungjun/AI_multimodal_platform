@@ -160,6 +160,43 @@ settings can implicitly load `backend/.env` during pytest, the script refuses to
 run backend tests when `backend/.env` exists. Use `--skip-backend` only for
 compose/frontend-focused checks.
 
+## Schema Migration and Reset Verification
+
+G1 makes Alembic the only normal schema mutation path. Static and unit checks
+run without a database:
+
+```powershell
+cd backend
+$env:AI_PROVIDER = "mock"
+python -m alembic heads
+python -m pytest `
+  tests/test_alembic_schema.py `
+  tests/test_schema_control.py `
+  tests/test_verify_schema_migrations_script.py -q
+```
+
+The packaged head must be exactly `0001_generation_baseline`. Application
+startup checks are read-only and must return a typed failure for a missing,
+empty, outdated, multiple-head, or unreachable schema.
+
+Use only the isolated verifier for destructive migration/reset QA:
+
+```powershell
+python scripts/verify_schema_migrations.py --env-file .env.example
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+```
+
+The verifier requires `AI_PROVIDER=mock`, creates a fresh project whose name
+matches `g1-schema-[a-z0-9]{8,32}`, refuses collisions, and always targets that
+exact project in cleanup. It must never be replaced with the default developer
+Compose project or volume. Receipts under `.omo/evidence/issue-94/` are local,
+redacted evidence and are not staged by directory wildcard.
+
+As of the Issue #94 implementation checkpoint, unit/static checks pass but the
+two real isolated runs are pending because the local Docker Linux engine did
+not become responsive. Do not report the feature as `Mock Verified` until both
+runs and the mock golden path complete.
+
 ## GitHub Actions CI
 
 The default CI workflow runs on pull requests, pushes to `main`, and manual
@@ -263,8 +300,9 @@ docker compose --env-file .env.example config --services
 For no-cost local smoke checks, use mock mode. For live Vertex QA, follow the
 manual runbook and expect provider cost risk.
 
-Expected local mock services include `db`, `redis`, `backend`, `dispatcher`,
-`worker`, and `frontend`. The `dispatcher` publishes Postgres outbox events to
+Expected local mock services include the finite `migrate` process plus `db`,
+`redis`, `backend`, `dispatcher`, `worker`, and `frontend`. The application
+processes start only after `migrate` completes successfully. The `dispatcher` publishes Postgres outbox events to
 Redis/Celery. The default `worker` is a Celery worker and should report healthy
 after its internal Celery ping succeeds. The legacy `python -m app.worker`
 polling runner is retained only as a manual fallback and should not run
