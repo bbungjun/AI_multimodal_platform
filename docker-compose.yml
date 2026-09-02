@@ -17,6 +17,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    # OAuth nonce/PKCE flow records must never enter an RDB snapshot or AOF.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

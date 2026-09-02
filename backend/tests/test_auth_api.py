@@ -109,6 +109,7 @@ def test_oauth_compose_values_are_backend_only():
     for name in ('AUTH_GOOGLE_CLIENT_ID', 'AUTH_GOOGLE_CLIENT_SECRET', 'AUTH_GOOGLE_REDIRECT_URI'):
         assert len(re.findall(r'^\s+' + name + ':', text, flags=re.MULTILINE)) == 1
         assert name + ':' in text.split('  backend:')[1].split('  worker:')[0]
+    assert 'command: ["redis-server", "--save", "", "--appendonly", "no"]' in text
 
 
 async def test_real_postgres_redis_http_lifecycle(monkeypatch):

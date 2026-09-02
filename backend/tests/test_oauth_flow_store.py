@@ -75,6 +75,8 @@ async def test_real_redis_flow_and_outage():
             with pytest.raises(m.AuthError, match='oauth_provider_unavailable'):
                 await store.consume(key, now)
             return
+        assert await client.config_get('save') == {'save': ''}
+        assert await client.config_get('appendonly') == {'appendonly': 'no'}
         await store.put(key, flow)
         assert 590 <= await client.ttl(store.key(key)) <= 600
         results = await asyncio.gather(*[store.consume(key, now) for _ in range(12)])
