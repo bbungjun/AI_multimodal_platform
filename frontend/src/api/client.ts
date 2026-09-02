@@ -36,7 +36,33 @@ export type {
   UUID,
 } from "./types";
 
-const apiBase = normalizeApiBase(import.meta.env.VITE_API_BASE);
+const apiBase = normalizeApiBase(import.meta.env?.VITE_API_BASE);
+import type { AuthReply, SessionController } from "../auth/session";
+
+let sessionGuard: SessionController | undefined;
+export function bindSessionGuard(session: SessionController) {
+  sessionGuard = session;
+  return () => { if (sessionGuard === session) sessionGuard = undefined; };
+}
+
+export function createAuthHttp(origin: string, base = apiBase, fetcher: typeof fetch = fetch, timeoutMs = 10_000) {
+  const configured = !base || base === origin || base === `${origin}/`;
+  async function request(path: string, signal: AbortSignal, method: string): Promise<AuthReply> {
+    if (!configured) throw new Error("Authentication requires a same-origin API root");
+    const abort = new AbortController();
+    const cancel = () => abort.abort();
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted) abort.abort();
+    const timer = setTimeout(cancel, timeoutMs);
+    try {
+      const response = await fetcher(`${origin}${path}`, { method, credentials: "same-origin",
+        cache: "no-store", signal: abort.signal, redirect: "error" });
+      return { status: response.status, body: response.status === 200 ? await response.json() : undefined };
+    } finally { clearTimeout(timer); signal.removeEventListener("abort", cancel); }
+  }
+  return { me: (signal: AbortSignal) => request("/api/auth/me", signal, "GET"),
+    signOut: (signal: AbortSignal) => request("/api/auth/logout", signal, "POST") };
+}
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -141,10 +167,19 @@ async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const { body, headers, query, ...init } = options;
+  const guard = path === "/api/health" ? undefined : sessionGuard;
+  const epoch = guard?.getEpoch();
+  const assertCurrent = () => {
+    if (guard && (guard !== sessionGuard || epoch !== guard.getEpoch() || guard.getSnapshot().kind !== "authenticated")) {
+      throw new ApiError("This request belongs to a previous session", 0, null);
+    }
+  };
+  assertCurrent();
   const requestHeaders = new Headers(headers);
 
   const requestInit: RequestInit = {
     ...init,
+    credentials: "same-origin",
     headers: requestHeaders,
   };
 
@@ -154,9 +189,12 @@ async function apiRequest<T>(
   }
 
   const response = await fetch(buildUrl(path, query), requestInit);
+  assertCurrent();
 
   if (!response.ok) {
     const errorBody = await readJson<ApiErrorBody>(response);
+    assertCurrent();
+    if (response.status === 401 && epoch !== undefined) guard?.unauthorized(epoch);
     const detail = errorBody?.detail;
     throw new ApiError(
       formatApiErrorMessage(response.status, detail),
@@ -169,7 +207,9 @@ async function apiRequest<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const result = await response.json() as T;
+  assertCurrent();
+  return result;
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
