@@ -10,7 +10,7 @@ import { JobDetailPage } from "./pages/JobDetailPage";
 import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { APP_COPY } from "./ui/copy";
-import { SessionScreen, WorkspaceGate } from "./auth/AuthViews";
+import { AccountControl, SessionScreen, WorkspaceGate } from "./auth/AuthViews";
 import "./index.css";
 
 const navItems = [
@@ -110,6 +110,7 @@ function AppShell() {
             <p>4개 엔드포인트 정상</p>
             <p>평균 지연 412ms</p>
           </div>
+          <AccountControl />
         </div>
       </aside>
 
@@ -126,6 +127,7 @@ function AppShell() {
             <kbd>⌘K</kbd>
           </div>
           <div className="creative-topbar__actions">
+            <AccountControl mobile />
             <HealthIndicator />
             <button className="creative-icon-button" aria-label="설정" type="button">
               <CpuIcon size={14} />
