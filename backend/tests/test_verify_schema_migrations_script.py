@@ -25,14 +25,15 @@ def test_project_name_is_generated_and_strictly_validated():
     module = _load_module()
 
     assert module.PROJECT_PATTERN.fullmatch(module.generate_project_name())
-    for invalid in ("", "multimodal", "g1-schema-", "g1-schema-UPPERCASE", "g1-schema-a/bcdefgh"):
+    assert module.generate_project_name().startswith("schema-verify-")
+    for invalid in ("", "multimodal", "g1-schema-12345678", "schema-verify-UPPERCASE", "schema-verify-a/bcdefgh"):
         with pytest.raises(module.VerificationError, match="must match"):
             module.validate_project_name(invalid)
 
 
 def test_compose_commands_always_bind_exact_project_and_env_file():
     module = _load_module()
-    project = "g1-schema-12345678"
+    project = "schema-verify-12345678"
     env_file = REPO_ROOT / ".env.example"
 
     command = module.compose_command(project, env_file, "up", "-d", "db")
@@ -45,7 +46,7 @@ def test_compose_commands_always_bind_exact_project_and_env_file():
 
 def test_collision_check_refuses_exact_project_and_volume():
     module = _load_module()
-    project = "g1-schema-12345678"
+    project = "schema-verify-12345678"
 
     def project_collision(arguments):
         if arguments[:3] == ["docker", "compose", "ls"]:
@@ -66,7 +67,7 @@ def test_collision_check_refuses_exact_project_and_volume():
 
 def test_failure_still_cleans_only_the_exact_validated_project(tmp_path, monkeypatch):
     module = _load_module()
-    project = "g1-schema-12345678"
+    project = "schema-verify-12345678"
     env_file = tmp_path / ".env.example"
     env_file.write_text(
         "AI_PROVIDER=mock\nPOSTGRES_USER=app\nPOSTGRES_DB=multimodal\n",
@@ -112,7 +113,7 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
 
     evidence_dir = tmp_path / "evidence"
     monkeypatch.setattr(module, "DEFAULT_EVIDENCE_DIR", evidence_dir)
-    receipt = module.write_receipt("g1-schema-12345678", cleanup=True)
+    receipt = module.write_receipt("schema-verify-12345678", cleanup=True)
     content = receipt.read_text(encoding="utf-8")
     assert secret not in content
     assert "postgresql" not in content
@@ -121,7 +122,7 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
 
 def test_reset_commands_are_preview_first_and_exact_target_only(tmp_path):
     module = _load_module()
-    project = "g1-schema-12345678"
+    project = "schema-verify-12345678"
     env_file = tmp_path / ".env.example"
 
     preview = module.reset_command(
@@ -147,7 +148,7 @@ def test_reset_commands_are_preview_first_and_exact_target_only(tmp_path):
 
 def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     module = _load_module()
-    project = "g1-schema-12345678"
+    project = "schema-verify-12345678"
     env_file = tmp_path / ".env.example"
     values = {
         "POSTGRES_USER": "app",
@@ -179,3 +180,11 @@ def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
     assert "0000_stale_revision" in sql_calls[0][-1]
     assert "0001_generation_baseline" in sql_calls[-1][-1]
+
+
+def test_verifier_targets_g2_head_and_schema_evidence_directory():
+    module = _load_module()
+
+    assert module.EXPECTED_REVISION == "0002_user_session_persistence"
+    assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
+    assert module.DEFAULT_EVIDENCE_DIR.parts[-2:] == ("evidence", "schema")

@@ -203,6 +203,15 @@ def test_reset_contract_is_preview_first_and_requires_every_guard() -> None:
     assert "gcloud" not in source.lower()
 
 
+def test_reset_preview_inventory_is_catalog_driven_and_not_a_fixed_table_list() -> None:
+    source = SCHEMA_CONTROL_PATH.read_text(encoding="utf-8")
+
+    assert "RESET_TABLES" not in source
+    assert "pg_tables" in source
+    assert "alembic_version" in source
+    assert "quote_identifier" in source
+
+
 def test_schema_control_cli_help_is_available_without_database_access(capsys) -> None:
     module = _schema_control()
 
