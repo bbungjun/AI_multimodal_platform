@@ -175,7 +175,7 @@ python -m pytest `
   tests/test_verify_schema_migrations_script.py -q
 ```
 
-The packaged head must be exactly `0001_generation_baseline`. Application
+The packaged head must be exactly `0002_user_session_persistence`. Application
 startup checks are read-only and must return a typed failure for a missing,
 empty, outdated, multiple-head, or unreachable schema.
 
@@ -187,20 +187,18 @@ python scripts/verify_schema_migrations.py --env-file .env.example --include-res
 ```
 
 The verifier requires `AI_PROVIDER=mock`, creates a fresh project whose name
-matches `g1-schema-[a-z0-9]{8,32}`, refuses collisions, and always targets that
+matches `schema-verify-[a-z0-9]{8,32}`, refuses collisions, and always targets that
 exact project in cleanup. It must never be replaced with the default developer
 Compose project or volume. Receipts under `.omo/evidence/issue-94/` are local,
 redacted evidence and are not staged by directory wildcard.
 
-At verified checkpoint `6aa8a1f`, two fresh `--include-reset` runs passed with
-receipts for projects `g1-schema-96996ab175ba` and
-`g1-schema-fa2916314600`. Each run also forced a stale revision, proved
-backend, worker, and dispatcher exit nonzero with the safe
-`schema_revision_outdated` code, restored head, and removed the exact project
-and volumes. The isolated mock product golden path passed under
-`g1-schema-golden01`; its job, asset, containers, network, and volumes were
-removed afterward. This evidence supports `Mock Verified`, not cloud or Vertex
-verification.
+At G2 checkpoint `2a4c8ab`, two fresh `--include-reset` runs passed under
+`schema-verify-75c5d479eb4a` and `schema-verify-a0f92adacc0f`. Each run checked
+valid identity rows, 11 rejected inserts across 10 named constraints,
+downgrade-to-G1 preservation, full-chain round trip, three-process stale
+revision refusal/recovery, identity-aware reset, and exact cleanup. The mock
+product golden path passed under `schema-verify-golden02`. These results support
+`Mock Verified` persistence, not OAuth, cloud, or Vertex verification.
 
 ## GitHub Actions CI
 

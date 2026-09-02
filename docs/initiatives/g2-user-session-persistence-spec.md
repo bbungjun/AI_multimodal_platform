@@ -2,7 +2,7 @@
 
 ## Document Status
 
-- Status: `Accepted / Execution Planned`
+- Status: `Accepted / Mock Verified`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
 - Dependency: G1 merged through PR #95 at `91cf903`
@@ -13,6 +13,9 @@
 - Goal plan SHA-256:
   `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311`
 - Base revision: accepted specification on `main` at `eefe939`
+- Verified code checkpoint: `2a4c8ab`
+- Runtime evidence: two isolated Postgres cycles and one mock product golden
+  path passed; OAuth/live verification remains unimplemented
 
 This specification narrows G2 to the persistence contract required by later
 identity work. Google authorization, callback handling, cookie issuance,
@@ -357,3 +360,16 @@ Approval fixes the following decisions before Issue creation:
 5. G2 may generalize G1 reset inventory internally while keeping its public
    interface unchanged.
 6. G2 has one migration and a 12 non-document-path stop limit.
+
+## Verified Result
+
+Implementation preserved the accepted persistence interface and used nine
+non-document paths, one fewer than predicted and below the 12-path stop limit.
+Two fresh isolated Postgres projects passed G2 inventory, 11 invalid-row
+attempts across 10 named constraints, downgrade-to-G1 preservation, full-chain
+round trip, three-process stale-revision refusal/recovery, guarded reset, and
+exact cleanup. The existing mock generation golden path also passed at G2 head.
+
+This result supports `Mock Verified` persistence only. Google OAuth, cookies,
+request authentication, Session admission/touch policy, ownership, credits,
+frontend behavior, cloud rollout, and provider execution remain planned.

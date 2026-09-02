@@ -109,7 +109,7 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   credit, usage, and Master-console capabilities remain `Planned`; only G1
   schema control is implemented. User and Session persistence remains G2 and
   must consume only G1's documented interface.
-- G2 planning is complete in
+- G2 implementation is `Mock Verified` in
   `docs/initiatives/g2-user-session-persistence-spec.md`. It proposes one
   `0002_user_session_persistence` revision, dedicated User/Session mappings,
   credential-free session digests, real Postgres constraint verification, and
@@ -119,9 +119,18 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   `eefe939`. The frozen 460-line execution plan is
   `.omo/plans/issue-96-g2-user-session-persistence-goal.md`, SHA-256
   `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311`.
-  It predicts 10 non-document paths, stops above 12 or one migration, and runs
-  Todo 1-8 followed by F1-F4. No G2 implementation exists yet; the next action
-  is to start this exact plan with `gpt-5.6-sol` medium.
+  It predicted 10 non-document paths and implementation used nine, with one
+  new migration. Focused schema/model/reset/verifier tests passed 52. Fresh
+  projects `schema-verify-75c5d479eb4a` and
+  `schema-verify-a0f92adacc0f` each passed G2 inventory, 11 invalid-row checks,
+  G1 downgrade preservation, full-chain round trip, three-process drift
+  refusal/recovery, guarded reset, and cleanup. The mock product golden path
+  passed under `schema-verify-golden02`; zero matching projects or volumes
+  remain. Full backend pytest passed 396 with only the pre-existing Windows
+  Bash path-conversion failure; frontend lint/build, Compose config, and
+  `verify_local.py --skip-backend` passed. OAuth, cookies, ownership, credits,
+  cloud, and providers were not changed or run. Next, complete F1-F4, push, and
+  open the Issue #96 draft PR; G3 remains planned until G2 merges.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

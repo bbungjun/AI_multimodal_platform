@@ -219,8 +219,8 @@ document or inherit the full design interview.
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
-| G2 | User and Session persistence | In Progress / Planning Complete | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [accepted specification](g2-user-session-persistence-spec.md), plan SHA `67263d2460eb7dcabfd9cd4d9af41daf61ece6f3a94b5dc6fd62124ec54ff311` | Execute Todo 1-8 on `codex/issue-96-user-session-persistence` with `gpt-5.6-sol` medium |
-| G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
+| G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), verified checkpoint `2a4c8ab` | Complete locally; cloud rollout Deferred / No-Go |
+| G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | G2 mapped types and constraints | Decide sixth-Session and activity-touch policy, then design OAuth module interface |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -303,8 +303,8 @@ statuses and the following fresh checks pass in mock mode:
 
 ## Next Goal
 
-G1 is `Mock Verified` and merged through
-[PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) at
-`91cf903`; its tracker [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
-is closed. G2 may now begin from current `main` and must consume only G1's
-documented interface rather than its internals.
+G2 is `Mock Verified` on `codex/issue-96-user-session-persistence`. G3 is the
+next planned slice after G2 review/merge. It may consume `User`, `UserSession`,
+the three identity enums, and their database invariants. Before implementation,
+G3 must explicitly decide sixth-Session behavior and activity-write frequency;
+it must not revise G2 table meaning to hide an unresolved lifecycle policy.
