@@ -10,6 +10,11 @@ PostgreSQL source of truth, transactional outbox, Redis/Celery worker, 좁은 pr
 boundary로 운영하는 것입니다. GKE/Terraform, Workload Identity, 부하테스트, 관리형
 Prometheus, digest release와 자동 rollback을 실제 운영 문제와 연결합니다.
 
+포트폴리오에서는 이 end-to-end 경험을 `AI Full Stack Engineer`, `FDE`,
+`AX Consultant`, `AI Platform Engineer` 관점으로 설명합니다. 사용자 workflow와 제품
+구현, 현장 통합과 문제 해결, 도입 효과와 운영 절차, 배포·관측·복구 가능한 플랫폼을
+서로 분리된 기능이 아니라 하나의 전달 과정으로 다룹니다.
+
 ## 운영 아키텍처
 
 ```text

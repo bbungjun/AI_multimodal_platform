@@ -79,6 +79,34 @@ paste credential contents.
 As of 2026-08-31, Issue #88 is active on branch
 `codex/issue-88-mock-ops-evidence`:
 
+- On 2026-09-02, the Google OAuth, per-User ownership, Free/Pro/Max credit,
+  personal usage, and Master console initiative was accepted and subsequently
+  refined into the eleven-Goal sequence described below. The initiative-wide
+  source of truth is
+  `docs/initiatives/auth-credits-master-console.md`; all capabilities remain
+  `Planned`, no product code or database was changed, and G1 is the only next
+  implementation slice. Every Goal must update its single status row here and
+  in the initiative document rather than carrying the full interview forward.
+  The initiative contract check and `git diff --check` passed. The standard
+  local verifier passed 352 backend tests and stopped on the already documented
+  Windows `/bin/bash` path-conversion failure in
+  `test_release_script_guards_plan_scope_and_uses_terraform_rollback`; frontend
+  checks did not run after that fail-fast stop.
+- On 2026-09-02, detailed G1 repository inspection separated schema control
+  from identity persistence. The initiative now has eleven bounded Goals. The
+  proposed G1 source is `docs/initiatives/g1-schema-control-spec.md` and covers
+  only Alembic baseline, fail-closed schema readiness, Compose migration order,
+  and guarded local database reset. User and Session persistence moved to G2.
+  G1 remains `Planned`; no Issue, branch, migration, reset, product code, or
+  database mutation has been created or executed. The G1 spec contract check,
+  `git diff --check`, Compose config, frontend typecheck, and frontend production
+  build passed. The latest backend run remains 352 passed plus the pre-existing
+  Windows Bash path-conversion failure recorded above.
+- On 2026-09-02, the portfolio target was broadened to `AI Full Stack
+  Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
+  should connect end-to-end product delivery, field integration, measurable
+  business outcomes, and production platform operations instead of optimizing
+  for one company or one job posting.
 - Issue #87 merged through PR #91 at `d650369`. Its platform-first README,
   evidence index, reusable Issue record and `AGENTS.md` portfolio documentation
   policy are now the `main` baseline.
@@ -1087,11 +1115,10 @@ As of 2026-07-08, Issue #22 completed on branch
 - Added `docs/runbooks/k6-gcp-load-test.md` with Linux k6 commands and the WSL
   workaround for running Windows `k6.exe` from a Windows temp copy of the
   script.
-- Updated `AGENTS.md` to make the Hyundai AutoEver Platform Engineer /
-  `AI 플랫폼 구축/운영` target explicit: future work should strengthen
-  Kubernetes/GKE operations, automation, observability, load testing, reliability,
-  and GPU-infrastructure readiness while clearly separating implemented evidence
-  from planned GPU work.
+- Updated `AGENTS.md` to make the portfolio job direction explicit: future work
+  should strengthen Kubernetes/GKE operations, automation, observability, load
+  testing, reliability, and GPU-infrastructure readiness while clearly separating
+  implemented evidence from planned GPU work.
 - Live target used for k6 verification: `http://34.50.26.152`, still running in
   `AI_PROVIDER=vertex`.
 - `PROFILE=readiness`, `EXPECTED_VERTEX_STATUS=ready`,
