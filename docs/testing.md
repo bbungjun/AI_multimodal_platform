@@ -52,6 +52,50 @@ limitations and observed latency belong to the
 [Issue #98 record](portfolio/issue-98-auth-session-lifecycle.md). Do not infer
 browser or live Google verification from these results.
 
+## Browser Authentication Verification (G3.1)
+
+The browser Session module has two mandatory test suites in the existing CI
+`verify` job. Playwright is a pinned development dependency, not product login
+logic. From `frontend`:
+
+```powershell
+npm ci
+npm run lint
+npm run build
+npm run test:auth
+npx playwright install chromium
+npm run test:auth:browser
+```
+
+CI uses Node 20 and `npx playwright install --with-deps chromium`. The module
+project launches no browser/server. Chromium launches a fresh strict-port
+loopback server on 18101; it never reuses a running developer server. Test
+fixtures intercept auth/work HTTP before navigation, block external origins and
+unhandled API/files requests, and disable service workers. No real Google login,
+profile image, cookie-storage proof or AI provider execution is implied.
+
+Coverage includes checking/anonymous/unavailable, profile validation, safe
+return paths and ten-minute optional intent storage, callback URL scrubbing,
+single native start, logout ambiguity, five-minute visible activity checks,
+12-hour fake-clock idle with zero automatic auth requests, stale account query/
+mutation/401 rejection and cross-tab invalidation. Viewports: 1440x900, 920x900,
+390x844, 320x720, including keyboard/disclosure focus and overflow assertions.
+
+Trace/video/HAR/storageState and automatic screenshots are disabled. Automatic
+DOM error snapshots are disabled and runner output is not retained. Only
+explicit masked captures outside the runner output directory are retained under
+local/untracked `.omo/evidence/issue-101/screens/`; do not upload the whole folder.
+Never include email/profile/prompt/cookie contents in reports. No-test discovery
+and skipped mandatory suites are failures, not successful verification.
+
+The backend compatibility extension is tested by `tests/test_auth_api.py`:
+default start failures remain 503 JSON; exactly one `ui=1` enables the configured
+frontend 303 error redirect with safe headers and flow-cookie cleanup. The rest
+of the G3 HTTP/Session contract is unchanged. Browser gating does not protect
+backend ownership; G4 is still required. See the
+[Issue #101 evidence](portfolio/issue-101-authenticated-workspace-ux.md) for counts,
+Windows baseline limitation and separate isolated mock-generation results.
+
 ## Prompt Enhancement Evaluation Schemas
 
 The prompt-enhancement benchmark has an isolated package under

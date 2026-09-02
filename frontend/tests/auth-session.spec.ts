@@ -135,6 +135,23 @@ test("late product response and 401 cannot cross account epoch", async () => {
     } finally { unbind(); globalThis.fetch = originalFetch; }
   }
 });
+
+for (const status of [401, 403, 503]) test(`current product status ${status} has bounded session effect`, async () => {
+  const previous = globalThis.fetch;
+  const s = createSession(); await s.retry(); const unbind = bindSessionGuard(s);
+  globalThis.fetch = async () => new Response(JSON.stringify({ detail: "fixture-error" }), { status });
+  try {
+    await expect(listGenerations()).rejects.toMatchObject({ status });
+    expect(s.getSnapshot().kind).toBe(status === 401 ? "anonymous" : "authenticated");
+  } finally { unbind(); globalThis.fetch = previous; }
+});
+test("signal burst coalesces while locked and dispose rejects late check", async () => {
+  const pending = deferred<AuthReply>(); let calls = 0;
+  const s = createSession({ me: async () => { calls++; return pending.promise; } });
+  const first = s.sessionChanged(); const second = s.sessionChanged(); expect(calls).toBe(1);
+  s.dispose(); pending.resolve({ status: 200, body: user }); await Promise.all([first, second]);
+  expect(s.getSnapshot().kind).toBe("checking");
+});
 test("idle clock does not request me; visible activity checks after five minutes", async () => {
   let now = 0;
   let calls = 0;

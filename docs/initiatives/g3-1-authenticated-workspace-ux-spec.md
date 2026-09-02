@@ -2,7 +2,8 @@
 
 ## 1. 상태와 목적
 
-- 상태: **Accepted — 2026-09-03 사용자 승인**. 구현·브라우저 검증은 시작하지 않았다.
+- 상태: **Implemented / local Mock Verified — 2026-09-03**. Todo 1-7 구현·검증 완료;
+  Todo 8의 문서/최종 review와 Draft PR 필수 CI delivery 진행 중이다. Live Verified가 아니다.
 - Tracker: [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101).
 - Branch: `codex/issue-101-authenticated-workspace-ux`, synced `main` `edd7208` 기반.
 - Accepted spec checkpoint: `928743c`.
@@ -14,7 +15,11 @@
 - 전체 합의: [인증·크레딧 initiative](auth-credits-master-console.md).
 - 선행 interface: [G3 spec의 HTTP / Cookie Contract](g3-auth-session-lifecycle-spec.md#http-contract).
 - 사용자 확정 방향: 기존 UI/UX, CSS, 배치와 공통 UI를 유지한다. 리디자인하지 않는다.
-- 아래 동작·검증·경로 예산과 여섯 승인 항목은 확정되었다. Goal 실행은 별도 명시 요청으로 시작한다.
+- 아래 동작·검증·경로 예산과 여섯 승인 항목은 확정되었고, 사용자의 별도 Goal 실행 요청으로 구현했다.
+- 구현 checkpoint: `58542f5`, CI 연결 checkpoint: `6aaf3ad`.
+- 로컬 결과: module 48 PASS, Chromium 34 PASS, frontend lint/build PASS, Linux backend
+  467 PASS / 기존 opt-in 3 SKIP, 격리 mock generation 및 cleanup PASS. 상세 원인/증거는
+  [Issue #101 포트폴리오](../portfolio/issue-101-authenticated-workspace-ux.md)에 보존한다.
 - 설계 단계 확인: 기존 frontend lint/build PASS, 문서 링크·diff hygiene·신규 spec 안전 검사
   PASS. 이것은 baseline/문서 검증이며 새 로그인 UX의 테스트 결과가 아니다.
 
@@ -193,7 +198,7 @@ useSession(): {
 
 ## 8. 변경 경로 예산
 
-예상 non-document **17개**, 상한 **20개**, migration **0개**. 승인은 구현을 뜻하지 않는다.
+예상/실제 non-document **17개**, 상한 **20개**, migration **0개**. 여유 경로는 사용하지 않았다.
 
 | # | 경로 | 역할 |
 |---:|---|---|
@@ -252,8 +257,9 @@ Google 이동 대신 같은 origin의 테스트 응답으로 UI 이동만 확인
 
 ### 확정 검증 명령
 
-구현 Goal에서 다음 명령을 실제 생성하고 확인한다. 지금 실행 가능한 테스트가 생겼다는
-뜻은 아니다. browser tests는 새로운 전용 port를 사용하고 기존 dev server를 재사용하지 않는다.
+구현 Goal에서 다음 명령을 생성하고 실행했다. browser tests는 전용 loopback port 18101을
+사용하고 기존 dev server를 재사용하지 않는다. Windows 전체 pytest의 기존 Bash 경로 실패는
+변경 전 baseline에서도 재현했으며, 전체 성공 증거는 Linux 검증과 구분해 기록한다.
 
 ```powershell
 cd frontend

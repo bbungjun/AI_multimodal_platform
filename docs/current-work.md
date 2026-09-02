@@ -80,9 +80,9 @@ paste credential contents.
 ### G3.1 execution handoff — 2026-09-03
 
 - Execution explicitly authorized. Todo 1-6 committed through `58542f5`; Todo 7
-  regression passed in supported Linux/mock environments; Todo 8 evidence/PR/CI
+  committed `6aaf3ad` after supported Linux/mock regression; Todo 8 evidence/PR/CI
   delivery is next. No PR merge or real OAuth/provider/cloud execution authorized.
-- Latest local results: module 44 PASS, Chromium 34 PASS (four widths and keyboard,
+- Latest local results: module 48 PASS, Chromium 34 PASS (four widths and keyboard,
   timeout, hidden/idle activity, two-tab and stale-response/mutation cases), npm
   ci/lint/build PASS. Linux full backend 467 PASS / 3 pre-existing conditional SKIP.
 - Windows backend/verify_local: 466 PASS / 3 SKIP / 1 existing Bash-path FAIL;
@@ -91,8 +91,9 @@ paste credential contents.
   removed and zero remaining verified. Developer resources untouched.
 - Browser review found/fixed 920px panel overflow and outside-click focus loss.
   Masked local artifacts and bounded receipt: `.omo/evidence/issue-101/`.
-- Scope: 17 non-document paths, zero migrations. Required remote CI remains
-  pending; F1-F4 and final delivery must not be marked complete yet.
+- Scope: 17 non-document paths, zero migrations. Local F1-F4 review APPROVE;
+  remote required CI and Draft delivery remain pending, so Goal is not complete.
+- Detailed record: [Issue #101 portfolio](portfolio/issue-101-authenticated-workspace-ux.md).
 
 #### Accepted planning context
 
