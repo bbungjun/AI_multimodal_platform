@@ -59,7 +59,7 @@ Expected services:
 
 - `db` healthy
 - `migrate` exits successfully after `alembic upgrade head`
-- `redis` healthy and used only as the Celery broker
+- `redis` healthy: Celery broker in database 0 and transient OAuth flows in database 1
 - `backend` on `http://127.0.0.1:8000`
 - `dispatcher` running `python -m app.services.jobs.outbox_dispatcher`
 - `worker` healthy, running the Celery `generation` queue with the same database and asset volume
@@ -75,6 +75,84 @@ The default worker has an internal Celery ping healthcheck, a stable
 Compose grace period through `CELERY_WORKER_SHUTDOWN_GRACE_SEC`.
 Before Celery starts, its fixed command runs `python -m app.schema_control
 check`; an incompatible revision exits before work is consumed.
+
+## Backend Authentication (G3)
+
+Leave `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` and
+`AUTH_GOOGLE_REDIRECT_URI` empty for default mock development. Health and
+generation remain operational; login start returns `503 auth_not_configured`.
+`AI_PROVIDER=mock` selects the AI provider, **not** a mock identity provider:
+configured OAuth could still contact Google, so do not populate these settings
+for this verification workflow. No browser login is performed here.
+
+Backend-only settings in `.env.example` also define `AUTH_FRONTEND_ORIGIN`,
+`AUTH_FLOW_REDIS_URL`, `AUTH_COOKIE_SECURE` and `AUTH_PROVIDER_TIMEOUT_SEC`.
+Secure cookies are the default; disabling Secure is accepted only for explicit
+`APP_ENV=local|test`. Frontend origin and callback URI must be exact, and
+credentialed CORS must not use `*`. Google settings never go to worker,
+dispatcher, frontend or migration containers.
+
+Use the credential-free verifier twice, with Docker running and backend dev
+dependencies installed:
+
+```powershell
+$env:AI_PROVIDER = "mock"
+python scripts/verify_auth_sessions.py --env-file .env.example
+python scripts/verify_auth_sessions.py --env-file .env.example
+```
+
+Each invocation owns a fresh guarded Postgres/Redis project and removes it in
+`finally`. Never substitute developer resources. A safe command failure requires
+diagnosis before rerun; `cleanup_failed` requires checking resources by the
+receipt/project label before removing anything. Never run broad Docker prune.
+
+Redis outage blocks new login but not existing Session checks. Restore Redis
+and start a new login; consumed or expired flows are not reconstructed. Google
+failure also requires a fresh flow. Disabling Google configuration blocks new
+login, **not existing Sessions**. Reverting G3 code requires no schema downgrade
+and preserves G2 data. Suspected Session compromise requires the guarded
+emergency-revocation operation tracked in
+[Issue #99](https://github.com/bbungjun/AI_multimodal_platform/issues/99), which is
+not implemented. Live readiness is blocked until that operation and deployment
+proxy query-redaction checks are completed. Do not enable live authentication
+on the strength of mock verification alone.
+
+Compose disables Redis RDB snapshots and AOF so transient OAuth material never
+enters Redis persistence. This applies to broker contents too: do not treat
+Redis as a durable queue or promise automatic job recovery after a restart.
+Outbox/worker recovery remains a separate operational concern. External Redis
+deployments must enforce equivalent no-persistence/backup and access controls
+before live OAuth is enabled; G3 does not configure cloud Redis.
+
+### Isolated generation regression
+
+For release evidence, use a new explicit project, not the default developer
+stack. Check its project label has no containers, networks or volumes first.
+The example below uses the normal backend port, so ensure it is free; when it
+is occupied, supply a local Compose override and matching `--base-url` rather
+than stopping the developer stack.
+
+```powershell
+$env:COMPOSE_PROJECT_NAME = "auth-verify-golden" + [guid]::NewGuid().ToString("N").Substring(0, 12)
+$env:AI_PROVIDER = "mock"
+$env:AUTH_GOOGLE_CLIENT_ID = ""
+$env:AUTH_GOOGLE_CLIENT_SECRET = ""
+$env:AUTH_GOOGLE_REDIRECT_URI = ""
+$label = "label=com.docker.compose.project=$env:COMPOSE_PROJECT_NAME"
+$existing = @(docker ps -aq --filter $label) + @(docker volume ls -q --filter $label) + @(docker network ls -q --filter $label)
+if ($existing.Count -gt 0) { throw "Isolated project collision; do not run cleanup" }
+try {
+  python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 120
+  if ($LASTEXITCODE -ne 0) { throw "Mock golden path failed" }
+} finally {
+  docker compose -p $env:COMPOSE_PROJECT_NAME --env-file .env.example down --volumes --remove-orphans
+  Remove-Item Env:COMPOSE_PROJECT_NAME
+}
+```
+
+Do not copy OAuth callback URLs, cookies, profiles or raw logs into evidence.
+Use bounded categories and counts. G3's concrete results are in the
+[portfolio record](../portfolio/issue-98-auth-session-lifecycle.md).
 
 ## Schema Migration and Readiness
 

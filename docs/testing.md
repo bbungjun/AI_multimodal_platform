@@ -13,6 +13,45 @@ $env:AI_PROVIDER = "mock"
 python -m pytest
 ```
 
+## Backend Authentication Verification (G3)
+
+Google is never contacted by automated authentication tests. The production
+adapter is exercised with `httpx.MockTransport`, including an ephemeral test
+signing key; flow and lifecycle tests inject a verified-identity adapter. There
+is no runtime mock-login setting or product bypass route.
+
+```powershell
+cd backend
+$env:AI_PROVIDER = "mock"
+python -m pytest tests/test_auth_service.py tests/test_auth_api.py tests/test_google_identity_adapter.py tests/test_oauth_flow_store.py tests/test_verify_auth_sessions_script.py -q
+cd ..
+python scripts/verify_auth_sessions.py --env-file .env.example
+python scripts/verify_auth_sessions.py --env-file .env.example
+```
+
+Install backend development dependencies and start Docker first. The verifier
+creates two distinct fresh `auth-verify-*` projects, starts only Postgres/Redis,
+upgrades to the existing G2 head, then runs host-side integration tests through
+ephemeral loopback ports. Tests cover HTTP-to-storage login/me/logout, User
+invariants, digest storage, transactional rollback, max-five admission races,
+expiry, touch races, one-time flow consumption, Redis outage/recovery and cleanup.
+No migration is introduced by G3. The three real-runtime tests intentionally
+skip in ordinary pytest without the guarded verifier environment; they execute
+against real services in this command, not SQLite or mocks.
+
+Only `.env.example` is accepted. Every lifecycle command is bound to the exact
+generated project, collision checks precede startup, and `finally` removes only
+that project's containers, network and volumes. Receipts under local/untracked
+`.omo/evidence/auth/` contain a code checkpoint, category results and numeric
+counts, never raw command output, profile, cookie or OAuth values. Redis ports
+are rediscovered after restart because Docker may reassign ephemeral ports.
+
+Existing product generation must also pass the isolated golden-path procedure
+in the [local runbook](runbooks/local-mock.md). Test counts, host-specific
+limitations and observed latency belong to the
+[Issue #98 record](portfolio/issue-98-auth-session-lifecycle.md). Do not infer
+browser or live Google verification from these results.
+
 ## Prompt Enhancement Evaluation Schemas
 
 The prompt-enhancement benchmark has an isolated package under

@@ -18,8 +18,8 @@ at the end of every meaningful work session.
 
 - Repository: `bbungjun/AI_multimodal_platform`
 - Default branch: `main`
-- Latest merged `main`: `eefe939` (accepted G2 User/Session persistence
-  specification after PR #95's G1 schema-control merge). No paid Vertex request
+- Latest merged `main`: `58f405b` (G2 User/Session persistence, PR #97).
+  G3 delivery is tracked below. No paid Vertex request
   has been run after the earlier Gemini structured-JSON fix.
 - Default local mode: `AI_PROVIDER=mock`
 - Runtime shape: Docker Compose runs `db`, `redis`, `backend`, `dispatcher`,
@@ -76,7 +76,8 @@ paste credential contents.
 
 ## Active Work
 
-As of 2026-09-02, Issue #94 is complete and merged through PR #95:
+As of 2026-09-03, G1/G2 are merged and G3's implementation and local verification
+are complete; strict-CI delivery remains in progress:
 
 - On 2026-09-02, the initiative and accepted G1 specification merged through
   PR #93 at `fd96acc`. Issue #94 now tracks G1 schema control, and branch
@@ -106,7 +107,7 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   `91cf903`. G2 User/Session persistence is now the next planned slice.
 - The initiative-wide source of truth remains
   `docs/initiatives/auth-credits-master-console.md`. G1 schema control and G2
-  User/Session persistence are `Mock Verified`; OAuth, ownership, credit, usage,
+  User/Session persistence and backend OAuth are `Mock Verified`; ownership, credit, usage,
   and Master-console capabilities remain `Planned` or `Proposed`.
 - G2 implementation is `Mock Verified` in
   `docs/initiatives/g2-user-session-persistence-spec.md`. It adds one
@@ -132,19 +133,28 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   [#97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) merged at
   `58f405b`. Repository auto-merge is enabled and `main` now strictly requires
   `verify`, `Scan and SBOM (backend)`, and `Scan and SBOM (frontend)`.
-- G3 backend Google OAuth and Session lifecycle is accepted and planning is
-  `In Progress` in [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98)
-  on `codex/issue-98-auth-session-lifecycle`. The deep module
-  consumes G2 mappings without a migration, evicts the oldest Active Session on
-  a sixth login, and touches activity at most every five minutes. Browser login
-  UX is split into G3.1 and Master promotion/suspension operations into G10.
-  The frozen Goal plan is
-  `.omo/plans/issue-98-g3-auth-session-lifecycle-goal.md`, SHA-256
-  `95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`, with
-  eight sequential Todos, F1-F4, 17 predicted non-document paths, a 20-path hard
-  stop, no migration, two isolated Postgres+Redis cycles, mock regression, and
-  strict-CI auto-merge. No implementation, OAuth credential, or Google call
-  exists yet.
+- G3 [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98)
+  is implemented on `codex/issue-98-auth-session-lifecycle`, code/test checkpoint
+  `ec42d61`. The frozen Goal SHA remains
+  `95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`.
+  Scope stayed at 17 non-document paths and zero migrations. Two final projects
+  `auth-verify-d44013ba240b` and `auth-verify-d462709efd3b` passed real
+  Postgres/Redis lifecycle, HTTP-to-storage, rollback, flow replay and outage
+  recovery; both cleaned up. Concurrent login 12 => 5 active Sessions; touch
+  requests 20 => 1 write; first-signup race 8 => 1 User; 50 successful auth
+  requests had local p95 8.014/11.033 ms. Isolated mock generation passed under
+  `auth-verify-golden0298` at `ec42d61` and cleaned up. Redis RDB/AOF are disabled
+  to keep flow secrets transient; this makes broker contents ephemeral too.
+  Focused auth tests: 60 passed, three guarded integration tests execute in the
+  verifier. Full Windows backend: 456 passed, three guarded skips, the same
+  pre-existing Bash path-conversion failure; no test was weakened. Frontend
+  lint/build, Compose config and `verify_local.py --skip-backend` passed.
+  See [portfolio evidence](portfolio/issue-98-auth-session-lifecycle.md).
+  Next: strict CI, F1-F4 approval, ready PR and squash auto-merge, then G3.1
+  browser design. G4 consumes `require_user`; generation remains unauthenticated.
+  Real Google, browser login, ownership, Master operations, cloud and AI calls
+  were not performed. Emergency revocation is a pre-live blocker in
+  [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99).
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

@@ -226,9 +226,9 @@ document or inherit the full design interview.
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
-| G3 | Backend Google OAuth and Session lifecycle | In Progress | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [accepted spec](g3-auth-session-lifecycle-spec.md), branch `codex/issue-98-auth-session-lifecycle` from `58f405b`, Goal SHA `95dd3c9…da6c` | Execute Todo 1; first verification is the expected-failure auth contract suite |
-| G3.1 | Authenticated workspace entry and browser Session UX | Planned | None | Blocked by G3 |
-| G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
+| G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | Delivery CI pending; live readiness blocked by #99 and browser/proxy gates |
+| G3.1 | Authenticated workspace entry and browser Session UX | Planned | G3 interface available | Consume `/me`, logout, host-only cookie and redirect contracts; no OAuth/SQL internals |
+| G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -315,11 +315,12 @@ mode:
 
 ## Next Goal
 
-G2 is merged through PR #97 at `58f405b`. G3 is now `In Progress` on
-`codex/issue-98-auth-session-lifecycle` and may
-consume `User`, `UserSession`, the three identity enums, and their database
-invariants. Its specification fixes the backend authentication interface,
-sixth-Session eviction, and five-minute activity-touch policy. Implementation
-must follow `.omo/plans/issue-98-g3-auth-session-lifecycle-goal.md` at SHA-256
-`95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`, starting
-with Todo 1's expected-failure contract suite.
+G3's backend interface is mock verified at `ec42d61`; delivery still requires
+strict CI and squash auto-merge. After merge, design G3.1 around `/me`, logout,
+host-only HttpOnly/Lax/Secure cookies and the start/callback redirect contract.
+G3.1 must not duplicate Google verification or Session policy. G4 separately
+consumes `require_user` for ownership enforcement. Existing generation endpoints
+are not yet protected, and there is no product mock-login bypass. Live operation
+remains blocked by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
+and later browser/proxy verification. No Plan/Credit or Master mutation is
+delivered by G3.

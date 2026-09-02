@@ -3,8 +3,8 @@
 ## Status
 
 - Specification: `Accepted`
-- Implementation: `In Progress / not started`
-- Evidence level: `None`
+- Implementation: `Implemented`
+- Evidence level: `Mock Verified` (not live Google/browser verification)
 - Base: merged G2 on `main` at `58f405b`
 - Tracker: [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98)
 - Branch: `codex/issue-98-auth-session-lifecycle`
@@ -12,6 +12,16 @@
 - Goal plan SHA-256:
   `95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`
 - Accepted planning checkpoint: `fa19ae0`
+- Verified code/test checkpoint: `ec42d61`; 17 non-document paths, zero migrations.
+- Evidence: [Issue #98 portfolio record](../portfolio/issue-98-auth-session-lifecycle.md).
+- Fresh Postgres/Redis proofs: `auth-verify-d44013ba240b` and
+  `auth-verify-d462709efd3b`; HTTP-to-storage, rollback, concurrency,
+  expiry, replay and Redis outage/recovery passed; cleanup passed.
+- Existing mock generation golden path: `auth-verify-golden0298` passed at
+  `ec42d61`. Redis RDB/AOF are explicitly disabled and runtime-checked.
+- Live operational readiness remains blocked by
+  [Issue #99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
+  proxy query-redaction verification and the later real-browser gate.
 
 This specification narrows G3 to one deep backend authentication module. It
 turns Google's verified identity into a bounded CreativeOps Studio Session and
