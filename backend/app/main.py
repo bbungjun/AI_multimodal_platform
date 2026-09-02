@@ -8,6 +8,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.assets import router as assets_router
+from app.api.auth import router as auth_router
+from app.auth.google import install_auth_log_filter
 from app.api.files import router as files_router
 from app.api.generations import router as generations_router
 from app.api.health import router as health_router
@@ -24,6 +26,7 @@ from app.services.ops.runtime import runtime_metrics
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+install_auth_log_filter()
 
 
 @asynccontextmanager
@@ -76,6 +79,7 @@ async def record_runtime_metrics(request: Request, call_next):
 
 
 app.include_router(health_router, prefix="/api")
+app.include_router(auth_router)
 app.include_router(metrics_router)
 app.include_router(ops_router)
 app.include_router(generations_router)

@@ -67,6 +67,12 @@ verification remain mock-first and must not call paid providers.
 - Sessions expire after 12 hours of inactivity and seven absolute days.
 - Store only a SHA-256 session identifier hash and allow at most five active
   sessions per User.
+- A sixth successful login revokes the oldest Active Session by
+  `(created_at, id)` and then creates the new Session in the same User-locked
+  transaction. It does not reject the login.
+- Authentication refreshes `last_seen_at` at most once per five minutes using
+  a conditional update. Every request still evaluates the 12-hour inactivity
+  and seven-day absolute limits against database state.
 - A suspended User cannot log in or create, enhance, or retry work. Suspension
   revokes every session and cancels not-yet-dispatched work while already
   running provider work completes and settles normally.
@@ -219,16 +225,17 @@ document or inherit the full design interview.
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
-| G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), verified checkpoint `2a4c8ab` | Complete locally; cloud rollout Deferred / No-Go |
-| G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | G2 mapped types and constraints | Decide sixth-Session and activity-touch policy, then design OAuth module interface |
-| G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
+| G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
+| G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
+| G3.1 | Authenticated workspace entry and browser Session UX | Planned | G3 interface available | Consume `/me`, logout, host-only cookie and redirect contracts; no OAuth/SQL internals |
+| G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | G3 interface available | Consume `app.api.auth_dependencies.require_user` and `AuthenticatedUser`; generation currently remains unauthenticated |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
 | G8 | Atomic per-User concurrency enforcement | Planned | None | Blocked by G7 |
 | G9 | Personal Plan and Usage UI | Planned | None | Blocked by G6, G7 |
-| G10 | Master console, audit controls, and deterministic seed | Planned | None | Blocked by G4, G5, G8 |
-| G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned | None | Blocked by G1-G10 |
+| G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Planned | None | Blocked by G3, G4, G5, G8 |
+| G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned | None | Blocked by G1-G10, including G3.1 |
 
 Per-Goal soft limits:
 
@@ -285,11 +292,16 @@ At the end of a Goal:
 | 2026-09-02 | Promoted G1 to `Mock Verified`. | Two fresh isolated migration/reset cycles, three-process stale-revision refusal and recovery, and the mock product golden path passed at `6aa8a1f`; no cloud or provider call was made. |
 | 2026-09-02 | Accepted the G2 User/Session persistence specification and six approval gates. | Keeping OAuth in G3 lets G2 prove identity schema, credential exclusion, migration, reset, and constraint behavior independently. |
 | 2026-09-02 | Created Issue #96 and froze the G2 execution plan from `main` revision `eefe939`. | The 460-line plan bounds execution to one migration, 10 predicted non-document paths, a 12-path hard stop, two isolated Postgres cycles, and four final reviewers. |
+| 2026-09-02 | Fixed sixth-login eviction and five-minute activity-touch policies for G3. | A User keeps access on a new device while database writes remain bounded; User-row locking and conditional updates make both policies race-testable. |
+| 2026-09-02 | Split backend authentication, browser UX, and Master operations across G3, G3.1, and G10, producing twelve delivery slices. | Combining three interfaces would exceed one reliable Goal and obscure OAuth/session security review. |
+| 2026-09-02 | Accepted the G3 backend OAuth/Session specification and created Issue #98 from merged `main` at `58f405b`. | The deep module, security policy, 17-path prediction, no-migration rule, and real Postgres+Redis verification gates are fixed before implementation. |
+| 2026-09-02 | Froze the Issue #98 G3 Goal plan at SHA-256 `95dd3c9…da6c`. | Eight sequential Todos and four final reviewers now bind implementation, real-runtime proof, documentation, strict CI, and auto-merge without reopening scope. |
 
 ## Initiative Completion Gate
 
-The initiative is complete only when G1-G11 have evidence-backed terminal
-statuses and the following fresh checks pass in mock mode:
+The initiative is complete only when G1-G11, including G3.1, have
+evidence-backed terminal statuses and the following fresh checks pass in mock
+mode:
 
 - backend full pytest;
 - frontend typecheck and production build;
@@ -303,8 +315,13 @@ statuses and the following fresh checks pass in mock mode:
 
 ## Next Goal
 
-G2 is `Mock Verified` on `codex/issue-96-user-session-persistence`. G3 is the
-next planned slice after G2 review/merge. It may consume `User`, `UserSession`,
-the three identity enums, and their database invariants. Before implementation,
-G3 must explicitly decide sixth-Session behavior and activity-write frequency;
-it must not revise G2 table meaning to hide an unresolved lifecycle policy.
+G3's backend interface is mock verified at `ec42d61`; delivery and strict CI /
+squash auto-merge status are tracked in [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100).
+After merge, design G3.1 around `/me`, logout,
+host-only HttpOnly/Lax/Secure cookies and the start/callback redirect contract.
+G3.1 must not duplicate Google verification or Session policy. G4 separately
+consumes `require_user` for ownership enforcement. Existing generation endpoints
+are not yet protected, and there is no product mock-login bypass. Live operation
+remains blocked by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
+and later browser/proxy verification. No Plan/Credit or Master mutation is
+delivered by G3.

@@ -10,6 +10,7 @@
 | 등급 | 의미 | 필요한 근거 |
 |---|---|---|
 | `Implemented` | 현재 소스에 구현되어 자동 검증할 수 있다. | 코드와 test/build/static validation |
+| `Mock Verified` | 외부 서비스는 fake/mock으로 대체하고 로컬 실행 경계를 실제 검증했다. | 격리 runtime, 재현 명령, 결과와 제한 사항 |
 | `Live Verified` | 특정 날짜와 revision의 실제 runtime에서 관찰했다. | 실행 환경, 명령, metric, 결과 |
 | `Planned` | 설계 또는 Issue만 있고 실제 실행하지 않았다. | 계획, 위험, 후속 Issue |
 
@@ -30,8 +31,9 @@
 | Vertex Gemini/Imagen/Veo boundary | `Live Verified` | [Provider modes](../provider-modes.md), [Vertex pilot runbook](../runbooks/prompt-enhancement-vertex-pilot.md) | 추가 유료 실행 No-Go |
 | Prompt enhancement paired evaluation | `Implemented` | [Evaluation gate](../runbooks/prompt-enhancement-evaluation-gate.md), [evaluation package](../../evals/prompt_enhancement) | post-fix live rerun 미수행 |
 | Alembic schema control and guarded local reset | `Mock Verified` | [Issue #94 record](issue-94-schema-control.md), [G1 specification](../initiatives/g1-schema-control-spec.md) | Two isolated cycles, drift refusal/recovery, and product golden path passed |
-| User and Session persistence | `Mock Verified` | [Issue #96 record](issue-96-user-session-persistence.md), [G2 specification](../initiatives/g2-user-session-persistence-spec.md) | Two isolated cycles and 10 constraint classes passed; OAuth not implemented |
-| Google OAuth, per-User credits, and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Eleven bounded Goals; G3 is next after G2 merge |
+| User and Session persistence | `Mock Verified` | [Issue #96 record](issue-96-user-session-persistence.md), [G2 specification](../initiatives/g2-user-session-persistence-spec.md) | G2 merged; schema reused unchanged by G3 |
+| Backend Google OAuth and Session lifecycle | `Mock Verified` | [Issue #98 record](issue-98-auth-session-lifecycle.md), [G3 specification](../initiatives/g3-auth-session-lifecycle-spec.md) | Two real Postgres/Redis cycles, HTTP-to-storage and generation passed; no live Google login |
+| Browser login, ownership, per-User credits, and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | G3.1 / G4 and later bounded Goals; no product enforcement claim |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
 
@@ -80,7 +82,8 @@
 | [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | [PR #91](https://github.com/bbungjun/AI_multimodal_platform/pull/91) merged, CI passed |
 | [#88](https://github.com/bbungjun/AI_multimodal_platform/issues/88) | [Mock-first operations evidence design](issue-88-mock-ops-evidence.md) | Design complete, implementation planned |
 | [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94) | [Schema control and safe local reset](issue-94-schema-control.md) | Mock Verified at `6aa8a1f`; [PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) merged |
-| [#96](https://github.com/bbungjun/AI_multimodal_platform/issues/96) | [User and Session persistence](issue-96-user-session-persistence.md) | Mock Verified at `2a4c8ab`; [draft PR #97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) open |
+| [#96](https://github.com/bbungjun/AI_multimodal_platform/issues/96) | [User and Session persistence](issue-96-user-session-persistence.md) | Mock Verified at `2a4c8ab`; [PR #97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) merged |
+| [#98](https://github.com/bbungjun/AI_multimodal_platform/issues/98) | [Backend OAuth and Session lifecycle](issue-98-auth-session-lifecycle.md) | Mock Verified at `ec42d61`; [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), strict-check squash auto-merge |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

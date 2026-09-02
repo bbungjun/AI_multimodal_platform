@@ -1,5 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from pydantic import Field, SecretStr, model_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -37,6 +40,13 @@ class Settings(BaseSettings):
     gcp_project_id: str | None = None
     gcp_location: str = "us-central1"
     enhance_model: str = "gemini-2.5-flash"
+    auth_google_client_id: str = Field(default='', repr=False)
+    auth_google_client_secret: SecretStr = Field(default=SecretStr(''), repr=False)
+    auth_google_redirect_uri: str = ''
+    auth_frontend_origin: str = 'http://localhost:5173'
+    auth_flow_redis_url: str = Field(default='redis://redis:6379/1', repr=False)
+    auth_cookie_secure: bool = True
+    auth_provider_timeout_sec: float = Field(default=5.0, ge=0.1, le=30.0)
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -46,7 +56,31 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
+
+    @model_validator(mode='after')
+    def validate_auth_settings(self):
+        local = self.app_env in ('local', 'test')
+        configured = bool(self.auth_google_client_id and self.auth_google_client_secret.get_secret_value()
+                          and self.auth_google_redirect_uri)
+        if not self.auth_cookie_secure and not local:
+            raise ValueError('insecure auth cookies require local or test environment')
+        if '*' in self.cors_origins:
+            raise ValueError('credentialed CORS requires exact origins')
+        for value in (self.auth_frontend_origin, self.auth_google_redirect_uri):
+            if not value:
+                continue
+            parts = urlsplit(value)
+            if (parts.scheme not in ('http', 'https') or not parts.hostname
+                    or parts.username or parts.password or parts.query or parts.fragment
+                    or (parts.scheme != 'https' and not local and configured)):
+                raise ValueError('invalid auth origin or callback configuration')
+        if urlsplit(self.auth_frontend_origin).path not in ('', '/'):
+            raise ValueError('auth frontend must be an origin')
+        if self.auth_google_redirect_uri and urlsplit(self.auth_google_redirect_uri).path != '/api/auth/google/callback':
+            raise ValueError('invalid auth callback path')
+        return self
 
 
 @lru_cache
