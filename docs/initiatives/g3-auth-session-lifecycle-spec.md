@@ -3,12 +3,15 @@
 ## Status
 
 - Specification: `Accepted`
-- Implementation: `Planning / not started`
+- Implementation: `In Progress / not started`
 - Evidence level: `None`
 - Base: merged G2 on `main` at `58f405b`
 - Tracker: [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98)
 - Branch: `codex/issue-98-auth-session-lifecycle`
-- Goal plan: pending freeze
+- Goal plan: `.omo/plans/issue-98-g3-auth-session-lifecycle-goal.md`
+- Goal plan SHA-256:
+  `95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`
+- Accepted planning checkpoint: `fa19ae0`
 
 This specification narrows G3 to one deep backend authentication module. It
 turns Google's verified identity into a bounded CreativeOps Studio Session and

@@ -138,8 +138,13 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   consumes G2 mappings without a migration, evicts the oldest Active Session on
   a sixth login, and touches activity at most every five minutes. Browser login
   UX is split into G3.1 and Master promotion/suspension operations into G10.
-  The Goal plan is not frozen yet; no implementation, OAuth credential, or
-  Google call exists.
+  The frozen Goal plan is
+  `.omo/plans/issue-98-g3-auth-session-lifecycle-goal.md`, SHA-256
+  `95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`, with
+  eight sequential Todos, F1-F4, 17 predicted non-document paths, a 20-path hard
+  stop, no migration, two isolated Postgres+Redis cycles, mock regression, and
+  strict-CI auto-merge. No implementation, OAuth credential, or Google call
+  exists yet.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

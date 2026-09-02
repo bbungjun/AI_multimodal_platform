@@ -226,7 +226,7 @@ document or inherit the full design interview.
 |---|---|---|---|---|
 | G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
-| G3 | Backend Google OAuth and Session lifecycle | In Progress | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [accepted spec](g3-auth-session-lifecycle-spec.md), branch `codex/issue-98-auth-session-lifecycle` from `58f405b` | Freeze Goal plan; first verification is the expected-failure auth contract suite |
+| G3 | Backend Google OAuth and Session lifecycle | In Progress | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [accepted spec](g3-auth-session-lifecycle-spec.md), branch `codex/issue-98-auth-session-lifecycle` from `58f405b`, Goal SHA `95dd3c9…da6c` | Execute Todo 1; first verification is the expected-failure auth contract suite |
 | G3.1 | Authenticated workspace entry and browser Session UX | Planned | None | Blocked by G3 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
@@ -295,6 +295,7 @@ At the end of a Goal:
 | 2026-09-02 | Fixed sixth-login eviction and five-minute activity-touch policies for G3. | A User keeps access on a new device while database writes remain bounded; User-row locking and conditional updates make both policies race-testable. |
 | 2026-09-02 | Split backend authentication, browser UX, and Master operations across G3, G3.1, and G10, producing twelve delivery slices. | Combining three interfaces would exceed one reliable Goal and obscure OAuth/session security review. |
 | 2026-09-02 | Accepted the G3 backend OAuth/Session specification and created Issue #98 from merged `main` at `58f405b`. | The deep module, security policy, 17-path prediction, no-migration rule, and real Postgres+Redis verification gates are fixed before implementation. |
+| 2026-09-02 | Froze the Issue #98 G3 Goal plan at SHA-256 `95dd3c9…da6c`. | Eight sequential Todos and four final reviewers now bind implementation, real-runtime proof, documentation, strict CI, and auto-merge without reopening scope. |
 
 ## Initiative Completion Gate
 
@@ -319,4 +320,6 @@ G2 is merged through PR #97 at `58f405b`. G3 is now `In Progress` on
 consume `User`, `UserSession`, the three identity enums, and their database
 invariants. Its specification fixes the backend authentication interface,
 sixth-Session eviction, and five-minute activity-touch policy. Implementation
-must not start until the Goal plan is frozen and hash-linked from the spec.
+must follow `.omo/plans/issue-98-g3-auth-session-lifecycle-goal.md` at SHA-256
+`95dd3c913c080a2550e77ed39c2948e1ca24d779dd2bc3a85ee396e827c4da6c`, starting
+with Todo 1's expected-failure contract suite.
