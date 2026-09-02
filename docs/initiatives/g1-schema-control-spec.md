@@ -2,14 +2,14 @@
 
 ## Document Status
 
-- Status: `Accepted / Planning Only`
+- Status: `Accepted / In Progress`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
 - Issue: [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
 - Branch: `codex/issue-94-schema-control`
 - Goal plan: `.omo/plans/issue-94-g1-schema-control-goal.md`
-- Goal plan SHA-256: `a76850315a4ddcd03ec3a7f4e2d01e059024b67884c8ebc0029a568eafd90acb`
-- Implementation status: `Planned`
+- Goal plan SHA-256: `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`
+- Implementation status: `In Progress`
 - Provider mode for all verification: `AI_PROVIDER=mock`
 
 This specification is the complete execution input for G1. It intentionally
@@ -225,7 +225,34 @@ Compose startup, tests against the developer's normal project, or CI.
 
 ## Anticipated Change Map
 
-The executor must confirm the map from the fresh G1 branch before coding.
+Fresh preflight confirmed the following exact 22 non-document paths. The user
+approved this G1-only exception to the initiative's general 20-file soft limit;
+the one-module and one-migration limits remain unchanged.
+
+1. `backend/pyproject.toml`
+2. `backend/Dockerfile`
+3. `backend/alembic.ini`
+4. `backend/migrations/env.py`
+5. `backend/migrations/script.py.mako`
+6. `backend/migrations/versions/0001_generation_baseline.py`
+7. `backend/app/db.py`
+8. `backend/app/schema_control.py`
+9. `backend/app/main.py`
+10. `backend/app/worker.py`
+11. `backend/app/services/jobs/outbox_dispatcher.py`
+12. `backend/app/config.py`
+13. `.env.example`
+14. `docker-compose.yml`
+15. `scripts/verify_schema_migrations.py`
+16. `backend/tests/test_alembic_schema.py`
+17. `backend/tests/test_schema_control.py`
+18. `backend/tests/test_verify_schema_migrations_script.py`
+19. `backend/tests/test_main_lifespan.py`
+20. `backend/tests/test_worker_bootstrap.py`
+21. `backend/tests/test_compose_worker_service.py`
+22. `backend/tests/test_db_schema_sync.py` (remove after its runtime DDL seam is removed)
+
+The zones below explain the ownership of those exact paths.
 
 Production and configuration zones:
 
@@ -259,7 +286,7 @@ Documentation zones at closeout:
 - one Issue-specific portfolio record after the Issue number exists
 
 If implementation needs a new authentication route, User/Session table,
-frontend file, cloud resource, second migration, or more than 20 non-document
+frontend file, cloud resource, second migration, or more than 22 non-document
 changed paths, stop and split before coding.
 
 ## TDD Execution Order

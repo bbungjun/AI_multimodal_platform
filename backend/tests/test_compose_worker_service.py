@@ -195,3 +195,27 @@ def test_vertex_compose_mounts_credentials_for_worker_and_backend():
     )
     assert credential_mount in backend_block
     assert credential_mount in worker_block
+
+
+def test_migrate_is_database_only_and_gates_database_processes():
+    compose_text = _compose_text()
+    migrate_block = _service_block(compose_text, "migrate")
+
+    assert "python -m alembic upgrade head" in migrate_block
+    assert "DATABASE_URL:" in migrate_block
+    for forbidden in (
+        "AI_PROVIDER",
+        "GOOGLE_",
+        "GCP_",
+        "CELERY_",
+        "REDIS",
+        "DATA_DIR",
+        "volumes:",
+        "ports:",
+    ):
+        assert forbidden not in migrate_block
+
+    for service_name in ("backend", "worker", "dispatcher"):
+        service_block = _service_block(compose_text, service_name)
+        assert "migrate:" in service_block
+        assert "condition: service_completed_successfully" in service_block

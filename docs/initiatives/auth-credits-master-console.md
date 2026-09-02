@@ -218,7 +218,7 @@ document or inherit the full design interview.
 
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
-| G1 | Alembic schema control, fail-closed readiness, and safe local reset | In Progress (Planning) | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [accepted spec](g1-schema-control-spec.md), Goal plan SHA `a7685031...acb` | Branch `codex/issue-94-schema-control`; review the Goal plan before implementation |
+| G1 | Alembic schema control, fail-closed readiness, and safe local reset | In Progress | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [accepted spec](g1-schema-control-spec.md), Goal plan SHA `5874d675...9ff88` | Branch `codex/issue-94-schema-control`; execute Todo 1 contracts before implementation |
 | G2 | User and Session persistence | Planned | None | Blocked by G1 |
 | G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
@@ -240,6 +240,12 @@ Per-Goal soft limits:
   exceeds 20 files or requires a second unrelated module;
 - discovered enhancements go to follow-up Issues rather than expanding the
   active Goal.
+
+G1 has one explicitly approved exception to the general file-count limit: its
+fresh preflight found 15 production/configuration/script paths and 7 test paths
+(22 total). The two additional paths are the isolated Postgres verifier and
+removal of the obsolete runtime-DDL test; the one-module and one-migration
+limits remain unchanged.
 
 ## Goal Update Protocol
 
@@ -275,6 +281,7 @@ At the end of a Goal:
 | 2026-09-02 | Created Issue #94 and the G1 branch from merged `main` revision `fd96acc`. | G1 planning now has an isolated execution context and must not absorb G2 identity persistence. |
 | 2026-09-02 | Replaced legacy ownership backfill with a clean database reset while retaining Alembic. | Existing data is disposable; schema reproducibility remains portfolio-relevant. |
 | 2026-09-02 | Named the elevated role `master` and removed `admin`. | The product will expose only `user` and `master` RBAC roles. |
+| 2026-09-02 | Approved a G1-only changed-path limit of 22 while retaining one module and one migration. | Fresh preflight found that the isolated Postgres verifier and removal of the obsolete runtime-DDL test were missing from the initial 20-path estimate. |
 
 ## Initiative Completion Gate
 

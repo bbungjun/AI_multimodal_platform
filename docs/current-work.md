@@ -82,15 +82,19 @@ As of 2026-08-31, Issue #88 is active on branch
 - On 2026-09-02, the initiative and accepted G1 specification merged through
   PR #93 at `fd96acc`. Issue #94 now tracks G1 schema control, and branch
   `codex/issue-94-schema-control` was created from that exact `main` revision.
-  G1 is in planning only: the executable Goal plan is being written, while no
-  migration, reset, product-code change, or database mutation has occurred.
+  G1 execution started after fresh preflight found 22 required non-document
+  paths. The user approved a G1-only exception from the general 20-path limit;
+  the one-module and one-migration limits remain unchanged. No migration,
+  reset, product-code change, or database mutation has occurred yet.
   G1 must remain limited to Alembic schema control, fail-closed readiness,
   Compose ordering, and guarded local reset; User and Session persistence is G2.
   The completed local Goal plan is
   `.omo/plans/issue-94-g1-schema-control-goal.md` with SHA-256
-  `a76850315a4ddcd03ec3a7f4e2d01e059024b67884c8ebc0029a568eafd90acb`.
-  It contains eight sequential Todos and four final verifiers and has not been
-  executed.
+  `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`.
+  It contains eight sequential Todos and four final verifiers. Todo 1 fixed the
+  exact 22-path map and added the Alembic/schema-control contracts; the focused
+  red run produced 10 expected failures for missing G1 behavior with no import
+  or fixture error. Todo 2 Alembic packaging is next.
 - On 2026-09-02, the Google OAuth, per-User ownership, Free/Pro/Max credit,
   personal usage, and Master console initiative was accepted and subsequently
   refined into the eleven-Goal sequence described below. The initiative-wide
