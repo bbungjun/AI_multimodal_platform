@@ -153,3 +153,40 @@ test("hidden activity does not validate; stale me after logout cannot restore UI
   http.meStatus = 200; release();
   await expect(page.locator(".creative-generate")).toHaveCount(0);
 });
+
+for (const viewport of viewports) {
+  test(`keyboard login and account bounds ${viewport.width}`, async ({ page, http }) => {
+    await page.setViewportSize(viewport); await page.emulateMedia({ reducedMotion: "reduce" });
+    http.meStatus = 401; await page.goto("/login");
+    const login = page.getByRole("button", { name: "Google로 계속하기" });
+    await expect(login).toBeVisible();
+    for (let i = 0; i < 20 && !(await login.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
+    await expect(login).toBeFocused();
+    const loginBox = await login.boundingBox(); expect(loginBox!.x).toBeGreaterThanOrEqual(0);
+    expect(loginBox!.x + loginBox!.width).toBeLessThanOrEqual(viewport.width);
+    await maskedScreenshot(page, `login-${viewport.width}`);
+    await page.keyboard.press("Enter"); await expect(page.locator(".creative-generate")).toBeVisible();
+    const trigger = page.getByRole("button", { name: "계정 정보", exact: true });
+    await expect(trigger).toHaveCount(1);
+    for (let i = 0; i < 25 && !(await trigger.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
+    await expect(trigger).toBeFocused(); await page.keyboard.press("Enter");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const details = page.locator(".creative-account-details");
+    const box = await details.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await maskedScreenshot(page, `account-${viewport.width}`);
+    await page.keyboard.press("Escape"); await expect(trigger).toBeFocused();
+    await expect(details).toHaveCount(0); await page.keyboard.press("Enter");
+    await page.locator(".creative-breadcrumb").click(); await expect(details).toHaveCount(0); await expect(trigger).toBeFocused();
+    await page.keyboard.press("Enter"); await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "로그아웃", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter"); await expect(login).toBeVisible();
+  });
+  test(`unavailable view bounds ${viewport.width}`, async ({ page, http }) => {
+    await page.setViewportSize(viewport); http.meStatus = 503; await page.goto("/history");
+    await expect(page.getByRole("alert")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await maskedScreenshot(page, `unavailable-${viewport.width}`);
+  });
+}

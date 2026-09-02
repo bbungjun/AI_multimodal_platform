@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { Button, Panel } from "../components/ui";
 import { AUTH_COPY } from "../ui/copy";
+import { authApiConfigurationValid } from "../api/client";
 import { useSession } from "./AuthProvider";
 
 export function SessionScreen() {
@@ -13,8 +14,9 @@ export function SessionScreen() {
   const message = view.kind === "anonymous" ? (view.reason === "expired" ? AUTH_COPY.expired :
     view.reason === "signed-out" ? AUTH_COPY.signedOut : view.reason === "login-error" ? AUTH_COPY.loginError : AUTH_COPY.description) : AUTH_COPY.noDraft;
   const error = view.kind === "unavailable" || view.kind === "logout-unconfirmed" || (view.kind === "anonymous" && view.reason === "login-error");
+  const configurationError = !authApiConfigurationValid(window.location.origin);
   return <div className="creative-auth-frame"><Panel className="creative-auth-panel" eyebrow="CREATIVEOPS · STUDIO" title={title}>
-    <p role={error ? "alert" : "status"}>{message}</p>
+    <p role={error || configurationError ? "alert" : "status"}>{configurationError ? AUTH_COPY.configurationError : message}</p>
     <div className="creative-auth-actions">
       {view.kind === "anonymous" && <Button variant="primary" onClick={beginLogin}>{AUTH_COPY.continueGoogle}</Button>}
       {view.kind === "unavailable" && <Button onClick={() => void retry()}>{AUTH_COPY.retry}</Button>}
@@ -43,9 +45,10 @@ export function AccountControl({ mobile = false }: { mobile?: boolean }) {
     if (!open) return;
     const close = () => { setOpen(false); trigger.current?.focus(); };
     const key = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); close(); } };
-    const outside = (event: PointerEvent) => { if (!container.current?.contains(event.target as Node)) close(); };
-    document.addEventListener("keydown", key); document.addEventListener("pointerdown", outside);
-    return () => { document.removeEventListener("keydown", key); document.removeEventListener("pointerdown", outside); };
+    // Close after the browser's pointer focus transfer, so focus return survives.
+    const outside = (event: MouseEvent) => { if (!container.current?.contains(event.target as Node)) close(); };
+    document.addEventListener("keydown", key); document.addEventListener("click", outside);
+    return () => { document.removeEventListener("keydown", key); document.removeEventListener("click", outside); };
   }, [open]);
   if (view.kind !== "authenticated") return null;
   const name = view.user.display_name?.trim() || "사용자";

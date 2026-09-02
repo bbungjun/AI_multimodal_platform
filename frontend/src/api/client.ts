@@ -45,8 +45,11 @@ export function bindSessionGuard(session: SessionController) {
   return () => { if (sessionGuard === session) sessionGuard = undefined; };
 }
 
+export function authApiConfigurationValid(origin: string, base = apiBase) {
+  return !base || base === origin || base === `${origin}/`;
+}
 export function createAuthHttp(origin: string, base = apiBase, fetcher: typeof fetch = fetch, timeoutMs = 10_000) {
-  const configured = !base || base === origin || base === `${origin}/`;
+  const configured = authApiConfigurationValid(origin, base);
   async function request(path: string, signal: AbortSignal, method: string): Promise<AuthReply> {
     if (!configured) throw new Error("Authentication requires a same-origin API root");
     const abort = new AbortController();
@@ -167,6 +170,9 @@ async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const { body, headers, query, ...init } = options;
+  if (typeof window !== "undefined" && !authApiConfigurationValid(window.location.origin)) {
+    throw new ApiError("Authentication requires a same-origin API root", 0, null);
+  }
   const guard = path === "/api/health" ? undefined : sessionGuard;
   const epoch = guard?.getEpoch();
   const assertCurrent = () => {

@@ -163,6 +163,7 @@ export function createSession(deps: SessionDeps) {
     },
     sessionChanged() {
       if (signingOut) return signingOut;
+      if (view.kind === "checking" && checking) return checking;
       lock({ kind: "checking" }); return retry();
     },
     dispose() { epoch++; checkAbort?.abort(); logoutAbort?.abort(); checking = undefined; listeners.clear(); },

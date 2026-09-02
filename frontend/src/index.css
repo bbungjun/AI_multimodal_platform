@@ -3770,8 +3770,9 @@ a.brand-lockup:focus-visible {
 @media (max-width: 920px) {
   .creative-account--mobile { display: block; }
   .creative-account--mobile .creative-account-name { display: none; }
-  .creative-account--mobile .creative-account-details { top: calc(100% + 8px); bottom: auto; left: 0; width: min(230px, 60vw); }
+  .creative-account--mobile .creative-account-details { top: calc(100% + 8px); bottom: auto; left: auto; right: 0; width: min(230px, 60vw); }
 }
 @media (max-width: 640px) {
+  .creative-account--mobile .creative-account-details { left: 0; right: auto; }
   .creative-auth-actions .button { width: 100%; justify-content: center; }
 }

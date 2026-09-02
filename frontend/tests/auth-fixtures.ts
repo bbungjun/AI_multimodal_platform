@@ -41,7 +41,7 @@ export async function installHttp(context: BrowserContext) {
 export async function maskedScreenshot(page: Page, name: string) {
   await mkdir("../.omo/evidence/issue-101/screens", { recursive: true });
   await page.screenshot({ path: `../.omo/evidence/issue-101/screens/${name}.png`, fullPage: true,
-    mask: [page.locator(".creative-user-card, .creative-account, .creative-stage__copy h2, textarea, input")] });
+    mask: [page.locator(".creative-user-card, .creative-account, .creative-account-details strong, .creative-account-details p, .creative-stage__copy, textarea, input")] });
 }
 export const test = base.extend<{ http: Awaited<ReturnType<typeof installHttp>> }>({
   http: [async ({ context }, use) => { const counts = await installHttp(context); await use(counts);
