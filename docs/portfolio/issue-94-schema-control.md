@@ -2,16 +2,15 @@
 
 ## Evidence Status
 
-- Overall: `Implemented / Runtime Verification Pending`
+- Overall: `Mock Verified`
 - Specification: `Accepted`
 - Implementation: `Implemented` on branch `codex/issue-94-schema-control`
 - Static and unit verification: `Passed`
-- Isolated Postgres and mock runtime verification: `Blocked by local Docker engine`
+- Isolated Postgres and mock runtime verification: `Passed`
 - Cloud verification: `Deferred / No-Go`
 
-This record does not claim `Mock Verified` or `Live Verified`. The Docker-based
-upgrade, downgrade, reset, drift-failure, and product golden-path checks remain
-mandatory before Issue #94 can close.
+This record claims `Mock Verified`, not `Live Verified`. No cloud deployment,
+credential, Vertex request, or paid provider path was used.
 
 ## Background and Problem
 
@@ -85,7 +84,7 @@ command instead of reporting a rollback or success.
 
 ## Verification Evidence
 
-Tested implementation checkpoint: `e24ddb4` and later documentation-only
+Tested implementation checkpoint: `6aa8a1f` and later documentation-only
 changes on the same branch.
 
 | Verification | Result | Evidence boundary |
@@ -93,28 +92,34 @@ changes on the same branch.
 | `python -m alembic heads` | PASS | Exactly `0001_generation_baseline (head)` |
 | Alembic offline `upgrade head --sql` | PASS | PostgreSQL transactional DDL compiled through version insert |
 | Alembic packaging contracts | PASS | 4 tests |
-| Readiness/startup focused suite | PASS | 25 tests |
-| Reset and isolated-verifier unit suite | PASS | 27 tests |
+| Focused schema-control suite | PASS | 33 tests |
 | Compose config with `.env.example` | PASS | No provider or credential dependency in `migrate` |
-| Backend full pytest | PARTIAL | 383 passed; one pre-existing Windows Bash path-conversion failure |
+| Backend full pytest | PARTIAL | 385 passed; one pre-existing Windows Bash path-conversion failure |
 | Frontend typecheck/lint | PASS | Exit 0 |
 | Frontend production build | PASS | 95 modules transformed |
-| Runtime image build and isolated Postgres round trip | BLOCKED | Docker Linux engine did not answer; `docker-desktop` WSL distribution was stopped |
-| Mock product golden path | NOT RUN | Depends on the same Docker engine |
+| Runtime image and packaged head | PASS | Backend image built; exactly one packaged head |
+| Isolated migration/reset cycle 1 | PASS | `g1-schema-96996ab175ba`; round trip, drift refusal/recovery, preview, reset, cleanup |
+| Isolated migration/reset cycle 2 | PASS | `g1-schema-fa2916314600`; same checks repeated on a fresh volume |
+| Mock product golden path | PASS | `g1-schema-golden01`; prompt enhancement, generation, PNG/range serving, job cleanup |
+| Exact cleanup | PASS | Zero remaining `g1-schema-*` projects and volumes |
 
 The known backend failure is
 `test_release_script_guards_plan_scope_and_uses_terraform_rollback`. Windows
 passes a drive-letter path to WSL Bash without conversion; the failure predates
 G1 and is outside its changed paths. It was not skipped or weakened.
 
-Docker diagnosis was bounded and non-destructive. Docker Desktop was started,
-the stopped `docker-desktop` WSL distribution was invoked once, and a Linux
-engine switch was requested. The engine still did not answer. No default
-Compose project, database, or volume was used or deleted.
+The first runtime attempt exposed two packaging-fidelity defects before final
+verification: custom migration constraint names differed from the existing
+SQLAlchemy-created schema, and the installed application could not find
+`/app/alembic.ini`. The baseline now preserves PostgreSQL's existing unnamed
+constraint behavior, index inventory excludes constraint-owned indexes, and
+schema control resolves both source-tree and runtime-image config layouts.
+Windows Docker output is decoded explicitly as UTF-8 with replacement so the
+verifier remains deterministic across host code pages.
 
 ## Result and Impact
 
-At the implemented evidence level:
+At the mock-verified evidence level:
 
 - runtime source contains no `create_all`, handwritten `ALTER TABLE`, or
   startup `CREATE INDEX` path;
@@ -125,11 +130,13 @@ At the implemented evidence level:
 - reset plans contain no password or full database URL;
 - production, remote-host, wrong-database, live-name mismatch, and wrong-
   confirmation tests prove zero mutation;
+- backend, worker, and dispatcher each exited nonzero on an intentionally stale
+  revision, then passed after head restoration;
+- two independent real Postgres 16 volumes completed the full migration and
+  guarded reset contract;
+- the existing mock generation workflow remained operational end to end;
 - G2 can add User and Session persistence as one new revision without changing
   schema-control internals.
-
-These results demonstrate implementation and automated contract coverage, not
-that a real Postgres container has executed the migration.
 
 ## Rollback and Recovery
 
@@ -148,12 +155,9 @@ Then run the schema check before starting application processes.
 
 ## Remaining Risks and Next Steps
 
-1. Restore a responsive Docker Linux engine.
-2. Build the backend image and prove its packaged head.
-3. Run two fresh isolated upgrade/downgrade/re-upgrade/reset cycles.
-4. Force an outdated isolated revision and prove backend, Celery worker, and
-   dispatcher refuse work, then restore head.
-5. Run the mock golden path and confirm exact isolated cleanup.
-6. Promote the record to `Mock Verified` only after those receipts pass.
-7. Keep cloud migration orchestration `Deferred / No-Go` until a separate
+1. Keep cloud migration orchestration `Deferred / No-Go` until a separate
    deployment Issue defines rollout and rollback ordering.
+2. Fix the pre-existing Windows Bash path conversion test in its own Issue; it
+   is unrelated to G1 and was not skipped or weakened here.
+3. After G1 merges, start G2 with one User/Session migration and consume only
+   the documented schema-control interface.

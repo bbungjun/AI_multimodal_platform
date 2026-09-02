@@ -218,8 +218,8 @@ document or inherit the full design interview.
 
 | Goal | Deep module or delivery slice | Status | Current evidence | Next input |
 |---|---|---|---|---|
-| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Implemented / Runtime Verification Pending | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), implementation `e24ddb4` | Restore Docker engine; run two isolated cycles, drift refusal, and mock golden path |
-| G2 | User and Session persistence | Planned | None | Blocked by G1 |
+| G1 | Alembic schema control, fail-closed readiness, and safe local reset | Mock Verified | [Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), [spec](g1-schema-control-spec.md), [portfolio record](../portfolio/issue-94-schema-control.md), verified checkpoint `6aa8a1f` | Complete; cloud rollout remains Deferred / No-Go |
+| G2 | User and Session persistence | Planned | None | Consume G1's three-operation interface; design a single new revision |
 | G3 | Google OAuth, session lifecycle, User/Master promotion | Planned | None | Blocked by G2 |
 | G4 | Ownership policy across Job, Prompt Enhancement, and Asset | Planned | None | Blocked by G3 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
@@ -282,6 +282,7 @@ At the end of a Goal:
 | 2026-09-02 | Replaced legacy ownership backfill with a clean database reset while retaining Alembic. | Existing data is disposable; schema reproducibility remains portfolio-relevant. |
 | 2026-09-02 | Named the elevated role `master` and removed `admin`. | The product will expose only `user` and `master` RBAC roles. |
 | 2026-09-02 | Approved a G1-only changed-path limit of 22 while retaining one module and one migration. | Fresh preflight found that the isolated Postgres verifier and removal of the obsolete runtime-DDL test were missing from the initial 20-path estimate. |
+| 2026-09-02 | Promoted G1 to `Mock Verified`. | Two fresh isolated migration/reset cycles, three-process stale-revision refusal and recovery, and the mock product golden path passed at `6aa8a1f`; no cloud or provider call was made. |
 
 ## Initiative Completion Gate
 
@@ -300,8 +301,7 @@ statuses and the following fresh checks pass in mock mode:
 
 ## Next Goal
 
-G1 is the only active slice. Its accepted specification is
-[G1 Schema Control Specification](g1-schema-control-spec.md), its tracker is
-[Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94), and
-its branch is `codex/issue-94-schema-control`. Implementation remains blocked
-until the executable Goal plan is complete and reviewed.
+G1 is `Mock Verified` on branch `codex/issue-94-schema-control`; its tracker is
+[Issue #94](https://github.com/bbungjun/AI_multimodal_platform/issues/94).
+After its draft PR is reviewed and merged, G2 may begin from current `main` and
+must consume only G1's documented interface rather than its internals.

@@ -2,14 +2,14 @@
 
 ## Document Status
 
-- Status: `Accepted / Implemented, Runtime Verification Pending`
+- Status: `Accepted / Mock Verified`
 - Last updated: `2026-09-02`
 - Parent: [Authentication, Credits, and Master Console Initiative](auth-credits-master-console.md)
 - Issue: [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94)
 - Branch: `codex/issue-94-schema-control`
 - Goal plan: `.omo/plans/issue-94-g1-schema-control-goal.md`
 - Goal plan SHA-256: `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`
-- Implementation status: `Implemented`; Docker runtime verification pending
+- Implementation status: `Mock Verified` at code checkpoint `6aa8a1f`
 - Provider mode for all verification: `AI_PROVIDER=mock`
 
 This specification is the complete execution input for G1. It intentionally

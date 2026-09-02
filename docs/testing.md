@@ -192,10 +192,15 @@ exact project in cleanup. It must never be replaced with the default developer
 Compose project or volume. Receipts under `.omo/evidence/issue-94/` are local,
 redacted evidence and are not staged by directory wildcard.
 
-As of the Issue #94 implementation checkpoint, unit/static checks pass but the
-two real isolated runs are pending because the local Docker Linux engine did
-not become responsive. Do not report the feature as `Mock Verified` until both
-runs and the mock golden path complete.
+At verified checkpoint `6aa8a1f`, two fresh `--include-reset` runs passed with
+receipts for projects `g1-schema-96996ab175ba` and
+`g1-schema-fa2916314600`. Each run also forced a stale revision, proved
+backend, worker, and dispatcher exit nonzero with the safe
+`schema_revision_outdated` code, restored head, and removed the exact project
+and volumes. The isolated mock product golden path passed under
+`g1-schema-golden01`; its job, asset, containers, network, and volumes were
+removed afterward. This evidence supports `Mock Verified`, not cloud or Vertex
+verification.
 
 ## GitHub Actions CI
 

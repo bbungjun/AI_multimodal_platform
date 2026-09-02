@@ -91,16 +91,18 @@ As of 2026-09-02, Issue #94 is active on branch
   `.omo/plans/issue-94-g1-schema-control-goal.md` with SHA-256
   `5874d675ac45e1cf538c026789993aed9f1c1056206cd019059cabeb3269ff88`.
   It contains eight sequential Todos and four final verifiers. Implementation
-  through guarded reset is complete at `e24ddb4`: the packaged head is
-  `0001_generation_baseline`, focused readiness/startup checks passed 25, reset
-  and verifier checks passed 27, Compose config passed, frontend lint/build
-  passed, and full backend pytest passed 383 with only the pre-existing Windows
-  Bash path-conversion failure. Docker runtime evidence is still pending: the
-  Docker Desktop processes started, but the Linux engine did not answer and the
-  `docker-desktop` WSL distribution was observed stopped. No default project,
-  database, volume, cloud resource, or provider was mutated. Next, restore the
-  engine and run two isolated migration/reset cycles, drift refusal, and the
-  mock golden path before promoting G1 to `Mock Verified` or opening its PR.
+  is `Mock Verified` at `6aa8a1f`: the packaged head is
+  `0001_generation_baseline`; two fresh isolated upgrade/downgrade/re-upgrade,
+  stale-revision refusal/recovery, and guarded-reset cycles passed under
+  `g1-schema-96996ab175ba` and `g1-schema-fa2916314600`. The product mock
+  golden path passed under `g1-schema-golden01`, including generated PNG range
+  serving and cleanup. All three projects and their volumes were removed, and
+  no default project, cloud resource, credential, or provider was touched.
+  Focused schema tests passed 33; full backend pytest passed 385 with only the
+  pre-existing Windows Bash path-conversion failure; frontend lint/build,
+  mock and placeholder-only Vertex Compose config, and
+  `verify_local.py --skip-backend` passed. Next, finish final review, push, and
+  open the G1 draft PR; G2 remains planned until G1 merges.
 - The initiative-wide source of truth remains
   `docs/initiatives/auth-credits-master-console.md`. Identity, OAuth, ownership,
   credit, usage, and Master-console capabilities remain `Planned`; only G1
