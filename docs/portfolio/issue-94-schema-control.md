@@ -76,4 +76,3 @@ The full contract is in
 - The current database is unversioned and must not be passed to automated
   round-trip tests.
 - Every result above remains planned until implementation evidence replaces it.
-
