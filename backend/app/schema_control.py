@@ -18,7 +18,19 @@ from app.config import Settings, get_settings
 from app.db import engine
 
 
-ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
+_SOURCE_ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
+_WORKDIR_ALEMBIC_CONFIG_PATH = Path.cwd() / "alembic.ini"
+ALEMBIC_CONFIG_PATH = next(
+    (
+        candidate
+        for candidate in (
+            _SOURCE_ALEMBIC_CONFIG_PATH,
+            _WORKDIR_ALEMBIC_CONFIG_PATH,
+        )
+        if candidate.is_file()
+    ),
+    _SOURCE_ALEMBIC_CONFIG_PATH,
+)
 LOCAL_DATABASE_HOSTS = frozenset({"db", "localhost", "127.0.0.1"})
 RESET_CONFIRMATION_PREFIX = "RESET:"
 RESET_SQL = (

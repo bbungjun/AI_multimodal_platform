@@ -48,6 +48,13 @@ def test_schema_control_exposes_one_small_async_interface() -> None:
     ]
 
 
+def test_alembic_config_path_resolves_for_source_execution() -> None:
+    module = _schema_control()
+
+    assert module.ALEMBIC_CONFIG_PATH.is_file()
+    assert module.ALEMBIC_CONFIG_PATH.name == "alembic.ini"
+
+
 def test_schema_control_results_are_immutable_and_errors_are_typed() -> None:
     module = _schema_control()
 
