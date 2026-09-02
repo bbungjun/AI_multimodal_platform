@@ -8,6 +8,7 @@
 - Static and unit verification: `Passed`
 - Isolated Postgres and mock runtime verification: `Passed`
 - Cloud verification: `Deferred / No-Go`
+- Delivery: [Draft PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95)
 
 This record claims `Mock Verified`, not `Live Verified`. No cloud deployment,
 credential, Vertex request, or paid provider path was used.

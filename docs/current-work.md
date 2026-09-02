@@ -101,8 +101,9 @@ As of 2026-09-02, Issue #94 is active on branch
   Focused schema tests passed 33; full backend pytest passed 385 with only the
   pre-existing Windows Bash path-conversion failure; frontend lint/build,
   mock and placeholder-only Vertex Compose config, and
-  `verify_local.py --skip-backend` passed. Next, finish final review, push, and
-  open the G1 draft PR; G2 remains planned until G1 merges.
+  `verify_local.py --skip-backend` passed. Draft PR
+  [#95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) is open;
+  G2 remains planned until G1 is reviewed and merged.
 - The initiative-wide source of truth remains
   `docs/initiatives/auth-credits-master-console.md`. Identity, OAuth, ownership,
   credit, usage, and Master-console capabilities remain `Planned`; only G1
