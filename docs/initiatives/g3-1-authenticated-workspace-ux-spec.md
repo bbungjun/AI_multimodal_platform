@@ -3,9 +3,11 @@
 ## 1. 상태와 목적
 
 - 상태: **Mock Verified — 2026-09-03**. Todo 1-8 / F1-F4 APPROVE;
-  [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)의 구현 head
+  [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)의 구현 head
   `3b82c12`에서 필수 verify 및 backend/frontend Scan·SBOM 모두 통과했다.
-  최종 문서-only head의 CI도 확인한다. merge/Live Verified는 아니다.
+  문서 head `93db614`도 필수 CI 모두 통과했다. 2026-09-03 후속 승인으로 Ready와
+  CI-gated squash auto-merge를 진행한다. 최종 head CI 및 병합 상태는 PR을 기준으로
+  확인하며 Live Verified로 올리지 않는다. Frozen Goal은 변경하지 않는다.
 - Tracker: [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101).
 - Branch: `codex/issue-101-authenticated-workspace-ux`, synced `main` `edd7208` 기반.
 - Accepted spec checkpoint: `928743c`.
@@ -305,8 +307,9 @@ git diff --cached --name-only
 
 모두 APPROVE이며 실제 실행 결과가 있을 때만 `Mock Verified`로 올린다. 승인된 Goal은
 작은 commit마다 focused test/diff/status/staged path 검사를 수행하고 push/Draft PR까지
-완료한다. Goal은 Draft PR의 필수 CI 통과까지 수행하고 Draft를 유지한다. 이번 승인은
-ready/merge/auto-merge 권한을 포함하지 않는다. UI 자동화 성공은 #99/G4/실 OAuth 검증을
+완료한다. 원래 Goal은 Draft PR의 필수 CI 통과와 Draft 유지까지였으며 당시 승인은
+ready/merge/auto-merge 권한을 포함하지 않았다. 2026-09-03 후속 승인이 Ready 및
+필수 CI 통과 후 squash auto-merge를 허용했다. UI 자동화 성공은 #99/G4/실 OAuth 검증을
 대체하지 않는다.
 
 ## 10. 확정 Goal 분할

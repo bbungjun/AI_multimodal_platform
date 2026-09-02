@@ -1,8 +1,9 @@
 # Issue #101 — 기존 UI를 유지하는 로그인·Session UX
 
 - Issue: [#101](https://github.com/bbungjun/AI_multimodal_platform/issues/101)
-- 상태: **Mock Verified**, [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
-  전달. 구현 head `3b82c12` 필수 CI 모두 PASS; merge/Live Verified 아님.
+- 상태: **Mock Verified**, [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
+  전달. `93db614` 필수 CI 모두 PASS; 후속 승인으로 CI-gated squash auto-merge 진행.
+  실제 병합 상태/SHA는 PR을 기준으로 한다. Live Verified 아님.
 - 기준: G3 병합 `edd7208`; 구현/브라우저 검증 `58542f5`; CI 연결 `6aaf3ad`.
 - 범위: non-document 17개, 상한 20개 중 여유 미사용, migration 0개.
 - 설계: [accepted spec](../initiatives/g3-1-authenticated-workspace-ux-spec.md).
@@ -113,8 +114,8 @@ GitHub에서 다운로드할 수 있는 artifact가 아니다. 공유 문서에�
 - 입력 초안 영속화는 의도적으로 제외했다. 불확실한 logout은 명시적으로 재확인해야 한다.
 - npm audit의 advisory는 현재/기존 `edd7208` 모두 9개, 신규 advisory 패키지 0개였다.
   광범위 업그레이드로 숨기지 않았으며 runtime image의 required security scans와 구분한다.
-- 로컬 F1-F4는 아래 근거로 APPROVE했다. Draft PR의 current-head 필수 CI가 완료돼야
-  Goal을 종료한다. 이번 Goal은 ready/auto-merge/merge 권한을 포함하지 않는다.
+- 로컬 F1-F4는 아래 근거로 APPROVE했다. 원래 Goal은 Draft PR current-head 필수 CI
+  통과로 종료했고 merge 권한을 포함하지 않았다. 아래 후속 승인이 delivery 조건을 변경한다.
 
 ## 최종 review
 
@@ -136,4 +137,14 @@ GitHub에서 다운로드할 수 있는 artifact가 아니다. 공유 문서에�
 
 이 결과를 기록하는 마지막 변경은 문서-only이며 해당 head의 세 required check도 다시
 확인한다. 이후 상태는 [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)의
-current-head checks를 기준으로 한다. Draft 유지, auto-merge off, Issue #101 open이다.
+current-head checks를 기준으로 한다.
+
+### 후속 병합 승인 — 2026-09-03
+
+사용자가 Draft 대신 필수 CI 통과 후 자동 병합까지 요청했다. 기존 Draft-only 조건은
+이 후속 작업에 한해 Ready + squash auto-merge로 변경하며 frozen Goal 파일은 수정하지 않는다.
+사전 확인한 `93db614`에서 [verify](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663473684)와
+[두 image scan](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663473753)이 모두 PASS였다.
+승인 기록을 추가한 최종 head도 필수 CI를 다시 통과해야 한다. branch protection 우회나
+admin merge는 사용하지 않으며 최종 merge SHA와 Issue 종료 여부는 PR의 실제 결과로 확인한다.
+코드·schema 변경, 실제 OAuth/provider 호출, cloud 배포는 이 후속 작업에 포함하지 않는다.

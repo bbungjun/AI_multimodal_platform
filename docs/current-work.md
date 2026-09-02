@@ -79,9 +79,10 @@ paste credential contents.
 
 ### G3.1 execution handoff — 2026-09-03
 
-- Todo 1-8 and F1-F4 APPROVE. [Draft PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
+- Todo 1-8 and F1-F4 APPROVE. [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102)
   delivered on `codex/issue-101-authenticated-workspace-ux`; verified implementation
-  head `3b82c12`. No PR merge or real OAuth/provider/cloud execution occurred.
+  head `3b82c12`. The original Goal stopped before merge; the follow-up approval
+  below governs delivery. No real OAuth/provider/cloud execution occurred.
 - Latest local results: module 48 PASS, Chromium 34 PASS (four widths and keyboard,
   timeout, hidden/idle activity, two-tab and stale-response/mutation cases), npm
   ci/lint/build PASS. Linux full backend 467 PASS / 3 pre-existing conditional SKIP.
@@ -95,9 +96,13 @@ paste credential contents.
   Scan/SBOM checks PASS at `3b82c12`: [CI](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156208),
   [image scans](https://github.com/bbungjun/AI_multimodal_platform/actions/runs/33663156200).
   CI independently confirmed backend 467/3 conditional skip, module48 and browser34.
-- Final evidence updates are documentation-only. Recheck PR current-head checks
-  before any separate merge decision; Draft and auto-merge-disabled are intentional.
-- Next: separately authorize review/merge, then design G4 backend ownership.
+- Follow-up approval on 2026-09-03 authorizes Ready and squash auto-merge after
+  current-head required CI passes, superseding the original Draft-only delivery.
+  Preflight at `93db614`: `verify` and both Scan/SBOM checks SUCCESS; no tracked
+  dirty or staged changes. This authorization update is documentation-only and
+  must pass fresh CI too. PR #102 is the source for the resulting merge status/SHA.
+  The frozen execution plan and its original hash remain unchanged.
+- Next: finish the authorized CI-gated merge, then design G4 backend ownership.
   Frontend gating is not server access control; #99/live OAuth/proxy checks remain.
 - Detailed record: [Issue #101 portfolio](portfolio/issue-101-authenticated-workspace-ux.md).
 
