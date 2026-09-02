@@ -112,6 +112,70 @@ def test_oauth_compose_values_are_backend_only():
     assert 'command: ["redis-server", "--save", "", "--appendonly", "no"]' in text
 
 
+@pytest.mark.parametrize('code', ['auth_not_configured', 'oauth_provider_unavailable',
+                                 'oauth_flow_invalid', 'oauth_denied', 'oauth_identity_rejected',
+                                 'authentication_required', 'origin_not_allowed', 'untrusted-value'])
+def test_opt_in_start_error_redirect_preserves_default_contract(monkeypatch, code):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api import auth_dependencies as deps
+    from app.auth.service import AuthError
+    from app.config import Settings
+    m = api_module()
+    settings = Settings(_env_file=None, ai_provider='mock', auth_frontend_origin='https://studio.test')
+    monkeypatch.setattr(m, 'get_settings', lambda: settings)
+
+    class Service:
+        async def begin_google_login(self, path):
+            raise AuthError(code)
+
+    app = FastAPI()
+    app.include_router(m.router)
+    app.dependency_overrides[deps.get_auth_service] = lambda: Service()
+    expected = code if code in AuthError.CODES else 'authentication_required'
+    with TestClient(app, base_url='https://hostile.test', follow_redirects=False) as client:
+        for query in ('', '?ui=0', '?ui=true', '?ui=1&ui=1', '?ui=1&ui=0'):
+            response = client.get('/api/auth/google/start' + query)
+            assert response.status_code == 503
+            assert response.json() == {'detail': expected}
+        response = client.get('/api/auth/google/start?ui=1&return_to=https://hostile.test',
+                              headers={'origin': 'https://hostile.test'})
+        assert response.status_code == 303
+        assert response.headers['location'] == 'https://studio.test/login?auth_error=' + expected
+        assert response.headers['cache-control'] == 'no-store'
+        assert response.headers['referrer-policy'] == 'no-referrer'
+        cookie = response.headers['set-cookie']
+        assert 'Max-Age=0' in cookie and 'Path=/api/auth/google/callback' in cookie
+        assert 'HttpOnly' in cookie and 'Secure' in cookie and 'SameSite=lax' in cookie
+
+
+@pytest.mark.parametrize('query', ['', '?ui=1'])
+def test_start_success_unchanged_with_browser_opt_in(monkeypatch, query):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api import auth_dependencies as deps
+    from app.auth.service import LoginStart
+    from app.config import Settings
+    m = api_module()
+    monkeypatch.setattr(m, 'get_settings', lambda: Settings(_env_file=None, ai_provider='mock'))
+    class Service:
+        calls = 0
+        async def begin_google_login(self, path):
+            self.calls += 1
+            return LoginStart('https://identity.test/authorize', 'f' * 43)
+    service = Service()
+    app = FastAPI()
+    app.include_router(m.router)
+    app.dependency_overrides[deps.get_auth_service] = lambda: service
+    with TestClient(app, base_url='https://studio.test', follow_redirects=False) as client:
+        response = client.get('/api/auth/google/start' + query)
+        assert response.status_code == 307
+        assert response.headers['location'] == 'https://identity.test/authorize'
+        assert response.headers['cache-control'] == 'no-store'
+        assert 'Max-Age=600' in response.headers['set-cookie']
+        assert service.calls == 1
+
+
 async def test_real_postgres_redis_http_lifecycle(monkeypatch):
     """Full HTTP-to-storage seam, with only external identity replaced."""
     import os
