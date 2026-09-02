@@ -1,8 +1,9 @@
 # CreativeOps Studio Portfolio Evidence
 
-이 디렉터리는 CreativeOps Studio의 AI Platform Engineer 포트폴리오 근거를
-Issue 단위로 보존한다. 제품 기능 목록보다 어떤 운영 문제가 있었고, 어떤 증거로
-원인을 판단했으며, 어떻게 해결하고 검증했는지를 우선한다.
+이 디렉터리는 CreativeOps Studio의 `AI Full Stack Engineer`, `FDE`,
+`AX Consultant`, `AI Platform Engineer` 포트폴리오 근거를 Issue 단위로 보존한다.
+제품 기능 목록보다 어떤 사용자·비즈니스·운영 문제가 있었고, 어떤 증거로 원인을
+판단했으며, 어떻게 해결하고 성과를 검증했는지를 우선한다.
 
 ## Evidence Levels
 
@@ -28,6 +29,7 @@ Issue 단위로 보존한다. 제품 기능 목록보다 어떤 운영 문제가
 | Image scan, SBOM, digest release, rollback | `Live Verified` | [Supply-chain workflow](../../.github/workflows/image-supply-chain.yml), [release script](../../scripts/deploy_gcp_release.sh) | CI 구현 유지 |
 | Vertex Gemini/Imagen/Veo boundary | `Live Verified` | [Provider modes](../provider-modes.md), [Vertex pilot runbook](../runbooks/prompt-enhancement-vertex-pilot.md) | 추가 유료 실행 No-Go |
 | Prompt enhancement paired evaluation | `Implemented` | [Evaluation gate](../runbooks/prompt-enhancement-evaluation-gate.md), [evaluation package](../../evals/prompt_enhancement) | post-fix live rerun 미수행 |
+| Google OAuth, per-User credits, and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Ten bounded Goals; G1 not started |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
 

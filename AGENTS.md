@@ -21,15 +21,28 @@
 
 ## 포트폴리오/지원 직무 방향
 
-이 프로젝트는 현대오토에버 Platform Engineer 직무, 특히 `AI 플랫폼 구축/운영`
-포지션의 역량을 실제로 기르기 위한 개인 프로젝트입니다. 단순히 AI API를 호출하는
-앱이 아니라, AI 기능을 실제 운영 가능한 Kubernetes 기반 플랫폼 위에 배포하고
-검증하는 경험을 만드는 것이 핵심입니다.
+이 프로젝트는 `AI Full Stack Engineer`, `Forward Deployed Engineer(FDE)`,
+`AX Consultant`, `AI Platform Engineer` 직무에 필요한 역량을 실제로 기르기 위한
+개인 프로젝트입니다. 단순히 AI API를 호출하는 앱이 아니라, 사용자와 비즈니스
+문제를 정의하고 AI 기능을 제품으로 구현한 뒤 배포, 운영, 측정, 개선하는 전체
+과정을 증명하는 것이 핵심입니다.
 
-채용 공고의 `AI 플랫폼 구축/운영` 포지션은 HMC/KIA AI 플랫폼 운영, 대규모 GPU
-인프라 기반 K8S 구축/관리, 운영 자동화, 분산 학습 GPU 모니터링 고도화 및 성능
-개선을 다룹니다. 이 repo의 작업은 다음 역량을 증명하는 방향으로 우선순위를 둡니다.
+새 작업은 특정 도구의 사용 여부보다 다음 네 관점에서 포트폴리오 가치를 판단합니다.
 
+- **AI Full Stack:** frontend UX, backend/API, 비동기 job, 데이터와 asset, AI provider
+  연동이 하나의 사용자 흐름으로 완결되는가
+- **FDE:** 불명확한 요구를 검증 가능한 문제로 좁히고, 기존 시스템과 빠르게 통합하며,
+  현장 제약과 장애를 반영해 배포 가능한 해결책으로 만드는가
+- **AX Consultant:** 사용자 업무 흐름, 도입 전후 KPI, 비용/효율, 운영 절차, 보안과
+  거버넌스를 설명하고 기술 선택을 비즈니스 결과와 연결하는가
+- **AI Platform Engineer:** AI workload를 재현 가능하고 안전하게 배포하며, CI/CD,
+  관측성, 확장성, 복구, 비용과 provider failure를 운영 가능한 경계로 다루는가
+
+이 repo의 작업은 다음 역량을 함께 증명하는 방향으로 우선순위를 둡니다.
+
+- 사용자 문제와 업무 흐름 정의, acceptance criteria, KPI와 before/after 기록
+- React/TypeScript UX, FastAPI API, Postgres/Redis/Celery 기반 end-to-end 제품 구현
+- 외부 시스템과 AI provider를 교체·테스트 가능한 service boundary로 통합
 - Docker/Container, Kubernetes Pod/Service/Secret/ConfigMap/Deployment 이해와 운영
 - GCP GKE, Terraform, Artifact Registry, Cloud SQL, Redis, GCS, Workload Identity
   기반의 클라우드 인프라 구축
@@ -41,6 +54,8 @@
   수집 등 GPU 인프라 운영 설계 및 향후 실습
 - AI/ML 서비스 배포 관점의 provider boundary, retry, rate limit, prompt/generation
   failure handling
+- 요구사항, 아키텍처 결정, runbook, 장애 분석, 성과와 남은 위험을 이해관계자에게
+  전달하는 문서와 데모
 
 이력서나 면접에서 말할 때는 구현한 것과 아직 설계/학습 단계인 것을 구분합니다.
 현재까지 실제 구현한 것은 GKE/Terraform 배포, Kubernetes workload 운영,
@@ -50,9 +65,10 @@ Workload Identity, Vertex AI 연동, runbook, mock/vertex 모드 분리, k6 부�
 
 ## 실무 수준 구현 기준
 
-앞으로의 작업은 "포트폴리오에서 보이기만 하는 기능"이 아니라, 플랫폼 엔지니어가
-실제 운영 환경에서 인수할 수 있는 수준을 목표로 합니다. 범위를 작게 잡더라도
-구현, 검증, 운영, 장애 대응, 문서화가 함께 닫혀야 합니다.
+앞으로의 작업은 "포트폴리오에서 보이기만 하는 기능"이 아니라, AI 제품·현장 배포·
+전환 컨설팅·플랫폼 운영 중 어느 관점에서도 인수 가능한 수준을 목표로 합니다.
+범위를 작게 잡더라도 문제 정의, 구현, 검증, 운영, 장애 대응, 성과 측정, 문서화가
+함께 닫혀야 합니다.
 
 - Toy/demo shortcut을 기본 선택지로 두지 않습니다. 임시 sleep, 하드코딩된 로컬 경로,
   수동 콘솔 작업, 검증 없는 설정 변경, 문서 없는 운영 절차는 PR에서 명확히
@@ -193,6 +209,7 @@ docker compose -f docker-compose.yml -f docker-compose.vertex.yml up -d --build
 - `docs/job-lifecycle.md`
 - `docs/storage-and-assets.md`
 - `docs/testing.md`
+- `docs/initiatives/auth-credits-master-console.md`
 - `docs/runbooks/local-mock.md`
 - `docs/runbooks/vertex-live-qa.md`
 - `docs/adr/`
@@ -208,12 +225,32 @@ related to the change. Use `README.md` for setup/user-facing context,
 문서를 수정할 때는 현재 코드, env, API contract와 맞춰 씁니다. 과거 맥락을 그대로
 옮기기보다 지금 제품을 이해하는 데 필요한 정보만 남깁니다.
 
+### 인증·크레딧 Initiative 기록 규칙
+
+Google OAuth, 사용자 소유권, Plan/Credit, 개인 사용량, Master 운영 기능의 전체 합의는
+`docs/initiatives/auth-credits-master-console.md`를 단일 source of truth로 사용합니다.
+각 Goal은 전체 인터뷰나 이전 Goal의 구현 내역을 다시 싣지 않고, 이 문서의 관련 섹션과
+직전 Goal이 제공한 interface contract만 입력으로 사용합니다.
+
+- Goal 시작 시 해당 상태표 행만 `In Progress`로 바꾸고 Issue, branch, 선행 interface,
+  첫 검증 명령을 기록합니다.
+- Goal 종료 시 같은 행에 근거가 있는 상태, PR/commit, 검증 결과, 남은 위험을 기록하고
+  다음 Goal 행에 필요한 interface contract만 전달합니다.
+- 동시에 `docs/current-work.md`의 짧은 handoff와 Issue별 포트폴리오 기록을 갱신합니다.
+- 겹치는 전체 설계 문서를 Goal마다 새로 만들지 않습니다. 합의 변경은 기준 문서의 해당
+  절과 Decision Change Log를 함께 수정합니다.
+- 각 Goal은 하나의 주된 module 또는 delivery slice만 다룹니다. 예상 변경 파일이 20개를
+  넘거나 관련 없는 두 번째 module이 필요하면 구현 전에 후속 Goal로 분리합니다.
+- 문서의 `Planned`, `Implemented`, `Mock Verified`, `Live Verified` 상태는 실제 증거 없이
+  올리지 않습니다.
+
 ### 포트폴리오 Polishing 기록 규칙
 
 앞으로 이 저장소에서 수행하는 의미 있는 구현, 운영 검증, 장애 대응, 성능 개선,
-인프라 변경은 모두 AI Platform Engineer 포트폴리오의 근거가 됩니다. 코드나 설정만
-변경하고 끝내지 않고, 같은 Issue/PR 범위에서 문제와 판단 과정, 검증 결과를 함께
-문서화해야 합니다. 문서화가 빠진 작업은 완료로 간주하지 않습니다.
+인프라 변경은 모두 AI Full Stack, FDE, AX Consultant, AI Platform Engineer
+포트폴리오의 근거가 됩니다. 코드나 설정만 변경하고 끝내지 않고, 같은 Issue/PR
+범위에서 문제와 판단 과정, 검증 결과를 함께 문서화해야 합니다. 문서화가 빠진
+작업은 완료로 간주하지 않습니다.
 
 - `docs/current-work.md`에는 현재 상태와 다음 작업을 짧게 갱신하고, 장기간 보존할
   가치가 있는 작업은 관련 아키텍처 문서, runbook, troubleshooting 문서 또는 별도의
