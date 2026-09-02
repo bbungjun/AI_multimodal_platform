@@ -43,4 +43,3 @@ _Avoid_: Calendar month, monthly billing
 **Synthetic User**:
 운영 대시보드와 테스트를 위해 생성되며 Google OAuth로 로그인할 수 없는 가상 User.
 _Avoid_: Mock login user, test account
-
