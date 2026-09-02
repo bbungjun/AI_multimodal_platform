@@ -109,6 +109,14 @@ As of 2026-09-02, Issue #94 is complete and merged through PR #95:
   credit, usage, and Master-console capabilities remain `Planned`; only G1
   schema control is implemented. User and Session persistence remains G2 and
   must consume only G1's documented interface.
+- G2 planning is accepted in
+  `docs/initiatives/g2-user-session-persistence-spec.md`. It proposes one
+  `0002_user_session_persistence` revision, dedicated User/Session mappings,
+  credential-free session digests, real Postgres constraint verification, and
+  an interface-preserving generalization of reset preview inventory. The six
+  approval gates are accepted. Next, commit this documentation checkpoint,
+  create the G2 Issue/branch, and freeze an Issue-numbered Goal plan SHA. No G2
+  implementation exists yet.
 - On 2026-09-02, the portfolio target was broadened to `AI Full Stack
   Engineer`, `FDE`, `AX Consultant`, and `AI Platform Engineer`. Future work
   should connect end-to-end product delivery, field integration, measurable

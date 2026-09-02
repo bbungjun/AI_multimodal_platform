@@ -6,8 +6,17 @@ CreativeOps Studio는 사용자가 AI로 프롬프트를 개선하고 이미지�
 ## Language
 
 **User**:
-Google OAuth로 식별되며 CreativeOps Studio에서 콘텐츠를 생성하는 사람.
+CreativeOps Studio에서 콘텐츠, 사용 권한, 플랜의 소유 주체가 되는 사람 또는 운영용
+가상 페르소나. 로그인 가능 여부는 User의 출처와 상태에 따라 달라진다.
 _Avoid_: Account, member, customer
+
+**OAuth User**:
+Google 외부 식별자와 연결되어 제품에 로그인할 수 있는 User.
+_Avoid_: Real User, Google account
+
+**Session**:
+하나의 OAuth User가 로그인 상태를 이어가기 위해 서버가 인정하는 제한된 수명의 연결.
+_Avoid_: OAuth token, browser token, login record
 
 **Master**:
 모든 사용자의 운영 상태를 조회하고 플랜, 보너스 크레딧, 계정 상태를 관리할 수 있는
