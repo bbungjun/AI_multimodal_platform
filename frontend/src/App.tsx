@@ -10,6 +10,7 @@ import { JobDetailPage } from "./pages/JobDetailPage";
 import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { APP_COPY } from "./ui/copy";
+import { SessionScreen, WorkspaceGate } from "./auth/AuthViews";
 import "./index.css";
 
 const navItems = [
@@ -30,6 +31,8 @@ export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
+        <Route path="login" element={<SessionScreen />} />
+        <Route element={<WorkspaceGate />}>
         <Route index element={<Navigate to="/generate" replace />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="history" element={<HistoryPage />} />
@@ -37,6 +40,7 @@ export default function App() {
         <Route path="jobs/:jobId" element={<JobDetailPage />} />
         <Route path="pipelines/:pipelineId" element={<PipelinePage />} />
         <Route path="*" element={<Navigate to="/generate" replace />} />
+        </Route>
       </Route>
     </Routes>
   );
@@ -105,13 +109,6 @@ function AppShell() {
             </div>
             <p>4개 엔드포인트 정상</p>
             <p>평균 지연 412ms</p>
-          </div>
-          <div className="creative-user-card">
-            <div className="creative-user-avatar">SK</div>
-            <div>
-              <strong>S. Kim</strong>
-              <span>personal workspace</span>
-            </div>
           </div>
         </div>
       </aside>

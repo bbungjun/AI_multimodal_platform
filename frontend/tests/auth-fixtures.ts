@@ -8,11 +8,25 @@ export const viewports = [{ width: 1440, height: 900 }, { width: 920, height: 90
   { width: 390, height: 844 }, { width: 320, height: 720 }];
 
 export async function installHttp(context: BrowserContext) {
-  const counts = { me: 0, work: 0, start: 0, logout: 0, external: 0, unexpected: 0 };
+  const counts = { me: 0, work: 0, start: 0, logout: 0, external: 0, unexpected: 0,
+    meStatus: 200, profile: user as unknown, holdMe: null as Promise<void> | null,
+    logoutStatus: 204, holdLogout: null as Promise<void> | null, startError: "" };
   await context.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== origin) { counts.external++; await route.abort(); return; }
-    if (url.pathname === "/api/auth/me") { counts.me++; await route.fulfill({ json: user }); return; }
+    if (url.pathname === "/api/auth/me") { counts.me++; await counts.holdMe;
+      await route.fulfill({ status: counts.meStatus, json: counts.profile }); return; }
+    if (url.pathname === "/api/auth/google/start") {
+      counts.start++;
+      const location = counts.startError ? `/login?auth_error=${counts.startError}` : url.searchParams.get("return_to") || "/generate";
+      if (!counts.startError) counts.meStatus = 200;
+      await route.fulfill({ status: 303, headers: { location } }); return;
+    }
+    if (url.pathname === "/api/auth/logout") {
+      counts.logout++; await counts.holdLogout;
+      if (counts.logoutStatus === 204) counts.meStatus = 401;
+      await route.fulfill({ status: counts.logoutStatus }); return;
+    }
     if (url.pathname === "/api/health") { await route.fulfill({ json: { ok: true, db: "up" } }); return; }
     if (url.pathname === "/api/generations" && route.request().method() === "GET") {
       counts.work++; await route.fulfill({ json: [] }); return;
