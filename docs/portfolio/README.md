@@ -34,7 +34,8 @@
 | User and Session persistence | `Mock Verified` | [Issue #96 record](issue-96-user-session-persistence.md), [G2 specification](../initiatives/g2-user-session-persistence-spec.md) | G2 merged; schema reused unchanged by G3 |
 | Backend Google OAuth and Session lifecycle | `Mock Verified` | [Issue #98 record](issue-98-auth-session-lifecycle.md), [G3 specification](../initiatives/g3-auth-session-lifecycle-spec.md) | Two real Postgres/Redis cycles, HTTP-to-storage and generation passed; no live Google login |
 | Browser login and race-safe Session UX | `Mock Verified` | [Issue #101 record](issue-101-authenticated-workspace-ux.md), [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) | Module/Chromium/isolated generation and required CI passed; follow-up authorizes CI-gated squash auto-merge (status in PR); no live Google or backend access-control claim |
-| Owner persistence and authenticated admission | `Mock Verified` | [Issue105 evidence](issue-105-owner-persistence-admission.md) | New writers only; worker hardening and full read/file/delete/ops isolation remain G4.2B/G4.3 |
+| Owner persistence and authenticated admission | `Mock Verified` | [Issue105 evidence](issue-105-owner-persistence-admission.md) | New writers; complete read/file/delete/ops isolation remains G4.3 |
+| Worker ownership and idempotent pipeline linking | `Mock Verified` | [Issue107 evidence](issue-107-worker-ownership-invariants.md) | Two real PostgreSQL/HTTP/Celery cycles, lock-observed races, Session-expiry independence; no migration, live provider or complete G4.3 access-control claim |
 | Per-User credits and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Later bounded Goals; not implemented |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
@@ -88,6 +89,7 @@
 | [#98](https://github.com/bbungjun/AI_multimodal_platform/issues/98) | [Backend OAuth and Session lifecycle](issue-98-auth-session-lifecycle.md) | Mock Verified at `ec42d61`; [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), strict-check squash auto-merge |
 | [#103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) | [Authenticated mock verification harness](issue-103-authenticated-mock-harness.md) | Mock Verified at `471b76e`; two auth12/scenarios3/cleanup cycles, Linux542 PASS; ownership enforcement remains G4.2/G4.3 |
 | [#105](https://github.com/bbungjun/AI_multimodal_platform/issues/105) | [Owner persistence and admission](issue-105-owner-persistence-admission.md) | Mock Verified: schema2/auth1/final admission2, Linux658 PASS; exact20 paths/one migration, delivery linked in record |
+| [#107](https://github.com/bbungjun/AI_multimodal_platform/issues/107) | [Worker ownership and pipeline/race proof](issue-107-worker-ownership-invariants.md) | Planned / Goal Prepared: exact11 paths, migration0, baseline282 PASS; no B implementation/runtime proof yet |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

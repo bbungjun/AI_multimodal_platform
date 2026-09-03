@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
+
+import pytest
 
 from app.models import (
     Asset,
@@ -29,8 +31,11 @@ class FakePipelineLinkSession:
         self.scalar_results = scalar_results
         self.commit_count = 0
         self.added: list[object] = []
+        self.rollback_count = 0
+        self.statements = []
 
     async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
+        self.statements.append(_args[0])
         rows = self.scalar_results.pop(0) if self.scalar_results else []
         return FakeScalarsResult(rows)
 
@@ -39,6 +44,9 @@ class FakePipelineLinkSession:
 
     async def commit(self) -> None:
         self.commit_count += 1
+
+    async def rollback(self) -> None:
+        self.rollback_count += 1
 
 
 def _job(
@@ -51,6 +59,7 @@ def _job(
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=UUID(int=107),
         mode=mode,
         model=(
             "imagen-4.0-fast-generate-001"
@@ -229,7 +238,7 @@ async def test_fail_blocked_children_for_parent_marks_only_blocked_active_childr
         parent,
     )
 
-    assert failed_count == 1
+    assert getattr(failed_count, "failed_count", None) == 1
     assert blocked_child.state == JobState.FAILED
     assert blocked_child.error["code"] == pipeline_link.PIPELINE_PARENT_FAILED
     assert blocked_child.state_history[-1]["detail"] == {
@@ -239,3 +248,66 @@ async def test_fail_blocked_children_for_parent_marks_only_blocked_active_childr
     assert unblocked_child.state == JobState.PENDING
     assert terminal_child.state == JobState.COMPLETED
     assert session.commit_count == 1
+
+
+@pytest.mark.parametrize("corruption", ("foreign", "null_child", "null_parent", "wrong_parent", "wrong_asset"))
+async def test_pipeline_execution_rejects_corrupt_relation_without_child_mutation(corruption):
+    parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
+    child, asset = _blocked_child(parent), _image_asset(parent)
+    if corruption == "foreign":
+        child.owner_user_id = UUID(int=108)
+    elif corruption == "null_child":
+        child.owner_user_id = None
+    elif corruption == "null_parent":
+        parent.owner_user_id = None
+    elif corruption == "wrong_parent":
+        child.parent_job_id = uuid4()
+    else:
+        asset.job_id = uuid4()
+    session = FakePipelineLinkSession([[child], [asset]])
+    result = await pipeline_link.link_completed_parent(session, parent)
+    assert result.linked is False and result.reason == "ownership_reference_mismatch"
+    assert result.child_id is None and result.source_asset_id is None
+    assert child.blocked and child.source_asset_id is None and child.state == JobState.PENDING
+    assert not session.added and session.commit_count == 0
+    assert parent.state == JobState.COMPLETED
+
+
+async def test_pipeline_execution_repeated_link_adds_only_one_outbox_and_locks_child():
+    from sqlalchemy.dialects import postgresql
+    parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
+    child, asset = _blocked_child(parent), _image_asset(parent)
+    session = FakePipelineLinkSession([[child], [asset], [child], [asset]])
+    first = await pipeline_link.link_completed_parent(session, parent)
+    second = await pipeline_link.link_completed_parent(session, parent)
+    assert first.linked and not second.linked and second.reason == "child_already_unblocked"
+    assert len(_added_outbox_events(session)) == 1 and session.commit_count == 1
+    assert "FOR UPDATE OF jobs" in str(session.statements[0].compile(dialect=postgresql.dialect()))
+    assert session.statements[0].get_execution_options()["populate_existing"]
+
+
+async def test_pipeline_execution_commit_failure_safe_result_preserves_completed_parent(monkeypatch):
+    parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
+    child, asset = _blocked_child(parent), _image_asset(parent)
+    session = FakePipelineLinkSession([[child], [asset]])
+    async def fail_commit():
+        raise RuntimeError("SECRET_CANARY")
+    monkeypatch.setattr(session,"commit",fail_commit)
+    result = await pipeline_link.link_completed_parent(session, parent)
+    assert result.reason == "pipeline_link_failed" and not result.linked
+    assert result.child_id is None and result.source_asset_id is None
+    assert "SECRET_CANARY" not in repr(result)
+    assert parent.state == JobState.COMPLETED and session.rollback_count == 1
+
+
+async def test_pipeline_execution_failure_cascade_skips_foreign_and_null_children():
+    parent = _job(mode=GenerationMode.T2I, state=JobState.FAILED)
+    own, foreign, null_owner = (_blocked_child(parent) for _ in range(3))
+    foreign.owner_user_id, null_owner.owner_user_id = UUID(int=108), None
+    session = FakePipelineLinkSession([[own, foreign, null_owner]])
+    result = await pipeline_link.fail_blocked_children_for_parent(session,parent)
+    assert getattr(result,"failed_count",None) == 1
+    assert result.skipped_count == 2 and result.reason == "ownership_reference_mismatch"
+    assert own.state == JobState.FAILED
+    assert foreign.state == null_owner.state == JobState.PENDING
+    assert foreign.error is None and null_owner.error is None

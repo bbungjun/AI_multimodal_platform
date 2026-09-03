@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.ownership import assert_same_owner
 from app.services.jobs.outbox import add_job_dispatch_event
 from app.state_machine import TERMINAL_STATES, transition
 
@@ -24,10 +26,33 @@ class PipelineLinkResult:
     source_asset_id: UUID | None = None
 
 
+@dataclass(frozen=True)
+class PipelineFailureResult:
+    failed_count: int = 0
+    skipped_count: int = 0
+    reason: str | None = None
+
+
+def _owned_child(parent: Job, child: Job) -> bool:
+    try:
+        assert_same_owner(parent, child)
+    except HTTPException:
+        return False
+    return child.parent_job_id == parent.id
+
+
 async def link_completed_parent(
     session: AsyncSession,
     parent: Job,
 ) -> PipelineLinkResult:
+    try:
+        return await _link_completed_parent(session, parent)
+    except Exception:
+        await session.rollback()
+        return PipelineLinkResult(linked=False, reason="pipeline_link_failed")
+
+
+async def _link_completed_parent(session: AsyncSession, parent: Job) -> PipelineLinkResult:
     if parent.mode != GenerationMode.T2I:
         return PipelineLinkResult(linked=False, reason="parent_not_t2i")
     if parent.state != JobState.COMPLETED:
@@ -36,6 +61,8 @@ async def link_completed_parent(
     child = await _first_pipeline_child(session, parent.id)
     if child is None:
         return PipelineLinkResult(linked=False, reason="child_missing")
+    if not _owned_child(parent, child):
+        return PipelineLinkResult(linked=False, reason="ownership_reference_mismatch")
     if child.state in TERMINAL_STATES:
         return PipelineLinkResult(
             linked=False,
@@ -48,8 +75,12 @@ async def link_completed_parent(
             reason="child_not_pending",
             child_id=child.id,
         )
+    if not child.blocked:
+        return PipelineLinkResult(linked=False, reason="child_already_unblocked")
 
     asset = await _first_parent_asset(session, parent.id)
+    if asset is not None and asset.job_id != parent.id:
+        return PipelineLinkResult(linked=False, reason="ownership_reference_mismatch")
     if asset is None:
         await _fail_child(
             session,
@@ -89,10 +120,22 @@ async def link_completed_parent(
 async def fail_blocked_children_for_parent(
     session: AsyncSession,
     parent: Job,
-) -> int:
+) -> PipelineFailureResult:
+    try:
+        return await _fail_blocked_children_for_parent(session, parent)
+    except Exception:
+        await session.rollback()
+        return PipelineFailureResult(reason="pipeline_link_failed")
+
+
+async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) -> PipelineFailureResult:
     children = await _pipeline_children(session, parent.id)
     failed = 0
+    skipped = 0
     for child in children:
+        if not _owned_child(parent, child):
+            skipped += 1
+            continue
         if not child.blocked or child.state in TERMINAL_STATES:
             continue
         child.error = {
@@ -110,7 +153,7 @@ async def fail_blocked_children_for_parent(
 
     if failed:
         await session.commit()
-    return failed
+    return PipelineFailureResult(failed, skipped, "ownership_reference_mismatch" if skipped else None)
 
 
 async def _first_pipeline_child(session: AsyncSession, parent_id: UUID) -> Job | None:
@@ -126,6 +169,8 @@ async def _pipeline_children(session: AsyncSession, parent_id: UUID) -> list[Job
             Job.mode == GenerationMode.I2V,
         )
         .order_by(Job.created_at, Job.id)
+        .with_for_update(of=Job)
+        .execution_options(populate_existing=True)
     )
     result = await session.scalars(statement)
     return list(result.all())
@@ -136,6 +181,7 @@ async def _first_parent_asset(session: AsyncSession, parent_id: UUID) -> Asset |
         select(Asset)
         .where(Asset.job_id == parent_id)
         .order_by(Asset.created_at, Asset.id)
+        .execution_options(populate_existing=True)
     )
     result = await session.scalars(statement)
     assets = list(result.all())

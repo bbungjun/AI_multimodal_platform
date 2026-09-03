@@ -318,15 +318,16 @@ URLs, traversal, redirects, proxies and auth-header overrides. Golden, retry and
 duplicate I2V requests (including both race requests, polling, Range and delete)
 all use that transport. Backend `/me` and logout are real G3 routes, not mocks.
 
-Expected: two JSON receipts, each `auth_checks=12`, `admission_checks=111`, `scenarios=3`, `passed=true`,
+Expected: two JSON receipts, each `auth_checks=12`, `admission_checks=111`, `scenarios=3`,
+`execution_checks=20`, `pipeline_checks=4`, `race_checks=3`, `expiry_checks=1`, `passed=true`,
 `cleanup=true`. Receipts also identify code/schema revision, generated project,
 phase, mock provider and elapsed seconds. Never attach raw Compose/application
 logs, SQL exceptions, profiles, prompt payloads, headers or cookie jars as evidence.
 A failed check gives a safe phase receipt/nonzero exit, without anonymous fallback.
 No-cookie and invalid Sessions must fail. G4.2A extends the original G4.1 harness
-with authenticated admission proof, not full content access isolation.
+with authenticated admission proof; G4.2B adds the execution proof below, not full content access isolation.
 
-Per-cycle work deadline is360s, each scenario at most90s, HTTP timeout10s,
+Per-cycle work deadline is360s, each original smoke at most90s, HTTP timeout10s,
 subprocess at most180s and total cleanup budget90s. Startup/build timeout is a
 failure, not a reason to use the developer stack. Manual CI allows20 minutes.
 
@@ -365,8 +366,37 @@ Raw secrets, identities, prompt text and HTTP/SQL responses stay out of receipts
 Implementation `e3c98f1` passed two final admission cycles with exact-label resource
 counts0. [Issue105](../portfolio/issue-105-owner-persistence-admission.md) records
 schema/auth evidence, regression counts, failure analysis and delivery. Worker
-reference rechecks/pipeline-race proof remain G4.2B; all read/file/delete/ops access
+reference rechecks/pipeline-race proof are verified by G4.2B below; all read/file/delete/ops access
 controls remain G4.3. This is private local mock verification, not public deployment.
+
+### Worker ownership and pipeline proof (G4.2B)
+
+Use the same canonical two-cycle command above, not the destructive schema/reset
+verifier. B changes no migration; packaged head remains0003. It checks foreign
+worker references on real valid-FK fixtures, two independent pipeline-link sessions
+blocked on the child lock, and create/create, create/retry, retry/retry HTTP pairs
+blocked on each intended source lock. Only this run's consumers pause/resume.
+
+The fixed holder protocol accepts LF/CRLF JSON lines, times out after20s, and rolls
+back on EOF or failure. Host waiter observation including label checks is bounded
+by5s; each HTTP request remains10s. Helpers are reaped before guarded project
+cleanup. Killing a launcher alone is not evidence that its DB transaction ended.
+The original auth/admission/smokes finish before A's fixture Session is expired;
+then /me401 and already admitted Job completion are required. B remains valid for
+later requests; no fallback/reseed occurs. Real Celery parent/child output bytes,
+owner/source relationships and child outbox1 are checked before cleanup.
+
+`ownership_reference_mismatch` fails only the executing nonterminal Job and never
+repairs owners. A failed pipeline transaction returns `pipeline_link_failed` while
+the parent remains completed; automatic link reconciliation is not implemented.
+Do not regenerate a completed parent, relabel an owner or reset the DB to bypass
+this condition. Preserve evidence and plan a separate reviewed repair procedure.
+Code rollback must retain A-compatible head0003 and acknowledges losing B's worker
+protections; do not downgrade/reset developer or preview data.
+
+[Issue107 evidence](../portfolio/issue-107-worker-ownership-invariants.md) records
+two complete cycles, Windows CRLF failure/recovery, full regression and delivery.
+Public multi-user release still requires G4.3 and the remaining live security gates.
 
 ### Failure and owned-project recovery
 

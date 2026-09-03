@@ -465,8 +465,8 @@ Failure/cleanup guards and manual recovery are in the
 The manual smoke workflow uses this same runner twice with contents:read and a
 20-minute job timeout, without raw Compose logs or default-project cleanup.
 
-G4.1 originally proved the harness and G3 Session lifecycle only. G4.2A now adds
-the admission proof below; read/list/delete/file/ops remain deferred to G4.3.
+G4.1 originally proved the harness and G3 Session lifecycle only. G4.2A adds
+admission and G4.2B adds execution/race proof below; read/list/delete/file/ops remain deferred to G4.3.
 See [Issue103 evidence](portfolio/issue-103-authenticated-mock-harness.md)
 for actual counts, the baseline Windows Bash-path failure and Linux results.
 
@@ -512,7 +512,41 @@ Authoritative Linux result at implementation `e3c98f1`: 658 PASS, 3 pre-existing
 guarded-integration skips. Windows has one independently reproduced main Bash
 absolute-path failure; it is not skipped or waived in Linux/CI. Full counts,
 acceptance mapping and rollback are in [Issue105 evidence](portfolio/issue-105-owner-persistence-admission.md).
-No B worker/race or G4.3 complete isolation claim follows from A's passing gates.
+No B worker/race or G4.3 complete isolation claim follows from A's passing gates alone.
+
+## Worker Ownership and Pipeline/Race Proof (G4.2B)
+
+The canonical command remains `python scripts/verify_ownership.py --env-file .env.example --cycles 2`.
+B adds no migration and does not rerun destructive schema/reset QA. Each fresh cycle
+must retain auth12/admission111/scenarios3 and separately report execution20,
+pipeline4, race3, expiry1, passed=true and cleanup=true. Nonzero integer groups are
+mandatory; a partial cycle is not accepted. Work360s/cleanup90s per cycle and the
+total900s budget remain unchanged. Independently check exact project-label
+container/volume/network counts0; never use the development or preview project.
+
+| Proof | Evidence boundary |
+|---|---|
+| P11 worker references | 40 foreign/missing unit combinations, null owner/terminal/optional/attempt/poll/rollback tests; real valid-FK foreign20, no cloud provider |
+| P12 Session independence | Authenticated admission, expire only A fixture Session, /me401, admitted Job completed with original owner; no reseed |
+| P13 pipeline | Owner/relationship/commit-failure unit cases; real two-Session child-lock overlap and repeated outbox1; Celery parent/child bytes |
+| P14 HTTP races | Three distinct sources, host Barrier and two observed DB lock waiters before release;201/409, active1/outbox1, original state preserved |
+| P15 complete cycles | Two new projects, all old/new groups required, independent cleanup inspection |
+| P16 harness safety | Target/head/provider/identity/operation/records, labels, LF/CRLF, EOF/timeout/broken pipe, safe-count/canary negatives |
+
+Focused commands from `backend` with `AI_PROVIDER=mock`:
+
+```powershell
+python -m pytest tests/test_job_handlers.py tests/test_pipeline_link.py tests/test_ownership_execution.py -q
+python -m pytest tests/test_verify_ownership_script.py tests/test_mock_auth_support.py tests/test_smoke_mock_golden_path_script.py tests/test_smoke_mock_retry_script.py tests/test_smoke_mock_i2v_duplicate_script.py tests/test_mock_smoke_workflow.py -q
+```
+
+Run full backend pytest in a Linux tracked-only archive without workspace/.env/
+credential mounts, plus Windows full and unchanged frontend lint/build/auth/browser.
+At implementation `ff808b0`, Linux782 PASS/3 pre-existing guarded auth SKIP; Windows
+781 PASS/1 Bash absolute-path FAIL/3 existing SKIP. The Windows failure was freshly
+reproduced in an untouched `d40a8f7` archive; Linux/CI must pass that test. No new
+skip/xfail is allowed. Frontend48+34 PASS. See [Issue107 evidence](portfolio/issue-107-worker-ownership-invariants.md)
+for exact checkpoints, commands, failure analysis and final-head CI/merge links.
 
 ## Secret Hygiene
 
