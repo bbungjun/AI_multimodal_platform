@@ -170,9 +170,12 @@ async def list_generations(
     state: JobState | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    scope: str = Query(default="mine"),
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> list[GenerationResponse]:
-    statement = select(Job).options(selectinload(Job.assets))
+    access = OwnershipAccess(session, actor)
+    statement = access.jobs_statement(scope)
     if mode is not None:
         statement = statement.where(Job.mode == mode)
     if asset_kind is not None:
@@ -182,9 +185,10 @@ async def list_generations(
     if state is not None:
         statement = statement.where(Job.state == state)
 
-    statement = statement.order_by(Job.created_at.desc()).limit(limit).offset(offset)
+    statement = statement.order_by(Job.created_at.desc(), Job.id.desc()).limit(limit).offset(offset)
     result = await session.scalars(statement)
     jobs = list(result.all())
+    await access.validate_read_jobs(jobs)
     return [job_response_from_job(job, assets=list(job.assets)) for job in jobs]
 
 
@@ -192,13 +196,11 @@ async def list_generations(
 async def get_generation(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> GenerationResponse:
-    job = await session.get(Job, job_id, options=[selectinload(Job.assets)])
-    if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Generation job was not found.",
-        )
+    access = OwnershipAccess(session, actor)
+    job = await access.job(job_id, intent="read")
+    await access.validate_read_jobs([job])
     return job_response_from_job(job, assets=list(job.assets))
 
 
@@ -292,13 +294,20 @@ async def retry_generation(
 async def delete_generation(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> None:
-    job = await session.get(Job, job_id, options=[selectinload(Job.assets)])
-    if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Generation job was not found.",
-        )
+    access = OwnershipAccess(session, actor)
+    await access.job(job_id, intent="mutate")
+    # Admission locks Asset before its parent Job FK; deletion must use that order.
+    locked_assets = list((await session.scalars(
+        select(Asset).where(Asset.job_id == job_id).order_by(Asset.id)
+        .with_for_update(of=Asset).execution_options(populate_existing=True)
+    )).all())
+    job = await access.job(job_id, intent="mutate", lock=True)
+    await session.refresh(job, attribute_names=["assets"])
+    if (any(asset.job_id != job.id for asset in job.assets)
+            or {asset.id for asset in job.assets} != {asset.id for asset in locked_assets}):
+        raise HTTPException(status_code=409, detail="ownership_reference_mismatch")
 
     referencing_jobs = await _validate_job_deletable(session, job)
 
@@ -399,6 +408,8 @@ async def _validate_job_deletable(session: AsyncSession, job: Job) -> list[Job]:
         )
 
     referencing_jobs = await _jobs_referencing_job(session, job)
+    if any(reference.owner_user_id != job.owner_user_id for reference in referencing_jobs):
+        raise HTTPException(status_code=409, detail="ownership_reference_mismatch")
     if any(reference.state not in TERMINAL_STATES for reference in referencing_jobs):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -427,12 +438,12 @@ async def _jobs_referencing_job(session: AsyncSession, job: Job) -> list[Job]:
 
 
 async def _child_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:
-    result = await session.scalars(select(Job).where(Job.parent_job_id == job_id))
+    result = await session.scalars(select(Job).where(Job.parent_job_id == job_id).execution_options(populate_existing=True))
     return list(result.all())
 
 
 async def _retry_jobs(session: AsyncSession, job_id: UUID) -> list[Job]:
-    result = await session.scalars(select(Job).where(Job.retry_of_job_id == job_id))
+    result = await session.scalars(select(Job).where(Job.retry_of_job_id == job_id).execution_options(populate_existing=True))
     return list(result.all())
 
 
@@ -444,7 +455,7 @@ async def _jobs_using_assets(
     statement = select(Job).where(
         Job.id != job_id,
         Job.source_asset_id.in_(asset_ids),
-    )
+    ).execution_options(populate_existing=True)
     result = await session.scalars(statement)
     return list(result.all())
 

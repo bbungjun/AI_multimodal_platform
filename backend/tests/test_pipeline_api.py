@@ -49,6 +49,9 @@ class FakeScalarsResult:
     def first(self) -> Job | None:
         return self.rows[0] if self.rows else None
 
+    def all(self):
+        return self.rows
+
 
 class FakePipelineSession:
     def __init__(
@@ -88,7 +91,16 @@ class FakePipelineSession:
     async def scalars(self, *args, **_kwargs) -> FakeScalarsResult:
         if args:
             self.scalar_statements.append(args[0])
+            if "jobs.id =" in str(args[0].whereclause):
+                row = await self.get(Job, args[0].compile().params["id_1"])
+                return FakeScalarsResult([row] if row else [])
         return FakeScalarsResult(self.child_rows)
+
+    async def execute(self, statement):
+        ids = statement.compile().params["id_1"]
+        if statement.column_descriptions[0]["entity"] is Job:
+            return FakeScalarsResult([(j.id,j.owner_user_id) for j in self.jobs.values() if j.id in ids])
+        return FakeScalarsResult([(a.id,j.owner_user_id) for j in self.jobs.values() for a in j.assets if a.id in ids])
 
 
 ACTOR = AuthenticatedUser(id=UUID(int=101), role="user", status="active", email="fixture@invalid.test")
@@ -114,10 +126,11 @@ async def _post_pipeline(payload: dict, session: FakePipelineSession, *, actor=A
         app.dependency_overrides.pop(pipelines.get_session, None)
 
 
-async def _get_pipeline(path: str, session: FakePipelineSession):
+async def _get_pipeline(path: str, session: FakePipelineSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakePipelineSession]:
         yield session
 
+    app.dependency_overrides[pipelines.require_user] = lambda: actor
     app.dependency_overrides[pipelines.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -127,6 +140,7 @@ async def _get_pipeline(path: str, session: FakePipelineSession):
         ) as client:
             return await client.get(path)
     finally:
+        app.dependency_overrides.pop(pipelines.require_user, None)
         app.dependency_overrides.pop(pipelines.get_session, None)
 
 
@@ -155,6 +169,7 @@ def _job(
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=ACTOR.id,
         mode=mode,
         model=model,
         state=state,
@@ -389,9 +404,9 @@ async def test_get_pipeline_queries_i2v_child_by_parent_with_stable_ordering():
     assert response.status_code == 200
     assert response.json()["child"]["id"] == str(child.id)
     assert session.get_calls == [(Job, parent.id)]
-    assert len(session.scalar_statements) == 1
+    assert len(session.scalar_statements) == 2
 
-    compiled = session.scalar_statements[0].compile(
+    compiled = session.scalar_statements[1].compile(
         compile_kwargs={"literal_binds": False},
     )
     sql = str(compiled)
@@ -424,7 +439,7 @@ async def test_get_pipeline_returns_404_for_missing_parent():
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Pipeline parent job was not found."
+    assert response.json()["detail"] == "content_not_found"
 
 
 async def test_get_pipeline_returns_404_for_missing_child():
@@ -436,4 +451,4 @@ async def test_get_pipeline_returns_404_for_missing_child():
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Pipeline child job was not found."
+    assert response.json()["detail"] == "content_not_found"
