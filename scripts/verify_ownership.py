@@ -243,7 +243,8 @@ def access_proof(runtime,identity):
             for client in (clients["a"],clients["master"]):
                 request(client,"/api/generations/"+access_id("a","corrupt-"+kind),404)
         for client in (clients["a"],clients["master"]):
-            request(client,"/api/generations",404,query={"model":"access-corrupt"})
+            request(client,"/api/generations",404,query={"model":"access-corrupt",
+                "scope":"all" if client is clients["master"] else "mine"})
             request(client,"/api/pipelines/"+access_id("a","corrupt-pipeline"),404)
         completed["R"]=True
         print(json.dumps({"access_group":"R"}),flush=True)
