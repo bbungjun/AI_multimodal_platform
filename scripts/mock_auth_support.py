@@ -295,6 +295,22 @@ class OwnedRuntime:
         if self.resources(cleanup=True):
             raise HarnessError("cleanup_incomplete")
 
+    def admission_fixture(self, operation, records=None):
+        if not self.started or not self.base_url:
+            raise HarnessError("fixture_before_owned_runtime")
+        if operation not in {"prepare", "counts", "assert_rows", "arm_commit_failure", "disarm_commit_failure", "clear"}:
+            raise HarnessError("fixture_operation_refused")
+        self.assert_owned()
+        value = self.docker(*self.compose, "exec", "-T", "backend", "python", "tests/ownership_support.py",
+            input=json.dumps({"project": self.project, "operation": operation, "records": records or []}))
+        result = json.loads(value)
+        fields = {"prepared", "completed", "rows_checked", "owners", "outbox", "lineage",
+                  "jobs", "assets", "prompt_enhancements", "outbox_events"}
+        if (not isinstance(result, dict) or not result or not set(result).issubset(fields)
+                or any(type(v) not in (bool, int) or v < 0 for v in result.values())):
+            raise HarnessError("unsafe_fixture_result")
+        return result
+
 
 def auth_proof(runtime, identity):
     for case in ("a", "b", "master"):
@@ -342,6 +358,10 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                 if scenario is None:
                     raise HarnessError("scenario_adapter_required")
                 receipt["scenarios"] = scenario(runtime, identity)
+                admission_checks = getattr(runtime, "admission_checks", 0)
+                if type(admission_checks) is not int or admission_checks < 0:
+                    raise HarnessError("unsafe_admission_receipt")
+                receipt["admission_checks"] = admission_checks
                 receipt["passed"] = True
             except (Exception, KeyboardInterrupt):
                 # Persist only the fixed phase, never the exception or raw command output.
