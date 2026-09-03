@@ -8,6 +8,9 @@ from pathlib import Path
 import subprocess
 import tempfile
 import time
+import queue
+import threading
+from contextlib import contextmanager
 from uuid import uuid4, uuid5, NAMESPACE_URL
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
@@ -17,6 +20,29 @@ CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthe
 ORIGIN = "http://localhost:5173"
 ROOT = Path(__file__).resolve().parents[1]
 REVISION = "0003_content_ownership"
+EXECUTION_RESULTS = {
+    "worker_proof": "execution_checks", "pipeline_proof": "pipeline_checks",
+    "prepare_race": "prepared", "check_race": "race_checks", "lock_waiters": "lock_waiters",
+    "race_completed": "race_completed", "expire_session": "expired", "check_completed": "completed_records",
+}
+RACE_CASES = ("create_create", "create_retry", "retry_retry")
+
+
+def protocol_line(process, expected, timeout):
+    """Bounded line read: even EOF or malformed output is never surfaced verbatim."""
+    incoming = queue.Queue(maxsize=1)
+    def read():
+        try:
+            incoming.put(process.stdout.readline(256))
+        except Exception:
+            incoming.put("")
+    threading.Thread(target=read, daemon=True).start()
+    try:
+        line = incoming.get(timeout=max(0.01, timeout))
+        if json.loads(line) != {expected: True}:
+            raise ValueError
+    except (queue.Empty, ValueError, TypeError):
+        raise HarnessError("lock_protocol_failed") from None
 
 
 class HarnessError(RuntimeError):
@@ -311,6 +337,85 @@ class OwnedRuntime:
             raise HarnessError("unsafe_fixture_result")
         return result
 
+    def execution_payload(self, operation, case="", records=None):
+        if not self.started or not self.base_url:
+            raise HarnessError("fixture_before_owned_runtime")
+        if operation not in {*EXECUTION_RESULTS, "hold_source"}:
+            raise HarnessError("fixture_operation_refused")
+        race = operation in {"prepare_race", "check_race", "lock_waiters", "race_completed", "hold_source"}
+        records = [] if records is None else records
+        if case not in (RACE_CASES if race else ("",)) or type(records) is not list or len(records) > 2:
+            raise HarnessError("fixture_input_refused")
+        if operation != "check_completed" and records:
+            raise HarnessError("fixture_input_refused")
+        from uuid import UUID
+        try:
+            for record in records:
+                if (not isinstance(record, dict) or set(record) != {"kind", "id"}
+                        or record["kind"] not in ("pipeline", "expiry")):
+                    raise ValueError
+                UUID(record["id"])
+        except (ValueError, TypeError, AttributeError):
+            raise HarnessError("fixture_input_refused") from None
+        return json.dumps(dict(project=self.project, operation=operation, case=case, records=records)) + "\n"
+
+    def execution_fixture(self, operation, case="", records=None):
+        payload = self.execution_payload(operation, case, records)
+        if operation not in EXECUTION_RESULTS:
+            raise HarnessError("fixture_operation_refused")
+        self.assert_owned()
+        value = self.docker(*self.compose, "exec", "-T", "backend", "python", "tests/ownership_execution_support.py",
+                            input=payload)
+        field = EXECUTION_RESULTS[operation]
+        try:
+            result = json.loads(value)
+            expected_type = bool if field in {"prepared", "expired"} else int
+            if (not isinstance(result, dict) or set(result) != {field}
+                    or type(result[field]) is not expected_type or result[field] < 0):
+                raise ValueError
+        except (ValueError, TypeError):
+            raise HarnessError("unsafe_execution_result") from None
+        return result
+
+    @contextmanager
+    def source_lock(self, case):
+        payload = self.execution_payload("hold_source", case)
+        self.assert_owned()
+        if self.deadline - time.monotonic() < 25:
+            raise HarnessError("cycle_deadline")
+        args = ["docker", "--context", self.context, *self.compose, "exec", "-T", "backend",
+                "python", "tests/ownership_execution_support.py"]
+        process = None
+        try:
+            process = subprocess.Popen(args, cwd=ROOT, env=self.env, stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                       text=True, encoding="utf-8")
+            process.stdin.write(payload)
+            process.stdin.flush()
+            protocol_line(process, "locked", 5)
+            yield
+            process.stdin.write('{"release":true}\n')
+            process.stdin.flush()
+            protocol_line(process, "released", 5)
+            if process.wait(timeout=5):
+                raise HarnessError("lock_helper_failed")
+        except (OSError, subprocess.TimeoutExpired):
+            raise HarnessError("lock_helper_failed") from None
+        finally:
+            if process is not None:
+                try:
+                    process.stdin.close()  # EOF asks the in-container holder to rollback.
+                except OSError:
+                    pass
+                try:
+                    process.wait(timeout=22)  # holder self-timeout is20; launcher death is NOT proof of cleanup.
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+                    raise HarnessError("lock_helper_cleanup_failed") from None
+                finally:
+                    process.stdout.close()
+
 
 def auth_proof(runtime, identity):
     for case in ("a", "b", "master"):
@@ -362,6 +467,11 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                 if type(admission_checks) is not int or admission_checks < 0:
                     raise HarnessError("unsafe_admission_receipt")
                 receipt["admission_checks"] = admission_checks
+                for field in ("execution_checks", "pipeline_checks", "race_checks", "expiry_checks"):
+                    value = getattr(runtime, field, 0)
+                    if type(value) is not int or value < 0:
+                        raise HarnessError("unsafe_execution_receipt")
+                    receipt[field] = value
                 receipt["passed"] = True
             except (Exception, KeyboardInterrupt):
                 # Persist only the fixed phase, never the exception or raw command output.

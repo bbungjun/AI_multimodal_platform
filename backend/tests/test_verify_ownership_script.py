@@ -211,3 +211,132 @@ def test_start_rejects_wildcard_or_extra_bindings(bindings, monkeypatch, tmp_pat
     with pytest.raises(support.HarnessError, match="wildcard_or_multiple_bind_refused"):
         runtime.start(tmp_path)
     assert runtime.started  # finally must clean partial startup
+
+
+@pytest.mark.parametrize("field", ["execution_checks", "pipeline_checks", "race_checks", "expiry_checks"])
+@pytest.mark.parametrize("value", ["SECRET_CANARY", -1, True])
+def test_execution_receipt_canary(field, value, monkeypatch, capsys):
+    monkeypatch.setattr(support,"command",lambda *a,**kw:"0"*40)
+    monkeypatch.setattr(support,"auth_proof",lambda *a:12)
+    class Runtime:
+        project = "ownership-verify-012345abcdef"
+        def __init__(self,*a): setattr(self,field,value)
+        def preflight(self): pass
+        def start(self,*a): pass
+        def seed(self,*a): pass
+        def cleanup(self): pass
+    result = support.verify_cycles(support.ROOT/".env.example",1,runtime_factory=Runtime,scenario=lambda *a:3)[0]
+    assert not result["passed"] and result["cleanup"] and field not in result
+    assert "SECRET_CANARY" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("output", ['{"execution_checks":"SECRET_CANARY"}', 'SECRET_CANARY',
+                                  '{"execution_checks":true}', '{"execution_checks":-1}', '{"email":"SECRET_CANARY"}'])
+def test_execution_output_guard(output, monkeypatch):
+    runtime = support.OwnedRuntime(support.ROOT/".env.example")
+    runtime.started, runtime.base_url, runtime.compose = True,"http://127.0.0.1:1234",["compose"]
+    monkeypatch.setattr(runtime,"assert_owned",lambda:[])
+    monkeypatch.setattr(runtime,"docker",lambda *a,**kw:output)
+    with pytest.raises(support.HarnessError,match="unsafe_execution_result") as error:
+        runtime.execution_fixture("worker_proof")
+    assert "SECRET_CANARY" not in str(error.value)
+
+
+def test_execution_inputs_fixed_before_any_docker_command(monkeypatch):
+    runtime = support.OwnedRuntime(support.ROOT/".env.example")
+    with pytest.raises(support.HarnessError): runtime.execution_fixture("worker_proof")
+    runtime.started, runtime.base_url = True,"http://127.0.0.1:1234"
+    monkeypatch.setattr(runtime,"assert_owned",lambda:pytest.fail("must not reach Docker"))
+    for args in [("sql",), ("hold_source","create_create"), ("prepare_race","arbitrary"),
+                 ("worker_proof","",[{}]), ("check_completed","",[{"kind":"pipeline","id":"bad"}]),
+                 ("check_completed","",[{}]*3)]:
+        with pytest.raises(support.HarnessError): runtime.execution_fixture(*args)
+
+
+def execution_helper():
+    import importlib.util
+    path = support.ROOT/"backend/tests/ownership_execution_support.py"
+    sys.path.insert(0,str(path.parent))
+    spec = importlib.util.spec_from_file_location("execution_fixture_test",path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_execution_helper_target_and_payload_guards():
+    from types import SimpleNamespace
+    module = execution_helper()
+    payload = dict(project="ownership-verify-012345abcdef",operation="worker_proof",case="",records=[])
+    url = SimpleNamespace(host="db",database="ownership_verify_012345abcdef")
+    module.validate_payload(payload,url,"mock","local")
+    for change in [{"operation":"sql"},{"case":"arbitrary"},{"sql":"secret"},
+                   {"records":[{}]}, {"operation":"hold_source"}, {"records":[{}]*3},
+                   {"operation":"check_completed","records":[{"kind":"sql","id":"bad"}]}]:
+        with pytest.raises(ValueError): module.validate_payload(payload|change,url,"mock","local")
+    for target,provider,env in [(SimpleNamespace(host="remote",database=url.database),"mock","local"),
+            (SimpleNamespace(host="db",database="multimodal"),"mock","local"),(url,"vertex","local"),(url,"mock","prod")]:
+        with pytest.raises(ValueError): module.validate_payload(payload,target,provider,env)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["head","identities"])
+async def test_execution_inventory_rejects_wrong_head_or_identity(bad):
+    import ownership_support
+    from types import SimpleNamespace
+    class Session:
+        async def scalar(self,*a): return "stale" if bad == "head" else support.REVISION
+        async def scalars(self,*a): return SimpleNamespace(all=lambda:[])
+    with pytest.raises(ValueError): await ownership_support.validate_fixture_inventory(Session())
+
+
+@pytest.mark.parametrize("line", ["", "SECRET_CANARY\n", '{"locked":false}\n', '{"locked":true,"extra":1}\n'])
+def test_lock_protocol_eof_or_unsafe_output(line):
+    from io import StringIO
+    from types import SimpleNamespace
+    with pytest.raises(support.HarnessError,match="lock_protocol_failed") as error:
+        support.protocol_line(SimpleNamespace(stdout=StringIO(line)),"locked",0.1)
+    assert "SECRET_CANARY" not in str(error.value)
+
+
+def test_lock_protocol_timeout(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(support.threading,"Thread",lambda **kw:SimpleNamespace(start=lambda:None))
+    with pytest.raises(support.HarnessError,match="lock_protocol_failed"):
+        support.protocol_line(SimpleNamespace(),"locked",0.01)
+
+
+@pytest.mark.parametrize("failure", [None,"body","broken_pipe","timeout","eof"])
+def test_source_lock_reaps_its_fixed_helper(failure,monkeypatch):
+    from io import StringIO
+    runtime = support.OwnedRuntime(support.ROOT/".env.example")
+    runtime.started,runtime.base_url,runtime.compose,runtime.context = True,"http://127.0.0.1:1234",["compose"],"local"
+    monkeypatch.setattr(runtime,"assert_owned",lambda:[])
+    class Input(StringIO):
+        def flush(self):
+            if failure == "broken_pipe": raise BrokenPipeError("SECRET_CANARY")
+    class Process:
+        stdin = Input()
+        stdout = StringIO('' if failure == "eof" else '{"locked":true}\n{"released":true}\n')
+        waited = 0
+        killed = False
+        def wait(self,timeout):
+            self.waited += 1
+            if failure == "timeout" and self.waited <= 2: raise support.subprocess.TimeoutExpired("fixed",timeout)
+            return 0
+        def kill(self): self.killed = True
+    process = Process()
+    def popen(args,**kw):
+        assert args[-1] == "tests/ownership_execution_support.py" and args[0:3] == ["docker","--context","local"]
+        assert kw["stderr"] is support.subprocess.DEVNULL
+        return process
+    monkeypatch.setattr(support.subprocess,"Popen",popen)
+    def run():
+        with runtime.source_lock("create_create"):
+            if failure == "body": raise support.HarnessError("test_body")
+    if failure:
+        with pytest.raises(support.HarnessError) as error: run()
+        assert "SECRET_CANARY" not in str(error.value)
+    else:
+        run()
+    assert process.waited and process.stdin.closed and process.stdout.closed
+    assert process.killed is (failure == "timeout")

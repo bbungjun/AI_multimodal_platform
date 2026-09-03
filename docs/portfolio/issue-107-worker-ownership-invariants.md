@@ -116,3 +116,14 @@ child의 no-op을 적용했다. 실패 전파는 자신의 child만 변경하고
 건너뛴다. commit 실패는 rollback 후 safe result이며 generation 완료와 link를 분리했다.
 예상 밖 link 예외도 완료 parent를 재분류하지 않는 회귀를 추가했다.
 W/E **98 PASS /2.20s**, S **106 PASS /1.30s**; Todo2 RED 전부 해소. 실제 lock 경합은 아직 미검증이다.
+
+### Todo5 — guarded proof helper
+
+고정 명령만 받는 test-only helper로 실제 FK를 유지한 foreign worker20종, 두 Session의
+child lock overlap, HTTP race3종, admission 후 Session expiry, Celery 결과 bytes 검증을
+구성했다. host label/DB name/head/fixture identity guard를 재사용한다. lock holder는
+20초 self-timeout/EOF rollback, host는 bounded ACK와 process reap을 보장하고 실패 시
+전체 owned project cleanup으로 이어진다. launcher kill을 DB 정리 증거로 간주하지 않는다.
+H **144 PASS /0.87s**, W **98 PASS /2.09s**, S **106 PASS /1.14s**. canary 출력,
+잘못된 대상·operation·records, head/identity, EOF·timeout·broken pipe 음성 테스트 포함.
+이 시점의 검증은 단위/guard 검증이며 실제 2cycle 성공은 Todo6에서 별도 기록한다.

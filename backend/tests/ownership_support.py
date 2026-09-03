@@ -109,11 +109,7 @@ async def admission(payload):
     validate_admission_target(payload, make_url(os.environ.get("DATABASE_URL", "")),
                               settings.ai_provider, settings.app_env)
     async with AsyncSessionLocal() as session:
-        if await session.scalar(text("SELECT version_num FROM alembic_version")) != EXPECTED_REVISION:
-            raise ValueError("admission_revision_refused")
-        users = set((await session.scalars(select(User.id))).all())
-        if users != {uuid5(NAMESPACE_URL, "ownership-fixture/" + case) for case in CASES}:
-            raise ValueError("admission_identity_inventory_refused")
+        await validate_fixture_inventory(session)
         operation = payload["operation"]
         models = (Job, Asset, PromptEnhancement, OutboxEvent)
         async def counts():
@@ -183,6 +179,16 @@ async def admission(payload):
                         raise ValueError("admission_child_outbox_mismatch")
             checked += 1
         return {"rows_checked": checked, "owners": True, "outbox": True, "lineage": True}
+
+
+async def validate_fixture_inventory(session):
+    from sqlalchemy import select, text
+    from app.identity_models import User
+    if await session.scalar(text("SELECT version_num FROM alembic_version")) != EXPECTED_REVISION:
+        raise ValueError("admission_revision_refused")
+    users = set((await session.scalars(select(User.id))).all())
+    if users != {uuid5(NAMESPACE_URL, "ownership-fixture/" + case) for case in CASES}:
+        raise ValueError("admission_identity_inventory_refused")
 
 
 if __name__ == "__main__":
