@@ -835,7 +835,9 @@ def verify_reset(
     database = values["POSTGRES_DB"]
     before = _reset_row_counts(runner, project_name, env_file, values)
     _seed_reset_rows(runner, project_name, env_file, values)
-    expected = {table: count + (table not in CREDIT_TABLES) for table, count in before.items()}
+    # The fixed seed adds only the six legacy application rows, not accounting history.
+    seeded_tables = {"users", "user_sessions", "jobs", "assets", "prompt_enhancements", "outbox_events"}
+    expected = {table: count + (table in seeded_tables) for table, count in before.items()}
     _assert_reset_row_counts(
         runner, project_name, env_file, values, expected=expected
     )

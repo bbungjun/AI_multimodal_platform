@@ -130,6 +130,22 @@ Focused H+C+M537 PASS/2.72s; B0452 PASS/2.14s; exact20/20 paths, one new migrati
 and D PASS. These are host structural/unit results only. Next: commit all code,
 capture SHA, then execute S2/R2/A/O/L/W/U on that immutable code.
 
+### Todo6 attempt1 — reset fixture accounting mismatch (not complete)
+
+At faf2e00, schema-verify-4f37775cc70c reached reset and refused because the
+verifier predicted one extra credit_operations row from the legacy seed, which
+actually inserts only six legacy rows. This was a verifier expectation defect;
+reset execute had not started. Work154.657s/cleanup2.000s, failure verification_failed,
+credit90 reached; the receipt truthfully marks the full cycle unverified. Exact
+container/volume/network label queries independently returned0. No timeout.
+
+Replaced the negative four-table exclusion with the exact six seeded legacy tables;
+the regression now explicitly preserves existing operation counts. Also bounded
+the first participant of each new lifecycle race to10s, matching the second.
+Fresh H+C+M537 PASS/2.91s. Failure receipt retained at
+`.omo/evidence/schema/migration-schema-verify-4f37775cc70c.json`. All runtime gates
+restart on the corrected committed code; this failed attempt is never counted.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash

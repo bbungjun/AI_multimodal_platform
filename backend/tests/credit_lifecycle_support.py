@@ -310,7 +310,7 @@ async def proof(db, factory):
         async with factory() as s1, factory() as s2:
             tx1, tx2 = await s1.begin(), await s2.begin()
             try:
-                one = await first(s1,uid)
+                one = await asyncio.wait_for(first(s1,uid),10)
                 pid = await s2.scalar(text("SELECT pg_backend_pid()"))
                 pending = asyncio.create_task(second(s2,uid))
                 deadline = time.monotonic()+5

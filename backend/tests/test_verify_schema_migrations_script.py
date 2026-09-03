@@ -251,7 +251,7 @@ def test_reset_includes_credit_rows_and_refuses_preview_mutation(monkeypatch, mu
     monkeypatch.setattr(module, "assert_inventory", lambda *a: None)
     def seed(*args):
         for table in counts:
-            if table not in module.CREDIT_TABLES:
+            if table in {"users", "user_sessions", "jobs", "assets", "prompt_enhancements", "outbox_events"}:
                 counts[table] += 1
     monkeypatch.setattr(module, "_seed_reset_rows", seed)
     def runner(args):
@@ -265,6 +265,7 @@ def test_reset_includes_credit_rows_and_refuses_preview_mutation(monkeypatch, mu
         with pytest.raises(module.VerificationError, match="preview changed data"):
             module.verify_reset(runner, "schema-verify-12345678", REPO_ROOT / ".env.example", {"POSTGRES_DB":"fixture"})
         assert len(commands) == 1 and all(counts[table] == 3 for table in module.CREDIT_TABLES)
+        assert counts["credit_operations"] == 3
     else:
         module.verify_reset(runner, "schema-verify-12345678", REPO_ROOT / ".env.example", {"POSTGRES_DB":"fixture"})
         assert len(commands) == 2 and "--execute" not in commands[0] and "--execute" in commands[1]
