@@ -261,8 +261,8 @@ overspend/settlement races remain C and are not claimed by this Goal.
 
 ### G5B — after A merge
 
-This historical planning envelope is superseded by the
-[G5B executable spec](g5-credit-lifecycle-spec.md) on merged a003257.
+This historical planning envelope is superseded by the implemented, locally
+Mock Verified [G5B executable spec](g5-credit-lifecycle-spec.md) on merged a003257.
 
 Proposed small Interface: `ensure_cycle(session, user_id, now)`,
 `change_plan(session, user_id, target, now, operation_key)`,

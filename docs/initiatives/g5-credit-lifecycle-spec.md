@@ -1,11 +1,13 @@
 # G5B — Credit lifecycle executable specification
 
-Status: In Progress, 2026-09-04; user approved section3 with matching Goal SHA.
+Status: Locally Mock Verified, delivery pending, 2026-09-04.
 Issue [#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116);
 parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
 Branch: `codex/issue-116-credit-lifecycle`.
 Base: `a003257c88e09d3e5404a73b44ebdf6deb4650db`, actual G5A PR118 squash.
-No G5B code or runtime proof has been produced during preparation.
+The three-operation Module and additive0005 are implemented. Final local code
+65cdbb4 passed schema2/lifecycle2/auth1/ownership-all2 and full regressions;
+PR/CI/merge remain separate delivery evidence.
 
 ## 1. Scope and predecessor Interface
 
@@ -290,10 +292,10 @@ Timeout is No-Go: cleanup exact project and STOP/replan, no rerun/budget inflati
 
 ## 7. Delivery and G5C handoff
 
-After local success document observed commands/counts/time, failed attempts,
+Local success documents observed commands/counts/time, failed attempts,
 rollback and limitations. Ready PR closes116 only. Final-head verify and both
 Scan/SBOM SUCCESS, protected squash actually MERGED; parent114 and117 stay OPEN.
-No implementation or PR in this preparation.
+Implementation is local Mock Verified; no public product caller or billing claim.
 
 G5C input is the implemented three-operation Interface, lock/savepoint discipline,
 immutable operation replay and held-expired-grant behavior. It must add its own
