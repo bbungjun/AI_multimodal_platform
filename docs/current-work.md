@@ -80,6 +80,8 @@ paste credential contents.
 ### G4.3B execution — 2026-09-03
 
 - **Implemented; complete local mock proof. Delivery tracked in Issue112.**
+  [Ready PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) is the
+  delivery source; final CI/merge SHA/parent closure are recorded in Issue112.
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, parent109. v2 Todo1–7 complete; sequential
   self-reviews F1–F3 APPROVE. Ready PR/final3 CI/protected squash merge finish delivery. Actual merge and

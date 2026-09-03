@@ -5,6 +5,9 @@
   Ready PR, final-head CI and actual merge; final evidence is linked from Issue112.
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, parent [Issue109](https://github.com/bbungjun/AI_multimodal_platform/issues/109).
+- Delivery: [Ready PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113).
+  Final-head CI links, actual merge SHA and parent closure are recorded in Issue112
+  after confirmation, not inferred from auto-merge being enabled.
 - [Spec/B contract](../initiatives/g4-ownership-access-control-spec.md),
   [canonical initiative](../initiatives/auth-credits-master-console.md).
 - Main base `cd654e5003e70d78cd7390cc24e98f322a3383fe`: [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)

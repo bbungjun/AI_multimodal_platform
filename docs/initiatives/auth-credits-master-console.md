@@ -353,6 +353,10 @@ governs resume. This is approved preparation, not a new runtime success or deliv
 Default ownership preserves the existing manual smoke20-minute workflow budget;
 that unchanged workflow alone cannot prove full G4.3B.
 
+G4.3B delivery source: [Ready PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113).
+Issue112 records final-head CI/actual squash SHA and parent109 closure. The complete
+local proof is not a live deployment claim; G5 receives the documented Interfaces.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
