@@ -93,6 +93,15 @@ not real DB proof. Scope4/20; current-head compatibility is intentionally Todo5.
 The first staged check found a trailing blank line in the new migration; it was
 removed and the owned, unpushed checkpoint amended after fresh staged validation.
 
+### Todo3 — initialization and renewal
+
+Added caller-transaction requirement, savepoint rollback, fresh User/account/cycle/
+grant locking, immutable CycleView and current-only signup-anchored renewal.
+Held/consumed amounts remain on expired grants; only available moves to expired.
+Corrupt anchor/allowance/base/Master state and clock regression fail closed. No
+product caller or provider work. Unit fake tests prove Interface decisions, not
+PostgreSQL locking. C72 PASS/0.76s, M23 PASS/0.85s; scope6/20, D PASS.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash
