@@ -79,11 +79,11 @@ paste credential contents.
 
 ### G4.2B execution — 2026-09-03
 
-- **Mock Verified — Todo1–7 complete; Todo8 documentation/CI/merge next.**
+- **Mock Verified — Todo1–8 local work complete; final-head CI/merge pending.**
   [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`,
   [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
-  [preparation record](portfolio/issue-107-worker-ownership-invariants.md).
+  [implementation/evidence record](portfolio/issue-107-worker-ownership-invariants.md).
 - Main fast-forwarded to A squash `d40a8f704df583c050a6a89c235c311a0d4aef77`.
   PR106 actually MERGED; required final-head verify/both Scan-SBOM succeeded.
   Tracked/staged user edits0 at start; existing .omo files preserved.
@@ -93,7 +93,8 @@ paste credential contents.
   Transfer exact bytes when changing machines; hash is not backup. Never stage .omo wholesale.
 - gpt-5.6-sol / medium, sequential executor, Todo1–8/F1–F4. Exact11 code paths,
   hard cap20, migration0; schema head0003 unchanged. New guarded execution helper
-  separates real proof from hash-only identity fixtures. No product changes during preparation.
+  separates real proof from hash-only identity fixtures. The preparation snapshot had no product changes;
+  worker/pipeline and guarded execution proofs are now implemented and Mock Verified.
 - Fresh existing-code baseline B0: **282 PASS /3.59s**, not B feature proof.
   Final preparation recheck: **282 PASS /3.14s**, relative links77/broken0,
   exact11/spec/Goal/Todo8/F4 parity PASS; product/config/test modifications0.
@@ -113,6 +114,8 @@ paste credential contents.
   Linux tracked snapshot d376ca1:782 PASS/3 existing SKIP; Windows781 PASS/1 baseline Bash-path
   FAIL/3 existing SKIP (fresh untouched d40a8f7 reproduction). U lint/build/session48/browser34 PASS.
   B0/E/W/H/S=334/72/98/157/106 PASS. CI/merge pending; implementation still ff808b0.
+  Canonical status/spec/testing/runbook/portfolio updated. Next after actual merge: G4.3 design,
+  consuming B5 Interface handoff only. No read/file/delete/ops isolation or live deployment claim.
   Failed/diagnostic owned projects were cleaned; default/preview preserved. Do not start G4.3 or reset
   developer/preview DB; live OAuth/provider/cloud and frontend changes remain excluded.
 
@@ -156,7 +159,7 @@ paste credential contents.
   Windows657 PASS/3 existing SKIP/1 independently reproduced main Bash-path failure.
   Frontend lint/build, Session48/browser34 PASS. Final ownership2 again passed
   auth12/admission111/smoke3 each, exact-label leftovers0. No developer DB reset.
-  Next: G4.2B preparation above; A execution is complete.
+  Next: G4.2B execution/delivery above; A execution is complete.
   B input: head0003; `OwnershipAccess(session, actor)` scoped job/enhancement/asset,
   `assert_same_owner`, immutable owner on new writers and existing authenticated harness.
   B worker/pipeline/race and G4.3 read/file/delete/ops are

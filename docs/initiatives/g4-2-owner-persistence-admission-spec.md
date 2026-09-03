@@ -2,12 +2,14 @@
 
 ## 0. 상태 / 읽기 범위
 
-- **G4.2A Ownership Admission Mock Verified / G4.2B Planned — 2026-09-03.**
-- B 실행 준비: [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
+- **G4.2A/B Mock Verified — 2026-09-03; B delivery는 실행 기록의 PR 참조.**
+- B 실행: [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`, A merge `d40a8f7` 기준.
   `.omo/plans/issue-107-g4-2b-worker-ownership-invariants-goal.md`,
   SHA256 `16f6cda60a7306b86bbd909c84241e25394117bb2953ae4445c70c550e271064`.
-  B1–B4는 실행 준비 계약이며 구현은 시작하지 않았다. baseline282 PASS는 기존 코드 결과다.
+  구현 `ff808b0`: 실제 독립2cycle, 각 auth12/admission111/smoke3/execution20/pipeline4/
+  race3/expiry1 PASS/cleanup0. Linux782 PASS/기존 SKIP3, frontend48+34 PASS.
+  B1–B4는 구현 계약이며 [실행·실패 분석 기록](../portfolio/issue-107-worker-ownership-invariants.md)을 함께 본다.
 - A 실행: [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`, main `4dd359a` 동기화 완료.
   frozen Goal은 `.omo/plans/issue-105-g4-2a-owner-persistence-admission-goal.md`이며
@@ -47,7 +49,7 @@
 | 실행 Goal | 한 번에 닫는 산출물 | non-document 예산 | migration |
 |---|---|---:|---:|
 | G4.2A | owner schema + 모든 신규 writer 인증/owner 부여 + 요청 참조 검증 | 최대20, 아래 후보 정확히20 | 정확히1 |
-| G4.2B | worker의 실제 사용 직전 참조 검증 + pipeline 링크/실패 전파 + 실경합 회귀 | 실행 준비안11, hard cap20 | 0 |
+| G4.2B | worker의 실제 사용 직전 참조 검증 + pipeline 링크/실패 전파 + 실경합 회귀 | 구현11, hard cap20 | 0 |
 | 기존 G4.3 | read/list/delete/file/ops 접근 제어, cache, 전체 E2E | 기존20 재확인 | 0 |
 
 A와 B 각각 독립 Issue/branch/frozen Goal/PR/검증을 갖는다. A 병합 후 B 입력은
@@ -293,7 +295,18 @@ auth12/admission111/기존 smoke3을 보존하고 별도 execution/pipeline/race
 B는 migration0이므로 A의 destructive schema/reset QA를 반복 실행하지 않는다. 대신
 모든 migration bytes/head0003 불변의 정적 회귀와 fresh runtime의 정상 upgrade/readiness를 검증한다.
 Linux 전체 pytest와 무변경 frontend lint/build/auth/browser, 최종 head 필수CI3개 및 실제
-Ready PR squash MERGED를 실행 종료 조건으로 한다. 현재는 설계/실행 준비이며 B의 PASS 증거는 아니다.
+Ready PR squash MERGED를 실행 종료 조건으로 한다. 실제 PASS와 delivery 증거는 위 실행 기록에 연결한다.
+
+### B5. G4.3에 전달하는 구현 Interface
+
+- `validate_execution_references(session, job)`와 `OwnershipReferenceMismatch`:
+  저장된 owner, scoped fresh query, 안전한 non-retryable 실패. HTTP actor/Session을 요구하지 않는다.
+- `PipelineLinkResult` 유지, `PipelineFailureResult(failed_count, skipped_count, reason)` 추가.
+  child row lock 아래 재검사/원자적 outbox1; generation 완료와 link 실패 분리.
+- A의 `OwnershipAccess`와 head0003/migration bytes는 그대로다. B는 migration을 추가하지 않았다.
+- canonical runner는 세 기존 smoke와 별도 execution/pipeline/race/expiry 지표를 모두 요구한다.
+- G4.3은 조회/list/delete/file/ops/cache 정책만 별도 Goal에서 구현한다. B의 검증은 공개
+  다중 사용자 격리 완료나 live provider/OAuth 검증이 아니다. 실패한 link의 자동 복구는 없다.
 
 ## 5. 수용 기준 matrix
 

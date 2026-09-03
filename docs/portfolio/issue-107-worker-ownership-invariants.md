@@ -13,12 +13,12 @@
 A는 요청 접수 시 owner와 참조를 검사한다. 비동기 worker는 이후 다른 시점에 실행되며,
 직접 handler 호출이나 polling 재개에서도 저장된 관계를 다시 확인해야 한다.
 pipeline 연결은 parent/child/Asset/outbox를 함께 다루므로 같은 owner 보존과 반복 실행의
-안전성을 실제 PostgreSQL에서 검증할 필요가 있다. 이는 아직 B의 구현 성과가 아니다.
+안전성을 실제 PostgreSQL에서 검증해야 했다. 실제 구현/검증과 준비 당시 관측을 아래에서 구분한다.
 
-## 관측과 원인 분석
+## 준비 당시 관측과 원인 분석
 
 - 직접 T2I/T2V/I2V와 polling 경로가 분리돼 있다. dispatch만 감싸는 설계로는 호출을 놓친다.
-- 현재 pipeline child 조회에는 row lock/blocked 재검사가 없어 반복 link가 outbox를
+- 당시 pipeline child 조회에는 row lock/blocked 재검사가 없어 반복 link가 outbox를
   중복 생성할 수 있는 구조다. 이 준비 단계에서 실제 경합을 실행한 것은 아니다.
 - T2I completion/link가 같은 try에 있고, handlers는 rollback 후 Job id를 읽는다.
   A에서 확인한 expired ORM 위험이 이 경계에도 있어 별도 회귀가 필요하다.
@@ -30,7 +30,7 @@ pipeline 연결은 parent/child/Asset/outbox를 함께 다루므로 같은 owner
 ## 해결 설계와 판단 근거
 
 codebase-design의 작은 Interface/Locality 원칙으로 기존 Ownership Module에
-`validate_execution_references(session, job)`를 추가한다. actor/Session을 새로 만들지 않고
+`validate_execution_references(session, job)`를 추가했다. actor/Session을 새로 만들지 않고
 저장된 Job owner를 기준으로 남은 관계를 검증한다. 실패는 해당 Job에만 고정 safe code를
 기록한다. Session 만료를 이미 접수된 Job의 취소로 해석하지 않는다.
 
@@ -62,14 +62,16 @@ pipeline E2E, unit provider/storage spy의 증거도 서로 구분한다.
 
 ## 결과와 영향
 
-Issue/branch와 한 Todo씩 실행할 수 있는 계획을 준비했다. 현재 변경은 문서뿐이며
-worker 보안 PASS, race 성공 횟수, Docker 정리 결과, B PR/merge 성과를 주장하지 않는다.
-미래 종료 조건은 P11–P16 + 기존 A 회귀, 독립 전체2cycle/cleanup0, Linux 전체와
-frontend 무변경 회귀, Ready PR의 최종 head verify/양쪽 Scan-SBOM 및 실제 squash merge다.
+실행 직전 owner 검증과 pipeline의 lock/recheck/outbox 원자성을 구현했다. foreign 참조는
+현재 Job만 안전하게 실패시키고 타 사용자 데이터는 변경하지 않는다. 반복 연결 outbox1,
+HTTP 경합201/409, 접수 후 Session 만료에도 원 owner의 작업 완료를 실제2cycle에서 확인했다.
+11개 코드 경로, 신규 파일2, migration0이며 baseline Linux658에서782 PASS로124개가 늘었다.
+여전히 read/list/delete/file/ops 전체 격리는 G4.3이다. Ready PR의 최종 head 필수CI와
+실제 squash merge는 별도 delivery gate이며 아래 링크의 상태를 근거로 판단한다.
 
 ## Rollback·남은 위험·다음 단계
 
-- 다음 단계는 frozen SHA를 포함한 명시적인 G4.2B Goal 실행 요청이다.
+- 다음 구현 단계는 B actual merge 뒤 G4.3 설계/Goal 준비다. 이 Issue에서 구현하지 않는다.
 - schema/model/migration은 바꾸지 않는다. 향후 코드 rollback은 A 호환 head0003을
   유지하되 worker 보호가 사라짐을 명시하고 공개 배포 금지 상태를 유지한다. DB reset은 하지 않는다.
 - 비정상 pipeline link의 자동 복구는 범위 밖이다. parent 완료/child 미연결 상태를
@@ -170,3 +172,21 @@ Linux/CI에서는 이 테스트도 통과해야 하며 Windows 예외를 그쪽�
 `npm run test:auth:browser` **34 PASS /19.2s**. frontend 소스 변경0, 개인 Session/live OAuth0.
 Compose config와 diff/status/staged 검사 PASS. 새 skip0이며 선택적 guarded auth3개만
 기존대로 남았다. dependency deprecation warning은 범위 외 후속 유지보수 항목이다.
+
+### Todo8 — handoff and sequential final review
+
+canonical initiative의 B/aggregate G4.2 상태와 G4.3의 최소 Interface 입력만 갱신했다.
+spec, testing, local runbook, current-work, portfolio/index를 실제 증거에 맞췄다.
+상대 링크94개/오류0, 기존 test 함수 이름 보존, 최종 W98/H157 PASS.
+
+- F1 **APPROVE**: exact11 코드 경로/신규2/migration0, excluded 경로와 migration bytes 불변,
+  사용자 변경과 기존 .omo 보존, 새 skip/삭제된 test 없음.
+- F2 **APPROVE**: P11–P16 unit/실제 proof를 구분, owner/optional/terminal/rollback,
+  실제 lock overlap과 outbox1, Session 만료 독립성, safe output/cleanup 확인.
+- F3 **APPROVE**: 최종 구현의 독립2cycle 전 그룹/정리0, Linux782와 U48+34,
+  Windows 예외의 새 untouched baseline 재현, code tree 불변 확인.
+- F4 **PENDING DELIVERY**: 문서 검토는 완료했으나 최종 head의 필수CI3개와 실제
+  Ready PR squash MERGED 전에는 APPROVE하지 않는다. 최종 merge SHA는 PR/Issue comment와
+  safe receipt에 기록하여 병합 후 문서 변경을 끝없이 반복하지 않는다.
+
+네 검토는 single executor의 순차 self-review이며 독립 에이전트 검토가 아니다.

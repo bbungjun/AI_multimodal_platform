@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1 harness / G4.2A admission Mock Verified; G4.2B/G4.3 Planned (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B Mock Verified; G4.3 Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -21,7 +21,7 @@
 ## 1. 해결할 문제와 관측 근거
 
 로그인 화면은 작업 UI를 가리지만 backend 접근 권한을 강제하지 않는다.
-현재 코드를 직접 확인한 결과:
+G4 설계 당시 코드를 직접 확인한 결과(현재 A/B 구현 상태는 상태표와 실행 기록 참조):
 
 | 코드 | 현재 동작 / 누락 |
 |---|---|
@@ -191,7 +191,7 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 |---|---|---|---|
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
 | G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
-| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 실행 준비11, 최대20 / 0 | Issue107/Goal Prepared, 미구현; A와 함께 G4.2 종료, 읽기·파일 격리는 G4.3 |
+| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 구현11, 최대20 / 0 | [Issue107 기록](../portfolio/issue-107-worker-ownership-invariants.md): ff808b0, 실제2cycle/전체 회귀 PASS; delivery는 기록의 PR 참조. 읽기·파일 격리는 G4.3 |
 | G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 20 / 0 | 아래 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
