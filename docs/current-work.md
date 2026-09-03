@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G5A execution — 2026-09-04
 
-- **Mock Verified locally — Todo1–7 complete; delivery pending.** User authorized frozen-SHA execution.
+- **Mock Verified locally — Todo1–7 complete; Ready [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118) delivery pending.** User authorized frozen-SHA execution.
   SHA matches; main remains6537025, starting documentation checkpoint aeafaba.
   Fresh B0:384 PASS/2 existing guarded skips/2.96s. Local desktop-linux/npipe;
   preview4 running and developer/preview volumes preserved. Pure policy, four-table

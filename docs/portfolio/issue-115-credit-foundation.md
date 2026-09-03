@@ -231,7 +231,8 @@ Linux and frontend passed; the sole Windows failure was independently reproduced
 from untouched base. No timeout, skip, assertion or workload was weakened.
 
 **F4 pending delivery:** documentation truthfully marks only local mock
-verification. Ready PR, final-head `verify` and both Scan/SBOM checks, actual
+verification. Ready [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118),
+final-head `verify` and both Scan/SBOM checks, actual
 protected squash merge, Issue115 closure and parent114 remaining open are required
 before F4 APPROVE. G5B consumes the merged four-table/pure-policy Interface only;
 it adds initialization, 30-day renewal, Plan changes and grant writers in its own
