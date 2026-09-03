@@ -85,6 +85,7 @@
 | [#94](https://github.com/bbungjun/AI_multimodal_platform/issues/94) | [Schema control and safe local reset](issue-94-schema-control.md) | Mock Verified at `6aa8a1f`; [PR #95](https://github.com/bbungjun/AI_multimodal_platform/pull/95) merged |
 | [#96](https://github.com/bbungjun/AI_multimodal_platform/issues/96) | [User and Session persistence](issue-96-user-session-persistence.md) | Mock Verified at `2a4c8ab`; [PR #97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) merged |
 | [#98](https://github.com/bbungjun/AI_multimodal_platform/issues/98) | [Backend OAuth and Session lifecycle](issue-98-auth-session-lifecycle.md) | Mock Verified at `ec42d61`; [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), strict-check squash auto-merge |
+| [#103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) | [Authenticated mock verification harness](issue-103-authenticated-mock-harness.md) | Planned; accepted G4.1 Goal prepared, no implementation |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

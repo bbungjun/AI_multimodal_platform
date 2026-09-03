@@ -10,6 +10,11 @@ CreativeOps Studio에서 콘텐츠, 사용 권한, 플랜의 소유 주체가 �
 가상 페르소나. 로그인 가능 여부는 User의 출처와 상태에 따라 달라진다.
 _Avoid_: Account, member, customer
 
+**Content Owner**:
+하나의 생성 작업 또는 프롬프트 개선 결과를 소유하는 User. 생성 결과물의 소유자는
+그 결과를 만든 작업의 소유자이며, 운영 목적으로 조회하는 Master와는 구분된다.
+_Avoid_: Creator account, administrator owner
+
 **OAuth User**:
 Google 외부 식별자와 연결되어 제품에 로그인할 수 있는 User.
 _Avoid_: Real User, Google account
