@@ -1,6 +1,7 @@
 # Issue112 — G4.3B File/Range and Master Ops Access
 
-- **Planned / execution-ready**,2026-09-03. No implementation or B runtime proof yet.
+- **Implemented / runtime No-Go**,2026-09-03. Todo1–5 committed; Todo6 stopped.
+  No successful full runtime cycle, final regression, delivery PR or merge.
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, parent [Issue109](https://github.com/bbungjun/AI_multimodal_platform/issues/109).
 - [Spec/B contract](../initiatives/g4-ownership-access-control-spec.md),
@@ -12,6 +13,65 @@
   Transfer exact bytes between machines; .omo whole staging forbidden.
 
 ## 배경과 문제
+
+### 최신 실행 결과 (준비 기록보다 우선)
+
+사용자의 frozen-SHA 요청으로 실행했다. SHA 일치, main cd654e5 유지, 브랜치와 사용자
+변경 보존을 확인했다. 코드 변경은 정확한16개, migration0이다.
+
+| Checkpoint | Result |
+|---|---|
+| Todo1 b10136a | B0 431 PASS/4.04s; S94 PASS/기존2 skip/1.62s |
+| Todo2 01b1239 | file_asset/require_master; I25 PASS, M248/S94 회귀 PASS |
+| Todo3 e9f38ec | files/ops routes; F175/M248/S94 PASS |
+| Todo4 e4291d1 | no-store/raw-path/stream errors; F231/M248/H201 PASS |
+| Todo5 ebfd530 | guarded F/O/V/E; H230/F231/M248/S94 PASS, py_compile PASS |
+| Todo6 actual attempt1 | FAIL,417.17s including cleanup; successful cycles0/2 |
+
+Actual revision `ebfd53068a643e00d7988130c14d6df41cbf51e3`, command
+`python scripts/verify_ownership.py --env-file .env.example --cycles 2`, exit1.
+Project `ownership-verify-fd3cd2d336a4`, head0003, provider mock. Final receipt:
+phase=scenarios, auth_checks12, scenarios0, passed=false, cleanup=true.
+F/O and V progress markers and metadata L/D/P/R/X/S/C/Q were observed; both actor
+flows returned before worker/pipeline/http_races/expiry/celery_completion markers.
+These are partial observations, NOT a final successful F/O/V/E/old-proof receipt.
+
+Docker lifecycle events show cleanup stop signals at11:03:31 UTC and final container
+removal at11:04:25 UTC (about54s). Combined with417.17s total, work reached the360s
+deadline; deadline exhaustion is the timing-supported diagnosis. Existing receipt
+intentionally suppresses exceptions, so the precise internal failure code is not
+available and must not be invented. The last observed stage was Celery completion.
+No raw container/application logs, secret or generation contents were recorded.
+
+### 장애 분석과 중단 판단
+
+기존 A 약338초에 파일/ops/폐기와 두 actor의 추가 workload를 한 cycle로 합친 예산이
+충분하지 않았다. 개별 provider나 DB 장애로 확정할 근거는 없으며, phase별 소요시간과
+고정 오류 코드를 보강해야 구체 병목을 구분할 수 있다. timeout/rate limit/worker 수를
+늘리지 않았다. frozen Goal의 시간 한도 중단 조건을 적용해 두 번째 cycle 및 후속
+schema2/auth1/full regression/PR를 실행하지 않았다.
+
+초기 unit 실패도 보존한다: 세 digit-named storage tests의 fixture 누락, 기존 file404
+detail과 AuthError bounded-code 기대값 불일치를 수정했다. H의 기존 `/metrics` 거절
+테스트는 새 exact GET 계약에 맞춰 slash/비GET/query/payload 거절과 positive GET으로
+보강했다. 테스트 삭제·skip·제품 인증 우회는 하지 않았다.
+
+### 복구·보존과 재설계 제안 (미승인)
+
+- 검증 runner cleanup true 외에 exact-label container/volume/network 목록 모두0을
+  독립 확인했다. 기존 preview4와 개발용 volume은 보존했으며 수동 reset/prune하지 않았다.
+- 구현 commit은 작업 브랜치에 보존한다. F1 경로 검토는 통과하나 F2–F4 종료 근거는
+  부족하다. Ready PR/merge 및 parent109 종료는 하지 않는다.
+- 추천: 검증만 두 suite로 분리한다. legacy ownership suite는 기존 auth/admission/
+  metadata8/348/delete-race2/worker/pipeline/race/expiry를 두 독립 cycle에서 보존하고,
+  file-ops suite는 F/O/V/E와 A/B 흐름을 별도 두 독립 cycle에서 검증한다.
+- 각 cycle360s/cleanup90s와 각2cycle command900s를 유지한다. 최초 frozen 계획의
+  "한 cycle에 모든 그룹" 수용 조건을 바꾸는 제안이므로 별도 승인과 새 SHA가 필요하다.
+  누락된 보안 matrix를 없애거나 전체 결과를 fake로 대체하는 제안은 아니다.
+- 재실행 전에 고정된 phase duration/failure-code만 출력하는 안전한 계측을 설계한다.
+  현재 frozen 계획은 수정하지 않았다. suite 분리/계측도 아직 구현하지 않았다.
+
+아래는 준비 시점 기록이다. "구현 미시작" 문구는 당시 상태이며 위 실행 결과가 최신이다.
 
 A는 목록/상세/삭제를 보호했지만 파일 route는 아직 DB 조회 없이 storage를 열고,
 운영 endpoint는 익명에게 전역 작업/지표를 반환한다. 로그인 화면과 metadata 소유권만으로

@@ -380,13 +380,16 @@ backend/tests/test_mock_auth_support.py
 #### B 실행 준비 — Issue112 (2026-09-03)
 
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
-  `codex/issue-112-file-ops-access`, **Planned / execution-ready, 구현 미시작**.
+  `codex/issue-112-file-ops-access`, **In Progress / runtime No-Go**. Todo1–5 구현은
+  ebfd530에서 완료했지만 첫 실제 cycle417.17s(cleanup 약54s)에서 work360s 한도에
+  도달해 Todo6 중단. 아래 내용은 frozen 설계이며 아직 최종 Mock Verified가 아니다.
 - 선행 [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)은 실제 squash
   병합되었다: `cd654e5003e70d78cd7390cc24e98f322a3383fe`. 최종 head5738c0d의 필수
   verify/양쪽 Scan-SBOM SUCCESS. 이 main을 fast-forward한 뒤 B branch를 만들었다.
 - [B 준비/실행 기록](../portfolio/issue-112-file-ops-access.md), frozen local Goal
   `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`와 SHA는 current-work에서 연결한다.
-  명령어까지 준비하라는 요청이며 구현·runtime 검증은 별도 Goal 실행 요청 후 진행한다.
+  이후 사용자의 frozen-SHA 실행 요청으로 구현했다. 현재는 시간 한도 중단 조건에 따라
+  재설계 승인을 기다린다. [실패/제안 기록](../portfolio/issue-112-file-ops-access.md) 참조.
 - B16/migration0, schema0003와 storage helper/worker/metadata writer는 수정하지 않는다.
   최초 후보를 actual merge의 코드/호출자/테스트로 재검토했다. 경로 밖 필요 시 중단한다.
 
