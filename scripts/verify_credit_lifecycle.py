@@ -32,7 +32,8 @@ def validate_project(project):
 
 def safe_env():
     allowed = {"PATH", "SYSTEMROOT", "WINDIR", "HOME", "USERPROFILE", "TEMP", "TMP", "DOCKER_CONFIG",
-               "DOCKER_CONTEXT", "DOCKER_HOST", "COMSPEC", "PATHEXT", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA"}
+               "DOCKER_CONTEXT", "DOCKER_HOST", "COMSPEC", "PATHEXT", "APPDATA", "LOCALAPPDATA", "PROGRAMDATA",
+               "PROGRAMFILES", "PROGRAMFILES(X86)"}
     env = {key: value for key,value in os.environ.items() if key.upper() in allowed}
     if env.get("DOCKER_HOST"):
         raise Failure("docker_host_refused")
@@ -202,6 +203,7 @@ def verify(env_file,*,run=command):
     result = None
     failure = cleanup_failure = None
     with tempfile.TemporaryDirectory(prefix="credit-proof-") as directory:
+        print("phase=configure",flush=True)
         runtime.configure(directory)
         try:
             runtime.owned = True

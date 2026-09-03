@@ -160,6 +160,25 @@ test covers the docs-only status. No Docker target was started by that probe.
 Fresh H+C+M538 PASS/2.75s. Commit the corrected runner and restart the complete
 runtime sequence so final acceptance never combines different code checkpoints.
 
+### Todo6 intermediate checks — Windows Compose plugin environment
+
+At6ad2a28, schema-d63285db38c4 and schema-d2bf7ee270b0 (both prefixed
+schema-verify-) passed all gates, credit90/races3, work149.860/151.156s and
+cleanup2.015/2.063s, independent resources0. Full project names are in the safe
+schema receipt filenames. These remain intermediate because of the next fix.
+
+The first lifecycle command failed before project creation during Compose config.
+Read-only diagnosis found its sanitized process environment omitted Windows
+ProgramFiles/ProgramFiles(x86), preventing Docker from locating the Compose plugin
+(native exit125). Adding only those system paths made config --quiet pass; a
+generated DB/migrate-only config also passed. No DB/volume/network was created.
+The new guard test initially assumed case-sensitive environment-key spelling;
+Windows normalizes it, so assertions now compare uppercase keys on both platforms.
+The test failure is retained here, not relabeled runtime success. No timeout.
+
+All runtime gates restart after the environment compatibility correction; provider
+and credential settings remain filtered, no private dotenv is used.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash

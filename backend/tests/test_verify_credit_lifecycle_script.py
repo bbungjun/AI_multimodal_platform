@@ -55,10 +55,15 @@ def test_ambient_provider_credentials_and_host_refused(monkeypatch):
         m.safe_env()
     monkeypatch.delenv("DOCKER_HOST")
     monkeypatch.setenv("DATABASE_URL","not-for-evidence")
+    monkeypatch.setenv("ProgramFiles","system-plugin-path")
+    monkeypatch.setenv("ProgramFiles(x86)","system-plugin-path-x86")
     monkeypatch.setenv("AUTH_GOOGLE_CLIENT_SECRET","not-for-evidence")
     env = m.safe_env()
     assert "DATABASE_URL" not in env and env["AUTH_GOOGLE_CLIENT_SECRET"] == ""
     assert env["AI_PROVIDER"] == "mock"
+    folded = {key.upper():value for key,value in env.items()}
+    assert folded["PROGRAMFILES"] == "system-plugin-path"
+    assert folded["PROGRAMFILES(X86)"] == "system-plugin-path-x86"
 
 
 def test_monotonic_deadline_clamps_and_does_not_retry(monkeypatch):
