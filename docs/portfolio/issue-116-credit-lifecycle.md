@@ -146,6 +146,20 @@ Fresh H+C+M537 PASS/2.91s. Failure receipt retained at
 `.omo/evidence/schema/migration-schema-verify-4f37775cc70c.json`. All runtime gates
 restart on the corrected committed code; this failed attempt is never counted.
 
+### Todo6 intermediate checks — schema success and runner preflight correction
+
+At243c394, schema-verify-d2c00c2d374b and schema-verify-5273490acda9 passed every
+schema/credit/operation/stale/reset gate: work149.469/148.438s, cleanup1.969/1.953s,
+credit90/races3 each, old ownership8, independent resources0 after each. No timeout.
+These receipts are preserved but superseded for final-code acceptance below.
+
+A read-only new-runner revision probe then reproduced dirty_code_refused with
+only docs/.omo changes. The subprocess adapter stripped porcelain's leading status
+column, shifting the path. It now removes line endings only; a real-adapter unit
+test covers the docs-only status. No Docker target was started by that probe.
+Fresh H+C+M538 PASS/2.75s. Commit the corrected runner and restart the complete
+runtime sequence so final acceptance never combines different code checkpoints.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash

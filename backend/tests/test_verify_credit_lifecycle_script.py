@@ -109,6 +109,16 @@ def test_command_timeout_and_raw_error_are_not_emitted(monkeypatch):
         m.command([],env={},timeout=1)
 
 
+def test_real_command_preserves_porcelain_column_and_docs_only_are_allowed(monkeypatch):
+    m = load()
+    monkeypatch.delenv("DOCKER_HOST",raising=False)
+    def run(args,**kwargs):
+        output = "f"*40+"\n" if args[1] == "rev-parse" else " M docs/current-work.md\n?? .omo/\n"
+        return subprocess.CompletedProcess(args,0,output,"")
+    monkeypatch.setattr(m.subprocess,"run",run)
+    assert m.Runtime(ROOT/".env.example").revision() == "f"*40
+
+
 def test_only_db_and_migrate_fixed_config(tmp_path,monkeypatch):
     m = load()
     monkeypatch.delenv("DOCKER_HOST",raising=False)

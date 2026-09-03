@@ -245,7 +245,7 @@ document or inherit the full design interview.
 | G4.3B | File/Range, Master ops and final proof | Mock Verified — Merged | [PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) squash6537025, [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/112#issuecomment-5525436934), [record](../portfolio/issue-112-file-ops-access.md) | Original No-Go preserved; v2 c05b815 aggregate4/998.187s, each legacy348/races2 or FOVE310/A-B10, cleanup0. Schema2/auth1/Linux1128/frontend48+34 PASS. Final head8aa6ba8 all3 required CI SUCCESS; Issues112/109 closed |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned — split A/B/C | [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114), [split spec](g5-credit-foundation-spec.md) | Aggregate requires all three children; not closed by foundation alone |
 | G5A | Credit persistence and pure Plan/rate/time policy | Mock Verified — Merged | [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118), [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729), [record](../portfolio/issue-115-credit-foundation.md) | Squash a003257; final b940be2 required3 CI SUCCESS. Exact17/migration1; schema2/credit90/races3, auth1, ownership all4/993.610s, Linux1229/frontend48+34/cleanup0. No automatic credit or product wiring |
-| G5B | Account initialization, 30-day cycles, Plan transitions and grants | In Progress | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [executable spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | Branch codex/issue-116-credit-lifecycle; merged A four-table/pure-policy input. Exact20 paths/new0005 operation receipts1; first command B0:446 PASS/2.39s. SHA and section3 execution approved; Todo1 complete |
+| G5B | Account initialization, 30-day cycles, Plan transitions and grants | In Progress | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [executable spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | Branch codex/issue-116-credit-lifecycle; merged A four-table/pure-policy input. Exact20 paths/new0005 operation receipts1; first command B0:446 PASS/2.39s. SHA and section3 approved; Todo1–5 implemented, actual runtime gates pending |
 | G5C | Reservation allocations, Usage and atomic settlement/release | Planned — blocked by G5B | [Issue117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [planning envelope](g5-credit-foundation-spec.md#7-successor-planning-envelopes-not-executable-goals) | Consume B's caller-owned transaction Interface; freeze own Goal after merge. G6/G7 product wiring and G8 concurrency remain separate |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -373,7 +373,7 @@ not authorization to execute, and no new capability is marked Implemented.
 ### G5B design refinement proposal — 2026-09-04
 
 G5B design consumes merged A without changing accepted prices/entitlements.
-Its hash-bearing execution request will approve the bounded refinements in
+The user's hash-bearing execution request approved the bounded refinements in
 [B spec section3](g5-credit-lifecycle-spec.md#3-lifecycle-rules-proposed-for-execution-approval):
 current-cycle-only lazy issuance, replacement/cancellation of pending downgrades,
 allowance-difference upgrades preserving consumed/held credit, available-only
@@ -382,7 +382,8 @@ A small append-only operation table is needed because scheduled/cancel/no-op Pla
 requests cannot be represented by zero-valued credit ledger events. Exactly one
 new migration and20 code paths include new-head proof compatibility. Internal
 accounting access does not authenticate users or expose public Master mutations.
-This is Prepared, not Implemented; no B/C product behavior is claimed.
+The bounded B Module is now implemented and undergoing isolated verification;
+no B/C product wiring or charged-generation behavior is claimed.
 
 ## Initiative Completion Gate
 
@@ -402,11 +403,12 @@ mode:
 
 ## Next Goal
 
-G5A Issue115 is actually merged at a003257. **G5B Issue116** is prepared on
+G5A Issue115 is actually merged at a003257. **G5B Issue116** is in progress on
 `codex/issue-116-credit-lifecycle`, with [spec](g5-credit-lifecycle-spec.md),
 exact20 paths, one additive migration, Todo1–8/F1–F4 and a frozen local Goal.
 Read [current-work](../current-work.md) for its SHA and first verification command.
-Do not implement until the user provides the hash-bearing execution approval.
+Execution approval is recorded; completion still requires every frozen runtime
+and delivery gate, not merely the existence of the Module.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;

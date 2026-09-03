@@ -83,8 +83,10 @@ paste credential contents.
   matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
   starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
   preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
-  Interface implemented; C102/M23 PASS. Six of20 code paths touched so far.
-  Next: fixed PostgreSQL proof/runner and current-head compatibility, then runtime.
+  Interface and fixed proof/runner implemented; H+C+M537 PASS, B0452 PASS.
+  Exact20 code paths/new migration1. First S attempt failed safely before reset
+  execute on verifier row-count arithmetic; corrected at243c394, fresh runtime
+  sequence in progress. No timeout; failed project's resources independently0.
   [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
   branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
   squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
@@ -104,7 +106,8 @@ paste credential contents.
   Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
   command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,
   development/preview migration/reset, actual OAuth/provider/cloud during preparation.
-  Current packaged head remains0004;0005/lifecycle are only designed.
+  That preparation used head0004. Current implementation packages0005; actual
+  lifecycle and full-regression completion are still pending.
 
 ### G5A execution — 2026-09-04
 

@@ -54,7 +54,8 @@ def command(args, *, env, timeout, input=None):
             raise Failure("timeout")
         match = re.fullmatch(r"lifecycle_proof_failed:(guard|init|renewal|plan|bonus|expiry|idempotency|transaction|concurrency|done)\s*",result.stdout)
         raise Failure("proof_"+match[1] if match else "command_failed")
-    return result.stdout.strip()
+    # Porcelain's leading status column is significant; only trim line endings.
+    return result.stdout.rstrip("\r\n")
 
 
 def parse_proof(output):
