@@ -31,7 +31,7 @@ python scripts/verify_auth_sessions.py --env-file .env.example
 
 Install backend development dependencies and start Docker first. The verifier
 creates two distinct fresh `auth-verify-*` projects, starts only Postgres/Redis,
-upgrades to the packaged Alembic head (currently `0004_credit_foundation`), then runs host-side integration tests through
+upgrades to the packaged Alembic head (currently `0005_credit_lifecycle_operations`), then runs host-side integration tests through
 ephemeral loopback ports. Tests cover HTTP-to-storage login/me/logout, User
 invariants, digest storage, transactional rollback, max-five admission races,
 expiry, touch races, one-time flow consumption, Redis outage/recovery and cleanup.
@@ -258,7 +258,7 @@ python -m pytest `
   tests/test_verify_schema_migrations_script.py -q
 ```
 
-The packaged head must be exactly `0004_credit_foundation`. Application
+The packaged head must be exactly `0005_credit_lifecycle_operations`. Application
 startup checks are read-only and must return a typed failure for a missing,
 empty, outdated, multiple-head, or unreachable schema.
 
@@ -635,6 +635,25 @@ skips; Windows had only the known native127 WSL-path failure, reproduced from
 untouched6537025. Frontend lint/build, Session48 and Chromium34 passed unchanged.
 See the [Issue115 record](portfolio/issue-115-credit-foundation.md). These are
 local mock results, not billing enforcement, live OAuth/provider or cloud proof.
+
+## G5B credit lifecycle verification
+
+G5B exposes only `ensure_cycle`, `change_plan` and `grant_bonus` over a caller-owned
+transaction. Two actual PostgreSQL runs use this fixed command:
+
+```powershell
+python scripts/verify_credit_lifecycle.py --env-file .env.example
+```
+
+The runner accepts no target/DSN/source/keep-volume override. It creates one fresh
+`credit-verify-*` project and reports success only when all8 groups,8 observed
+lock races and at least80 checks complete. At code65cdbb4 both runs completed320
+checks; work16.656/16.828s and cleanup2.938/3.093s, resources0 after each.
+
+The same code passed schema2 with credit90/races3, auth1, ownership/file4 cycles,
+Linux1321 PASS/3 guarded skips and frontend Session48/Chromium34. Windows reported
+only the existing Bash-path native127, reproduced on untouched a003257. This does
+not prove debit/settlement or generation admission; those remain later Goals.
 
 ## Secret Hygiene
 

@@ -1,6 +1,6 @@
 # Issue116 — G5B credit lifecycle design and evidence
 
-Status: Planned / Prepared, 2026-09-04. No G5B implementation or runtime claim.
+Status: Locally Mock Verified / delivery pending, 2026-09-04.
 Issue [#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116);
 [spec](../initiatives/g5-credit-lifecycle-spec.md); parent114 remains open.
 
@@ -41,7 +41,8 @@ write only the receipt.
 The spec explicitly resolves pending downgrade replacement/cancellation, current-
 cycle-only skipped renewal, immediate allowance difference, Master/suspended
 handling, held-credit expiry, strict overflow and original-result replay. The
-hash-bearing execution request approves these details; they are not live behavior.
+hash-bearing execution request approved these details. They are implemented and
+locally Mock Verified, but remain unwired to product generation.
 
 Rollback preserves all existing data: populated operation downgrade refuses under
 bounded locks. Empty-operation downgrade preserves populated0004 rows. There are
@@ -184,6 +185,33 @@ independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash
 actual merge. New proof requires eight completed groups and eight lock-observed
 races; partial checks cannot count as complete. Fixed deadlines stop on overrun.
+
+### Todo6 final runtime and regressions
+
+Final code65cdbb4 passed schema2 at151.515/148.312s work and2.032/2.000s
+cleanup; each retained credit90/races3, ownership8, populated0004 migration,
+stale0004 recovery and guarded reset. Lifecycle2 completed all8 groups,8 observed
+lock races and320 checks at16.656/16.828s work and2.938/3.093s cleanup. Every
+project independently left containers/volumes/networks0; preview4 stayed running.
+
+Auth passed PostgreSQL/Redis/outage recovery. Ownership all/2 completed four
+projects in1027.531s: ownership access348/admission111/delete races2 twice and
+file FOVE310/two actors10 stages twice. Linux tracked-only archive:1321 PASS/3
+guarded skips. Windows:1320 PASS/3 skips plus the sole documented native127
+Bash-path failure, reproduced on untouched a003257. Compose, frontend lint/build,
+Session48 and Chromium34 passed. No timeout/provider/OAuth/cloud execution.
+
+### Todo7 sequential self-review
+
+- **F1 APPROVE:** exact20 code paths, one new0005; migrations0001–0004 and
+  forbidden production areas unchanged; one lifecycle Module, no product caller.
+- **F2 APPROVE:** B01–B23 map to unit plus actual constraints, append-only attempts,
+  rollback/fresh locks/replay and eight named races. B24 delivery remains pending;
+  no G5C billing claim.
+- **F3 APPROVE:** final-code S2/R2/A1/Oall2, Linux/frontend and documented Windows
+  exception have direct evidence; every owned project cleaned independently.
+- **F4 PENDING:** Ready PR, final-head three CI checks, protected squash and Issue
+  states are Todo8 and cannot be inferred from local tests.
 
 The20-path cap leaves no spare path. Any21st path, second migration, missing required
 Interface or runtime timeout requires redesign before scope expansion. No account/
