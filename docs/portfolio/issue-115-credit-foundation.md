@@ -96,3 +96,13 @@ guard passed. B0 command above:384 PASS/2 existing guarded skips/2.96s.
 Scope/diff/status/staged checks passed. A01–A11/A16–A18 map to ORM/migration and
 real S proof; A12–A15 to pure policy P; A19 auth A; A20 ownership O; A21 isolated
 repeatability; A22 full regression/CI/delivery. Next: Todo2 pure policy tests.
+
+### Todo2 — pure policy
+
+Added immutable Plan catalog and versioned strict integer rate calculations;
+signup-anchored half-open cycle bounds normalize aware instants to UTC and use
+timedelta floor division rather than floating-point seconds. No DB/provider/IO.
+P first failed at expected `credit_policy_missing` assertion (not collection),
+then **55 PASS/0.07s** including all7 rates, BIGINT edges, invalid types, no Master
+bypass, leap-year/DST-equivalent instants and exact microsecond cycle boundaries.
+Scope2/17; diff/status/staged checks passed. Next: four-table schema/migration.
