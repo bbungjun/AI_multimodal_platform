@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.3A execution — 2026-09-03
 
-- **Mock Verified — Todo1–7 complete; Ready PR/final-CI/merge delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
+- **Mock Verified — Todo1–7 complete; [Ready PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111), final-CI/merge delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.

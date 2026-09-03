@@ -1,6 +1,6 @@
 # Issue110 — G4.3A Metadata Ownership Access
 
-- Status: **Mock Verified — Todo1–7 complete; Ready PR/final-CI/merge delivery pending** (2026-09-03).
+- Status: **Mock Verified — Todo1–7 complete; [Ready PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111), final-CI/merge delivery pending** (2026-09-03).
 - [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
   `codex/issue-110-metadata-ownership-access`.
 - Main base `c84394a8e2b16748d1b4b4c877f9f491624f7a1b` (G4.2B PR108 actual merge).
@@ -38,7 +38,8 @@ Execution checkpoint:1588911 Ownership Interface,6f9a1a5 metadata routes,
 existing guarded-auth skips only. First actual runtime stopped after L/D/P at109.75s:
 the Master corruption-list probe incorrectly assumed all instead of default mine.
 acb44a9 fixes only that probe's explicit scope; focused265 PASS. Cleanup succeeded;
-both complete cycles must be rerun. This is not yet Mock Verified or delivered.
+at that checkpoint both complete cycles still needed rerunning. The two successful
+reruns above supersede that intermediate result; delivery is tracked by PR #111.
 
 The preparation notes below describe the earlier snapshot, not final verification.
 
