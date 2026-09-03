@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from app.config import Settings
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
@@ -18,6 +18,11 @@ class FakeHandlerSession:
     def __init__(self, job: Job, *, assets: list[Asset] | None = None) -> None:
         self.job = job
         self.assets_by_id = {asset.id: asset for asset in assets or []}
+        self.source_jobs = {
+            asset.job_id: Job(id=asset.job_id, owner_user_id=UUID(int=107),
+                             mode=GenerationMode.T2I, state=JobState.COMPLETED)
+            for asset in assets or []
+        }
         self.added: list[object] = []
         self.commit_count = 0
         self.rollback_count = 0
@@ -38,11 +43,28 @@ class FakeHandlerSession:
             return self.assets_by_id.get(entity_id)
         return None
 
+    async def scalars(self, statement):
+        from types import SimpleNamespace
+        params = statement.compile().params
+        row_id = next((v for k,v in params.items() if k.startswith("id_")), None)
+        row = self.job if row_id == self.job.id else None
+        return SimpleNamespace(first=lambda: row)
+
+    async def execute(self, statement):
+        from types import SimpleNamespace
+        params = statement.compile().params
+        row_id = next((v for k,v in params.items() if k.startswith("id_")), None)
+        asset = self.assets_by_id.get(row_id)
+        parent = self.source_jobs.get(asset.job_id) if asset else None
+        row = (asset, parent.owner_user_id) if parent else None
+        return SimpleNamespace(one_or_none=lambda: row)
+
 
 def _t2i_job() -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=UUID(int=107),
         mode=GenerationMode.T2I,
         model="imagen-4.0-fast-generate-001",
         state=JobState.PENDING,
@@ -61,6 +83,7 @@ def _t2v_job() -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=UUID(int=107),
         mode=GenerationMode.T2V,
         model="veo-3.0-fast-generate-001",
         state=JobState.PENDING,
@@ -105,6 +128,7 @@ def _i2v_job(source_asset_id: object) -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=UUID(int=107),
         mode=GenerationMode.I2V,
         model="veo-3.0-fast-generate-001",
         state=JobState.PENDING,

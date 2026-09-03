@@ -89,3 +89,12 @@ tracked/staged 사용자 변경0, 기존 .omo 보존. B0 **282 PASS /4.40s**, S 
 Docker Desktop local named-pipe endpoint와 host override 부재를 확인했다. 기존 preview
 container5개(4 running/1 exited), default/preview volumes는 읽기 전용 확인만 했다.
 이 단계는 새 worker 기능이나 실제 격리 검증의 완료를 뜻하지 않는다.
+
+### Todo2 — behavioral RED
+
+직접/재개5종 × 남은 참조4종 × foreign/missing2종40개와 null owner5개,
+SQL scope/optional-null/source 필수/attempt 재검사/실제 ORM expire 회귀를 고정했다.
+pipeline foreign 관계, 반복 outbox, lock, commit 실패, 혼합 owner cascade 계약도 추가했다.
+W/E 합계 **70 expected FAIL /22 PASS /2.79s**, collection 오류0. 실패는 누락된
+검증 Interface와 기존 pipeline 계약 때문이며 기존 무변경 schema 회귀106개는 PASS다.
+기존 factory에는 명시적 일반 User owner와 source parent 관계를 제공했다. bypass/skip은 없다.
