@@ -147,5 +147,21 @@ frontend lint/build, Session48, Chromium34 PASS; 기존 UI/CSS는 수정하지 �
 index 이름이 있으면 다른 constraint 오류를409로 오인할 수 있음을 재현했다.
 허용된 generations 경로에서 PostgreSQL SQLSTATE23505와 driver의 정확한 constraint metadata를
 먼저 확인하도록 보강했다. 공용 i2v_guard/worker 파일은 변경하지 않았다.
-네 adversarial 회귀를 추가한 W183/H113 PASS. 최종 committed code의 ownership2회와
-Linux/Windows 전체 pytest를 다시 실행한 뒤 최종 수치를 기록한다.
+네 adversarial 회귀를 추가한 W183/H113 PASS. 최종 구현
+`c8ee90a2d1d17774eac17900a936592b46c45090`에서 다시 검증했다.
+
+- Linux 전체 **656 PASS / 기존 SKIP3 /3.32s**; Windows **655 PASS / SKIP3 /
+  동일 Bash-path FAIL1 /8.38s**. Windows 예외는 위의 main 독립 재현으로 분류했으며
+  skip/xfail을 추가하거나 CI 검증을 우회하지 않았다.
+- B0 **288 PASS /4.00s**, S schema13, A25, W183, H113 PASS.
+- 최종 ownership: `ownership-verify-06860640f43f` **97.20s**,
+  `ownership-verify-e63ce598d6fd` **73.89s**. 각각 auth12/admission111/smoke3 PASS,
+  cleanup=true. 두 프로젝트의 정확한 label 기준 container/volume/network는 모두0이다.
+- tracked archive만 사용한 Linux test container도 종료/제거됐다. default/preview
+  DB와 container는 그대로이며 `.env.example` Compose quiet 검사 PASS.
+- 기존 integration skip3은 `test_auth_api.py`, `test_auth_service.py`,
+  `test_oauth_flow_store.py`의 guarded PostgreSQL/Redis 전제조건이다. 실제 통합 경계는
+  Todo6 auth verifier와 최종 ownership verifier로 검증했다.
+
+최종 보강은 API 오류 분류와 단위 테스트뿐이다. schema/auth/harness 구현은 앞선 실제
+검증 revision과 동일하며 이후 문서-only commit은 이 구현 SHA를 검증 근거로 사용한다.
