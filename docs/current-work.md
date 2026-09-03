@@ -77,14 +77,43 @@ paste credential contents.
 
 ## Active Work
 
+### G5A execution preparation — 2026-09-03
+
+- **Planned / execution prepared only.** User requested G5 split and Goal plan,
+  not implementation. [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
+  has A[#115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
+  B[#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
+  C[#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117).
+- Main fast-forwarded to actual G4 merge `6537025535b1006f6ca03366765e8a0f7e6bf978`;
+  branch `codex/issue-115-credit-foundation`. Existing untracked .omo preserved.
+- [Split/G5A spec](initiatives/g5-credit-foundation-spec.md),
+  [preparation and verification record](portfolio/issue-115-credit-foundation.md).
+  A: four credit tables and pure Plan/rate/time policy, exact17 code paths,
+  exactly1 additive migration0004. No credits issued, lifecycle or product wiring.
+  B: renewal/Plan/grants. C: reservation/Usage/settlement. B/C need their own
+  path/command freeze after predecessor merge; no speculative executable plans.
+- Frozen local plan `.omo/plans/issue-115-g5a-credit-foundation-goal.md`:
+  SHA256 `ba64dcd7d57cb4f1b5521e43079d464c0c0ac23fcdbf5696c662a861abf39971`.
+  Transfer exact file bytes between machines; hash alone is not a backup.
+  Never stage .omo wholesale. Explicit hash-bearing execution request required.
+- First execution check: Goal SHA and B0 (11 existing backend test files listed
+  in plan). Preparation baseline384 PASS/2 existing guarded skips in2.20s.
+  Todo1–8/F1–F4 require schema+credit2/auth1/ownership all4cycles, full Linux and
+  existing frontend regression, Ready PR/final3 CI/protected squash actual MERGED.
+- Preserve existing development/preview databases; only fresh local Docker mock
+  verification projects may reset. Current runtime schema is still0003. G5A code
+  will reject stale0003 until a separately approved local migration; do not
+  silently migrate developer/preview DB during Goal execution.
+
 ### G4.3B execution — 2026-09-03
 
-- **Implemented; complete local mock proof. Delivery tracked in Issue112.**
+- **Mock Verified — Merged.** PR113 squash `6537025`; final head8aa6ba8
+  verify and both Scan/SBOM SUCCESS. Issues112/109 closed; [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/112#issuecomment-5525436934).
   [Ready PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) is the
   delivery source; final CI/merge SHA/parent closure are recorded in Issue112.
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
-  `codex/issue-112-file-ops-access`, parent109. v2 Todo1–7 complete; sequential
-  self-reviews F1–F3 APPROVE. Ready PR/final3 CI/protected squash merge finish delivery. Actual merge and
+  `codex/issue-112-file-ops-access`, parent109. v2 Todo1–8 complete;
+  F1–F4 APPROVE. Actual merge and
   parent closure evidence are linked from Issue112; no Live claim.
 - [Contract](initiatives/g4-ownership-access-control-spec.md),
   [durable problem/solution/evidence](portfolio/issue-112-file-ops-access.md).
