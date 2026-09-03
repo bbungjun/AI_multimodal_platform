@@ -127,3 +127,14 @@ child lock overlap, HTTP race3종, admission 후 Session expiry, Celery 결과 b
 H **144 PASS /0.87s**, W **98 PASS /2.09s**, S **106 PASS /1.14s**. canary 출력,
 잘못된 대상·operation·records, head/identity, EOF·timeout·broken pipe 음성 테스트 포함.
 이 시점의 검증은 단위/guard 검증이며 실제 2cycle 성공은 Todo6에서 별도 기록한다.
+
+### Todo6 — first real failure and diagnosis
+
+최초 R은122.67초에 HTTP race 단계에서 실패했고 cleanup=true, exact-label 잔여0이었다.
+진단 재현101.55초에서도 create/create의 release ACK가 EOF로 끝났다. ready ACK는
+정상이며 Windows text pipe가 CRLF를 전달한다는 별도 컨테이너 probe를 확인했다.
+LF literal 비교가 release를 거부한 원인이므로 bounded JSON shape/boolean 검증으로
+CRLF/LF를 모두 지원했다. HTTP waiter 관찰의5초도 label 검사와 개별 command까지
+공유 deadline으로 묶었다. 20초 holder self-timeout과 기존 HTTP10초는 바꾸지 않았다.
+추가 timeout 테스트에서 전역 monotonic 패치가 asyncio까지 침범한 실패도 발견해,
+helper module에만 clock fake를 주입했다. 실패 run과 진단 run은 accepted cycle이 아니다.

@@ -260,6 +260,15 @@ async def completed_records(session, records):
     return {"completed_records":checked}
 
 
+def validate_release_line(line):
+    # Windows text pipes emit CRLF; accept either line ending, not arbitrary commands.
+    if not isinstance(line,str) or len(line) > 128 or not line.endswith("\n"):
+        raise ValueError("lock_release_refused")
+    value = json.loads(line)
+    if not isinstance(value,dict) or set(value) != {"release"} or value["release"] is not True:
+        raise ValueError("lock_release_refused")
+
+
 async def hold_source(session, case):
     from sqlalchemy import select, text
     from app.models import Asset
@@ -280,8 +289,7 @@ async def hold_source(session, case):
             except queue.Empty:
                 await asyncio.sleep(0.01)
                 continue
-            if line != '{"release":true}\n':
-                raise ValueError("lock_release_refused")
+            validate_release_line(line)
             return {"released":True}
         raise ValueError("lock_holder_timeout")
     finally:

@@ -377,6 +377,19 @@ class OwnedRuntime:
             raise HarnessError("unsafe_execution_result") from None
         return result
 
+    def observe_source_waiters(self, case):
+        # Clamp every label check and command to the same five-second window.
+        previous_deadline = self.deadline
+        self.deadline = min(previous_deadline, time.monotonic() + 5)
+        try:
+            while time.monotonic() < self.deadline:
+                result = self.execution_fixture("lock_waiters",case)
+                if result == {"lock_waiters":2} and time.monotonic() <= self.deadline:
+                    return
+            raise HarnessError("source_lock_overlap_missing")
+        finally:
+            self.deadline = previous_deadline
+
     @contextmanager
     def source_lock(self, case):
         payload = self.execution_payload("hold_source", case)

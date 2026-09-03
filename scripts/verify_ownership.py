@@ -163,12 +163,7 @@ def http_race(runtime, client, case):
         with runtime.source_lock(case):
             futures = [pool.submit(send,request) for request in requests]
             barrier.wait(timeout=5)
-            deadline = time.monotonic() + 5
-            while time.monotonic() < deadline:
-                if runtime.execution_fixture("lock_waiters",case) == {"lock_waiters":2}:
-                    break
-            else:
-                raise HarnessError("source_lock_overlap_missing")
+            runtime.observe_source_waiters(case)
         results = [future.result(timeout=10) for future in futures]
     if sorted(status for status,_ in results) != [201,409]:
         raise HarnessError("race_status_failed")

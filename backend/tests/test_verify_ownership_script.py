@@ -340,3 +340,50 @@ def test_source_lock_reaps_its_fixed_helper(failure,monkeypatch):
         run()
     assert process.waited and process.stdin.closed and process.stdout.closed
     assert process.killed is (failure == "timeout")
+
+
+@pytest.mark.parametrize("line", ['{"release":true}\n','{"release":true}\r\n'])
+def test_execution_release_accepts_windows_and_linux_line_endings(line):
+    execution_helper().validate_release_line(line)
+
+
+@pytest.mark.parametrize("line", ['', '{}\n', '{"release":1}\n', '{"release":false}\n',
+                                 '{"release":true,"sql":"x"}\n', '{"release":true}', 'x'*129+'\n'])
+def test_execution_release_refuses_eof_and_non_command(line):
+    with pytest.raises(ValueError): execution_helper().validate_release_line(line)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timeout", [False,True])
+async def test_execution_holder_rolls_back_on_eof_or_self_timeout(timeout,monkeypatch,capsys):
+    from io import StringIO
+    from types import SimpleNamespace
+    module = execution_helper()
+    class Session:
+        rolled_back = False
+        async def execute(self,*a): pass
+        async def scalar(self,*a): return module.content_id('create_create','asset')
+        async def rollback(self): self.rolled_back = True
+    session = Session()
+    monkeypatch.setattr(module.sys,'stdin',StringIO(''))
+    if timeout:
+        ticks=iter([0,21])
+        monkeypatch.setattr(module,'time',SimpleNamespace(monotonic=lambda:next(ticks)))
+        monkeypatch.setattr(module.threading,'Thread',lambda **kw:SimpleNamespace(start=lambda:None))
+    with pytest.raises(ValueError): await module.hold_source(session,'create_create')
+    assert session.rolled_back and json.loads(capsys.readouterr().out) == {'locked':True}
+
+
+@pytest.mark.parametrize("failure", [False,True])
+def test_waiter_window_clamps_commands_and_restores_cycle_deadline(failure,monkeypatch):
+    runtime=support.OwnedRuntime(support.ROOT/'.env.example')
+    original=runtime.deadline
+    def fixture(operation,case):
+        assert operation == 'lock_waiters' and runtime.deadline <= support.time.monotonic()+5
+        if failure: raise support.HarnessError('command_failed')
+        return {'lock_waiters':2}
+    monkeypatch.setattr(runtime,'execution_fixture',fixture)
+    if failure:
+        with pytest.raises(support.HarnessError): runtime.observe_source_waiters('create_create')
+    else: runtime.observe_source_waiters('create_create')
+    assert runtime.deadline == original
