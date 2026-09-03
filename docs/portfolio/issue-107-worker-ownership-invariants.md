@@ -1,6 +1,6 @@
 # Issue #107 — Worker ownership and pipeline/race proof
 
-- 상태: **In Progress — Todo1**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
+- 상태: **In Progress — Todo6**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
 - [Issue107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`.
 - Base: A [PR106](https://github.com/bbungjun/AI_multimodal_platform/pull/106)의 실제 squash merge
@@ -138,3 +138,18 @@ CRLF/LF를 모두 지원했다. HTTP waiter 관찰의5초도 label 검사와 개
 공유 deadline으로 묶었다. 20초 holder self-timeout과 기존 HTTP10초는 바꾸지 않았다.
 추가 timeout 테스트에서 전역 monotonic 패치가 asyncio까지 침범한 실패도 발견해,
 helper module에만 clock fake를 주입했다. 실패 run과 진단 run은 accepted cycle이 아니다.
+
+### Todo6 — accepted independent cycles
+
+불변 구현 `ff808b0051570c8a7feeb951effc7f6cb35e736a`에서 canonical R2를 재실행했다.
+서로 다른 fresh Compose project의 결과는 각각 **274.97초 /272.36초**이며,
+합계547.33초로 전체900초 예산 안이다. 각 cycle: auth12/admission111/smoke3,
+execution20/pipeline4/race3/expiry1, passed=true/cleanup=true. 이는 fake-only가 아니라
+실제 PostgreSQL lock 대기, 인증 HTTP 경합, Redis/Celery 처리, storage bytes 검증이다.
+worker20은 유효 FK의 foreign 관계이며 불가능한 null/missing FK는 unit proof와 구분한다.
+pipeline4는 DB link race+foreign link+foreign cascade+Celery E2E다. expiry1은 접수 후
+A Session만 만료시켜 /me401과 기존 Job 완료/소유자 보존을 함께 확인했다.
+검증 명령: `python scripts/verify_ownership.py --env-file .env.example --cycles 2`.
+로컬 safe receipts: `.omo/evidence/issue-107/cycle1.json`, `cycle2.json`.
+두 project의 container/volume/network는 별도 exact-label 조회에서도 모두0이었다.
+기존 default/preview DB와 volume, preview 서비스는 보존했다. 전체 회귀/CI/merge는 다음 단계다.

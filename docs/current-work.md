@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.2B execution — 2026-09-03
 
-- **In Progress — Todo1 baseline verified.**
+- **In Progress — Todo1–6 complete; Todo7 full regression next.**
   [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`,
   [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
@@ -99,13 +99,18 @@ paste credential contents.
   exact11/spec/Goal/Todo8/F4 parity PASS; product/config/test modifications0.
   Inputs only: A OwnershipAccess/assert_same_owner, stored owner, head0003 and
   MemoryIdentity/ScopedClient/OwnedRuntime. Main/Issue/branch prepared, no Docker QA run.
-- Future execution: handler/attempt/poll references, safe current-job failure,
+- Implemented: handler/attempt/poll references, safe current-job failure,
   same-owner locked/idempotent pipeline, real lock-observed create/retry races,
   two complete isolated cycles preserving auth12/admission111/smoke3; Linux and
   unchanged frontend regression, Ready PR/final-head CI/actual squash merge.
 - Execution SHA/branch/base matched, B0 **282 PASS /4.40s**, S **106 PASS /1.48s**.
   Local desktop-linux daemon and default/preview inventory verified read-only;
-  no runtime mutations. Next: Todo2 behavioral RED. Do not start G4.3 or reset
+  no baseline runtime mutations. Implementation through `ff808b0`: W98/H157/S106 PASS.
+  First real run failed at lock release: Windows CRLF was refused by LF-only protocol.
+  Fixed bounded JSON validation and five-second observer deadline; fresh two cycles PASS:
+  274.97s/272.36s, each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1,
+  cleanup=true and independently checked container/volume/network0. Full regression/CI/merge pending.
+  Failed/diagnostic owned projects were cleaned; default/preview preserved. Do not start G4.3 or reset
   developer/preview DB; live OAuth/provider/cloud and frontend changes remain excluded.
 
 ### G4.2A execution — 2026-09-03
