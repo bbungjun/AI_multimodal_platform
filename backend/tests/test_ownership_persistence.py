@@ -162,7 +162,7 @@ async def test_access_unknown_intent_fails_before_query(kind):
     session = SimpleNamespace(scalars=AsyncMock(), execute=AsyncMock())
     access = module.OwnershipAccess(session, SimpleNamespace(id=OWNER, role="master"))
     with pytest.raises(ValueError, match="^unsupported_ownership_intent$"):
-        await getattr(access, kind)(UUID(int=201), intent="read")
+        await getattr(access, kind)(UUID(int=201), intent="unsupported")
     session.scalars.assert_not_called()
     session.execute.assert_not_called()
 

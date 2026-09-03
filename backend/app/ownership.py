@@ -1,4 +1,4 @@
-"""Owner-only admission queries. Callers retain transaction ownership."""
+"""Content access and reference integrity. Callers retain transaction ownership."""
 from __future__ import annotations
 
 from typing import Literal
@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth.service import AuthenticatedUser
 from app.models import Asset, GenerationMode, Job, JobState, PromptEnhancement
@@ -68,23 +69,38 @@ class OwnershipAccess:
         self.session = session
         self.actor = actor
 
-    def _intent(self, actual: str, expected: str) -> None:
-        if actual != expected:
+    def _intent(self, actual: str, expected: str | tuple[str, ...]) -> None:
+        if actual not in ((expected,) if isinstance(expected, str) else expected):
             raise ValueError("unsupported_ownership_intent")
 
-    def _check_owner(self, owner: UUID | None) -> None:
-        if owner is None or owner != self.actor.id:
+    def _check_owner(self, owner: UUID | None, *, intent: str = "use") -> None:
+        if owner is None or (owner != self.actor.id and not self._master_read(intent)):
             raise _not_found()
 
-    async def job(self, job_id: UUID, *, intent: Literal["mutate"], lock: bool = False) -> Job:
-        self._intent(intent, "mutate")
-        statement = select(Job).where(Job.id == job_id, Job.owner_user_id == self.actor.id)
+    def _master_read(self, intent: str) -> bool:
+        return intent == "read" and self.actor.role == "master"
+
+    def jobs_statement(self, scope: str = "mine"):
+        if scope not in ("mine", "all"):
+            raise HTTPException(status_code=422, detail="invalid_scope")
+        if scope == "all" and self.actor.role != "master":
+            raise HTTPException(status_code=403, detail="scope_forbidden")
+        statement = select(Job).options(selectinload(Job.assets))
+        return statement if scope == "all" else statement.where(Job.owner_user_id == self.actor.id)
+
+    async def job(self, job_id: UUID, *, intent: Literal["read", "mutate"], lock: bool = False) -> Job:
+        self._intent(intent, ("read", "mutate"))
+        statement = select(Job).where(Job.id == job_id)
+        if not self._master_read(intent):
+            statement = statement.where(Job.owner_user_id == self.actor.id)
+        if intent == "read":
+            statement = statement.options(selectinload(Job.assets))
         if lock:
-            statement = statement.with_for_update(of=Job)
+            statement = statement.with_for_update(of=Job).execution_options(populate_existing=True)
         row = (await self.session.scalars(statement)).first()
-        if row is None:
+        if row is None or row.id != job_id:
             raise _not_found()
-        self._check_owner(row.owner_user_id)
+        self._check_owner(row.owner_user_id, intent=intent)
         return row
 
     async def enhancement(self, enhancement_id: UUID, *, intent: Literal["use"]) -> PromptEnhancement:
@@ -99,16 +115,47 @@ class OwnershipAccess:
         self._check_owner(row.owner_user_id)
         return row
 
-    async def asset(self, asset_id: UUID, *, intent: Literal["use"], lock: bool = False) -> Asset:
-        self._intent(intent, "use")
+    async def asset(self, asset_id: UUID, *, intent: Literal["read", "use"], lock: bool = False) -> Asset:
+        self._intent(intent, ("read", "use"))
         statement = select(Asset, Job.owner_user_id).join(Job, Asset.job_id == Job.id).where(
-            Asset.id == asset_id, Job.owner_user_id == self.actor.id,
+            Asset.id == asset_id,
         )
+        if not self._master_read(intent):
+            statement = statement.where(Job.owner_user_id == self.actor.id)
         if lock:
-            statement = statement.with_for_update(of=Asset)
+            statement = statement.with_for_update(of=Asset).execution_options(populate_existing=True)
         row = (await self.session.execute(statement)).one_or_none()
         if row is None:
             raise _not_found()
         asset, owner = row
-        self._check_owner(owner)
+        if asset.id != asset_id:
+            raise _not_found()
+        self._check_owner(owner, intent=intent)
         return asset
+
+    async def validate_read_jobs(self, jobs: list[Job]) -> None:
+        """Validate only returned rows and known direct links, in at most3 queries."""
+        for job in jobs:
+            self._check_owner(job.owner_user_id, intent="read")
+            if any(asset.job_id != job.id for asset in job.assets):
+                raise _not_found()
+        job_refs = {ref for job in jobs for ref in (job.parent_job_id, job.retry_of_job_id) if ref is not None}
+        enhancement_refs = {job.enhancement_id for job in jobs if job.enhancement_id is not None}
+        source_refs = {job.source_asset_id for job in jobs if job.source_asset_id is not None}
+        owners = {}
+        for model, refs in ((Job, job_refs), (PromptEnhancement, enhancement_refs)):
+            if refs:
+                rows = (await self.session.execute(select(model.id, model.owner_user_id).where(model.id.in_(refs)))).all()
+                owners[model] = dict(rows)
+            else:
+                owners[model] = {}
+        sources = {}
+        if source_refs:
+            sources = dict((await self.session.execute(
+                select(Asset.id, Job.owner_user_id).join(Job, Asset.job_id == Job.id).where(Asset.id.in_(source_refs))
+            )).all())
+        for job in jobs:
+            for ref, mapping in ((job.parent_job_id, owners[Job]), (job.retry_of_job_id, owners[Job]),
+                                 (job.enhancement_id, owners[PromptEnhancement]), (job.source_asset_id, sources)):
+                if ref is not None and mapping.get(ref) != job.owner_user_id:
+                    raise _not_found()
