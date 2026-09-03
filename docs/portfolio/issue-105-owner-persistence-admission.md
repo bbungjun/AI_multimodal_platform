@@ -81,3 +81,11 @@ Issue105와 작업 branch, frozen Goal/hash까지 준비했으며 제품 코드/
 Docker Desktop local named-pipe daemon29.2.1을 읽기 전용으로 확인했다.
 기존 default/preview DB volume과 preview5개 container는 손대지 않았다.
 이 단계는 preflight이며 새 owner 기능이나 runtime gate 통과를 뜻하지 않는다.
+
+### Todo2 — 의도된 RED 계약
+
+schema13개/access25개 새 계약은 각각 누락된 owner/unique/migration/head와
+Ownership Interface 때문에 예상 RED였다. 기존 metadata/revision 기대값2개도 RED,
+나머지 S 회귀64개 PASS. collection 오류0, skip/xfail 추가0.
+SQL owner scope, 반환 row 재검증, Master/None 거절, target row lock,
+transaction 부수효과0와 migration DDL 전 거절을 구현 전에 고정했다.
