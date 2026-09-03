@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.3B execution preparation — 2026-09-03
 
-- **Planned / execution-ready; implementation and runtime not started.**
+- **In Progress — Todo1 baseline complete; implementation next.**
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`. User requested preparation through Goal command.
 - Main synchronized by fast-forward to actual [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)
@@ -101,7 +101,10 @@ paste credential contents.
   targets and96 relative doc links passed. No B feature verification claimed.
   Existing work360s/cleanup90s/total900s preserved; full proof over budget means replan.
   No developer/preview reset, live OAuth/provider/cloud or product mock-login.
-- Next: explicit frozen-SHA Goal execution. At its start mark only B In Progress.
+- Execution: frozen SHA matched; base/main cd654e5 unchanged; correct branch, tracked/
+  staged clean and existing .omo preserved. B0 431 PASS/4.04s, S94 PASS/2 existing
+  guarded skips/1.62s. Docker desktop-linux/local npipe; existing preview4 preserved.
+- Next: Todo2 file_asset/require_master Interfaces, then ordered frozen Goal.
   B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
 
 ### G4.3A execution — 2026-09-03
