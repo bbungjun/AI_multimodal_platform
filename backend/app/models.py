@@ -15,12 +15,14 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     and_,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+from app import identity_models as _identity_models  # Register owner FK targets.
 
 
 class GenerationMode(StrEnum):
@@ -84,6 +86,13 @@ outbox_event_status_enum = Enum(
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_owner_created_at_id", "owner_user_id", "created_at", "id"),)
+
+    owner_user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", name="fk_jobs_owner_user_id_users", ondelete="RESTRICT"),
+        nullable=False,
+    )
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -204,6 +213,7 @@ Index(
 
 class Asset(Base):
     __tablename__ = "assets"
+    __table_args__ = (UniqueConstraint("local_path", name="uq_assets_local_path"),)
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -238,6 +248,15 @@ class Asset(Base):
 
 class PromptEnhancement(Base):
     __tablename__ = "prompt_enhancements"
+    __table_args__ = (
+        Index("ix_prompt_enhancements_owner_created_at_id", "owner_user_id", "created_at", "id"),
+    )
+
+    owner_user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", name="fk_prompt_enhancements_owner_user_id_users", ondelete="RESTRICT"),
+        nullable=False,
+    )
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),

@@ -105,7 +105,9 @@ paste credential contents.
   OAuth/provider/cloud operation, Goal execution or PR creation in preparation.
 - Execution authorized: frozen SHA matched, main unchanged, B0 **212 PASS /2.84s**,
   local Docker Desktop29.2.1 available; existing default/preview resources untouched.
-  Next: Todo2 owner/schema failing contracts. B worker/pipeline/race and G4.3 read/file/delete/ops are
+  Todo2 expected RED complete; Todo3 schema13 + regressions68 + harness106 PASS.
+  Sole0003 and owner metadata/head compatibility implemented, runtime unverified.
+  Next: Todo4 Ownership Interface. B worker/pipeline/race and G4.3 read/file/delete/ops are
   excluded from A; no public multi-user deployment at this checkpoint.
 
 ### G4.1 authenticated mock harness — 2026-09-03

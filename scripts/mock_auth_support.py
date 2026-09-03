@@ -16,7 +16,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
 ORIGIN = "http://localhost:5173"
 ROOT = Path(__file__).resolve().parents[1]
-REVISION = "0002_user_session_persistence"
+REVISION = "0003_content_ownership"
 
 
 class HarnessError(RuntimeError):

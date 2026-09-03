@@ -89,3 +89,14 @@ Ownership Interface 때문에 예상 RED였다. 기존 metadata/revision 기대�
 나머지 S 회귀64개 PASS. collection 오류0, skip/xfail 추가0.
 SQL owner scope, 반환 row 재검증, Master/None 거절, target row lock,
 transaction 부수효과0와 migration DDL 전 거절을 구현 전에 고정했다.
+
+### Todo3 — schema/head compatibility
+
+두 owner NOT NULL/RESTRICT/composite index, Asset path UNIQUE와0003을 추가했다.
+upgrade/downgrade는 generation4개 테이블의 ACCESS EXCLUSIVE lock과5초 lock timeout,
+DDL 전 nonempty 거절을 사용한다. 기존0001/0002는 수정하지 않았다.
+schema/auth/harness/seeder head와 reset owner fixture를 맞췄다.
+격리 verifier에 actual constraint/8회 refusal/identity preservation/lock-timeout proof를
+추가했지만 실제 runtime 실행은 Todo6으로 남겼다. 내장 proof의 문자열 구문 오류를
+단위 검사에서 잡고 수정했으며 재발 방지를 위해 compile 검사도 추가했다.
+S 새 schema13 PASS + 기존/확장 회귀68 PASS, H106 PASS. Access25 RED는 Todo4 입력이다.

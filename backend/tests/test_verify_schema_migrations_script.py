@@ -31,6 +31,30 @@ def test_project_name_is_generated_and_strictly_validated():
             module.validate_project_name(invalid)
 
 
+def test_ownership_proof_program_compiles_and_is_fixed_to_owned_runtime():
+    module = _load_module()
+    compile(module.OWNERSHIP_PROOF_SCRIPT, "ownership-proof", "exec")
+    calls = []
+    def runner(command):
+        calls.append(command)
+        return module.CommandResult(0, "ownership_schema_proof_pass")
+    module.verify_content_ownership(runner, "schema-verify-12345678", REPO_ROOT / ".env.example")
+    assert len(calls) == 1
+    assert calls[0][-4:] == ["migrate", "python", "-c", module.OWNERSHIP_PROOF_SCRIPT]
+    assert "schema-verify-12345678" in calls[0]
+    assert "lock timeout" in module.OWNERSHIP_PROOF_SCRIPT
+    assert "await snapshot() == before" in module.OWNERSHIP_PROOF_SCRIPT
+
+
+def test_ownership_proof_failure_never_exposes_raw_output():
+    module = _load_module()
+    def runner(command):
+        return module.CommandResult(1, "private fixture", "private database error")
+    with pytest.raises(module.VerificationError) as error:
+        module.verify_content_ownership(runner, "schema-verify-12345678", REPO_ROOT / ".env.example")
+    assert str(error.value) == "ownership schema constraints and atomic refusal failed with exit code 1."
+
+
 def test_compose_commands_always_bind_exact_project_and_env_file():
     module = _load_module()
     project = "schema-verify-12345678"
@@ -119,7 +143,7 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
     assert "postgresql" not in content
     assert str(tmp_path) not in content
     payload = json.loads(content)
-    assert payload["revision"] == "0002_user_session_persistence"
+    assert payload["revision"] == "0003_content_ownership"
     assert payload["g1_downgrade"] == "pass"
     assert payload["identity_constraints"] == "pass"
 
@@ -183,13 +207,13 @@ def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     ]
     sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
     assert "0000_stale_revision" in sql_calls[0][-1]
-    assert "0002_user_session_persistence" in sql_calls[-1][-1]
+    assert "0003_content_ownership" in sql_calls[-1][-1]
 
 
 def test_verifier_targets_g2_head_and_schema_evidence_directory():
     module = _load_module()
 
-    assert module.EXPECTED_REVISION == "0002_user_session_persistence"
+    assert module.EXPECTED_REVISION == "0003_content_ownership"
     assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
     assert module.DEFAULT_EVIDENCE_DIR.parts[-2:] == ("evidence", "schema")
 

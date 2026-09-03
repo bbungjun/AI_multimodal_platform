@@ -17,7 +17,8 @@ DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
 PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
 G1_REVISION = "0001_generation_baseline"
-EXPECTED_REVISION = "0002_user_session_persistence"
+EXPECTED_REVISION = "0003_content_ownership"
+IDENTITY_REVISION = "0002_user_session_persistence"
 G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
 EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions"}
 EXPECTED_ENUMS = {
@@ -30,6 +31,8 @@ EXPECTED_ENUMS = {
     "user_status:active,suspended",
 }
 EXPECTED_FOREIGN_KEYS = {
+    "fk_jobs_owner_user_id_users",
+    "fk_prompt_enhancements_owner_user_id_users",
     "assets_job_id_fkey",
     "fk_jobs_retry_of_job_id_jobs",
     "fk_jobs_source_asset_id_assets",
@@ -38,6 +41,8 @@ EXPECTED_FOREIGN_KEYS = {
     "fk_user_sessions_user_id_users",
 }
 EXPECTED_INDEXES = {
+    "ix_jobs_owner_created_at_id",
+    "ix_prompt_enhancements_owner_created_at_id",
     "ix_assets_job_id",
     "ix_jobs_parent_job_id",
     "ix_jobs_retry_of_job_id",
@@ -686,14 +691,16 @@ VALUES
    TIMESTAMPTZ '2026-01-01 00:00:00+00', TIMESTAMPTZ '2026-01-01 00:00:00+00',
    TIMESTAMPTZ '2026-01-08 00:00:00+00');
 INSERT INTO prompt_enhancements
-  (id, original, enhanced, components, target_mode, target_model, llm_model, created_at)
+  (id, owner_user_id, original, enhanced, components, target_mode, target_model, llm_model, created_at)
 VALUES
-  ('00000000-0000-0000-0000-000000000001', 'seed', 'seed', '{}', 't2i', 'seed', 'seed', now());
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000005',
+   'seed', 'seed', '{}', 't2i', 'seed', 'seed', now());
 INSERT INTO jobs
-  (id, mode, model, state, prompt, enhancement_id, blocked, attempts, parameters,
+  (id, owner_user_id, mode, model, state, prompt, enhancement_id, blocked, attempts, parameters,
    state_history, vertex_charged, created_at, updated_at)
 VALUES
-  ('00000000-0000-0000-0000-000000000002', 't2i', 'seed', 'pending', 'seed',
+  ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000005',
+   't2i', 'seed', 'pending', 'seed',
    '00000000-0000-0000-0000-000000000001', false, 0, '{}', '[]', false, now(), now());
 INSERT INTO assets
   (id, job_id, kind, local_path, mime, size_bytes, created_at)
@@ -797,6 +804,149 @@ def verify_reset(
     )
 
 
+# Fixed program executed only inside this verifier's newly owned migrate container.
+# No user-supplied SQL/DSN, no row/exception output; comparisons stay in memory.
+OWNERSHIP_PROOF_SCRIPT = r'''
+import asyncio, os, sys
+import asyncpg
+
+OWNER = "20000000-0000-0000-0000-000000000001"
+JOB = "20000000-0000-0000-0000-000000000002"
+TABLES = ("jobs", "assets", "prompt_enhancements", "outbox_events")
+
+async def main():
+    connection = await asyncpg.connect(os.environ["DATABASE_URL"].replace("postgresql+asyncpg:", "postgresql:"))
+    async def migrate(direction, target, reject=False):
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "alembic", direction, target,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        output, error = await asyncio.wait_for(process.communicate(), 30)
+        if reject:
+            assert process.returncode != 0
+            assert b"content_ownership_requires_empty_generation_tables" in output + error
+        else:
+            assert process.returncode == 0
+    async def identity():
+        return [await connection.fetch(f"SELECT row_to_json(t)::text FROM {table} t ORDER BY id")
+                for table in ("users", "user_sessions")]
+    async def snapshot():
+        rows = [await connection.fetch(f"SELECT row_to_json(t)::text FROM {table} t ORDER BY id")
+                for table in TABLES]
+        columns = await connection.fetch("SELECT table_name,column_name,data_type,is_nullable,column_default "
+                                         "FROM information_schema.columns WHERE table_schema='public' "
+                                         "ORDER BY table_name,ordinal_position")
+        constraints = await connection.fetch("SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint "
+                                             "WHERE connamespace='public'::regnamespace ORDER BY conname")
+        indexes = await connection.fetch("SELECT indexname,indexdef FROM pg_indexes "
+                                         "WHERE schemaname='public' ORDER BY indexname")
+        return rows, columns, constraints, indexes, await connection.fetchval("SELECT version_num FROM alembic_version"), await identity()
+    async def clear():
+        for table in ("outbox_events", "assets", "jobs", "prompt_enhancements"):
+            await connection.execute(f"DELETE FROM {table}")
+    def fixture(table, owned=True):
+        owner_column = ", owner_user_id" if owned else ""
+        owner_value = f", '{OWNER}'" if owned else ""
+        job = f"""INSERT INTO jobs (id,mode,model,state,prompt,blocked,attempts,parameters,
+                   state_history,vertex_charged,created_at,updated_at{owner_column})
+                   VALUES ('{JOB}','t2i','mock','failed','fixture',false,0,'{{}}','[]',false,now(),now(){owner_value});"""
+        if table == "jobs":
+            return job
+        if table == "assets":
+            return job + f"""INSERT INTO assets(id,job_id,kind,local_path,mime,size_bytes,created_at)
+                VALUES ('20000000-0000-0000-0000-000000000003','{JOB}','image','ownership-fixture.png','image/png',1,now());"""
+        if table == "prompt_enhancements":
+            return f"""INSERT INTO prompt_enhancements(id,original,enhanced,components,target_mode,
+                target_model,llm_model,created_at{owner_column}) VALUES
+                ('20000000-0000-0000-0000-000000000004','fixture','fixture','{{}}','t2i','mock','mock',now(){owner_value});"""
+        assert table == "outbox_events"
+        return f"""INSERT INTO outbox_events(id,event_type,aggregate_type,aggregate_id,payload,status,
+            attempts,created_at,updated_at) VALUES
+            ('20000000-0000-0000-0000-000000000005','fixture','job','{JOB}','{{}}','pending',0,now(),now());"""
+    async def rejects(sql, error_type):
+        before = await snapshot()
+        transaction = connection.transaction()
+        await transaction.start()
+        try:
+            try:
+                await connection.execute(sql)
+            except error_type:
+                pass
+            else:
+                raise AssertionError("expected_constraint_rejection")
+        finally:
+            await transaction.rollback()
+        assert await snapshot() == before
+    try:
+        assert await connection.fetchval("SELECT version_num FROM alembic_version") == "0003_content_ownership"
+        assert all([await connection.fetchval(f"SELECT count(*) FROM {t}") == 0 for t in TABLES])
+        await connection.execute(f"""INSERT INTO users(id,email_verified,role,status,data_origin,signed_up_at,updated_at)
+            VALUES ('{OWNER}',false,'user','active','synthetic',now(),now());
+            INSERT INTO user_sessions(id,user_id,token_hash,created_at,last_seen_at,absolute_expires_at)
+            VALUES ('20000000-0000-0000-0000-000000000006','{OWNER}',decode(repeat('ab',32),'hex'),
+                    now(),now(),now()+interval '7 days');""")
+        identities = await identity()
+        for table in ("jobs", "prompt_enhancements"):
+            metadata = await connection.fetchrow("SELECT data_type,is_nullable,column_default FROM information_schema.columns "
+                "WHERE table_schema='public' AND table_name=$1 AND column_name='owner_user_id'", table)
+            assert tuple(metadata) == ("uuid","NO",None)
+            await rejects(fixture(table, False), asyncpg.NotNullViolationError)
+            await rejects(fixture(table).replace(OWNER, "20000000-0000-0000-0000-000000000099"),
+                          asyncpg.ForeignKeyViolationError)
+            await connection.execute(fixture(table))
+            await rejects(f"DELETE FROM users WHERE id='{OWNER}'", asyncpg.ForeignKeyViolationError)
+            await clear()
+        await connection.execute(fixture("assets"))
+        await rejects(f"""INSERT INTO assets(id,job_id,kind,local_path,mime,size_bytes,created_at)
+            VALUES ('20000000-0000-0000-0000-000000000007','{JOB}','image','ownership-fixture.png','image/png',1,now());""",
+            asyncpg.UniqueViolationError)
+        assert await connection.fetchval(f"SELECT bool_and(j.owner_user_id='{OWNER}'::uuid) FROM assets a JOIN jobs j ON j.id=a.job_id")
+        await clear()
+        for owned, direction, target in ((True,"downgrade","0002_user_session_persistence"),
+                                          (False,"upgrade","head")):
+            if not owned:
+                await migrate("downgrade","0002_user_session_persistence")
+                assert await identity() == identities
+            for table in TABLES:
+                await connection.execute(fixture(table, owned))
+                before = await snapshot()
+                await migrate(direction,target,reject=True)
+                assert await snapshot() == before
+                await clear()
+            if not owned:
+                await migrate("upgrade","head")
+                assert await identity() == identities
+        # Hold a conflicting lock until the migration's bounded lock_timeout refuses.
+        transaction = connection.transaction()
+        await transaction.start()
+        await connection.execute("LOCK TABLE jobs IN ROW EXCLUSIVE MODE")
+        process = await asyncio.create_subprocess_exec(sys.executable,"-m","alembic","downgrade",
+            "0002_user_session_persistence",stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+        try:
+            output,error = await asyncio.wait_for(process.communicate(),20)
+            assert process.returncode != 0 and b"lock timeout" in output+error
+        finally:
+            await transaction.rollback()
+        assert await connection.fetchval("SELECT version_num FROM alembic_version") == "0003_content_ownership"
+        assert await identity() == identities
+        await connection.execute(f"DELETE FROM users WHERE id='{OWNER}'")
+    finally:
+        await connection.close()
+
+try:
+    asyncio.run(main())
+except Exception:
+    print("ownership_schema_proof_failed")
+    sys.exit(1)
+print("ownership_schema_proof_pass")
+'''
+
+
+def verify_content_ownership(runner, project_name, env_file):
+    _run(runner, compose_command(project_name, env_file, "run", "--rm", "--no-deps",
+                                 "migrate", "python", "-c", OWNERSHIP_PROOF_SCRIPT),
+         action="ownership schema constraints and atomic refusal")
+
+
 def write_receipt(project_name: str, *, cleanup: bool) -> Path:
     validate_project_name(project_name)
     DEFAULT_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -808,6 +958,10 @@ def write_receipt(project_name: str, *, cleanup: bool) -> Path:
         "round_trip": "pass",
         "g1_downgrade": "pass",
         "identity_constraints": "pass",
+        "ownership_constraints": "pass",
+        "nonempty_refusals": 8,
+        "lock_refusal": "pass",
+        "identity_preservation": "pass",
         "revision_refusal": "pass",
         "cleanup": "pass" if cleanup else "fail",
     }
@@ -873,6 +1027,7 @@ def verify(
             else:
                 assert_inventory(runner, project_name, env_file, values)
         verify_identity_constraints(runner, project_name, env_file, values)
+        verify_content_ownership(runner, project_name, env_file)
         verify_revision_refusal(runner, project_name, env_file, values)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)
