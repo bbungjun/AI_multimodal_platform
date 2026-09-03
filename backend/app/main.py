@@ -53,16 +53,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 class PrivateContentResponses:
     """Only intercept response-start; keep streaming and exception propagation intact."""
 
-    prefixes = ("/api/generations", "/api/pipelines", "/api/assets", "/api/prompts")
+    prefixes = ("/api/generations", "/api/pipelines", "/api/assets", "/api/prompts", "/files", "/api/ops")
 
     def __init__(self, application):
         self.application = application
 
     async def __call__(self, scope, receive, send):
         path = scope.get("path", "")
-        protected = scope["type"] == "http" and any(
+        protected = scope["type"] == "http" and (path in ("/metrics", "/metrics/") or any(
             path == prefix or path.startswith(prefix + "/") for prefix in self.prefixes
-        )
+        ))
 
         async def send_private(message):
             if protected and message["type"] == "http.response.start":

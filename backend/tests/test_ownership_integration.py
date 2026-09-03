@@ -86,6 +86,91 @@ async def test_file_ops_session_before_path_query_and_range(error,status,monkeyp
     session.execute.assert_not_called(); resolve.assert_not_called()
 
 
+@pytest.mark.parametrize("path", ["/files/probe", "/api/ops/probe", "/metrics"])
+@pytest.mark.parametrize("code", [200,206,400,401,403,404,405,416,422,500])
+async def test_file_ops_cache_all_statuses(path, code):
+    from fastapi import Response
+    from app.main import ContentApplication
+    instance = ContentApplication()
+    async def endpoint():
+        if code == 500:
+            raise RuntimeError("fixed_failure")
+        return Response(status_code=code, headers={"Cache-Control":"public, max-age=1"})
+    instance.add_api_route(path,endpoint,methods=["GET"])
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=instance,raise_app_exceptions=False),base_url="http://test") as client:
+        response = await client.get(path)
+    assert response.status_code == code
+    assert response.headers.get_list("cache-control") == ["private, no-store"]
+    assert "fixed_failure" not in response.text
+
+
+@pytest.mark.parametrize("path", ["/files", "/api/ops", "/metrics"])
+async def test_file_ops_cache_stream_no_buffering(path):
+    from app.main import PrivateContentResponses
+    events = [{"type":"http.response.start","status":206,"headers":[]},
+              {"type":"http.response.body","body":b"a","more_body":True},
+              {"type":"http.response.body","body":b"b","more_body":False}]
+    sent=[]
+    async def downstream(scope,receive,send):
+        for index,event in enumerate(events):
+            await send(event)
+            assert len(sent)==index+1
+        raise RuntimeError("stream_failure")
+    async def send(event):
+        sent.append(event)
+    with pytest.raises(RuntimeError,match="stream_failure"):
+        await PrivateContentResponses(downstream)({"type":"http","path":path},None,send)
+    assert sent[1] is events[1] and sent[2] is events[2]
+    assert sent[0]["headers"]==[(b"cache-control",b"private, no-store")]
+
+
+@pytest.mark.parametrize("path", ["/files-extra", "/api/ops-extra", "/metrics-extra", "/api/health/live"])
+async def test_file_ops_no_cache_prefix_overmatch(path):
+    response, _, _ = await _file_ops_request(path)
+    assert "cache-control" not in response.headers
+
+
+@pytest.mark.parametrize("raw_suffix", [b"%6futput.png",b"output%2epng",b"%252e%252e/other",b"../output.png",b"./output.png",b"/output.png",b"output.png%00"])
+async def test_file_ops_raw_asgi_alias_before_storage(raw_suffix,monkeypatch):
+    from urllib.parse import unquote
+    from app.api import files
+    raw=b"/files/00000000-0000-0000-0000-000000000123/"+raw_suffix
+    path=unquote(raw.decode())
+    previous=app.dependency_overrides.copy()
+    app.dependency_overrides[auth_dependencies.require_user]=lambda: ACTOR
+    query=AsyncMock(return_value=Mock(one_or_none=lambda:None))
+    async def db():
+        yield SimpleNamespace(execute=query)
+    app.dependency_overrides[generations.get_session]=db
+    resolve=Mock(); monkeypatch.setattr(files.storage,"resolve_asset_path",resolve)
+    scope={"type":"http","asgi":{"version":"3.0","spec_version":"2.4"},"http_version":"1.1",
+           "method":"GET","scheme":"http","path":path,"raw_path":raw,"root_path":"",
+           "query_string":b"","headers":[],"server":("test",80),"client":("127.0.0.1",1)}
+    events=[]
+    async def receive():
+        return {"type":"http.request","body":b"","more_body":False}
+    async def send(event):
+        events.append(event)
+    try:
+        await app(scope,receive,send)
+    finally:
+        app.dependency_overrides.clear(); app.dependency_overrides.update(previous)
+    assert events[0]["status"]==404
+    assert (b"cache-control",b"private, no-store") in events[0]["headers"]
+    resolve.assert_not_called(); query.assert_not_called()
+
+
+@pytest.mark.parametrize("path", ["/files/00000000-0000-0000-0000-000000000123/output.png", "/metrics"])
+async def test_file_ops_head_no_data_or_storage(path,monkeypatch):
+    from app.api import files
+    resolve=Mock(); monkeypatch.setattr(files.storage,"resolve_asset_path",resolve)
+    response, session, auth = await _file_ops_request(path,method="HEAD")
+    assert response.status_code==405 and response.content==b""
+    assert response.headers["cache-control"]=="private, no-store"
+    assert "content-range" not in response.headers and "accept-ranges" not in response.headers
+    resolve.assert_not_called(); session.execute.assert_not_called(); auth.assert_not_called()
+
+
 @pytest.mark.parametrize("role", ["user","master"])
 @pytest.mark.parametrize("missing", [False,True])
 async def test_access_foreign_delete_is_uniform404_without_storage(role,missing,monkeypatch):

@@ -267,3 +267,43 @@ async def test_files_route_rejects_unsafe_path(registered_files, monkeypatch, tm
 
     assert response.status_code == 404
     assert response.json()["detail"] == "content_not_found"
+
+
+@pytest.mark.parametrize("body,header,code,expected", [(b"",None,200,b""),(b"","bytes=0-",416,None),
+    (b"abcdef","bytes=2-99",206,b"cdef"),(b"abcdef","bytes=oops",400,None)])
+async def test_file_ops_empty_clipped_malformed_and_cache(registered_files,monkeypatch,tmp_path,body,header,code,expected):
+    monkeypatch.setattr(storage,"get_settings",lambda:_settings_for_data_dir(tmp_path))
+    path=storage.save_bytes(uuid4(),"output.bin",body)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url="http://test") as client:
+        response=await client.get("/files/"+path,headers={"Range":header} if header else None)
+    assert response.status_code==code and response.headers["cache-control"]=="private, no-store"
+    if expected is not None:
+        assert response.content==expected
+    if code==416:
+        assert response.headers["content-range"]=="bytes */0"
+
+
+@pytest.mark.parametrize("role",["user","master"])
+@pytest.mark.parametrize("kind",["orphan","missing","alias"])
+async def test_file_ops_registered_disk_consistency(registered_files,monkeypatch,tmp_path,role,kind):
+    import os
+    monkeypatch.setattr(storage,"get_settings",lambda:_settings_for_data_dir(tmp_path))
+    actor=app.dependency_overrides[auth_dependencies.require_user]()
+    actor.role=role
+    path=storage.save_bytes(uuid4(),"output.txt",b"owned")
+    if kind=="orphan":
+        registered_files.pop(path)
+    elif kind=="missing":
+        storage.delete_file(path)
+    else:
+        other=storage.save_bytes(uuid4(),"other.txt",b"foreign")
+        if os.name=="nt":
+            # Windows symlink privilege varies; authoritative Linux uses a real alias.
+            monkeypatch.setattr(files.storage,"resolve_asset_path",lambda value:tmp_path/other)
+        else:
+            (tmp_path/path).unlink()
+            (tmp_path/path).symlink_to(tmp_path/other)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url="http://test") as client:
+        response=await client.get("/files/"+path,headers={"Range":"invalid"})
+    assert response.status_code==404 and response.json()=={"detail":"content_not_found"}
+    assert "content-range" not in response.headers
