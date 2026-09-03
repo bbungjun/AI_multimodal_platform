@@ -1,6 +1,7 @@
 # Issue110 — G4.3A Metadata Ownership Access
 
-- Status: **Mock Verified — Todo1–7 complete; [Ready PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111), final-CI/merge delivery pending** (2026-09-03).
+- Status: **Mock Verified — Todo1–8/F1–F4 complete; [PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) actually squash MERGED cd654e5** (2026-09-03).
+- Final head5738c0d: verify and both Scan/SBOM SUCCESS. [Delivery evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/110#issuecomment-5524251068). Historical pending-delivery notes below describe earlier checkpoints, superseded by this result.
 - [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
   `codex/issue-110-metadata-ownership-access`.
 - Main base `c84394a8e2b16748d1b4b4c877f9f491624f7a1b` (G4.2B PR108 actual merge).

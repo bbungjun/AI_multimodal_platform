@@ -241,8 +241,8 @@ document or inherit the full design interview.
 | G4.2A | Owner persistence and authenticated admission | Ownership Admission Mock Verified; delivery tracked below | [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105), branch `codex/issue-105-owner-persistence-admission`, [execution record](../portfolio/issue-105-owner-persistence-admission.md); implementation `e3c98f1` | Exact20 paths/migration1/head0003; schema2/auth1/final admission2 PASS, cleanup0. Linux658 PASS/3 existing SKIP; frontend48+34 PASS. Developer/preview preserved; final CI/merge use delivery link |
 | G4.2B | Worker references and pipeline/race proof | Mock Verified — delivery tracked in execution record | [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107), branch `codex/issue-107-worker-ownership-invariants`, [B spec](g4-2-owner-persistence-admission-spec.md), [execution record](../portfolio/issue-107-worker-ownership-invariants.md); implementation ff808b0 | Exact11/migration0/head0003; two real cycles each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1/cleanup0. Linux782/3 existing SKIP, frontend48+34. G4.3 receives worker validator, safe pipeline results and expanded guarded harness; failed-link recovery/live verification remain excluded |
 | G4.3 | Complete ownership access enforcement | In Progress — A Mock Verified / B Planned | [Accepted policy/split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md) | Only A+B complete closes aggregate G4; file/ops still unprotected, no public multi-user deployment |
-| G4.3A | Metadata ownership access and safe deletion | Mock Verified — delivery tracked in execution record | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch `codex/issue-110-metadata-ownership-access`, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. B receives read/batch/cache/client Interfaces; Ready/final-CI/merge status in record |
-| G4.3B | File/Range, Master ops and final proof | Planned | [Accepted split](g4-ownership-access-control-spec.md) | Candidate16 paths, migration0; freeze after A actual merge; final security matrix/2cycle/CI/merge closes G4 |
+| G4.3A | Metadata ownership access and safe deletion | Mock Verified — Merged | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) squash cd654e5, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. Final head5738c0d all3 required CI SUCCESS; B receives read/batch/cache/client Interfaces |
+| G4.3B | File/Range, Master ops and final proof | Planned — execution-ready | [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch `codex/issue-112-file-ops-access`, [spec](g4-ownership-access-control-spec.md), [record](../portfolio/issue-112-file-ops-access.md) | Exact16/migration0, base cd654e5. Ownership.file_asset + require_master + file/ops cache and F/O/V/E proof. Frozen Goal prepared, no implementation/runtime yet; final matrix/2cycle/schema2/auth1/CI/actual merge closes G4 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -334,6 +334,14 @@ migrations, same ownership policy and Ready/final-CI/squash delivery. Candidate 
 does not increase the per-Goal20 cap. A remains private/incomplete until B; preparation
 does not activate a Goal or authorize implementation without the frozen-SHA request.
 
+2026-09-03 accepted preparation: user requested G4.3B through its Goal command.
+After PR111 actual squash merge cd654e5, Issue112 freezes existing B16 paths,
+migration0 and unchanged ownership policy. Add raw-path/DB-path binding, narrow
+Master dependency, four final proof groups; retain all prior metadata/race proof.
+Schema2/auth1 use unchanged verifiers in new isolated projects only. Preparation
+is Planned, not implementation authorization. Public deployment and machine-metrics
+authentication remain separately gated.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
@@ -365,10 +373,11 @@ is now Ownership Admission Mock Verified at implementation `e3c98f1`; A actually
 merged at `d40a8f7`. B is Mock Verified and actually merged through
 [PR #108](https://github.com/bbungjun/AI_multimodal_platform/pull/108) at `c84394a`.
 G4.3A/B split is accepted. Issue110 implemented metadata access at acb44a9, with
-two real cycles and full regression; delivery status is in its execution record.
-After A actual merge, prepare B from the spec's short Interface handoff.
+two real cycles and full regression; PR111 actually merged at cd654e5 with all3
+required final-head checks successful. Issue112 B preparation now consumes that
+Interface handoff; frozen Goal/SHA are linked in current-work. No B implementation yet.
 Budgets are G4.1=13, G4.2A=20, G4.2B exact11 (cap20), G4.3A exact16,
-G4.3B candidate16 (union23), not an exception to the per-Goal20 cap. Only G4.2A adds one migration.
+G4.3B exact16 (union23), not an exception to the per-Goal20 cap. Only G4.2A adds one migration.
 Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
 That PR confirms A final-head checks and merge SHA; B evidence is in its execution record.
 Reuse injected clients and hash-only fixtures; schema/auth/harness/seeder expected

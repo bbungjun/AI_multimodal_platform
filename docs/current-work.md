@@ -77,9 +77,36 @@ paste credential contents.
 
 ## Active Work
 
+### G4.3B execution preparation — 2026-09-03
+
+- **Planned / execution-ready; implementation and runtime not started.**
+  [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
+  `codex/issue-112-file-ops-access`. User requested preparation through Goal command.
+- Main synchronized by fast-forward to actual [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)
+  squash `cd654e5003e70d78cd7390cc24e98f322a3383fe`; final head5738c0d required verify
+  and both Scan/SBOM SUCCESS. Issue110 CLOSED; parent109 stays OPEN until B completes.
+- [B contract](initiatives/g4-ownership-access-control-spec.md),
+  [preparation/evidence](portfolio/issue-112-file-ops-access.md). Existing16 code paths,
+  migration0; storage helper/worker/metadata writers/frontend/cloud excluded.
+- Frozen local plan `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`;
+  SHA-256 `005908f870551f84d952a11e18f7348e11811337ac1010adf422fdd2ae65a29f`.
+  Transfer exact bytes, not only
+  the hash, between machines. Existing .omo is preserved and not staged wholesale.
+- gpt-5.6-sol / medium, sequential Todo1–8/F1–F4. file_asset / require_master /
+  no-store extension; F/O/V/E real proof plus existing metadata8/348/delete-race2.
+  Two ownership cycles, separate unchanged schema2/include-reset and auth1,
+  Linux full + existing frontend, Ready PR/final3 CI/actual squash MERGED.
+- Fresh existing-code B0 **431 PASS/4.45s; final recheck4.99s**, Compose config PASS.
+  Plan/spec16-path parity,24 existing test
+  targets and96 relative doc links passed. No B feature verification claimed.
+  Existing work360s/cleanup90s/total900s preserved; full proof over budget means replan.
+  No developer/preview reset, live OAuth/provider/cloud or product mock-login.
+- Next: explicit frozen-SHA Goal execution. At its start mark only B In Progress.
+  B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
+
 ### G4.3A execution — 2026-09-03
 
-- **Mock Verified — Todo1–7 complete; [Ready PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111), final-CI/merge delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
+- **Mock Verified — Todo1–8/F1–F4 complete; [PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) actually squash merged cd654e5.** Final head5738c0d required3 checks SUCCESS; [completion evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/110#issuecomment-5524251068). User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
@@ -109,7 +136,8 @@ paste credential contents.
   checks348/delete-race2 plus all old proof groups; exact-label resources0/preview4
   preserved. Linux928 PASS/3 existing skips; Windows927 PASS/known Bash-path1 FAIL/
   3 skips, freshly reproduced at untouched c84394a. Frontend lint/build/Session48/
-  Chromium34 PASS. Fresh O102/M248/H201/S94 PASS. Next Ready PR/CI/actual merge.
+  Chromium34 PASS. Fresh O102/M248/H201/S94 PASS. Delivery subsequently completed;
+  next B preparation above supersedes historical candidate/next-merge notes below.
   B handoff: jobs_statement/read/batched refs, JSON-only no-store wrapper, structured
   ScopedClient queries/arrays and access8/checks348/delete-race2 receipt. File/ops still B.
   No OAuth/provider/cloud or frontend implementation is authorized.

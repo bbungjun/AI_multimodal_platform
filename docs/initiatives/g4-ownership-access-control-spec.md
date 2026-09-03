@@ -192,7 +192,7 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
 | G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
 | G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 구현11, 최대20 / 0 | [Issue107 기록](../portfolio/issue-107-worker-ownership-invariants.md): ff808b0, 실제2cycle/전체 회귀 PASS; delivery는 기록의 PR 참조. 읽기·파일 격리는 G4.3 |
-| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 합집합23 / 0 | 단일20개 예상 폐기; A/B 분할 승인. A16 고정/B16 후보. 최종 gate 통과 시에만 G4 Mock Verified |
+| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 합집합23 / 0 | 단일20개 예상 폐기; A/B 분할 승인. A16/B16 고정. 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
 공개 배포 완료가 아니다. 공개 노출은 G4.3 및 기존 #99/live 환경 gate 전까지 No-Go.
@@ -313,14 +313,14 @@ backend/tests/test_verify_ownership_script.py
 제한한다. 이 slice는 migration/새 permission model/frontend redesign을 추가하지 않는다.
 구현 중 테스트 fake/query 전환이 예산보다 커지면 뒤늦게 파일을 합치지 말고 재분할한다.
 
-### G4.3A/B 분할 — 승인 완료, A 실행 준비
+### G4.3A/B 분할 — 승인 완료, A 병합/B 실행 준비
 
 [설계 Issue #109](https://github.com/bbungjun/AI_multimodal_platform/issues/109)는 aggregate
 설계/종료 추적용이다. 사용자가 A/B 분할과 A 실행 준비를 승인했다.
 [A Issue #110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
 `codex/issue-110-metadata-ownership-access`, main `c84394a` 기반으로 준비했다.
 Goal은 `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`이며 SHA는 current-work에
-기록한다. 사용자의 frozen-SHA 요청으로 A 구현·실제 검증을 완료했다. B는 A 실제 병합 후 확정한다.
+기록한다. 사용자의 frozen-SHA 요청으로 A 구현·실제 검증·병합을 완료했다. B는 아래 Issue112에서 확정했다.
 제품 권한 정책은 바꾸지 않으며 migration은 두 단계 모두0이다.
 
 | Slice | 책임 | 종료 의미 |
@@ -349,7 +349,7 @@ backend/tests/test_verify_ownership_script.py
 backend/tests/test_mock_auth_support.py
 ```
 
-#### B 후보 경로 (16)
+#### B 실행 경로 (16, Issue112 고정)
 
 ```text
 backend/app/ownership.py
@@ -370,12 +370,63 @@ backend/tests/test_verify_ownership_script.py
 backend/tests/test_mock_auth_support.py
 ```
 
-`test_ownership_access.py`와 `test_ownership_integration.py`만 신규 코드 후보다.
+위 B16 경로는 A 병합본에서 모두 존재한다. B에서 새 코드 파일을 추가하지 않는다.
 최초 제안은 A15/B16/합집합22였다. A 준비 중 기존 persistence 테스트가 `read`를
 미지원 intent로 검사하는 것을 발견했다. `test_ownership_persistence.py`의 해당 테스트만
 실제 미지원 intent로 바꿔 보호를 유지하도록 A16으로 확정했다. 합집합23/공통9, 최대20
 원칙과 분할 책임은 그대로다. 테스트를 합치거나 생략하지 않는다. A allowlist 밖 코드가
-필요하면 최대20 이하여도 먼저 재설계한다. B16은 A 병합 후 다시 확인할 후보이다.
+필요하면 최대20 이하여도 먼저 재설계한다. B도 아래 Issue112 계약으로16개를 고정했다.
+
+#### B 실행 준비 — Issue112 (2026-09-03)
+
+- [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
+  `codex/issue-112-file-ops-access`, **Planned / execution-ready, 구현 미시작**.
+- 선행 [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)은 실제 squash
+  병합되었다: `cd654e5003e70d78cd7390cc24e98f322a3383fe`. 최종 head5738c0d의 필수
+  verify/양쪽 Scan-SBOM SUCCESS. 이 main을 fast-forward한 뒤 B branch를 만들었다.
+- [B 준비/실행 기록](../portfolio/issue-112-file-ops-access.md), frozen local Goal
+  `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`와 SHA는 current-work에서 연결한다.
+  명령어까지 준비하라는 요청이며 구현·runtime 검증은 별도 Goal 실행 요청 후 진행한다.
+- B16/migration0, schema0003와 storage helper/worker/metadata writer는 수정하지 않는다.
+  최초 후보를 actual merge의 코드/호출자/테스트로 재검토했다. 경로 밖 필요 시 중단한다.
+
+확정할 작은 Interface는 `OwnershipAccess.file_asset(local_path)`와
+`require_master(actor=Depends(require_user))`다. 파일 lookup은 정확한 DB path와
+Job owner를 SQL에서 확인하고, Master read 외에 mutation 예외를 추가하지 않는다.
+`require_master`의 일반 사용자 거절은403 `master_required`;401/503은 require_user 그대로다.
+
+파일 경로는 기존 storage가 생성하는 canonical UUID/filename만 허용한다. raw ASGI path의
+percent/encoded slash/dot/중복 separator 변형을 다른 유효 경로로 보정하지 않는다.
+DB Asset.job_id와 path의 Job 디렉터리가 불일치하면 Master도404 `content_not_found`.
+권한 확정 전 resolve/stat/open/Range parsing0; 권한 확인 후에도 resolved path가 다른
+Job/file을 가리키는 기존 in-root symlink alias는 거절한다. storage sandbox를 재사용하며
+공격자의 동시 filesystem 교체까지 원자적으로 막았다고 주장하지 않는다.
+정상200/206/400/416와 정확한 bytes, 기존 HEAD405를 유지한다. HEAD 기능은 추가하지 않는다.
+현재 JSON response-start wrapper를 files/ops/exact metrics로 확장하되 buffering하지 않는다.
+
+최종 실제 proof는 기존 metadata8그룹/348검사와 삭제경합2종 및 이전 proof를 유지하고,
+F(files), O(ops), V(revocation), E(A/B end-to-end) 네 그룹을 추가한다. E는 각 사용자마다
+enhance/generate/poll/metadata/file/Range/pipeline/retry/delete/cross-user 거절 stage를
+별도로 확인한다. V는 기존 logout fixture를 유효할 때 먼저 파일로 검증하고 실제 logout
+뒤 동일 client의 새 Range401을 확인한다. Session을 재발급하거나 폐기를 되돌리지 않는다.
+기존 A Session 만료 전 A의 모든 권한 필요 stage를 끝낸다.
+
+일반 ScopedClient의 URL guard는 유지한다. 정확한 GET `/metrics`만 좁게 허용하고,
+공격 probe/HEAD는 고정 enum과 검증된 fixture ID로만 구성한다. 임의 URL/encoding/header를
+허용하는 검증용 탈출구를 만들지 않는다. receipt는 F/O/V/E와 A/B stage가 모두 참일 때만
+성공이며 unit fake를 실제 HTTP/DB 증거로 계산하지 않는다.
+
+검증은 ownership2cycle, 별도 기존 schema verifier2회(`--include-reset`), auth verifier1회,
+전체 Linux backend/기존 frontend 회귀다. schema 검증은 새로운 migration이 아니며 모든
+reset은 verifier가 만든 새 격리 DB에만 수행한다. 기존360s work+90s cleanup/cycle와 전체900s,
+HTTP10s, lock20s/observe5s는 유지한다. A의 약338s 대비 여유가 작으므로 stage 재사용과
+최대2개의 독립 actor HTTP 흐름만 병행하고 공유 fixture/worker-stop/expiry는 순차 처리한다.
+완전한 proof가 예산에 들어오지 않으면 측정 결과를 보고하고 재설계한다.
+
+Todo1–8/F1–F4와 정확한 test/CLI는 frozen Goal에 고정한다. Ready PR 최종 head 필수3개 CI
+성공과 실제 squash merge 후에만 B 및 aggregate G4 Mock Verified로 종료할 수 있다.
+parent109는 그때 전체 matrix 근거와 함께 닫는다. #99/live/proxy/machine-scraper gate는
+그대로 열려 있으며 무인 `/metrics`가401로 바뀌는 영향을 숨기지 않는다.
 
 #### A Interface와 실패 계약
 
@@ -445,7 +496,7 @@ backend/tests/test_mock_auth_support.py
 각 Goal의 Todo 순서는 1 baseline/상태표, 2 Ownership Interface,
 3 route 적용, 4 경계·실패 테스트, 5 guarded harness, 6 실제2cycle/전체 회귀,
 7 문서·포트폴리오, 8 Ready PR/CI/실제 squash merge로 고정한다. A와 B에서 2–5의
-세부 테스트/commit 경로는 A frozen Goal에 고정했으며 B는 후속 확정한다. 각 Todo는 focused test,
+세부 테스트/commit 경로는 각 Issue110/112 frozen Goal에 고정했다. 각 Todo는 focused test,
 diff/status/staged 검사 후 작은 commit을 남긴다.
 
 F1 경로/무migration, F2 해당 보안 matrix, F3 실제2cycle/전체 회귀,
@@ -480,7 +531,7 @@ frontend48+34 PASS. 최종 PR/CI/실제 merge는 실행 기록의 delivery 링�
 
 남은 제약: corrupted reference가 포함된 page는 전체404 fail-closed; arbitrary DBA
 동시 변경, 파일 원자적 복구, 이미 전송된 bytes 회수는 보장하지 않는다. A만으로 전체
-G4/공개 배포를 완료했다고 표시하지 않는다. B의16개 후보는 실제 A merge 후 재검토한다.
+G4/공개 배포를 완료했다고 표시하지 않는다. B16은 실제 A merge 후 Issue112에서 고정했다.
 
 ## 7. 필수 검증 matrix
 
@@ -539,7 +590,7 @@ git diff --cached --name-only
 
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`는 G4.1에서 구현·검증한
 명령이다. 기존 smoke CLI는 이를 위임하고 arbitrary base URL/Compose 옵션을 거절한다.
-후속 G4 보안 matrix는 아직 미구현이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
+현재 A metadata matrix까지 구현됐으며 B의 최종 F/O/V/E는 아직 미구현이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
 인증12 × 2, 세 시나리오 × 2, cleanup과 전체 회귀 결과를 구분해 남긴다.
 
 ## 8. 종료·중단 조건

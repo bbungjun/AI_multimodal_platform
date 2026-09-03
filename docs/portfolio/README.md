@@ -38,6 +38,7 @@
 | Worker ownership and idempotent pipeline linking | `Mock Verified` | [Issue107 evidence](issue-107-worker-ownership-invariants.md) | Two real PostgreSQL/HTTP/Celery cycles, lock-observed races, Session-expiry independence; no migration, live provider or complete G4.3 access-control claim |
 | Metadata owner scoping, safe deletion and private JSON cache | `Mock Verified` | [Issue110 evidence](issue-110-metadata-ownership-access.md) | Two actual cycles, each8 access groups/348 checks/2 deletion races; Linux928 PASS. File/Range/ops remains G4.3B; delivery status in record |
 | Per-User credits and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Later bounded Goals; not implemented |
+| File ownership, Range and Master-only operations | `Planned` | [Issue112 preparation](issue-112-file-ops-access.md) | B16/migration0 frozen Goal after PR111 actual merge; no B implementation or runtime verification yet |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
 
