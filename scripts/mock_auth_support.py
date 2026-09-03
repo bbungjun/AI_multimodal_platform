@@ -139,7 +139,8 @@ class MemoryIdentity:
         return {case: hashlib.sha256(value.encode()).hexdigest() for case, value in self._secrets.items()}
 
     def client(self, base_url, case, *, transport=None):
-        return ScopedClient(base_url, secret=self._secrets[case], transport=transport)
+        return ScopedClient(base_url, secret=self._secrets[case], transport=transport,
+                            deadline=getattr(self, "deadline", None))
 
 
 def loopback_origin(value):
@@ -170,12 +171,12 @@ class NoRedirect(HTTPRedirectHandler):
         raise HarnessError("redirect_refused")
 
 
-def http_transport(request):
+def http_transport(request, *, timeout=10):
     # A fresh opener per call is safe for concurrent duplicate requests. Never use
     # environment proxies or a CookieJar which might persist server-set cookies.
     opener = build_opener(ProxyHandler({}), NoRedirect())
     try:
-        with opener.open(request, timeout=10) as response:
+        with opener.open(request, timeout=min(10, timeout)) as response:
             return response.read(8 * 1024 * 1024 + 1), dict(response.headers.items()), response.status
     except HTTPError as error:
         with error:
@@ -183,14 +184,15 @@ def http_transport(request):
 
 
 class ScopedClient:
-    def __init__(self, base_url, *, secret, transport=None, origin=ORIGIN):
+    def __init__(self, base_url, *, secret, transport=None, origin=ORIGIN, deadline=None):
         self.base_url = loopback_origin(base_url)
         if secret is not None and not re.fullmatch(r"[A-Za-z0-9_-]{43}", secret):
             raise HarnessError("invalid_session")
         if origin != ORIGIN:
             raise HarnessError("invalid_trusted_origin")
         self._secret = secret
-        self._transport = transport or http_transport
+        self._transport = transport
+        self._deadline = deadline
 
     def request_bytes(self, method, path, *, expected_status, step_name="request", payload=None, headers=None, query=None):
         if path == "/metrics":
@@ -245,11 +247,17 @@ class ScopedClient:
         return self._send(Request(url,headers=headers,method="HEAD" if case=="head" else "GET"),expected_status)
 
     def _send(self, request, expected_status):
+        remaining = 10 if self._deadline is None else self._deadline - time.monotonic()
+        if remaining <= 0:
+            raise HarnessError("cycle_deadline")
         try:
-            result = self._transport(request)
+            result = (self._transport(request) if self._transport is not None else
+                      http_transport(request, timeout=min(10, remaining)))
             body, response_headers, status = result
         except Exception:
             raise HarnessError("http_transport_failed") from None
+        if self._deadline is not None and time.monotonic() > self._deadline:
+            raise HarnessError("cycle_deadline")
         if 300 <= status < 400:
             raise HarnessError("redirect_refused")
         allowed = (expected_status,) if isinstance(expected_status, int) else tuple(expected_status)
@@ -618,21 +626,27 @@ def auth_proof(runtime, identity):
     return 12
 
 
-def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=None):
+def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=None, command_deadline=None):
     if type(cycles) is not int or cycles not in (1, 2):
         raise HarnessError("invalid_cycle_count")
     results = []
+    suite = getattr(scenario, "suite", "custom")
+    if suite not in ("ownership", "file-ops", "custom"):
+        raise HarnessError("invalid_suite")
+    suite_deadline = min(time.monotonic() + 900, command_deadline or float("inf"))
     revision = command(["git", "rev-parse", "HEAD"])
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise HarnessError("invalid_code_revision")
-    for _ in range(cycles):
+    for index in range(1, cycles + 1):
         start = time.monotonic()
         runtime = runtime_factory(env_file)
+        validate_project(runtime.project)
         runtime.phase_clock = PhaseClock()
-        work_deadline = min(getattr(runtime, "deadline", start + 360), start + 360)
+        work_deadline = min(getattr(runtime, "deadline", start + 360), start + 360, suite_deadline - 90)
+        runtime.deadline = work_deadline
         receipt = dict(project=runtime.project, provider="mock", revision=REVISION, code_revision=revision, phase="preflight",
                        auth_checks=0, scenarios=0, cleanup=False, passed=False,
-                       failure_code="none", cleanup_failure_code="none")
+                       failure_code="none", cleanup_failure_code="none", suite=suite, cycle=index)
         with tempfile.TemporaryDirectory(prefix="ownership-verifier-") as directory:
             try:
                 with phase(runtime, "preflight"):
@@ -642,6 +656,7 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                     runtime.start(directory)
                 receipt["phase"] = "seed"
                 identity = MemoryIdentity()
+                identity.deadline = work_deadline
                 with phase(runtime, "seed"):
                     runtime.seed(identity)
                 file_ops = bool(getattr(scenario,"requires_file_ops",False))
@@ -659,16 +674,21 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                 receipt["phase"] = "scenarios"
                 if scenario is None:
                     raise HarnessError("scenario_adapter_required")
-                receipt["scenarios"] = scenario(runtime, identity)
+                count = scenario(runtime, identity)
+                if type(count) is not int or count < 0:
+                    raise HarnessError("unsafe_scenario_receipt")
+                receipt["scenarios"] = count
                 admission_checks = getattr(runtime, "admission_checks", 0)
                 if type(admission_checks) is not int or admission_checks < 0:
                     raise HarnessError("unsafe_admission_receipt")
-                receipt["admission_checks"] = admission_checks
+                if suite != "file-ops":
+                    receipt["admission_checks"] = admission_checks
                 for field in ("execution_checks", "pipeline_checks", "race_checks", "expiry_checks"):
                     value = getattr(runtime, field, 0)
                     if type(value) is not int or value < 0:
                         raise HarnessError("unsafe_execution_receipt")
-                    receipt[field] = value
+                    if suite != "file-ops":
+                        receipt[field] = value
                 if scenario is not None and getattr(scenario,"requires_access",False):
                     groups=getattr(runtime,"access_completed",None)
                     checks=getattr(runtime,"access_checks",None)
@@ -677,10 +697,17 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                             or any(value is not True for value in groups.values())
                             or type(checks) is not int or checks<=0 or type(races) is not int or races!=2):
                         raise HarnessError("unsafe_access_receipt")
-                    receipt.update(access_groups=8,access_checks=checks,delete_race_checks=races)
+                    receipt.update(access_groups=8,access_checks=checks,delete_race_checks=races,
+                                   access_completed=dict(groups))
                 if file_ops:
                     validate_file_ops_receipt(runtime)
-                    receipt.update(file_ops_groups=4,file_ops_checks=runtime.file_ops_checks,e2e_actors=2)
+                    receipt.update(file_ops_groups=4,file_ops_checks=runtime.file_ops_checks,e2e_actors=2,
+                                   file_ops_completed=dict(runtime.file_ops_completed),
+                                   e2e_completed={k:dict(v) for k,v in runtime.e2e_completed.items()})
+                with phase(runtime, "validate"):
+                    if suite != "custom":
+                        validate_proof(receipt, suite)
+                        receipt["phase"] = "validate"
                 if time.monotonic() > work_deadline:
                     raise HarnessError("cycle_deadline")
                 receipt["passed"] = True
@@ -702,6 +729,8 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                     receipt["cleanup_failure_code"] = "cleanup_failed"
                 receipt["cleanup_sec"] = safe_seconds(time.monotonic() - work_end)
         receipt["duration_sec"] = safe_seconds(time.monotonic() - start)
+        if time.monotonic() > suite_deadline:
+            receipt.update(passed=False, failure_code="deadline_exceeded")
         try:
             receipt["phase_seconds"] = runtime.phase_clock.snapshot()
             if runtime.phase_clock.failed_phase is not None:
@@ -726,3 +755,76 @@ def validate_file_ops_receipt(runtime):
     for values in stages.values():
         if type(values) is not dict or set(values)!=set(E2E_STAGES) or any(v is not True for v in values.values()):
             raise HarnessError("unsafe_file_ops_receipt")
+
+
+LEGACY_COUNTS = dict(auth_checks=12, scenarios=3, admission_checks=111,
+    execution_checks=20, pipeline_checks=4, race_checks=3, expiry_checks=1,
+    access_groups=8, delete_race_checks=2)
+FILE_COUNTS = dict(auth_checks=12, scenarios=2, file_ops_groups=4, e2e_actors=2)
+BASE_RECEIPT = frozenset(("project", "provider", "revision", "code_revision", "phase",
+    "cleanup", "passed", "failure_code", "cleanup_failure_code", "suite", "cycle",
+    "work_sec", "cleanup_sec", "duration_sec", "phase_seconds"))
+
+
+def true_flags(value, names):
+    return type(value) is dict and set(value) == set(names) and all(v is True for v in value.values())
+
+
+def validate_proof(row, suite):
+    counts = LEGACY_COUNTS if suite == "ownership" else FILE_COUNTS
+    if suite not in ("ownership", "file-ops") or any(
+            type(row.get(k)) is not int or row[k] != v for k, v in counts.items()):
+        raise HarnessError("unsafe_proof_receipt")
+    if suite == "ownership":
+        checks = row.get("access_checks")
+        if type(checks) is not int or checks < 348 or not true_flags(row.get("access_completed"), ACCESS_GROUPS):
+            raise HarnessError("unsafe_proof_receipt")
+    else:
+        checks, actors = row.get("file_ops_checks"), row.get("e2e_completed")
+        if (type(checks) is not int or checks <= 0
+                or not true_flags(row.get("file_ops_completed"), FILE_OPS_GROUPS)
+                or type(actors) is not dict or set(actors) != {"a", "b"}
+                or any(not true_flags(stages, E2E_STAGES) for stages in actors.values())):
+            raise HarnessError("unsafe_proof_receipt")
+
+
+def validate_aggregate(rows, suites, cycles, revision):
+    if (type(rows) is not list or type(cycles) is not int or cycles not in (1, 2)
+            or suites not in (("ownership",), ("file-ops",), ("ownership", "file-ops"))
+            or type(revision) is not str or not re.fullmatch(r"[0-9a-f]{40}", revision)
+            or len(rows) != len(suites) * cycles):
+        raise HarnessError("unsafe_aggregate")
+    projects, durations = set(), {suite:0 for suite in suites}
+    for row, (suite, index) in zip(rows, ((s, i) for s in suites for i in range(1, cycles+1))):
+        extra = ({"access_checks", "access_completed"} | set(LEGACY_COUNTS) if suite == "ownership"
+                 else {"file_ops_checks", "file_ops_completed", "e2e_completed"} | set(FILE_COUNTS))
+        if type(row) is not dict or set(row) != BASE_RECEIPT | extra:
+            raise HarnessError("unsafe_aggregate")
+        validate_project(row["project"])
+        if (row["project"] in projects or row["suite"] != suite or type(row["cycle"]) is not int
+                or row["cycle"] != index or row["code_revision"] != revision
+                or row["revision"] != REVISION or row["provider"] != "mock"
+                or row["passed"] is not True or row["cleanup"] is not True
+                or row["failure_code"] != "none" or row["cleanup_failure_code"] != "none"
+                or row["phase"] != "validate"):
+            raise HarnessError("unsafe_aggregate")
+        validate_proof(row, suite)
+        projects.add(row["project"])
+        for key, limit in (("work_sec",360), ("cleanup_sec",90), ("duration_sec",450)):
+            safe_seconds(row[key])
+            if row[key] > limit:
+                raise HarnessError("cycle_deadline")
+        if row["duration_sec"] + 0.003 < row["work_sec"] + row["cleanup_sec"]:
+            raise HarnessError("unsafe_aggregate")
+        timing = row["phase_seconds"]
+        required = {"preflight", "start", "seed", "auth", "validate", "cleanup"}
+        required |= ({"admission", "metadata", "smokes", "worker", "pipeline", "http_races", "expiry", "celery_completion"}
+                     if suite == "ownership" else {"file_pre_auth", "file_post_auth", "e_a", "e_b"})
+        if type(timing) is not dict or set(timing) != required:
+            raise HarnessError("unsafe_aggregate")
+        for value in timing.values():
+            safe_seconds(value)
+        durations[suite] += row["duration_sec"]
+    if any(value > 900 for value in durations.values()) or sum(durations.values()) > 1800:
+        raise HarnessError("cycle_deadline")
+    return True

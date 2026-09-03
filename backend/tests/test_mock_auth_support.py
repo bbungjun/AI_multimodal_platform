@@ -232,3 +232,29 @@ def test_v2_failure_codes_never_use_exception_payload(error, expired, expected):
     assert failure_code(error, expired=expired) == expected
     assert failure_code(HarnessError("SECRET_CANARY")) == "harness_failure"
     assert failure_code(HarnessError("cycle_deadline")) == "deadline_exceeded"
+
+
+@pytest.mark.parametrize("late", [False, True])
+def test_v2_client_stops_before_or_after_cycle_deadline(late, monkeypatch):
+    now, calls = [11 if not late else 9], []
+    monkeypatch.setattr(support.time, "monotonic", lambda: now[0])
+    def transport(request):
+        calls.append(True)
+        now[0] = 11
+        return b"", {}, 200
+    client = support.ScopedClient("http://127.0.0.1:1234", secret=None, transport=transport, deadline=10)
+    with pytest.raises(support.HarnessError, match="cycle_deadline"):
+        client.request_bytes("GET", "/api/health", expected_status=200)
+    assert len(calls) == int(late)
+
+
+def test_v2_default_transport_is_clamped_to_remaining_time(monkeypatch):
+    monkeypatch.setattr(support.time, "monotonic", lambda: 9)
+    seen = []
+    def transport(request, *, timeout):
+        seen.append(timeout)
+        return b"", {}, 200
+    monkeypatch.setattr(support, "http_transport", transport)
+    client = support.ScopedClient("http://127.0.0.1:1234", secret=None, deadline=10)
+    client.request_bytes("GET", "/api/health", expected_status=200)
+    assert seen == [1]

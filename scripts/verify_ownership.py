@@ -8,7 +8,8 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-from mock_auth_support import HarnessError, ROOT, measured, phase, verify_cycles
+from mock_auth_support import (HarnessError, ROOT, measured, phase, verify_cycles,
+    command, validate_aggregate, failure_code)
 
 
 def content_id(case, kind):
@@ -131,6 +132,26 @@ def scenarios(runtime, identity):
     import smoke_mock_golden_path as golden
     import smoke_mock_retry_flow as retry
     import smoke_mock_i2v_duplicate_guard as duplicate
+    with phase(runtime, "smokes"):
+        for module in (golden, retry, duplicate):
+            remaining = runtime.deadline - time.monotonic()
+            if remaining <= 0:
+                raise HarnessError("cycle_deadline")
+            args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
+                                   keep_job=False, keep_jobs=False)
+            module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
+    execution_proof(runtime, identity)
+    return 3
+
+
+scenarios.requires_access = True
+scenarios.suite = "ownership"
+
+
+def file_ops_scenarios(runtime, identity):
+    import smoke_mock_golden_path as golden
+    import smoke_mock_retry_flow as retry
+    import smoke_mock_i2v_duplicate_guard as duplicate
     from mock_auth_support import E2E_STAGES
     runtime.e2e_completed={case:dict.fromkeys(E2E_STAGES,False) for case in ("a","b")}
     def actor_flow(case):
@@ -147,19 +168,18 @@ def scenarios(runtime, identity):
                                  keep_job=False,keep_jobs=False)
             module.run_smoke(args,client=client)
         pipeline_end_to_end(runtime,client)
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        futures=[pool.submit(actor_flow,case) for case in ("a","b")]
-        for future in futures:
-            future.result(timeout=max(0.1,runtime.deadline-time.monotonic()))
+    # Sequential bounded clients avoid executor shutdown waits on a failed actor.
+    # No assertion/workload is dropped; each actor still executes its complete flow.
+    for case in ("a", "b"):
+        actor_flow(case)
     if not all(all(stages.values()) for stages in runtime.e2e_completed.values()):
         raise HarnessError("actor_flow_incomplete")
     runtime.file_ops_completed["E"]=True
-    execution_proof(runtime, identity)
-    return 3
+    return 2
 
 
-scenarios.requires_access = True
-scenarios.requires_file_ops = True
+file_ops_scenarios.requires_file_ops = True
+file_ops_scenarios.suite = "file-ops"
 
 
 def file_id(case, kind="job"):
@@ -547,13 +567,57 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env.example")
     parser.add_argument("--cycles", type=int, choices=(1, 2), default=2)
+    parser.add_argument("--suite", choices=("ownership", "file-ops", "all"), default="ownership")
     args = parser.parse_args(argv)
     try:
-        results = verify_cycles(args.env_file, args.cycles, scenario=scenarios)
-    except (Exception, KeyboardInterrupt):
-        print(json.dumps({"phase": "preflight", "provider": "mock", "passed": False}), file=sys.stderr)
+        summary = run_suites(args.env_file, args.cycles, args.suite)
+        print(json.dumps(summary), flush=True)
+    except (Exception, KeyboardInterrupt) as error:
+        print(json.dumps({"phase": "validate", "provider": "mock", "passed": False,
+                          "complete": False, "failure_code": failure_code(error)}), file=sys.stderr)
         return 1
-    return 0 if len(results) == args.cycles and all(row["passed"] for row in results) else 1
+    return 0 if summary["passed"] else 1
+
+
+def code_revision():
+    revision = command(["git", "rev-parse", "HEAD"], timeout=10)
+    from re import fullmatch
+    if not fullmatch(r"[0-9a-f]{40}", revision):
+        raise HarnessError("invalid_code_revision")
+    changed = command(["git", "diff", "--name-only", "HEAD"], timeout=10).splitlines()
+    untracked = command(["git", "ls-files", "--others", "--exclude-standard"], timeout=10).splitlines()
+    if (any(not path.startswith("docs/") for path in changed)
+            or any(not path.startswith(".omo/") for path in untracked)):
+        raise HarnessError("uncommitted_code")
+    return revision
+
+
+def run_suites(env_file, cycles, suite, *, verify=None):
+    if suite not in ("ownership", "file-ops", "all") or type(cycles) is not int or cycles not in (1, 2):
+        raise HarnessError("invalid_suite")
+    started = time.monotonic()
+    revision = code_revision()
+    selected = ("ownership", "file-ops") if suite == "all" else (suite,)
+    deadline = started + (1800 if suite == "all" else 900)
+    rows = []
+    verify = verify or verify_cycles
+    for name in selected:
+        if time.monotonic() >= deadline:
+            raise HarnessError("cycle_deadline")
+        adapter = scenarios if name == "ownership" else file_ops_scenarios
+        current = verify(env_file, cycles, scenario=adapter, command_deadline=deadline)
+        # Validate each suite before starting another; failures never become success
+        # through a later receipt, and arbitrary payloads are never printed here.
+        validate_aggregate(current, (name,), cycles, revision)
+        rows.extend(current)
+    if code_revision() != revision:
+        raise HarnessError("code_revision_changed")
+    if time.monotonic() > deadline:
+        raise HarnessError("cycle_deadline")
+    validate_aggregate(rows, selected, cycles, revision)
+    return dict(provider="mock", code_revision=revision, suite=suite, cycles=cycles,
+                passed=True, complete=suite == "all" and cycles == 2,
+                verified_cycles=len(rows), duration_sec=round(time.monotonic()-started, 3))
 
 
 if __name__ == "__main__":
