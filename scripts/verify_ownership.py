@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-from mock_auth_support import HarnessError, ROOT, verify_cycles
+from mock_auth_support import HarnessError, ROOT, measured, phase, verify_cycles
 
 
 def content_id(case, kind):
@@ -16,6 +16,7 @@ def content_id(case, kind):
     return str(uuid5(NAMESPACE_URL, "ownership-content/" + case + "/" + kind))
 
 
+@measured("admission")
 def admission_proof(runtime, identity):
     # Quiesce only this run's owned consumers; admission rows remain deterministic.
     from urllib.request import Request
@@ -133,6 +134,9 @@ def scenarios(runtime, identity):
     from mock_auth_support import E2E_STAGES
     runtime.e2e_completed={case:dict.fromkeys(E2E_STAGES,False) for case in ("a","b")}
     def actor_flow(case):
+        with phase(runtime, "e_" + case):
+            run_actor(case)
+    def run_actor(case):
         client=TrackedActor(runtime,identity,case)
         modules=(golden,retry,duplicate) if case=="a" else (golden,retry)
         for module in modules:
@@ -343,6 +347,7 @@ def delete_race(runtime,client,case):
         raise HarnessError("access_race_persistence_failed")
 
 
+@measured("metadata")
 def access_proof(runtime,identity):
     from mock_auth_support import ScopedClient,ACCESS_GROUPS,DELETE_CASES
     clients={case:identity.client(runtime.base_url,case) for case in ("a","b","master")}
@@ -496,37 +501,42 @@ def execution_proof(runtime, identity):
     runtime.docker(*runtime.compose,"stop","dispatcher","worker")
     try:
         print(json.dumps({"proof":"worker"}),flush=True)
-        if runtime.execution_fixture("worker_proof") != {"execution_checks":20}:
-            raise HarnessError("worker_proof_incomplete")
+        with phase(runtime, "worker"):
+            if runtime.execution_fixture("worker_proof") != {"execution_checks":20}:
+                raise HarnessError("worker_proof_incomplete")
         print(json.dumps({"proof":"pipeline"}),flush=True)
-        if runtime.execution_fixture("pipeline_proof") != {"pipeline_checks":3}:
-            raise HarnessError("pipeline_proof_incomplete")
+        with phase(runtime, "pipeline"):
+            if runtime.execution_fixture("pipeline_proof") != {"pipeline_checks":3}:
+                raise HarnessError("pipeline_proof_incomplete")
         print(json.dumps({"proof":"http_races"}),flush=True)
-        winners = [(case,http_race(runtime,actor_b,case)) for case in RACE_CASES]
+        with phase(runtime, "http_races"):
+            winners = [(case,http_race(runtime,actor_b,case)) for case in RACE_CASES]
         print(json.dumps({"proof":"expiry"}),flush=True)
-        actor_a = identity.client(runtime.base_url,"a")
-        expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
-            payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
-        if runtime.execution_fixture("expire_session") != {"expired":True}:
-            raise HarnessError("session_expiry_failed")
-        actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
-        pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
-            payload={"image_prompt":"fixture","video_prompt":"fixture",
-                     "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
+        with phase(runtime, "expiry"):
+            actor_a = identity.client(runtime.base_url,"a")
+            expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
+                payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
+            if runtime.execution_fixture("expire_session") != {"expired":True}:
+                raise HarnessError("session_expiry_failed")
+            actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
+            pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
+                payload={"image_prompt":"fixture","video_prompt":"fixture",
+                         "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
     finally:
         runtime.assert_owned()
         runtime.docker(*runtime.compose,"start","dispatcher","worker")
     print(json.dumps({"proof":"celery_completion"}),flush=True)
-    for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners),
-                   pipeline["parent"]["id"], pipeline["child"]["id"]]:
-        poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
-    poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
-    for case,_ in winners:
-        if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:
-            raise HarnessError("race_completion_failed")
-    if runtime.execution_fixture("check_completed",records=[{"kind":"pipeline","id":pipeline["id"]},
-            {"kind":"expiry","id":expiry["id"]}]) != {"completed_records":2}:
-        raise HarnessError("completion_proof_failed")
+    with phase(runtime, "celery_completion"):
+        for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners),
+                       pipeline["parent"]["id"], pipeline["child"]["id"]]:
+            poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
+        for case,_ in winners:
+            if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:
+                raise HarnessError("race_completion_failed")
+        if runtime.execution_fixture("check_completed",records=[{"kind":"pipeline","id":pipeline["id"]},
+                {"kind":"expiry","id":expiry["id"]}]) != {"completed_records":2}:
+            raise HarnessError("completion_proof_failed")
     runtime.execution_checks = 20
     runtime.pipeline_checks = 4
     runtime.race_checks = 3

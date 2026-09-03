@@ -10,7 +10,9 @@ import tempfile
 import time
 import queue
 import threading
-from contextlib import contextmanager
+import math
+from functools import wraps
+from contextlib import contextmanager, nullcontext
 from uuid import uuid4, uuid5, NAMESPACE_URL
 from urllib.error import HTTPError
 from urllib.parse import urlsplit, urlencode
@@ -55,6 +57,72 @@ def protocol_line(process, expected, timeout):
 
 class HarnessError(RuntimeError):
     """A bounded public failure code, never a raw exception/response."""
+
+
+PHASES = frozenset(("preflight", "start", "seed", "file_pre_auth", "auth",
+    "file_post_auth", "admission", "metadata", "smokes", "e_a", "e_b", "worker",
+    "pipeline", "http_races", "expiry", "celery_completion", "validate", "cleanup"))
+
+
+def safe_seconds(value):
+    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+        raise HarnessError("unsafe_timing")
+    return round(value, 3)
+
+
+class PhaseClock:
+    """Only fixed phase names and monotonic durations can cross this Interface."""
+    def __init__(self, clock=None):
+        self.clock = clock or time.monotonic
+        self.timings = {}
+        self.failed_phase = None
+        self.lock = threading.Lock()
+
+    @contextmanager
+    def measure(self, name):
+        if name not in PHASES:
+            raise HarnessError("unsafe_phase")
+        start = self.clock()
+        try:
+            yield
+        except BaseException:
+            with self.lock:
+                if self.failed_phase is None and name != "cleanup":
+                    self.failed_phase = name
+            raise
+        finally:
+            elapsed = safe_seconds(self.clock() - start)
+            with self.lock:
+                self.timings[name] = safe_seconds(self.timings.get(name, 0) + elapsed)
+
+    def snapshot(self):
+        with self.lock:
+            if set(self.timings) - PHASES:
+                raise HarnessError("unsafe_phase")
+            return {name: safe_seconds(value) for name, value in self.timings.items()}
+
+
+def phase(runtime, name):
+    clock = getattr(runtime, "phase_clock", None)
+    return clock.measure(name) if clock is not None else nullcontext()
+
+
+def measured(name):
+    def decorate(function):
+        @wraps(function)
+        def call(runtime, *args, **kwargs):
+            with phase(runtime, name):
+                return function(runtime, *args, **kwargs)
+        return call
+    return decorate
+
+
+def failure_code(error, *, expired=False):
+    if expired or (isinstance(error, HarnessError) and error.args == ("cycle_deadline",)):
+        return "deadline_exceeded"
+    if isinstance(error, KeyboardInterrupt):
+        return "interrupted"
+    return "harness_failure" if isinstance(error, HarnessError) else "unexpected_failure"
 
 
 def validate_project(project):
@@ -558,27 +626,36 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise HarnessError("invalid_code_revision")
     for _ in range(cycles):
-        runtime = runtime_factory(env_file)
-        receipt = dict(project=runtime.project, provider="mock", revision=REVISION, code_revision=revision, phase="preflight",
-                       auth_checks=0, scenarios=0, cleanup=False, passed=False)
         start = time.monotonic()
+        runtime = runtime_factory(env_file)
+        runtime.phase_clock = PhaseClock()
+        work_deadline = min(getattr(runtime, "deadline", start + 360), start + 360)
+        receipt = dict(project=runtime.project, provider="mock", revision=REVISION, code_revision=revision, phase="preflight",
+                       auth_checks=0, scenarios=0, cleanup=False, passed=False,
+                       failure_code="none", cleanup_failure_code="none")
         with tempfile.TemporaryDirectory(prefix="ownership-verifier-") as directory:
             try:
-                runtime.preflight()
+                with phase(runtime, "preflight"):
+                    runtime.preflight()
                 receipt["phase"] = "start"
-                runtime.start(directory)
+                with phase(runtime, "start"):
+                    runtime.start(directory)
                 receipt["phase"] = "seed"
                 identity = MemoryIdentity()
-                runtime.seed(identity)
+                with phase(runtime, "seed"):
+                    runtime.seed(identity)
                 file_ops = bool(getattr(scenario,"requires_file_ops",False))
                 if file_ops:
                     from verify_ownership import file_ops_before_auth
-                    file_ops_before_auth(runtime,identity)
+                    with phase(runtime, "file_pre_auth"):
+                        file_ops_before_auth(runtime,identity)
                 receipt["phase"] = "auth"
-                receipt["auth_checks"] = auth_proof(runtime, identity)
+                with phase(runtime, "auth"):
+                    receipt["auth_checks"] = auth_proof(runtime, identity)
                 if file_ops:
                     from verify_ownership import file_ops_after_auth
-                    file_ops_after_auth(runtime,identity)
+                    with phase(runtime, "file_post_auth"):
+                        file_ops_after_auth(runtime,identity)
                 receipt["phase"] = "scenarios"
                 if scenario is None:
                     raise HarnessError("scenario_adapter_required")
@@ -604,18 +681,33 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                 if file_ops:
                     validate_file_ops_receipt(runtime)
                     receipt.update(file_ops_groups=4,file_ops_checks=runtime.file_ops_checks,e2e_actors=2)
+                if time.monotonic() > work_deadline:
+                    raise HarnessError("cycle_deadline")
                 receipt["passed"] = True
-            except (Exception, KeyboardInterrupt):
-                # Persist only the fixed phase, never the exception or raw command output.
+            except (Exception, KeyboardInterrupt) as error:
                 receipt["passed"] = False
+                receipt["failure_code"] = failure_code(error, expired=time.monotonic() > work_deadline)
             finally:
+                work_end = time.monotonic()
+                receipt["work_sec"] = safe_seconds(work_end - start)
                 try:
-                    runtime.cleanup()
+                    with phase(runtime, "cleanup"):
+                        runtime.cleanup()
+                    if time.monotonic() - work_end > 90:
+                        raise HarnessError("cycle_deadline")
                     receipt["cleanup"] = True
-                except Exception:
+                except (Exception, KeyboardInterrupt):
                     receipt["cleanup"] = False
                     receipt["passed"] = False
-        receipt["duration_sec"] = round(time.monotonic() - start, 2)
+                    receipt["cleanup_failure_code"] = "cleanup_failed"
+                receipt["cleanup_sec"] = safe_seconds(time.monotonic() - work_end)
+        receipt["duration_sec"] = safe_seconds(time.monotonic() - start)
+        try:
+            receipt["phase_seconds"] = runtime.phase_clock.snapshot()
+            if runtime.phase_clock.failed_phase is not None:
+                receipt["phase"] = runtime.phase_clock.failed_phase
+        except HarnessError:
+            receipt.update(passed=False, failure_code="invalid_receipt")
         results.append(receipt)
         print(json.dumps(receipt), flush=True)
         if not receipt["passed"]:

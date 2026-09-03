@@ -511,3 +511,38 @@ def test_waiter_window_clamps_commands_and_restores_cycle_deadline(failure,monke
         with pytest.raises(support.HarnessError): runtime.observe_source_waiters('create_create')
     else: runtime.observe_source_waiters('create_create')
     assert runtime.deadline == original
+@pytest.mark.parametrize("mode", ["unknown", "deadline", "cleanup", "both"])
+def test_v2_failure_receipt_preserves_work_and_cleanup_failures(mode, monkeypatch, capsys):
+    now = [0.0]
+    monkeypatch.setattr(support.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(support, "command", lambda *a, **kw: "0" * 40)
+    monkeypatch.setattr(support, "auth_proof", lambda *a: 12)
+    class Runtime:
+        project = "ownership-verify-012345abcdef"
+        deadline = 360
+        def __init__(self, *a): pass
+        def preflight(self): now[0] += 1
+        def start(self, *a): now[0] += 2
+        def seed(self, *a): now[0] += 3
+        def cleanup(self):
+            now[0] += 4
+            if mode in ("cleanup", "both"):
+                raise RuntimeError("SECRET_CANARY")
+    def scenario(runtime, identity):
+        with support.phase(runtime, "worker"):
+            if mode == "deadline":
+                now[0] = 361
+                raise support.HarnessError("cycle_deadline")
+            if mode in ("unknown", "both"):
+                raise RuntimeError("SECRET_CANARY")
+        return 3
+    row = support.verify_cycles(support.ROOT / ".env.example", 1,
+        runtime_factory=Runtime, scenario=scenario)[0]
+    assert row["passed"] is False
+    assert row["cleanup_sec"] == 4
+    assert row["work_sec"] == (361 if mode == "deadline" else 6)
+    assert row["failure_code"] == ({"unknown":"unexpected_failure", "both":"unexpected_failure",
+        "deadline":"deadline_exceeded", "cleanup":"none"}[mode])
+    assert row["cleanup_failure_code"] == ("cleanup_failed" if mode in ("cleanup", "both") else "none")
+    assert set(row["phase_seconds"]) <= support.PHASES
+    assert "SECRET_CANARY" not in capsys.readouterr().out

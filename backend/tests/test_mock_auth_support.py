@@ -198,3 +198,37 @@ def test_seed_target_guard_refuses_nonowned_or_nonmock(field, value):
     with pytest.raises(ValueError, match="seed_target_refused"):
         module.validate_target({"project": fields["project"], "hashes": {}},
             SimpleNamespace(host=fields["host"], database=fields["database"]), fields["provider"], fields["app_env"])
+@pytest.mark.parametrize("value", [True, -1, float("nan"), float("inf"), "SECRET_CANARY"])
+def test_v2_timing_refuses_unsafe_values(value):
+    from mock_auth_support import HarnessError, safe_seconds
+    with pytest.raises(HarnessError, match="unsafe_timing"):
+        safe_seconds(value)
+
+
+def test_v2_phase_clock_fixed_names_and_failed_duration():
+    from mock_auth_support import PhaseClock, HarnessError
+    values = iter((1.0, 3.5))
+    clock = PhaseClock(clock=lambda: next(values))
+    with pytest.raises(ValueError):
+        with clock.measure("auth"):
+            raise ValueError("SECRET_CANARY")
+    assert clock.failed_phase == "auth"
+    assert clock.snapshot() == {"auth": 2.5}
+    with pytest.raises(HarnessError, match="unsafe_phase"):
+        with clock.measure("SECRET_CANARY"):
+            pass
+    clock.timings["SECRET_CANARY"] = 0
+    with pytest.raises(HarnessError, match="unsafe_phase"):
+        clock.snapshot()
+
+
+@pytest.mark.parametrize("error,expired,expected", [
+    (RuntimeError("SECRET_CANARY"), False, "unexpected_failure"),
+    (KeyboardInterrupt("SECRET_CANARY"), False, "interrupted"),
+    (RuntimeError("SECRET_CANARY"), True, "deadline_exceeded"),
+])
+def test_v2_failure_codes_never_use_exception_payload(error, expired, expected):
+    from mock_auth_support import failure_code, HarnessError
+    assert failure_code(error, expired=expired) == expected
+    assert failure_code(HarnessError("SECRET_CANARY")) == "harness_failure"
+    assert failure_code(HarnessError("cycle_deadline")) == "deadline_exceeded"
