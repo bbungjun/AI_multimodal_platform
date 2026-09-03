@@ -156,3 +156,44 @@ above. Total264.140s, below780s; each below300s work/90s cleanup. No rerun/failu
 was required. Read-only Docker inventory formatting was corrected from an
 unsupported field; it did not affect runtime validation or resources.
 Fresh P/M/H combined459 PASS/1.92s; D PASS. Next auth/ownership/full regression.
+
+### Todo6 — auth, ownership and full regressions
+
+The separate auth verifier passed at revision0004 using fresh PostgreSQL and
+Redis, including outage/recovery and exact-project cleanup. It exercised12
+concurrent admissions (5 active),20 touch requests (1 write),8 signup races,
+50 authentication requests (p95 7.628ms), and12 one-time flow consumes. Receipt:
+`.omo/evidence/auth/auth-verify-46def4ae7e72.json`; no identity or Session secret
+is recorded.
+
+The single explicit `--suite all --cycles 2` aggregate completed all four fresh
+projects at the same non-document code as the schema proof:
+
+| Suite/cycle | Work | Cleanup | Required result |
+|---|---:|---:|---|
+| ownership/1 | 327.594s | 6.750s | metadata348, delete races2 |
+| ownership/2 | 324.844s | 6.187s | metadata348, delete races2 |
+| file-ops/1 | 157.110s | 6.594s | F/O/V/E310, actors2 x stages10 |
+| file-ops/2 | 157.375s | 6.265s | F/O/V/E310, actors2 x stages10 |
+
+Aggregate `complete=true`, verified cycles4, duration993.610s. Each receipt used
+revision0004 and independently reported no failure; an additional exact-label
+container/volume/network inventory found0 resources after every cycle. Existing
+preview containers and developer/preview volumes remained present.
+
+The committed tracked archive passed the authoritative Linux full backend suite:
+**1229 PASS,3 existing guarded skips,39.091s**. Host Windows produced **1228 PASS,
+1 FAIL,3 existing guarded skips,12.264s**; the sole failure is the known native
+WSL Bash path conversion in the supply-chain shell syntax test (exit127). The
+same exact test reproduced exit127 from a fresh untouched6537025 archive, so no
+skip/assertion change was made and Linux remains authoritative.
+
+Static Compose configuration, frontend lint and build passed. Existing mock-only
+Session tests **48 PASS** and Chromium UX tests **34 PASS**; total frontend gate
+36.001s. Playwright output was redirected only to the Issue115 local evidence
+directory to avoid replacing prior Issue101 evidence; test selection, browser,
+assertions and source stayed unchanged. No OAuth/provider/cloud request ran.
+
+All runtime deadlines held and no retry or timeout relaxation was used. Next is
+fresh focused regression, A01-A22 review, truthful handoff, Ready PR and protected
+CI/squash delivery.
