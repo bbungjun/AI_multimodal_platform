@@ -119,3 +119,20 @@ Job/outbox rollback을 보강하고, pipeline parent/child에는 같은 owner를
 override는 추가하지 않았다. 누락 참조의 이전400/409 기대값은 승인된404 계약으로 바꿨다.
 W179 PASS, S68 PASS, H106 PASS. 생성 거절 시 provider/storage/DB 부수효과0는 unit proof이며,
 실제 G3 Session과 PostgreSQL 검증은 Todo6에서 별도로 수행한다. Read/delete/worker는 변경하지 않았다.
+
+### Todo6 — 실제 격리 검증
+
+제품 코드 checkpoint133b882, 확장 admission harness2232ba6에서 검증했다.
+schema verifier2회: `schema-verify-222735bbc2af`, `schema-verify-e87fa3ef5958` 모두 PASS.
+각각 실제 owner 제약,8개 nonempty upgrade/downgrade refusal, identity 보존,
+lock timeout, stale revision 거절/복구, guarded reset와 round-trip을 확인했다.
+auth verifier `auth-verify-f24475ad43c1` PASS: PostgreSQL/Redis와 outage/recovery,
+50개 인증 요청의 테스트 p95=10.499ms; 이는 제품 SLO 측정 결과가 아니다.
+ownership2회: `ownership-verify-2da4a26b46bb`77.75s /
+`ownership-verify-d53ff045b381`77.81s. 각 auth12/admission111/smoke3 PASS, cleanup=true.
+admission111은 HTTP 결과93개와 persisted row 검사18개를 합한 개수다.
+검증 runtime의 worker/dispatcher만 잠시 멈춰 접수 상태를 고정하고, actual outbox trigger
+실패에서도 Job/outbox 추가0을 확인했다. test rows/trigger 제거 후 consumers를 재시작하여
+기존 golden/retry/중복 I2V 시나리오를 그대로 실행했다. G4.2B worker 강화의 증거는 아니다.
+민감한 fixture/응답 값은 메모리에서 비교했다. 잘못된 admission metric이 receipt에
+들어가기 전에 검증하도록 하고 canary 검사로 확인했다. H113 + W179 =292 PASS, S68 PASS.

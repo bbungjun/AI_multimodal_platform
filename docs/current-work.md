@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.2A execution — 2026-09-03
 
-- **In Progress — Todo5 writers unit verified**, isolated runtime not yet verified.
+- **In Progress — Todo6 isolated proof passed**, full regression/delivery pending.
   [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`,
   [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
@@ -108,7 +108,9 @@ paste credential contents.
   Todo2 expected RED complete; Todo3 schema13 + regressions68 + harness106 PASS.
   Sole0003 and owner metadata/head compatibility implemented, runtime unverified.
   Todo4 access25/schema13/regressions68 PASS. Todo5 W179/S68/H106 PASS.
-  Next: Todo6 real isolated schema/auth/admission proof. No developer DB reset.
+  Todo6 schema2/auth1/ownership2 PASS; each ownership auth12/admission111/smoke3,
+  cleanup=true at code2232ba6. See Issue105 portfolio for safe project receipts.
+  Next: Todo7 Linux/Windows full backend and unchanged frontend regression. No developer DB reset.
   B worker/pipeline/race and G4.3 read/file/delete/ops are
   excluded from A; no public multi-user deployment at this checkpoint.
 
