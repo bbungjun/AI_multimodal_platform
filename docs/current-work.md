@@ -77,9 +77,9 @@ paste credential contents.
 
 ## Active Work
 
-### G4.2B execution preparation — 2026-09-03
+### G4.2B execution — 2026-09-03
 
-- **Planned / Goal Prepared; implementation NOT started.**
+- **In Progress — Todo1 baseline verified.**
   [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`,
   [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
@@ -103,7 +103,9 @@ paste credential contents.
   same-owner locked/idempotent pipeline, real lock-observed create/retry races,
   two complete isolated cycles preserving auth12/admission111/smoke3; Linux and
   unchanged frontend regression, Ready PR/final-head CI/actual squash merge.
-- Next: explicit execution request with frozen SHA. Do not start G4.3 or reset
+- Execution SHA/branch/base matched, B0 **282 PASS /4.40s**, S **106 PASS /1.48s**.
+  Local desktop-linux daemon and default/preview inventory verified read-only;
+  no runtime mutations. Next: Todo2 behavioral RED. Do not start G4.3 or reset
   developer/preview DB; live OAuth/provider/cloud and frontend changes remain excluded.
 
 ### G4.2A execution — 2026-09-03

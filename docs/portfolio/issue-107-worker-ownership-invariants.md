@@ -1,6 +1,6 @@
 # Issue #107 — Worker ownership and pipeline/race proof
 
-- 상태: **Planned / Goal Prepared**, 2026-09-03. 구현 및 실행 Goal 시작 전이다.
+- 상태: **In Progress — Todo1**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
 - [Issue107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`.
 - Base: A [PR106](https://github.com/bbungjun/AI_multimodal_platform/pull/106)의 실제 squash merge
@@ -79,3 +79,13 @@ frontend 무변경 회귀, Ready PR의 최종 head verify/양쪽 Scan-SBOM 및 �
 - 11개 외 코드 경로나 migration, developer/preview reset이 필요하면 구현 전 재설계한다.
 - G4.3 조회/list/delete/file/ops/cache와 긴급 폐기/live 검증은 별도다. 외부 provider,
   Google OAuth, managed Redis/cloud 비용을 발생시키지 않는다.
+
+## 실행 기록
+
+### Todo1 — preflight
+
+명시적 Goal 요청 후 SHA/branch/base 일치 확인. 원격 main은 여전히 A merge d40a8f7이며
+tracked/staged 사용자 변경0, 기존 .omo 보존. B0 **282 PASS /4.40s**, S **106 PASS /1.48s**.
+Docker Desktop local named-pipe endpoint와 host override 부재를 확인했다. 기존 preview
+container5개(4 running/1 exited), default/preview volumes는 읽기 전용 확인만 했다.
+이 단계는 새 worker 기능이나 실제 격리 검증의 완료를 뜻하지 않는다.
