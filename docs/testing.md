@@ -581,6 +581,21 @@ known Bash-path1 FAIL/3 skips, freshly reproduced at untouched c84394a. Linux/CI
 pass that test. Frontend lint/build/Session48/Chromium34 passed unchanged.
 [Issue110 record](portfolio/issue-110-metadata-ownership-access.md) tracks CI/merge.
 
+## G4.3B approved verification redesign (not executed)
+
+The combined B runtime failed at its work budget; partial progress is not success.
+The [Issue112 record](portfolio/issue-112-file-ops-access.md) preserves that attempt.
+Approved v2 adds `--suite all`, `ownership` (default), `file-ops` to the same verifier;
+these selectors are planned, not yet implemented. Acceptance will run ownership2
+then file-ops2 on four new projects at one code revision, requiring a strict complete
+aggregate. Legacy8/348/delete-race2 and every old proof remain; F/O/V/E requires all
+ten stages for both actors. Single-suite diagnostics cannot close G4.3B.
+Work360s/cleanup90s per cycle and900s per suite remain; total four-cycle budget1800s
+is explicit. Schema2/auth1, full Linux/backend and unchanged frontend remain separate.
+See [B v2 contract](initiatives/g4-ownership-access-control-spec.md) before execution.
+Default ownership preserves the existing manual smoke20-minute job budget. Only
+explicit `--suite all --cycles 2` proves the complete four-cycle aggregate.
+
 ## Secret Hygiene
 
 Verification should include checks that `.env`, credential files, generated

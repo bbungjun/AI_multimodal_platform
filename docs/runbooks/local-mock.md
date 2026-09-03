@@ -550,6 +550,18 @@ a private/stopped backend and previous code, not a schema downgrade; older code 
 metadata protection and must not be publicly exposed. No actual rollback/live deployment
 was performed by this verification.
 
+## G4.3B resume preparation
+
+B file/Range/Master ops code is implemented on its Issue112 branch, but the first
+combined runtime exceeded its work budget. It is not final Mock Verified or merged.
+The approved v2 verification plan splits ownership2 and file-ops2 into four fresh
+owned projects, same code revision; work360s/cleanup90s per cycle, suite900s, all1800s.
+`--suite all` is the planned full-acceptance selector, not yet available in current code.
+Default ownership preserves the existing manual smoke20-minute budget, but only
+explicit all proves complete G4.3B. No CI workflow change or dispatch is authorized.
+Do not retry the over-budget combined proof or run any reset against preview/default
+resources. Follow the new frozen Goal and [failure/approval record](../portfolio/issue-112-file-ops-access.md).
+
 ## Stop
 
 ```powershell

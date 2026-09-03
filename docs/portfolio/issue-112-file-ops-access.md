@@ -1,6 +1,7 @@
 # Issue112 — G4.3B File/Range and Master Ops Access
 
-- **Implemented / runtime No-Go**,2026-09-03. Todo1–5 committed; Todo6 stopped.
+- **Implemented / runtime No-Go; verification redesign approved**,2026-09-03.
+  Original Todo1–5 committed; Todo6 stopped. v2 is prepared, not executed.
   No successful full runtime cycle, final regression, delivery PR or merge.
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, parent [Issue109](https://github.com/bbungjun/AI_multimodal_platform/issues/109).
@@ -56,20 +57,43 @@ detail과 AuthError bounded-code 기대값 불일치를 수정했다. H의 기�
 테스트는 새 exact GET 계약에 맞춰 slash/비GET/query/payload 거절과 positive GET으로
 보강했다. 테스트 삭제·skip·제품 인증 우회는 하지 않았다.
 
-### 복구·보존과 재설계 제안 (미승인)
+### 복구·보존과 승인된 재설계 (아직 구현/실행 전)
 
 - 검증 runner cleanup true 외에 exact-label container/volume/network 목록 모두0을
   독립 확인했다. 기존 preview4와 개발용 volume은 보존했으며 수동 reset/prune하지 않았다.
 - 구현 commit은 작업 브랜치에 보존한다. F1 경로 검토는 통과하나 F2–F4 종료 근거는
   부족하다. Ready PR/merge 및 parent109 종료는 하지 않는다.
-- 추천: 검증만 두 suite로 분리한다. legacy ownership suite는 기존 auth/admission/
+- 사용자 승인: 검증만 두 suite로 분리한다. legacy ownership suite는 기존 auth/admission/
   metadata8/348/delete-race2/worker/pipeline/race/expiry를 두 독립 cycle에서 보존하고,
   file-ops suite는 F/O/V/E와 A/B 흐름을 별도 두 독립 cycle에서 검증한다.
 - 각 cycle360s/cleanup90s와 각2cycle command900s를 유지한다. 최초 frozen 계획의
-  "한 cycle에 모든 그룹" 수용 조건을 바꾸는 제안이므로 별도 승인과 새 SHA가 필요하다.
+  "한 cycle에 모든 그룹" 수용 조건을 변경하도록 승인했다. 총4회 aggregate1800s이며
+  단일 cycle의 시간 제한은 늘리지 않는다. 새 v2 계획과 SHA로만 재개한다.
   누락된 보안 matrix를 없애거나 전체 결과를 fake로 대체하는 제안은 아니다.
 - 재실행 전에 고정된 phase duration/failure-code만 출력하는 안전한 계측을 설계한다.
   현재 frozen 계획은 수정하지 않았다. suite 분리/계측도 아직 구현하지 않았다.
+
+새 계획 `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md`는 명시적 `--suite all`에서
+ownership2 다음 file-ops2, 모두 다른 새 project와 동일 code SHA를 요구한다. 단일 suite
+성공은 aggregate 완료로 간주하지 않는다. schema2/auth1/Linux/frontend/최종 CI/실제
+merge/parent109 종료 조건은 유지한다. 새 변경은 기존 verification5개 경로로 제한한다.
+원래 Todo1–5를 다시 구현하지 않고 재개용 Todo1–8로 남은 검증/전달 작업을 진행한다.
+
+판단 근거: codebase-design의 작은 Interface 원칙에 따라 suite selector와 엄격한
+aggregate를 기존 verifier Module에 둔다. 제품 권한 코드를 다시 설계하거나 임의
+scenario/URL 실행 옵션을 노출하지 않는다. Trade-off는 격리 환경이2개에서4개로 늘어
+전체 검증 비용이 증가하는 점이다. 네 번 모두 같은 코드에서 통과해야 coverage를 보존한다.
+준비 중 Docker/DB 작업과 PR/merge는 수행하지 않았다. 효과와 실제 소요시간 개선은
+v2 실행 전이므로 아직 측정/주장하지 않는다.
+기존 수동 smoke workflow가20분으로 제한된 것을 확인해 기본 selector는 ownership으로
+유지한다. all의 최대30분과 충돌하지 않으며 CI 설정은 변경하지 않는다. 기본 명령의
+성공은 legacy suite만 증명하므로 complete=false이고, B 종료는 명시적 all이 필수다.
+
+v2 frozen SHA-256:
+`55f4fcf9c737b764f6747d781344ebcfd5d6bd3ce4f6a2ea1da001f63a91d909`.
+준비 검증: F231 PASS/3.97s, H230 PASS/1.00s, Compose example/diff check PASS,
+누적16경로와 계획 일치, 이번 코드 변경0/migration diff0. 이는 재설계 문서의 준비
+근거이며 새 selector/계측/4cycle 구현을 검증한 결과가 아니다.
 
 아래는 준비 시점 기록이다. "구현 미시작" 문구는 당시 상태이며 위 실행 결과가 최신이다.
 

@@ -242,7 +242,7 @@ document or inherit the full design interview.
 | G4.2B | Worker references and pipeline/race proof | Mock Verified — delivery tracked in execution record | [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107), branch `codex/issue-107-worker-ownership-invariants`, [B spec](g4-2-owner-persistence-admission-spec.md), [execution record](../portfolio/issue-107-worker-ownership-invariants.md); implementation ff808b0 | Exact11/migration0/head0003; two real cycles each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1/cleanup0. Linux782/3 existing SKIP, frontend48+34. G4.3 receives worker validator, safe pipeline results and expanded guarded harness; failed-link recovery/live verification remain excluded |
 | G4.3 | Complete ownership access enforcement | In Progress — A Mock Verified / B Planned | [Accepted policy/split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md) | Only A+B complete closes aggregate G4; file/ops still unprotected, no public multi-user deployment |
 | G4.3A | Metadata ownership access and safe deletion | Mock Verified — Merged | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) squash cd654e5, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. Final head5738c0d all3 required CI SUCCESS; B receives read/batch/cache/client Interfaces |
-| G4.3B | File/Range, Master ops and final proof | In Progress — runtime No-Go | [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch `codex/issue-112-file-ops-access`, [spec](g4-ownership-access-control-spec.md), [record](../portfolio/issue-112-file-ops-access.md) | Todo1–5 implemented ebfd530, exact16/migration0. F231/M248/H230/S94 unit PASS. First runtime failed417.17s including about54s cleanup at work360s limit; cleanup0/preview4 preserved. Todo6–8 and F2–F4 incomplete; verification split proposal needs approval, no PR/merge |
+| G4.3B | File/Range, Master ops and final proof | In Progress — runtime No-Go; redesign approved | [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch `codex/issue-112-file-ops-access`, [spec](g4-ownership-access-control-spec.md), [record](../portfolio/issue-112-file-ops-access.md) | Todo1–5 implemented ebfd530, exact16/migration0. F231/M248/H230/S94 unit PASS. First runtime failed417.17s including about54s cleanup at work360s limit; cleanup0/preview4 preserved. Approved ownership2 + file-ops2 split, new v2 frozen Goal; runner changes not executed. Original completion gates still incomplete, no PR/merge |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -341,6 +341,17 @@ Master dependency, four final proof groups; retain all prior metadata/race proof
 Schema2/auth1 use unchanged verifiers in new isolated projects only. Preparation
 is Planned, not implementation authorization. Public deployment and machine-metrics
 authentication remain separately gated.
+
+2026-09-03 accepted verification redesign (Issue112): user approved splitting the
+over-budget combined cycle into ownership2 and file-ops2 fresh cycles. Each retains
+work360s/cleanup90s; each suite900s and explicit aggregate1800s for four projects.
+Explicit `--suite all` must pass both suites at one code revision; partial suites never close
+G4.3B. Keep all legacy proof and F/O/V/E, add fixed safe failure codes/phase timing.
+Product policy/exact16/migration0 are unchanged; new edits limited to existing5
+verification paths. Preserve original frozen plan and failure; a new v2 plan/SHA
+governs resume. This is approved preparation, not a new runtime success or delivery.
+Default ownership preserves the existing manual smoke20-minute workflow budget;
+that unchanged workflow alone cannot prove full G4.3B.
 
 ## Initiative Completion Gate
 

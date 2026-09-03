@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Planned (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Implemented, runtime No-Go; verification redesign approved (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -326,7 +326,7 @@ Goal은 `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`이며 SHA
 | Slice | 책임 | 종료 의미 |
 |---|---|---|
 | G4.3A | 목록·상세·삭제, JSON cache 경계, harness 호환성 | metadata 접근 제어만 검증; 파일·ops는 아직 미보호, 공개 배포 금지 |
-| G4.3B | 파일·Range, Master ops, 최종 전체 보안 검증 | 아래 전체 matrix와 두 실제 cycle/CI/merge를 닫은 뒤 G4 Mock Verified |
+| G4.3B | 파일·Range, Master ops, 최종 전체 보안 검증 | 아래 전체 matrix와 v2 ownership2+file-ops2/CI/merge를 닫은 뒤 G4 Mock Verified |
 
 #### A 실행 경로 (16)
 
@@ -389,7 +389,8 @@ backend/tests/test_mock_auth_support.py
 - [B 준비/실행 기록](../portfolio/issue-112-file-ops-access.md), frozen local Goal
   `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`와 SHA는 current-work에서 연결한다.
   이후 사용자의 frozen-SHA 실행 요청으로 구현했다. 현재는 시간 한도 중단 조건에 따라
-  재설계 승인을 기다린다. [실패/제안 기록](../portfolio/issue-112-file-ops-access.md) 참조.
+  검증 분할 재설계를 승인받아 아래 v2 계약으로 실행을 준비했다. 아직 v2 구현/실행 전이다.
+  [실패/승인 기록](../portfolio/issue-112-file-ops-access.md) 참조.
 - B16/migration0, schema0003와 storage helper/worker/metadata writer는 수정하지 않는다.
   최초 후보를 actual merge의 코드/호출자/테스트로 재검토했다. 경로 밖 필요 시 중단한다.
 
@@ -419,12 +420,42 @@ enhance/generate/poll/metadata/file/Range/pipeline/retry/delete/cross-user 거�
 허용하는 검증용 탈출구를 만들지 않는다. receipt는 F/O/V/E와 A/B stage가 모두 참일 때만
 성공이며 unit fake를 실제 HTTP/DB 증거로 계산하지 않는다.
 
-검증은 ownership2cycle, 별도 기존 schema verifier2회(`--include-reset`), auth verifier1회,
+최초 계획의 검증은 ownership2cycle, 별도 기존 schema verifier2회(`--include-reset`), auth verifier1회,
 전체 Linux backend/기존 frontend 회귀다. schema 검증은 새로운 migration이 아니며 모든
 reset은 verifier가 만든 새 격리 DB에만 수행한다. 기존360s work+90s cleanup/cycle와 전체900s,
 HTTP10s, lock20s/observe5s는 유지한다. A의 약338s 대비 여유가 작으므로 stage 재사용과
 최대2개의 독립 actor HTTP 흐름만 병행하고 공유 fixture/worker-stop/expiry는 순차 처리한다.
 완전한 proof가 예산에 들어오지 않으면 측정 결과를 보고하고 재설계한다.
+
+#### B 검증 재설계 승인 — v2 (2026-09-03, 실행 전)
+
+최초 한 cycle의 모든 그룹 조건과 전체900s 조건은 다음 분할로 대체한다. 제품 권한과
+아래 A1–A24 matrix, schema2/auth1/전체 회귀/CI/merge 조건은 그대로다. 이전 frozen 파일은
+변경하지 않으며 `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md`를 새 SHA로 동결한다.
+
+| Suite | 매 fresh cycle 필수 proof | 횟수 |
+|---|---|---|
+| ownership | auth12/admission111/scenarios3/metadata8·348 이상/delete-race2/execution20/pipeline4/race3/expiry1, 기존 A golden/retry/duplicate 전부 | 2 |
+| file-ops | auth12와 F/O/V/E 전부, A/B 각각 enhance/generate/poll/metadata/file/range/pipeline/retry/delete/foreign | 2 |
+
+계획된 CLI는 `--suite all`/`ownership`(기본)/`file-ops`; 기존 `--cycles 2`는 유지한다.
+명시적 all에서 ownership2 다음 file-ops2를 순차 실행하고, 네 프로젝트·DB·Redis·identity는
+모두 새로 만든다. 하나의 immutable code SHA에서4회 및 cleanup0이 모두 확인되어야
+aggregate complete=true다. 개별 suite/1cycle 진단 실행은 전체 완료가 아니다.
+현재 코드에는 아직 이 selector/aggregate 계약이 없으므로 새 실행 증거로 해석하지 않는다.
+기본 ownership은 기존 수동 smoke CI의20분 한도를 유지하기 위한 호환 선택이다.
+그 workflow는 변경/실행하지 않으며, 기본 smoke 성공만으로 B 전체 완료를 주장하지 않는다.
+
+각 cycle work360s+cleanup90s, 각 suite900s를 유지하고4회 전체는 명시적으로1800s다.
+HTTP10s, smoke90s, lock20s/observe5s, worker/quota는 그대로다. 기존 suite에 B 추가 E를
+겹쳐 넣지 않으며 파일 suite에는 worker-stop/Session expiry를 중복하지 않는다.
+계측은 고정 phase와 유한한 elapsed time, 고정 error enum만 남기고 raw exception/로그는
+출력하지 않는다. 누락 그룹·잘못된 count·서로 다른 SHA·재사용 project·cleanup 실패는
+aggregate 거절이다. timeout 초과는 계속 No-Go이며 측정 근거와 재설계를 보고한다.
+
+새 구현 변경은 기존 verifier/support/guarded fixture/tests5개에 한정한다. 누적16코드
+경로/migration0, 기존 제품 구현과 최초 실패 증거를 보존한다. Todo1–8/F1–F4는 v2에서
+재개용 순서로 고정하며, 아래 역사적2cycle 표기는 B 종료 시 두 suite 각각2회로 읽는다.
 
 Todo1–8/F1–F4와 정확한 test/CLI는 frozen Goal에 고정한다. Ready PR 최종 head 필수3개 CI
 성공과 실제 squash merge 후에만 B 및 aggregate G4 Mock Verified로 종료할 수 있다.
@@ -593,7 +624,8 @@ git diff --cached --name-only
 
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`는 G4.1에서 구현·검증한
 명령이다. 기존 smoke CLI는 이를 위임하고 arbitrary base URL/Compose 옵션을 거절한다.
-현재 A metadata matrix까지 구현됐으며 B의 최종 F/O/V/E는 아직 미구현이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
+현재 A metadata와 B F/O/V/E 코드는 구현됐지만 B의 합산 runtime은 실패했다. 위 v2 CLI는
+계획이며 아직 구현 전이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
 인증12 × 2, 세 시나리오 × 2, cleanup과 전체 회귀 결과를 구분해 남긴다.
 
 ## 8. 종료·중단 조건

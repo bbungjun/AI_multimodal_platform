@@ -79,7 +79,8 @@ paste credential contents.
 
 ### G4.3B execution preparation — 2026-09-03
 
-- **In Progress / runtime No-Go — Todo1–5 committed; Todo6 stopped, replan required.**
+- **Implemented / runtime No-Go; verification redesign approved, resume prepared.**
+  Original Todo1–5 committed; Todo6 stopped. New v2 execution has not started.
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`. User requested preparation through Goal command.
 - Main synchronized by fast-forward to actual [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)
@@ -94,7 +95,7 @@ paste credential contents.
   the hash, between machines. Existing .omo is preserved and not staged wholesale.
 - gpt-5.6-sol / medium, sequential Todo1–8/F1–F4. file_asset / require_master /
   no-store extension; F/O/V/E real proof plus existing metadata8/348/delete-race2.
-  Two ownership cycles, separate unchanged schema2/include-reset and auth1,
+  Original plan: two combined ownership cycles, separate schema2/include-reset and auth1,
   Linux full + existing frontend, Ready PR/final3 CI/actual squash MERGED.
 - Fresh existing-code B0 **431 PASS/4.45s; final recheck4.99s**, Compose config PASS.
   Plan/spec16-path parity,24 existing test
@@ -115,9 +116,20 @@ paste credential contents.
   Partial progress does NOT count as a successful full cycle or final group receipt.
 - Cleanup true and independent exact-label containers/volumes/networks0; preview4
   unchanged. No timeout increase/retry, schema2/auth1/full regression or PR/merge.
-- Next: approve a verification-only replan. Proposed separate fresh two-cycle legacy
-  ownership suite and two-cycle file/ops/A-B suite, retaining all assertions and360s
-  per-cycle ceiling; safe phase durations/fixed failure codes before another run.
+- User approved verification-only redesign on2026-09-03. Explicit `--suite all` runs legacy
+  ownership2 then file-ops/A-B2: four fresh projects at one immutable code revision.
+  Each cycle work360s/cleanup90s, each suite900s, aggregate1800s; no assertion removed.
+  Fixed safe phase durations/error codes and strict aggregate receipt are planned.
+  Default selector stays ownership-only to preserve the existing manual smoke CI's
+  20-minute budget; default/single-suite success is not full G4.3B completion.
+- Next execution uses `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md` and its
+  SHA-256 `55f4fcf9c737b764f6747d781344ebcfd5d6bd3ce4f6a2ea1da001f63a91d909`.
+  Original frozen file/hash and failed evidence remain unchanged. New
+  code edits limited to existing5 verification paths within cumulative16/migration0.
+  v2 Todo1–8/F1–F4 keep schema2/auth1/Linux/frontend/Ready/final-CI/merge/parent gates.
+  No redesigned runner, new runtime cycle, PR or merge performed during preparation.
+- Fresh preparation checks: F231 PASS/3.97s, H230 PASS/1.00s, Compose example and
+  diff hygiene PASS; existing16-path parity, new code0, migration diff0 verified.
   This changes the frozen single-cycle acceptance contract and is not yet authorized.
   Current frozen file/SHA remains unchanged; see Issue112 portfolio for evidence.
   B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
