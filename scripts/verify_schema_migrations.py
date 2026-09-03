@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import os
 import re
 import secrets
 import subprocess
 import sys
+import time
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Sequence
@@ -17,10 +21,17 @@ DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
 PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
 G1_REVISION = "0001_generation_baseline"
-EXPECTED_REVISION = "0003_content_ownership"
+EXPECTED_REVISION = "0004_credit_foundation"
+OWNERSHIP_REVISION = "0003_content_ownership"
 IDENTITY_REVISION = "0002_user_session_persistence"
 G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
-EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions"}
+CREDIT_TABLES = {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
+EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions"} | CREDIT_TABLES
+WORK_SECONDS = 300
+CLEANUP_SECONDS = 90
+_COMMAND_TIMEOUT = ContextVar("schema_command_timeout", default=120.0)
+_COMMAND_INPUT = ContextVar("schema_command_input", default=None)
+CREDIT_PROOF_PATH = REPO_ROOT / "backend" / "tests" / "credit_foundation_support.py"
 EXPECTED_ENUMS = {
     "asset_kind:image,video",
     "generation_mode:t2i,t2v,i2v",
@@ -39,6 +50,8 @@ EXPECTED_FOREIGN_KEYS = {
     "jobs_enhancement_id_fkey",
     "jobs_parent_job_id_fkey",
     "fk_user_sessions_user_id_users",
+    "fk_credit_accounts_user", "fk_credit_cycles_account", "fk_credit_grants_account",
+    "fk_credit_grants_cycle_owner", "fk_credit_ledger_account", "fk_credit_ledger_grant_owner",
 }
 EXPECTED_INDEXES = {
     "ix_jobs_owner_created_at_id",
@@ -55,6 +68,8 @@ EXPECTED_INDEXES = {
     "uq_jobs_active_i2v_source_asset",
     "ix_user_sessions_absolute_expires_at",
     "ix_user_sessions_active_user_id",
+    "ix_credit_cycles_user_start", "uq_credit_grants_base_cycle",
+    "ix_credit_grants_user_expiry", "ix_credit_ledger_user_created",
 }
 
 
@@ -70,6 +85,36 @@ class CommandResult:
 
 
 Runner = Callable[[Sequence[str]], CommandResult]
+
+
+class DeadlineRunner:
+    def __init__(self, runner: Runner, seconds: float):
+        self.runner = runner
+        self.deadline = time.monotonic() + seconds
+
+    def __call__(self, arguments: Sequence[str]) -> CommandResult:
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise VerificationError("schema_deadline_exceeded")
+        token = _COMMAND_TIMEOUT.set(min(120.0, remaining))
+        try:
+            result = self.runner(arguments)
+        finally:
+            _COMMAND_TIMEOUT.reset(token)
+        if result.returncode == 124 or time.monotonic() > self.deadline:
+            raise VerificationError("schema_command_timeout")
+        return result
+
+
+def code_revision(runner: Runner) -> str:
+    revision = _run(runner, ["git", "rev-parse", "HEAD"], action="code revision").stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise VerificationError("invalid_code_revision")
+    status = _run(runner, ["git", "status", "--porcelain", "--untracked-files=normal"], action="code status").stdout
+    if any(line.strip() and any(not path.startswith(("docs/", ".omo/"))
+                               for path in line[3:].split(" -> ")) for line in status.splitlines()):
+        raise VerificationError("dirty_code_refused")
+    return revision
 
 
 def validate_project_name(project_name: str) -> str:
@@ -136,16 +181,25 @@ def subprocess_runner(arguments: Sequence[str]) -> CommandResult:
             encoding="utf-8",
             errors="replace",
             check=False,
-            timeout=120,
+            timeout=_COMMAND_TIMEOUT.get(),
+            input=_COMMAND_INPUT.get(),
+            env=dict(os.environ, AI_PROVIDER="mock", GOOGLE_APPLICATION_CREDENTIALS="",
+                     AUTH_GOOGLE_CLIENT_ID="", AUTH_GOOGLE_CLIENT_SECRET="", AUTH_GOOGLE_REDIRECT_URI=""),
         )
     except subprocess.TimeoutExpired:
         return CommandResult(124)
+    except OSError:
+        return CommandResult(127)
     return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
 def _run(runner: Runner, arguments: Sequence[str], *, action: str) -> CommandResult:
     result = runner(arguments)
     if result.returncode != 0:
+        if action.startswith("credit "):
+            phase = re.search(r"^credit_proof_failed:(guard|additive|metadata|constraints|ledger|races|downgrade|done)$", result.stdout, re.M)
+            if phase:
+                raise VerificationError(f"{action} failed with exit code {result.returncode}; phase={phase[1]}.")
         raise VerificationError(f"{action} failed with exit code {result.returncode}.")
     return result
 
@@ -172,6 +226,10 @@ def refuse_collisions(project_name: str, runner: Runner) -> None:
     volume_prefix = f"{project_name}_"
     if any(line.strip().startswith(volume_prefix) for line in volumes.stdout.splitlines()):
         raise VerificationError("A volume for the exact isolated project already exists.")
+    for command in (("docker", "ps", "-aq"), ("docker", "volume", "ls", "-q"), ("docker", "network", "ls", "-q")):
+        result = _run(runner, [*command, "--filter", f"label=com.docker.compose.project={project_name}"], action="exact resource collision")
+        if result.stdout.strip():
+            raise VerificationError("Exact isolated resource collision.")
 
 
 def _psql_command(
@@ -566,9 +624,11 @@ def verify_revision_refusal(
     project_name: str,
     env_file: Path,
     values: dict[str, str],
+    stale_revision: str = "0000_stale_revision",
 ) -> None:
     expected_revision = EXPECTED_REVISION
-    stale_revision = "0000_stale_revision"
+    if stale_revision not in ("0000_stale_revision", OWNERSHIP_REVISION):
+        raise VerificationError("invalid_stale_revision")
     update_revision = (
         "UPDATE alembic_version SET version_num="
         f"'{stale_revision}'"
@@ -726,40 +786,41 @@ VALUES
     )
 
 
-def _assert_reset_row_counts(
+def _reset_row_counts(
     runner: Runner,
     project_name: str,
     env_file: Path,
     values: dict[str, str],
-    *,
-    expected: int,
-) -> None:
+) -> dict[str, int]:
+    tables = sorted(EXPECTED_TABLES - {"alembic_version"})
     rows = _query_lines(
         runner,
         project_name,
         env_file,
         values,
-        "SELECT 'assets:' || count(*) FROM assets UNION ALL "
-        "SELECT 'jobs:' || count(*) FROM jobs UNION ALL "
-        "SELECT 'outbox_events:' || count(*) FROM outbox_events UNION ALL "
-        "SELECT 'prompt_enhancements:' || count(*) FROM prompt_enhancements UNION ALL "
-        "SELECT 'user_sessions:' || count(*) FROM user_sessions UNION ALL "
-        "SELECT 'users:' || count(*) FROM users",
+        " UNION ALL ".join(f"SELECT '{table}:' || count(*) FROM {table}" for table in tables),
         "reset row-count check",
     )
-    expected_rows = {
-        f"{table}:{expected}"
-        for table in (
-            "assets",
-            "jobs",
-            "outbox_events",
-            "prompt_enhancements",
-            "user_sessions",
-            "users",
-        )
-    }
+    if len(rows) != len(tables) or any(not re.fullmatch(r"[a-z_]+:[0-9]+", row) for row in rows):
+        raise VerificationError("Invalid reset row-count response.")
+    result = {row.split(":")[0]: int(row.split(":")[1]) for row in rows}
+    if set(result) != set(tables):
+        raise VerificationError("Unexpected reset tables.")
+    return result
+
+
+def _assert_reset_row_counts(runner, project_name, env_file, values, *, expected):
+    rows = _reset_row_counts(runner, project_name, env_file, values)
+    expected_rows = ({table: expected for table in rows} if type(expected) is int else expected)
     if rows != expected_rows:
         raise VerificationError("Reset row counts did not match the expected state.")
+
+
+def _reset_data_snapshot(runner, project_name, env_file, values):
+    # Kept only in memory for preview nonmutation; never output as evidence.
+    return {table: _query_lines(runner, project_name, env_file, values,
+            f"SELECT row_to_json(t)::text FROM {table} t ORDER BY 1", "reset preview snapshot")
+            for table in sorted(EXPECTED_TABLES - {"alembic_version"})}
 
 
 def verify_reset(
@@ -769,10 +830,13 @@ def verify_reset(
     values: dict[str, str],
 ) -> None:
     database = values["POSTGRES_DB"]
+    before = _reset_row_counts(runner, project_name, env_file, values)
     _seed_reset_rows(runner, project_name, env_file, values)
+    expected = {table: count + (table not in CREDIT_TABLES) for table, count in before.items()}
     _assert_reset_row_counts(
-        runner, project_name, env_file, values, expected=1
+        runner, project_name, env_file, values, expected=expected
     )
+    snapshot = _reset_data_snapshot(runner, project_name, env_file, values)
     preview = _run(
         runner,
         reset_command(
@@ -786,8 +850,10 @@ def verify_reset(
     if "PREVIEW:" not in preview.stdout:
         raise VerificationError("Reset preview did not report preview mode.")
     _assert_reset_row_counts(
-        runner, project_name, env_file, values, expected=1
+        runner, project_name, env_file, values, expected=expected
     )
+    if _reset_data_snapshot(runner, project_name, env_file, values) != snapshot:
+        raise VerificationError("Reset preview changed data.")
     _run(
         runner,
         reset_command(
@@ -902,7 +968,7 @@ async def main():
         assert await connection.fetchval(f"SELECT bool_and(j.owner_user_id='{OWNER}'::uuid) FROM assets a JOIN jobs j ON j.id=a.job_id")
         await clear()
         for owned, direction, target in ((True,"downgrade","0002_user_session_persistence"),
-                                          (False,"upgrade","head")):
+                                          (False,"upgrade","0003_content_ownership")):
             if not owned:
                 await migrate("downgrade","0002_user_session_persistence")
                 assert await identity() == identities
@@ -913,7 +979,7 @@ async def main():
                 assert await snapshot() == before
                 await clear()
             if not owned:
-                await migrate("upgrade","head")
+                await migrate("upgrade","0003_content_ownership")
                 assert await identity() == identities
         # Hold a conflicting lock until the migration's bounded lock_timeout refuses.
         transaction = connection.transaction()
@@ -943,26 +1009,83 @@ print("ownership_schema_proof_pass")
 
 def verify_content_ownership(runner, project_name, env_file):
     _run(runner, compose_command(project_name, env_file, "run", "--rm", "--no-deps",
+                                "migrate", "python", "-m", "alembic", "downgrade", OWNERSHIP_REVISION),
+         action="pin legacy ownership revision")
+    _run(runner, compose_command(project_name, env_file, "run", "--rm", "--no-deps",
                                  "migrate", "python", "-c", OWNERSHIP_PROOF_SCRIPT),
          action="ownership schema constraints and atomic refusal")
+    _run(runner, compose_command(project_name, env_file, "run", "--rm", "--no-deps",
+                                "migrate", "python", "-m", "alembic", "upgrade", "head"),
+         action="restore credit head")
 
 
-def write_receipt(project_name: str, *, cleanup: bool) -> Path:
+def verify_credit_foundation(runner, project_name, env_file, values, mode):
+    if mode not in ("additive", "credit"):
+        raise VerificationError("invalid_credit_proof_mode")
+    source = CREDIT_PROOF_PATH.read_text(encoding="utf-8")
+    token = _COMMAND_INPUT.set(source)
+    try:
+        result = _run(runner, compose_command(project_name, env_file, "run", "--rm", "--no-deps", "-T",
+            "-e", "AI_PROVIDER=mock", "-e", "APP_ENV=test",
+            "-e", f"CREDIT_PROOF_PROJECT={project_name}", "-e", f"CREDIT_PROOF_MODE={mode}",
+            "-e", f"CREDIT_PROOF_DATABASE={values['POSTGRES_DB']}", "migrate", "python", "-"),
+            action=f"credit {mode} proof")
+    finally:
+        _COMMAND_INPUT.reset(token)
+    try:
+        payload = json.loads(result.stdout.strip())
+    except (ValueError, TypeError):
+        raise VerificationError("invalid_credit_proof_receipt") from None
+    if (not isinstance(payload, dict) or set(payload) != {"mode", "checks"} or payload["mode"] != mode
+            or type(payload["checks"]) is not int or payload["checks"] < (80 if mode == "credit" else 1)):
+        raise VerificationError("invalid_credit_proof_receipt")
+    return payload["checks"]
+
+
+def write_receipt(project_name: str, *, cleanup: bool, completed: bool, commit: str,
+                  include_reset=False, credit_checks=0, work_seconds=0.0, cleanup_seconds=0.0,
+                  failure_code="none", cleanup_failure_code="none") -> Path:
     validate_project_name(project_name)
+    if (type(cleanup) is not bool or type(completed) is not bool or type(include_reset) is not bool
+            or not re.fullmatch(r"[0-9a-f]{40}", commit)
+            or type(credit_checks) is not int or credit_checks < 0
+            or failure_code not in ("none", "timeout", "verification_failed")
+            or cleanup_failure_code not in ("none", "cleanup_failed")
+            or any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
+                   for value in (work_seconds, cleanup_seconds))
+            or (completed and (not cleanup or failure_code != "none" or cleanup_failure_code != "none"
+                               or credit_checks < 80 or work_seconds > WORK_SECONDS or cleanup_seconds > CLEANUP_SECONDS))):
+        raise VerificationError("invalid_schema_receipt")
     DEFAULT_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     path = DEFAULT_EVIDENCE_DIR / f"migration-{project_name}.json"
+    status = "pass" if completed else "unverified"
     receipt = {
         "project": project_name,
         "provider": "mock",
-        "revision": EXPECTED_REVISION,
-        "round_trip": "pass",
-        "g1_downgrade": "pass",
-        "identity_constraints": "pass",
-        "ownership_constraints": "pass",
-        "nonempty_refusals": 8,
-        "lock_refusal": "pass",
-        "identity_preservation": "pass",
-        "revision_refusal": "pass",
+        "commit": commit,
+        "revision": EXPECTED_REVISION if completed else "unverified",
+        "expected_revision": EXPECTED_REVISION,
+        "completed": completed,
+        "round_trip": status,
+        "g1_downgrade": status,
+        "identity_constraints": status,
+        "ownership_constraints": status,
+        "nonempty_refusals": 8 if completed else 0,
+        "lock_refusal": status,
+        "identity_preservation": status,
+        "revision_refusal": status,
+        "additive_preservation": status,
+        "metadata_parity": status,
+        "credit_constraints": status,
+        "credit_checks": credit_checks,
+        "credit_uniqueness_races": 3 if completed else 0,
+        "credit_downgrade_refusal": status,
+        "credit_append_only": status,
+        "reset": status if include_reset else "not_requested",
+        "work_seconds": round(work_seconds, 3),
+        "cleanup_seconds": round(cleanup_seconds, 3),
+        "failure_code": failure_code,
+        "cleanup_failure_code": cleanup_failure_code,
         "cleanup": "pass" if cleanup else "fail",
     }
     path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
@@ -976,10 +1099,18 @@ def verify(
     runner: Runner = subprocess_runner,
     include_reset: bool = False,
 ) -> Path:
+    started = time.monotonic()
+    original_runner = runner
+    runner = DeadlineRunner(runner, WORK_SECONDS)
     values = validate_env_file(env_file)
     project_name = validate_project_name(project_name or generate_project_name())
+    commit = code_revision(runner)
     refuse_collisions(project_name, runner)
     cleanup_succeeded = False
+    failure = None
+    cleanup_failure = None
+    credit_checks = 0
+    print(f"phase=start project={project_name}", flush=True)
     try:
         _run(
             runner,
@@ -1028,19 +1159,48 @@ def verify(
                 assert_inventory(runner, project_name, env_file, values)
         verify_identity_constraints(runner, project_name, env_file, values)
         verify_content_ownership(runner, project_name, env_file)
+        print("phase=credit_additive", flush=True)
+        verify_credit_foundation(runner, project_name, env_file, values, "additive")
+        print("phase=credit_constraints", flush=True)
+        credit_checks = verify_credit_foundation(runner, project_name, env_file, values, "credit")
+        assert_inventory(runner, project_name, env_file, values)
+        print("phase=revision_refusal", flush=True)
         verify_revision_refusal(runner, project_name, env_file, values)
+        verify_revision_refusal(runner, project_name, env_file, values, OWNERSHIP_REVISION)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)
+        if code_revision(runner) != commit:
+            raise VerificationError("code_changed_during_proof")
+    except VerificationError as error:
+        failure = error
+    except Exception:
+        failure = VerificationError("unexpected_schema_failure")
     finally:
+        work_seconds = time.monotonic() - started
         validate_project_name(project_name)
-        cleanup = runner(
-            compose_command(project_name, env_file, "down", "-v", "--remove-orphans")
-        )
-        cleanup_succeeded = cleanup.returncode == 0
-
-    if not cleanup_succeeded:
-        raise VerificationError("Exact isolated Compose cleanup failed.")
-    return write_receipt(project_name, cleanup=True)
+        cleanup_started = time.monotonic()
+        cleanup_runner = DeadlineRunner(original_runner, CLEANUP_SECONDS)
+        print("phase=cleanup", flush=True)
+        try:
+            _run(cleanup_runner, compose_command(project_name, env_file, "down", "-v", "--remove-orphans"), action="exact cleanup")
+            for command in (("docker", "ps", "-aq"), ("docker", "volume", "ls", "-q"), ("docker", "network", "ls", "-q")):
+                result = _run(cleanup_runner, [*command, "--filter", f"label=com.docker.compose.project={project_name}"], action="cleanup inventory")
+                if result.stdout.strip():
+                    raise VerificationError("cleanup_incomplete")
+            cleanup_succeeded = True
+        except Exception:
+            cleanup_failure = "cleanup_failed"
+        cleanup_seconds = time.monotonic() - cleanup_started
+    if work_seconds > WORK_SECONDS and failure is None:
+        failure = VerificationError("schema_deadline_exceeded")
+    path = write_receipt(project_name, cleanup=cleanup_succeeded, completed=failure is None and cleanup_failure is None,
+        commit=commit, include_reset=include_reset, credit_checks=credit_checks, work_seconds=work_seconds,
+        cleanup_seconds=cleanup_seconds, failure_code=("none" if failure is None else
+        "timeout" if any(token in str(failure) for token in ("timeout", "deadline")) else "verification_failed"),
+        cleanup_failure_code=cleanup_failure or "none")
+    if failure or cleanup_failure:
+        raise VerificationError((str(failure) if failure else "") + ("; cleanup_failed" if cleanup_failure else ""))
+    return path
 
 
 def build_parser() -> argparse.ArgumentParser:

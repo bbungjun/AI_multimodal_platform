@@ -21,7 +21,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
 ORIGIN = "http://localhost:5173"
 ROOT = Path(__file__).resolve().parents[1]
-REVISION = "0003_content_ownership"
+REVISION = "0004_credit_foundation"
 EXECUTION_RESULTS = {
     "worker_proof": "execution_checks", "pipeline_proof": "pipeline_checks",
     "prepare_race": "prepared", "check_race": "race_checks", "lock_waiters": "lock_waiters",

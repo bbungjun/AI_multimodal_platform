@@ -8,7 +8,7 @@ import sys
 from uuid import NAMESPACE_URL, uuid5
 
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
-EXPECTED_REVISION = "0003_content_ownership"
+EXPECTED_REVISION = "0004_credit_foundation"
 
 
 def validate_target(payload, url, provider, app_env):
