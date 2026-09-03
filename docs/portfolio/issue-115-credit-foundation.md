@@ -131,3 +131,28 @@ all populated tables and row snapshots through preview, then every count zero.
 H372 PASS/1.76s; M32/0.84s; P55/0.06s; B0 402/2 existing guarded skips/2.17s.
 Exact17 paths/new migration1, old revisions unchanged; D PASS. Next S two fresh
 projects on this clean committed code, no source edits while proof runs.
+
+### Todo5 — actual isolated PostgreSQL proof
+
+Both invocations of `python scripts/verify_schema_migrations.py --env-file
+.env.example --include-reset` passed at immutable code
+`b2900a43a3bbfcbbbcb7f6aee8901269d9d656ba` (join command on one line).
+
+| Cycle/project | Work seconds | Cleanup seconds | Result |
+|---|---:|---:|---|
+| schema-verify-a8cf88cf7bf3 | 141.406 | 1.859 | PASS, credit90/races3 |
+| schema-verify-34b401b48ba1 | 119.000 | 1.875 | PASS, credit90/races3 |
+
+Both actual0004; additive populated legacy data/schema preservation, metadata
+parity, all credit constraints, append-only, ledger reconstruction/rollback,
+lock-observed uniqueness races, populated downgrade and lock refusals PASS.
+Original identity/ownership proof retained8 nonempty refusals and lock refusal;
+all3 processes refused both stale sentinel and previous0003 and recovered.
+Guarded reset preview preserved populated rows; execution left all tables empty.
+Every failure code none. Each exact-project independent container/volume/network
+inventory0; preview4 and developer/preview pgdata/assets volumes preserved.
+Receipts: `.omo/evidence/schema/migration-<project>.json` with the exact projects
+above. Total264.140s, below780s; each below300s work/90s cleanup. No rerun/failure
+was required. Read-only Docker inventory formatting was corrected from an
+unsupported field; it did not affect runtime validation or resources.
+Fresh P/M/H combined459 PASS/1.92s; D PASS. Next auth/ownership/full regression.

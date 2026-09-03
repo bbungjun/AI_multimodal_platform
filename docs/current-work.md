@@ -79,12 +79,14 @@ paste credential contents.
 
 ### G5A execution — 2026-09-04
 
-- **In Progress — Todo1–4 implemented; real proof pending.** User authorized frozen-SHA execution.
+- **In Progress — Todo1–5 complete; regression/delivery pending.** User authorized frozen-SHA execution.
   SHA matches; main remains6537025, starting documentation checkpoint aeafaba.
   Fresh B0:384 PASS/2 existing guarded skips/2.96s. Local desktop-linux/npipe;
   preview4 running and developer/preview volumes preserved. Pure policy, four-table
   migration and fixed PostgreSQL proof/head compatibility implemented within17 paths.
-  P55/M32/H372/B0 402 PASS (B0 has2 existing guarded skips); next S two real cycles.
+  P55/M32/H372/B0 402 PASS (B0 has2 existing guarded skips). At b2900a4, S2 each
+  credit90/races3 plus legacy/reset/recovery PASS; work141.406/119s, cleanup1.859/
+  1.875s, independent resources0. Fresh focused459 PASS; next auth/ownership/full regression.
   [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
   has A[#115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
   B[#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
