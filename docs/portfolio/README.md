@@ -36,6 +36,7 @@
 | Browser login and race-safe Session UX | `Mock Verified` | [Issue #101 record](issue-101-authenticated-workspace-ux.md), [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) | Module/Chromium/isolated generation and required CI passed; follow-up authorizes CI-gated squash auto-merge (status in PR); no live Google or backend access-control claim |
 | Owner persistence and authenticated admission | `Mock Verified` | [Issue105 evidence](issue-105-owner-persistence-admission.md) | New writers; complete read/file/delete/ops isolation remains G4.3 |
 | Worker ownership and idempotent pipeline linking | `Mock Verified` | [Issue107 evidence](issue-107-worker-ownership-invariants.md) | Two real PostgreSQL/HTTP/Celery cycles, lock-observed races, Session-expiry independence; no migration, live provider or complete G4.3 access-control claim |
+| Metadata owner scoping, safe deletion and private JSON cache | `Mock Verified` | [Issue110 evidence](issue-110-metadata-ownership-access.md) | Two actual cycles, each8 access groups/348 checks/2 deletion races; Linux928 PASS. File/Range/ops remains G4.3B; delivery status in record |
 | Per-User credits and Master console | `Planned` | [Initiative source of truth](../initiatives/auth-credits-master-console.md) | Later bounded Goals; not implemented |
 | GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
 | Distributed training operations | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
@@ -81,8 +82,8 @@
 ## Issue Records
 
 G4.3: [Issue109 design](issue-109-ownership-access-design.md)의 A/B 분할 승인 후
-[Issue110 A Goal 준비](issue-110-metadata-ownership-access.md) 완료. A16/B16 후보,
-existing-code baseline385 PASS; 구현/Goal 실행은 아직 시작하지 않았다.
+[Issue110 A 실행](issue-110-metadata-ownership-access.md)에서 metadata Mock Verified.
+A16 구현/B16 후보, actual2cycle/전체 회귀 완료; 최종 delivery는 실행 기록 참조.
 
 | Issue | Record | Status |
 |---|---|---|

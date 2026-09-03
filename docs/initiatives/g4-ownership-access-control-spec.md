@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1/G4.2A/B Mock Verified; G4.3A Goal Prepared / B Planned (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -185,7 +185,7 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 단일 G4는 production, 기존 endpoint/파일 테스트, migration verifier, mock scripts까지
 **20개 이상**의 non-document 경로에 영향을 준다. 파일 수를 숨기거나 인증 테스트를
 전역 skip/override로 우회하지 않는다. 최초 세 단계 중 G4.2를 A/B로 나누는
-추가 승인을 반영해 아래 **네 개의 순차 Goal**로 실행한다.
+추가 승인과 G4.3A/B 분할을 반영해 **다섯 개의 순차 Goal**로 실행한다.
 
 | Slice | 주된 산출물 | 예상 non-document / migration | 단독 완료의 의미 |
 |---|---|---|---|
@@ -320,7 +320,7 @@ backend/tests/test_verify_ownership_script.py
 [A Issue #110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
 `codex/issue-110-metadata-ownership-access`, main `c84394a` 기반으로 준비했다.
 Goal은 `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`이며 SHA는 current-work에
-기록한다. 별도 frozen-SHA 실행 요청 전에는 구현하지 않는다. B는 A 실제 병합 후 확정한다.
+기록한다. 사용자의 frozen-SHA 요청으로 A 구현·실제 검증을 완료했다. B는 A 실제 병합 후 확정한다.
 제품 권한 정책은 바꾸지 않으며 migration은 두 단계 모두0이다.
 
 | Slice | 책임 | 종료 의미 |
@@ -452,7 +452,35 @@ F1 경로/무migration, F2 해당 보안 matrix, F3 실제2cycle/전체 회귀,
 F4 문서/최종 head의 verify + 양쪽 Scan/SBOM/실제 MERGED를 모두 APPROVE해야 한다.
 A의 APPROVE는 G4 전체 승인이나 공개 배포 허가가 아니다. 검증 우회/관리자 강제 merge 금지.
 회귀 명령은 아래7절을 사용하며, 실행 계획 동결 시 실제 CLI/test 존재와 native exit
-전파를 확인한다. 현재385 PASS는 기존 코드 baseline일 뿐 G4.3 보안 검증이 아니다.
+전파를 확인한다. 초기385 PASS는 기존 코드 baseline이다. A 실제 검증 결과는 아래에 구분한다.
+
+#### A 구현 결과와 B 입력 Interface
+
+Implementation `acb44a9`, [Issue110 실행 기록](../portfolio/issue-110-metadata-ownership-access.md).
+16개 코드 경로/migration0, head0003 동일. 실제2cycle337.73/338.12s, 각8개 access group/
+348 checks/delete-race2와 기존 proof 유지, cleanup0. Linux928 PASS/3 existing skips,
+frontend48+34 PASS. 최종 PR/CI/실제 merge는 실행 기록의 delivery 링크를 확인한다.
+
+- `OwnershipAccess.jobs_statement(scope)` 및 job/asset read, `validate_read_jobs(jobs)`:
+  작은 Interface로 목록·상세 권한과 direct reference 검증을 수행한다. Master read와
+  owner-only mutate/use는 분리. page1/20/100에서 content SELECT5 실제 측정.
+- delete는 Asset id-order lock → fresh Job lock/Asset refresh → terminal → incoming
+  owner → active dependent → storage/detach/delete. 실제 delete/create·delete/retry의
+  lock 대기를 관측했다. 이전 file-delete/DB-commit 비원자성은 남는다.
+- `ContentApplication`/`PrivateContentResponses`는 response-start만 처리하며
+  ServerErrorMiddleware 바깥에서 JSON family4개의 no-store를 적용한다. B는 file/ops를
+  명시적으로 확장·검증해야 한다. body buffering/예외 삼키기 없음.
+- `ScopedClient`는 GET generations의 구조화된 query와 명시적 `expected_type=list`를
+  지원한다. `/metrics`는 아직 거절한다. same-origin/no-redirect guard는 유지한다.
+- canonical scenario는 `requires_access=True`; access_groups8/access_checks 양수/
+  delete_race_checks2와 기존 groups를 검증한다. 고정 access fixture/lock helper만 추가,
+  Session fixture9/head0003 유지. 만료A 작업은 Master로 관찰하고 B 작업은 B로 관찰한다.
+- 실패한 첫 실행은 Master의 기본 mine을 all로 오해한 probe 문제였다. 해당 요청만
+  explicit all로 수정하고 두 cycle을 새로 통과했다. 제품 기본 mine은 변경하지 않았다.
+
+남은 제약: corrupted reference가 포함된 page는 전체404 fail-closed; arbitrary DBA
+동시 변경, 파일 원자적 복구, 이미 전송된 bytes 회수는 보장하지 않는다. A만으로 전체
+G4/공개 배포를 완료했다고 표시하지 않는다. B의16개 후보는 실제 A merge 후 재검토한다.
 
 ## 7. 필수 검증 matrix
 
@@ -550,7 +578,7 @@ G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함�
 G4.3 입력으로 사용한다. B는11개 경로/migration0, 실제2cycle과 전체 회귀를 검증했다.
 G4.3 설계 준비는 [Issue109 기록](../portfolio/issue-109-ownership-access-design.md)에 남긴다.
 분할 승인을 반영한 [Issue110 준비 기록](../portfolio/issue-110-metadata-ownership-access.md)과
-frozen Goal을 작성했다. G4.3 제품 구현·Goal 실행·DB 작업은 시작하지 않았다.
+frozen Goal을 실행해 A metadata 구현·격리 검증을 완료했다. 파일/Range/ops는 B에 남으며 개발/preview DB는 보존했다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

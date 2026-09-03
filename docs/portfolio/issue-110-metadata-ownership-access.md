@@ -1,6 +1,6 @@
 # Issue110 — G4.3A Metadata Ownership Access
 
-- Status: **In Progress — Todo1–6 complete, real2cycle PASS; full regression/delivery pending** (2026-09-03).
+- Status: **Mock Verified — Todo1–7 complete; Ready PR/final-CI/merge delivery pending** (2026-09-03).
 - [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
   `codex/issue-110-metadata-ownership-access`.
 - Main base `c84394a8e2b16748d1b4b4c877f9f491624f7a1b` (G4.2B PR108 actual merge).
@@ -110,13 +110,42 @@ if ($LASTEXITCODE) { throw 'Staged check failed' }
 A16개 코드 경로/migration0, Todo1–8/F1–F4, mock-only 2cycle, 전체 회귀와 Ready PR의
 최종-head CI/실제 squash merge까지 실행 계획을 준비했다. SHA 불일치, 목록 밖 코드,
 추가 migration/정책/운영 환경 변경이 필요하면 구현 전에 멈추도록 했다.
-Goal 실행이나 제품 구현, Docker/DB mutation, 실제 OAuth/provider/cloud 호출은 시작하지 않았다.
+준비 단계에서는 Goal/제품/Docker 작업을 하지 않았다. 이후 명시적 실행 요청으로 위
+metadata 구현과 격리 mock 검증을 완료했다. 개발/preview DB와 실제 OAuth/provider/cloud는 변경하지 않았다.
 
 ## 남은 위험과 다음 단계
 
-- 사용자가 frozen SHA를 포함해 Goal 실행을 요청하면 A 구현 시작. 준비는 실행 결과가 아니다.
+- A 로컬 구현·검증은 완료했으며 Ready PR의 최종-head 필수 CI와 실제 merge를 확인해야 한다.
 - G4.3B는 A 실제 병합 후 파일/Range/Master ops/최종 전체 검증을 설계·실행한다.
 - 기존 work360s/cleanup90s 예산 안에 추가 proof가 들어가야 한다. 초과하면 재설계한다.
 - no-store의 unhandled500 처리, FK lock 순서와 concurrent delete는 실제 검증이 필요하다.
 - #99 긴급 폐기, 실제 OAuth/proxy/live gate, machine metrics 인증은 별도다.
 - 실제 MERGED 후 PR/Issue에 merge SHA를 기록하고 #109는 B 완료까지 열어 둔다.
+
+## 구현 결과, 검증 명령과 운영 인계
+
+조회는 SQL owner scope를 먼저 적용하고 UUID tie-break pagination을 사용한다.
+Master도 기본 mine이며 all은 명시적 요청만 허용한다. known reference/Asset graph를
+일괄 검증하고, 타인/없는 대상은 동일404다. Master의 read 예외가 delete/retry/use로
+번지지 않는다. 안전한 삭제 lock 순서와 no-store500/스트리밍 보존을 함께 검증했다.
+초기 Linux782에서928 PASS로146개가 늘었으며 기존 테스트는 삭제/skip하지 않았다.
+
+실행 명령: backend에서 mock `python -m pytest -q` (Windows 결과는 위 예외 포함),
+Linux는 HEAD tracked-only `git archive`를 생성해 `python:3.11-slim` 컨테이너에
+read-only archive만 mount하고 `python -m pip install ".[dev]" && python -m pytest -q`를
+수행했다. .env/credential/workspace mount0, 종료 후 해당 컨테이너0. 새 검증 명령은
+[testing](../testing.md)의 G4.3A 절, runtime은
+`python scripts/verify_ownership.py --env-file .env.example --cycles 2`다.
+frontend `npm run lint`, `npm run build`, `npm run test:auth`, `npm run test:auth:browser`
+모두 통과했다. `docker compose --env-file .env.example config --quiet`와 diff/staged/
+allowlist/hash 검사도 통과. Native exit를 확인했으며 실패 run은 성공에 포함하지 않았다.
+
+Rollback: 새 schema가 없으므로 downgrade하지 않는다. private 환경에서 backend 진입을
+중지한 후 알려진 이전 이미지/code로 복귀하고 mock readiness와 기준 검증을 실행한다.
+이전 코드에는 metadata 보호가 없으므로 외부 접근을 재개하면 안 된다. 이미 삭제된 파일은
+DB rollback만으로 복원되지 않는다. provider/UI/cloud rollback을 수행한 것으로 주장하지 않는다.
+
+운영 한계: 직접 DB 변조를 read snapshot과 원자적으로 막는 RLS는 아니다. 잘못 연결된
+row가 있는 page는 전체404로 거절한다. 이미 전송된 bytes나 파일 삭제/DB commit의
+비원자성을 해결하지 않았다. File/Range/ops 보호와 machine metrics 인증/실제 Google/
+긴급 폐기 gate는 남아 있다. 이는 metadata Mock Verified이며 전체 G4/Live Verified가 아니다.

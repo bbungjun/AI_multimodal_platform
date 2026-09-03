@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.3A execution — 2026-09-03
 
-- **In Progress — Todo1–6 complete; full regression/delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
+- **Mock Verified — Todo1–7 complete; Ready PR/final-CI/merge delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
@@ -107,7 +107,11 @@ paste credential contents.
   all its resources cleaned. Fix acb44a9 selects explicit all only for Master inspection,
   focused265 PASS. Both full cycles at acb44a9 passed337.73/338.12s, each access8/
   checks348/delete-race2 plus all old proof groups; exact-label resources0/preview4
-  preserved. Next Todo7 full Linux/Windows/frontend regression, then PR delivery.
+  preserved. Linux928 PASS/3 existing skips; Windows927 PASS/known Bash-path1 FAIL/
+  3 skips, freshly reproduced at untouched c84394a. Frontend lint/build/Session48/
+  Chromium34 PASS. Fresh O102/M248/H201/S94 PASS. Next Ready PR/CI/actual merge.
+  B handoff: jobs_statement/read/batched refs, JSON-only no-store wrapper, structured
+  ScopedClient queries/arrays and access8/checks348/delete-race2 receipt. File/ops still B.
   No OAuth/provider/cloud or frontend implementation is authorized.
   G4 remains incomplete/private until B; #99/live/machine-metrics gates remain.
 

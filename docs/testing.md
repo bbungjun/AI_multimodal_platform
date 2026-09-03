@@ -548,6 +548,39 @@ reproduced in an untouched `d40a8f7` archive; Linux/CI must pass that test. No n
 skip/xfail is allowed. Frontend48+34 PASS. See [Issue107 evidence](portfolio/issue-107-worker-ownership-invariants.md)
 for exact checkpoints, commands, failure analysis and final-head CI/merge links.
 
+## G4.3A Metadata Access Verification
+
+At implementation `acb44a9`, two independent owned local mock projects passed
+337.73/338.12s. Each preserves auth12/admission111/scenario3/worker20/pipeline4/
+race3/expiry1 and adds access_groups8/access_checks348/delete_race_checks2.
+The eight groups cover scoped list/detail/pipeline/delete/reference/cache/Session/
+query cost. Query measurement is5 content SELECTs for page1/20/100. Two deletion
+races observe actual row-lock overlap. Cleanup receipts and independent exact-label
+container/volume/network inventories are0; default/preview untouched.
+
+```powershell
+# repository root, local Docker only
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_ownership.py --env-file .env.example --cycles 2
+if ($LASTEXITCODE) { throw 'Ownership verification failed' }
+# backend, focused Interface/route contracts
+Push-Location backend
+python -m pytest tests/test_ownership_access.py tests/test_ownership_integration.py -q
+$accessExit = $LASTEXITCODE
+Pop-Location
+if ($accessExit) { throw 'Access contracts failed' }
+```
+
+Runtime uses actual Session authentication, PostgreSQL/Redis/Celery with no dependency
+override. ASGI tests explicitly use fakes and are not called real-DB evidence.
+An initial Master corruption probe incorrectly used mine; it failed and cleaned up,
+then explicit all inspection was corrected and both complete cycles rerun.
+No metadata proof authorizes file/Range or ops access; those remain G4.3B.
+Full Linux tracked-only archive928 PASS/3 existing guarded auth skips; Windows927/
+known Bash-path1 FAIL/3 skips, freshly reproduced at untouched c84394a. Linux/CI must
+pass that test. Frontend lint/build/Session48/Chromium34 passed unchanged.
+[Issue110 record](portfolio/issue-110-metadata-ownership-access.md) tracks CI/merge.
+
 ## Secret Hygiene
 
 Verification should include checks that `.env`, credential files, generated

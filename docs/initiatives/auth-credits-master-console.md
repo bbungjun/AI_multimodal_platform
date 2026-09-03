@@ -240,8 +240,8 @@ document or inherit the full design interview.
 | G4.2 | Owner persistence and admission/reference invariants | Mock Verified — A/B | [Accepted G4 policy](g4-ownership-access-control-spec.md), [split spec and implementation handoff](g4-2-owner-persistence-admission-spec.md) | G4.3 read/file/delete/ops/cache enforcement remains; no public multi-user deployment |
 | G4.2A | Owner persistence and authenticated admission | Ownership Admission Mock Verified; delivery tracked below | [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105), branch `codex/issue-105-owner-persistence-admission`, [execution record](../portfolio/issue-105-owner-persistence-admission.md); implementation `e3c98f1` | Exact20 paths/migration1/head0003; schema2/auth1/final admission2 PASS, cleanup0. Linux658 PASS/3 existing SKIP; frontend48+34 PASS. Developer/preview preserved; final CI/merge use delivery link |
 | G4.2B | Worker references and pipeline/race proof | Mock Verified — delivery tracked in execution record | [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107), branch `codex/issue-107-worker-ownership-invariants`, [B spec](g4-2-owner-persistence-admission-spec.md), [execution record](../portfolio/issue-107-worker-ownership-invariants.md); implementation ff808b0 | Exact11/migration0/head0003; two real cycles each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1/cleanup0. Linux782/3 existing SKIP, frontend48+34. G4.3 receives worker validator, safe pipeline results and expanded guarded harness; failed-link recovery/live verification remain excluded |
-| G4.3 | Complete ownership access enforcement | Planned — accepted A/B split | [Accepted policy/split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md) | G4.2B merged c84394a; only A+B complete closes aggregate G4; no public multi-user deployment |
-| G4.3A | Metadata ownership access and safe deletion | In Progress — Todo1 | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch `codex/issue-110-metadata-ownership-access`, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0; frozen-SHA execution requested. Input OwnershipAccess/B5/head0003; first B0 python pytest385 PASS, S94 PASS/2 existing skips; next Todo2 |
+| G4.3 | Complete ownership access enforcement | In Progress — A Mock Verified / B Planned | [Accepted policy/split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md) | Only A+B complete closes aggregate G4; file/ops still unprotected, no public multi-user deployment |
+| G4.3A | Metadata ownership access and safe deletion | Mock Verified — delivery tracked in execution record | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch `codex/issue-110-metadata-ownership-access`, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. B receives read/batch/cache/client Interfaces; Ready/final-CI/merge status in record |
 | G4.3B | File/Range, Master ops and final proof | Planned | [Accepted split](g4-ownership-access-control-spec.md) | Candidate16 paths, migration0; freeze after A actual merge; final security matrix/2cycle/CI/merge closes G4 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -364,9 +364,10 @@ for verification and delivery. [G4.2A Issue #105](https://github.com/bbungjun/AI
 is now Ownership Admission Mock Verified at implementation `e3c98f1`; A actually
 merged at `d40a8f7`. B is Mock Verified and actually merged through
 [PR #108](https://github.com/bbungjun/AI_multimodal_platform/pull/108) at `c84394a`.
-G4.3A/B split is accepted. Issue110 provides a bounded A Issue/branch/frozen Goal;
-next is an explicit execution request with its SHA in current-work. No G4.3 implementation
-has started. Budgets are G4.1=13, G4.2A=20, G4.2B exact11 (cap20), G4.3A exact16,
+G4.3A/B split is accepted. Issue110 implemented metadata access at acb44a9, with
+two real cycles and full regression; delivery status is in its execution record.
+After A actual merge, prepare B from the spec's short Interface handoff.
+Budgets are G4.1=13, G4.2A=20, G4.2B exact11 (cap20), G4.3A exact16,
 G4.3B candidate16 (union23), not an exception to the per-Goal20 cap. Only G4.2A adds one migration.
 Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
 That PR confirms A final-head checks and merge SHA; B evidence is in its execution record.
@@ -374,7 +375,8 @@ Reuse injected clients and hash-only fixtures; schema/auth/harness/seeder expect
 revisions are now0003. B consumes OwnershipAccess and persisted owner relationships.
 
 The four new-content/retry writers authenticate and enforce reference ownership.
-Read/list/delete/file/ops enforcement remains G4.3. No product mock-login
+Read/list/delete and JSON no-store are G4.3A Mock Verified. File/Range and ops
+enforcement remains G4.3B. No product mock-login
 bypass was added. No partial slice is safe for public multi-user deployment.
 Live operation
 also remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
