@@ -184,12 +184,14 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 
 단일 G4는 production, 기존 endpoint/파일 테스트, migration verifier, mock scripts까지
 **20개 이상**의 non-document 경로에 영향을 준다. 파일 수를 숨기거나 인증 테스트를
-전역 skip/override로 우회하지 않고 아래 **세 개의 순차 Goal**로 나눈다.
+전역 skip/override로 우회하지 않는다. 최초 세 단계 중 G4.2를 A/B로 나누는
+추가 승인을 반영해 아래 **네 개의 순차 Goal**로 실행한다.
 
 | Slice | 주된 산출물 | 예상 non-document / migration | 단독 완료의 의미 |
 |---|---|---|---|
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
-| G4.2 | non-null owner·생성/재사용/worker 관계 검증 | 20 / 1 | 저장/접수 규칙 구현; 읽기·파일 격리 아직 미완료 |
+| G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
+| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 후보10, 최대20 / 0 | A와 함께 G4.2 종료; 읽기·파일 격리 아직 미완료 |
 | G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 20 / 0 | 아래 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
@@ -236,9 +238,16 @@ workflow는 해당 guarded runner를 호출하고 실패 시 raw Compose/auth/SQ
 항상 자신의 project만 정리한다. 폐기된 기존 smoke 명령은 문서에서 새 명령으로 교체하며
 보호 활성화 후 익명 fallback을 남기지 않는다. G4.1 frozen Goal에서 canonical CLI를
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`로 고정했다.
-아직 구현되지 않은 실행 산출물이다.
+G4.1에서 구현·검증을 완료했으며 PR104로 병합됐다.
 
 ### G4.2 경로 예산 (20)
+
+아래는 최초 승인 당시 **예상표**이며 실행 allowlist가 아니다. G4.1 병합 후 재조사에서
+harness head, identity metadata test, 직접 worker와 runtime 검증 경로 누락을 확인했다.
+[G4.2 상세 설계](g4-2-owner-persistence-admission-spec.md)의 A/B 분할을 승인했다.
+아래 단일 Goal 예상표는 대체되었으며 실행하지 않는다. A는 상세 spec A5의20개만
+허용하고 [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105)로 준비했다.
+제품 권한 계약은 변경하지 않으며 구현은 별도 Goal 요청 후 시작한다.
 
 ```text
 backend/app/models.py

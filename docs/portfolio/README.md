@@ -86,6 +86,7 @@
 | [#96](https://github.com/bbungjun/AI_multimodal_platform/issues/96) | [User and Session persistence](issue-96-user-session-persistence.md) | Mock Verified at `2a4c8ab`; [PR #97](https://github.com/bbungjun/AI_multimodal_platform/pull/97) merged |
 | [#98](https://github.com/bbungjun/AI_multimodal_platform/issues/98) | [Backend OAuth and Session lifecycle](issue-98-auth-session-lifecycle.md) | Mock Verified at `ec42d61`; [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), strict-check squash auto-merge |
 | [#103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) | [Authenticated mock verification harness](issue-103-authenticated-mock-harness.md) | Mock Verified at `471b76e`; two auth12/scenarios3/cleanup cycles, Linux542 PASS; ownership enforcement remains G4.2/G4.3 |
+| [#105](https://github.com/bbungjun/AI_multimodal_platform/issues/105) | [Owner persistence and admission](issue-105-owner-persistence-admission.md) | Planned / Accepted split, A Goal Prepared; implementation and runtime validation not started |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 
