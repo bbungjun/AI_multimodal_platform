@@ -8,7 +8,7 @@ import mock_auth_support as support
 
 
 def test_credit_head_compatibility_preserves_explicit_revision_guard():
-    assert support.REVISION == "0004_credit_foundation"
+    assert support.REVISION == "0005_credit_lifecycle_operations"
 
 
 def test_access_structured_list_query_and_array_response():

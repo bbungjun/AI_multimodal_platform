@@ -94,7 +94,7 @@ def test_schema_migration_refuses_nonempty_before_ddl(monkeypatch, direction, no
 
 
 def test_schema_harness_and_verifier_head_parity():
-    head = "0004_credit_foundation"
+    head = "0005_credit_lifecycle_operations"
     for relative in ("scripts/verify_schema_migrations.py", "scripts/verify_auth_sessions.py",
                      "scripts/mock_auth_support.py", "backend/tests/ownership_support.py"):
         assert head in (ROOT / relative).read_text(), relative

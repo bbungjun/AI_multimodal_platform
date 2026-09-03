@@ -11,7 +11,7 @@ from uuid import UUID
 LEGACY = ("users", "user_sessions", "jobs", "assets", "prompt_enhancements", "outbox_events")
 CREDIT = ("credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events")
 NOW = datetime(2024, 3, 1, 13, tzinfo=timezone.utc)
-HEAD = "0004_credit_foundation"
+HEAD = "0005_credit_lifecycle_operations"
 PHASES = ("guard", "additive", "metadata", "constraints", "ledger", "races", "downgrade", "done")
 phase = "guard"
 
@@ -322,6 +322,43 @@ async def credit(connection, dsn):
     return checks+2
 
 
+async def operation_migration(connection):
+    """Real populated 0004 round trip; never stamp or delete accounting rows."""
+    global phase
+    phase = "downgrade"
+    before = await snapshot(connection, LEGACY+CREDIT)
+    async def schema():
+        return await connection.fetch("SELECT table_name,column_name,data_type,is_nullable,column_default "
+            "FROM information_schema.columns WHERE table_schema='public' AND table_name=ANY($1::text[]) ORDER BY 1,2", list(LEGACY+CREDIT)), await connection.fetch(
+            "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND tablename=ANY($1::text[]) ORDER BY 1", list(LEGACY+CREDIT)), await connection.fetch(
+            "SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid IN "
+            "(SELECT oid FROM pg_class WHERE relname=ANY($1::text[]) AND relnamespace='public'::regnamespace) ORDER BY 1", list(LEGACY+CREDIT))
+    old_schema = await schema()
+    await migrate("downgrade", "0004_credit_foundation")
+    assert await connection.fetchval("SELECT to_regclass('credit_operations')") is None
+    assert await connection.fetchval("SELECT version_num FROM alembic_version") == "0004_credit_foundation"
+    assert await snapshot(connection, LEGACY+CREDIT) == before and await schema() == old_schema
+    await migrate("upgrade", "head")
+    assert await connection.fetchval("SELECT count(*) FROM credit_operations") == 0
+    assert await snapshot(connection, LEGACY+CREDIT) == before and await schema() == old_schema
+    await metadata()
+    # Populated new table must survive both row refusal and lock timeout unchanged.
+    await connection.execute("INSERT INTO credit_operations(user_id,operation_key,kind,target_plan,"
+        "rate_card_version,effective_at,result_cycle_id,outcome) VALUES($1,'migration_fixture',"
+        "'plan_change','free','v1',$2,$3,'unchanged')", uid(1), NOW, uid(10))
+    all_before = await snapshot(connection, LEGACY+CREDIT+("credit_operations",))
+    await migrate("downgrade", "0004_credit_foundation", "credit_operations_requires_empty_table")
+    tx = connection.transaction()
+    await tx.start()
+    await connection.execute("LOCK TABLE credit_operations IN ROW EXCLUSIVE MODE")
+    try:
+        await migrate("downgrade", "0004_credit_foundation", "lock timeout")
+    finally:
+        await tx.rollback()
+    assert await snapshot(connection, LEGACY+CREDIT+("credit_operations",)) == all_before
+    assert await connection.fetchval("SELECT version_num FROM alembic_version") == HEAD
+
+
 async def main():
     import asyncpg
     from sqlalchemy.engine import make_url
@@ -342,6 +379,7 @@ async def main():
             phase = "metadata"
             await metadata()
             result = {"mode": mode, "checks": await credit(connection, dsn)}
+            await operation_migration(connection)
         phase = "done"
         print(json.dumps(result))
     finally:

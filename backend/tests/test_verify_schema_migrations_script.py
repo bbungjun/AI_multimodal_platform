@@ -145,13 +145,13 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
 
     evidence_dir = tmp_path / "evidence"
     monkeypatch.setattr(module, "DEFAULT_EVIDENCE_DIR", evidence_dir)
-    receipt = module.write_receipt("schema-verify-12345678", cleanup=True, completed=True, commit="f"*40, credit_checks=80)
+    receipt = module.write_receipt("schema-verify-12345678", cleanup=True, completed=True, commit="f"*40, credit_checks=90)
     content = receipt.read_text(encoding="utf-8")
     assert secret not in content
     assert "postgresql" not in content
     assert str(tmp_path) not in content
     payload = json.loads(content)
-    assert payload["revision"] == "0004_credit_foundation"
+    assert payload["revision"] == "0005_credit_lifecycle_operations"
     assert payload["g1_downgrade"] == "pass"
     assert payload["identity_constraints"] == "pass"
     assert payload["reset"] == "not_requested"
@@ -163,7 +163,7 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
 def test_receipt_refuses_contradictory_success_or_unsafe_fields(tmp_path, monkeypatch, change):
     module = _load_module()
     monkeypatch.setattr(module, "DEFAULT_EVIDENCE_DIR", tmp_path)
-    args = dict(cleanup=True, completed=True, commit="f"*40, credit_checks=80)
+    args = dict(cleanup=True, completed=True, commit="f"*40, credit_checks=90)
     args.update(change)
     with pytest.raises(module.VerificationError, match="invalid_schema_receipt"):
         module.write_receipt("schema-verify-12345678", **args)
@@ -223,7 +223,8 @@ def test_credit_proof_uses_fixed_source_on_stdin_and_validates_receipt():
             module.verify_credit_foundation(lambda _: module.CommandResult(0, output), "schema-verify-12345678", REPO_ROOT / ".env.example", {"POSTGRES_DB":"fixture"}, "credit")
 
 
-def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path):
+@pytest.mark.parametrize("stale", ["0003_content_ownership", "0004_credit_foundation"])
+def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path, stale):
     module = _load_module()
     calls = []
     def runner(args):
@@ -232,16 +233,16 @@ def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path):
             return module.CommandResult(1, "schema_revision_outdated")
         return module.CommandResult(0)
     module.verify_revision_refusal(runner, "schema-verify-12345678", tmp_path / ".env.example",
-                                   {"POSTGRES_DB":"fixture", "POSTGRES_USER":"fixture"}, module.OWNERSHIP_REVISION)
-    assert "0003_content_ownership" in calls[0][-1]
+                                   {"POSTGRES_DB":"fixture", "POSTGRES_USER":"fixture"}, stale)
+    assert stale in calls[0][-1]
     assert [args[-1] for args in calls if args[-1] in ("backend", "worker", "dispatcher")] == ["backend", "worker", "dispatcher"]
-    assert sum("0004_credit_foundation" in args[-1] for args in calls) == 1
+    assert sum("0005_credit_lifecycle_operations" in args[-1] for args in calls) == 1
 
 
 @pytest.mark.parametrize("mutate_preview", [False, True])
 def test_reset_includes_credit_rows_and_refuses_preview_mutation(monkeypatch, mutate_preview):
     module = _load_module()
-    counts = {table: (3 if table in module.CREDIT_TABLES or table == "users" else 0)
+    counts = {table: (3 if table in module.CREDIT_TABLES or table in ("users", "credit_operations") else 0)
               for table in module.EXPECTED_TABLES - {"alembic_version"}}
     snapshot_tag = [0]
     commands = []
@@ -348,13 +349,13 @@ def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     ]
     sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
     assert "0000_stale_revision" in sql_calls[0][-1]
-    assert "0004_credit_foundation" in sql_calls[-1][-1]
+    assert "0005_credit_lifecycle_operations" in sql_calls[-1][-1]
 
 
 def test_verifier_targets_g2_head_and_schema_evidence_directory():
     module = _load_module()
 
-    assert module.EXPECTED_REVISION == "0004_credit_foundation"
+    assert module.EXPECTED_REVISION == "0005_credit_lifecycle_operations"
     assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
     assert module.DEFAULT_EVIDENCE_DIR.parts[-2:] == ("evidence", "schema")
 

@@ -111,6 +111,25 @@ replay keeps original IDs/time even after expiry/suspension. Contention maps to 
 fixed safe code after savepoint rollback. No product caller. C102 PASS/1.02s and
 M23 PASS/0.97s; scope remains6/20. Real SQL/locking proof follows in Todo5/6.
 
+### Todo5 — fixed PostgreSQL proof and compatibility
+
+Implemented the fixed runtime lifecycle proof and its local-only owned-project
+runner. Eight groups cover initialization, renewal, Plan, bonus, expiry, replay,
+transaction semantics and eight independent lock-observed races. Runtime uses
+Python stdin, not pytest or arbitrary SQL/source inputs. Only allowlisted receipts
+leave the runner; first failure and cleanup failure remain separate. Work300s and
+cleanup90s deadlines are not extended or retried.
+
+All current-head consumers now require0005; historical0003 proof stays pinned.
+Schema proof retains credit90/races3 and adds populated0004 round trip, empty new
+table downgrade/re-up, populated operation/lock refusal, stale0004 recovery for
+all three processes and populated operation reset coverage. Old migrations and
+four-table DDL remain unchanged. No provider or product wiring.
+
+Focused H+C+M537 PASS/2.72s; B0452 PASS/2.14s; exact20/20 paths, one new migration
+and D PASS. These are host structural/unit results only. Next: commit all code,
+capture SHA, then execute S2/R2/A/O/L/W/U on that immutable code.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash

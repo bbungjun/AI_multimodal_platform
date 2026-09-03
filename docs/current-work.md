@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G5B execution — 2026-09-04
 
-- **In Progress — Todo1–4 complete; actual DB proof pending.** User approved spec section3 and
+- **In Progress — Todo1–5 complete; actual DB proof pending.** User approved spec section3 and
   matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
   starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
   preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
