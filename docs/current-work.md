@@ -77,9 +77,36 @@ paste credential contents.
 
 ## Active Work
 
+### G5B preparation — 2026-09-04
+
+- **Prepared / awaiting hash-bearing execution approval; no implementation.**
+  [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
+  branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
+  squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
+- [G5B spec](initiatives/g5-credit-lifecycle-spec.md),
+  [problem/design/preparation evidence](portfolio/issue-116-credit-lifecycle.md).
+  Three-operation transaction-composable lifecycle; exact20 code paths and one
+  additive0005 operation-replay table. Current four-table DDL/credit_policy unchanged.
+  This new table is necessary for immutable no-op/downgrade/cancellation receipts,
+  not only credit-moving ledger events. No generation or public Master wiring.
+- Frozen local Goal `.omo/plans/issue-116-g5b-credit-lifecycle-goal.md`;
+  SHA256 `d17f47ac85b21ff11f3c95081794fb81517277368c6b1196427fd53669dcb590`.
+  Transfer exact file bytes across machines; never stage .omo wholesale.
+  Execution request approves spec section3 refinements. Todo1–8/F1–F4 require
+  schema2/lifecycle2/auth1/ownership all2, full Linux/backend/frontend and final
+  required3 CI/Ready PR/protected squash actual MERGED. Parent114/117 stay open.
+- First execution checks: Goal SHA, branch/base, clean tracked/index, B0.
+  Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
+  command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,
+  development/preview migration/reset, actual OAuth/provider/cloud during preparation.
+  Current packaged head remains0004;0005/lifecycle are only designed.
+
 ### G5A execution — 2026-09-04
 
-- **Mock Verified locally — Todo1–7 complete; Ready [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118) delivery pending.** User authorized frozen-SHA execution.
+- **Mock Verified — Todo1–8/F1–F4 complete; [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118) merged a003257.**
+  [Final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729):
+  final head b940be2 all3 CI SUCCESS; merged tree equals tested final tree.
+  Issue115 closed, parent114 open. User authorized frozen-SHA execution.
   SHA matches; main remains6537025, starting documentation checkpoint aeafaba.
   Fresh B0:384 PASS/2 existing guarded skips/2.96s. Local desktop-linux/npipe;
   preview4 running and developer/preview volumes preserved. Pure policy, four-table
@@ -94,7 +121,7 @@ paste credential contents.
   FAIL/3 skips, identically reproduced from untouched6537025. Compose, frontend
   lint/build, Session48 and Chromium34 PASS. F1–F3 APPROVE: exact17 paths,
   migration1, A01–A22 local traceability, same-code bounded proofs and truthful
-  scope. F4 remains pending Ready PR/final-head3 CI/protected squash actual merge.
+  scope. F4 subsequently approved after actual protected squash and tree verification.
   [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
   has A[#115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
   B[#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
