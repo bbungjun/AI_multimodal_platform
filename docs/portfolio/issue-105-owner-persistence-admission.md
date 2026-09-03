@@ -108,3 +108,14 @@ owner-scoped SQL과 반환 row 재검증, Master 동일 정책, null/missing404,
 AsyncSession 결과의 first/one_or_none는 동기 메서드이므로 초기 AsyncMock 결과를
 동기 Mock으로 정정했다. 제품 코드를 fake에 맞춰 바꾸지 않았다.
 Access25 PASS, schema13 PASS, schema 회귀68 PASS. writer 적용 전이며 실제 DB proof는 미실행이다.
+
+### Todo5 — authenticated writers
+
+generation/retry/pipeline/enhance에 함수별 require_user를 연결했다. 모든 신규 Job/Prompt의
+owner는 인증 actor이며 request extras는422로 거절한다. foreign/missing 참조는 동일404,
+자신의 reference인 경우만 의미 검사를 한다. retry의 source row lock/active409와
+Job/outbox rollback을 보강하고, pipeline parent/child에는 같은 owner를 저장한다.
+기존 fake는 명시적인 일반 User actor와 실제 FK 관계를 갖도록 바꿨으며 전역 Master
+override는 추가하지 않았다. 누락 참조의 이전400/409 기대값은 승인된404 계약으로 바꿨다.
+W179 PASS, S68 PASS, H106 PASS. 생성 거절 시 provider/storage/DB 부수효과0는 unit proof이며,
+실제 G3 Session과 PostgreSQL 검증은 Todo6에서 별도로 수행한다. Read/delete/worker는 변경하지 않았다.

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
 
 from app.api import prompts
+from app.auth.service import AuthenticatedUser
 from app.main import app
 from app.models import GenerationMode, PromptEnhancement, utc_now
 from app.prompt_enhancement import (
@@ -18,6 +19,18 @@ from app.prompt_enhancement import (
 from app.services.llm import enhancer
 from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexRateLimitedError
+
+
+@pytest.mark.parametrize("field", ["owner_user_id", "user_id", "role"])
+async def test_admission_p03_prompt_rejects_spoofed_owner(monkeypatch, field):
+    from unittest.mock import AsyncMock
+    provider = AsyncMock(side_effect=AssertionError("unexpected_provider"))
+    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", provider)
+    session = FakePromptSession()
+    response = await _post_prompt_enhance({"prompt":"fixture","target_mode":"t2i",
+        "target_model":"imagen-4.0-fast-generate-001",field:"forged"}, session)
+    assert response.status_code == 422 and session.added == []
+    provider.assert_not_called()
 
 
 class FakePromptSession:
@@ -41,10 +54,16 @@ class FakePromptSession:
                 instance.created_at = utc_now()
 
 
-async def _post_prompt_enhance(payload: dict, session: FakePromptSession):
+ACTOR = AuthenticatedUser(id=UUID(int=101), role="user", status="active", email="fixture@invalid.test")
+
+
+async def _post_prompt_enhance(payload: dict, session: FakePromptSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakePromptSession]:
         yield session
 
+    async def override_user():
+        return actor
+    app.dependency_overrides[prompts.require_user] = override_user
     app.dependency_overrides[prompts.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -54,11 +73,14 @@ async def _post_prompt_enhance(payload: dict, session: FakePromptSession):
         ) as client:
             return await client.post("/api/prompts/enhance", json=payload)
     finally:
+        app.dependency_overrides.pop(prompts.require_user, None)
         app.dependency_overrides.pop(prompts.get_session, None)
 
 
-async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
+@pytest.mark.parametrize("actor_id,role", [(101,"user"), (102,"user"), (103,"master")])
+async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch, actor_id, role):
     session = FakePromptSession()
+    actor = AuthenticatedUser(id=UUID(int=actor_id), role=role, status="active", email="fixture@invalid.test")
 
     async def enhance_prompt(
         prompt: str,
@@ -95,6 +117,7 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
             "creativity_preset": "imaginative",
         },
         session,
+        actor=actor,
     )
 
     assert response.status_code == 201
@@ -122,6 +145,7 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch):
 
     assert len(session.added) == 1
     row = session.added[0]
+    assert row.owner_user_id == actor.id
     assert isinstance(row, PromptEnhancement)
     assert body["id"] == str(row.id)
     assert row.original == "a quiet desk lamp"

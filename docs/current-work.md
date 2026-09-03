@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.2A execution — 2026-09-03
 
-- **In Progress — Todo1 baseline verified**, implementation not yet verified.
+- **In Progress — Todo5 writers unit verified**, isolated runtime not yet verified.
   [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`,
   [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
@@ -107,7 +107,8 @@ paste credential contents.
   local Docker Desktop29.2.1 available; existing default/preview resources untouched.
   Todo2 expected RED complete; Todo3 schema13 + regressions68 + harness106 PASS.
   Sole0003 and owner metadata/head compatibility implemented, runtime unverified.
-  Todo4 access25/schema13/regressions68 PASS. Next: Todo5 four authenticated writers.
+  Todo4 access25/schema13/regressions68 PASS. Todo5 W179/S68/H106 PASS.
+  Next: Todo6 real isolated schema/auth/admission proof. No developer DB reset.
   B worker/pipeline/race and G4.3 read/file/delete/ops are
   excluded from A; no public multi-user deployment at this checkpoint.
 

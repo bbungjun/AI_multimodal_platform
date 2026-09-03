@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import AsyncSessionLocal
+from app.api.auth_dependencies import require_user
+from app.auth.service import AuthenticatedUser
+from app.ownership import OwnershipAccess
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState, PromptEnhancement, utc_now
 from app.prompt_enhancement import (
     PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
@@ -40,7 +43,17 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 async def create_generation(
     payload: GenerationCreate = Body(...),
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> GenerationResponse:
+    access = OwnershipAccess(session, actor)
+    prompt_enhancement = (
+        await access.enhancement(payload.enhancement_id, intent="use")
+        if payload.enhancement_id is not None else None
+    )
+    source_asset = (
+        await access.asset(payload.source_asset_id, intent="use", lock=True)
+        if payload.mode == "i2v" else None
+    )
     if payload.auto_enhance:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -69,15 +82,6 @@ async def create_generation(
         _validate_model(payload.model, prefix="veo-", detail="Unsupported Veo model.")
         generation_mode = GenerationMode.I2V
         source_asset_id = payload.source_asset_id
-        source_asset_result = await session.scalars(
-            i2v_guard.source_asset_for_update_statement(source_asset_id)
-        )
-        source_asset = source_asset_result.first()
-        if source_asset is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Source asset was not found.",
-            )
         if source_asset.kind != AssetKind.IMAGE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -102,9 +106,8 @@ async def create_generation(
             detail="Generation mode is not implemented.",
         )
 
-    prompt_enhancement = await _get_matching_prompt_enhancement(
-        session,
-        enhancement_id=payload.enhancement_id,
+    _validate_matching_prompt_enhancement(
+        prompt_enhancement,
         generation_mode=generation_mode,
         model=payload.model,
     )
@@ -117,6 +120,7 @@ async def create_generation(
     now = utc_now()
     job = Job(
         id=uuid4(),
+        owner_user_id=actor.id,
         mode=generation_mode,
         model=payload.model,
         state=JobState.PENDING,
@@ -150,7 +154,10 @@ async def create_generation(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE,
-            ) from exc
+            ) from None
+        raise
+    except Exception:
+        await session.rollback()
         raise
     return job_response_from_job(job, assets=[])
 
@@ -203,13 +210,10 @@ async def get_generation(
 async def retry_generation(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> GenerationResponse:
-    source = await session.get(Job, job_id)
-    if source is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Generation job was not found.",
-        )
+    access = OwnershipAccess(session, actor)
+    source = await access.job(job_id, intent="mutate")
     if source.state != JobState.FAILED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -217,14 +221,16 @@ async def retry_generation(
         )
 
     source_asset_id = source.source_asset_id
+    if source.enhancement_id is not None:
+        await access.enhancement(source.enhancement_id, intent="use")
+    if source.parent_job_id is not None:
+        await access.job(source.parent_job_id, intent="mutate")
+    source_asset = (
+        await access.asset(source_asset_id, intent="use", lock=True)
+        if source_asset_id is not None else None
+    )
     if source.mode == GenerationMode.I2V:
         if source_asset_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Retry source asset is no longer available.",
-            )
-        source_asset = await session.get(Asset, source_asset_id)
-        if source_asset is None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Retry source asset is no longer available.",
@@ -234,10 +240,14 @@ async def retry_generation(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Retry source asset must be an image.",
             )
+        active_result = await session.scalars(i2v_guard.active_i2v_job_statement(source_asset_id))
+        if active_result.first() is not None:
+            raise HTTPException(status_code=409, detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE)
 
     now = utc_now()
     retry = Job(
         id=uuid4(),
+        owner_user_id=actor.id,
         mode=source.mode,
         model=source.model,
         state=JobState.PENDING,
@@ -259,7 +269,16 @@ async def retry_generation(
     )
     session.add(retry)
     add_job_dispatch_event(session, retry.id, reason="generation_retry_created")
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if source.mode == GenerationMode.I2V and i2v_guard.is_active_i2v_unique_violation(exc):
+            raise HTTPException(status_code=409, detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE) from None
+        raise
+    except Exception:
+        await session.rollback()
+        raise
     return job_response_from_job(retry, assets=[])
 
 
@@ -333,22 +352,14 @@ def _with_prompt_provenance(
     return {**parameters, PROMPT_PROVENANCE_PARAMETER_KEY: provenance}
 
 
-async def _get_matching_prompt_enhancement(
-    session: AsyncSession,
+def _validate_matching_prompt_enhancement(
+    prompt_enhancement: PromptEnhancement | None,
     *,
-    enhancement_id: UUID | None,
     generation_mode: GenerationMode,
     model: str,
 ) -> PromptEnhancement | None:
-    if enhancement_id is None:
-        return None
-
-    prompt_enhancement = await session.get(PromptEnhancement, enhancement_id)
     if prompt_enhancement is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Prompt enhancement was not found.",
-        )
+        return None
     if (
         prompt_enhancement.target_mode != generation_mode
         or prompt_enhancement.target_model != model
