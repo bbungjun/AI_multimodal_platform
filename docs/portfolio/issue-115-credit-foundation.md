@@ -197,3 +197,42 @@ assertions and source stayed unchanged. No OAuth/provider/cloud request ran.
 All runtime deadlines held and no retry or timeout relaxation was used. Next is
 fresh focused regression, A01-A22 review, truthful handoff, Ready PR and protected
 CI/squash delivery.
+
+### Todo7 — acceptance traceability and review
+
+| Acceptance | Evidence |
+|---|---|
+| A01–A03 | one additive0004, old migration bytes unchanged; both actual schema cycles proved populated upgrade, empty chains and guarded downgrade/lock refusal |
+| A04–A11 | ORM M tests plus actual credit90/races3: account/cycle/grant/ledger shape, composite ownership, BIGINT balances, append-only mutation refusal, reconstruction/rollback and observed uniqueness races |
+| A12–A15 | P55: exact immutable plans, seven V1 integer meters, type/overflow refusal and aware UTC half-open elapsed cycles including leap/DST/microseconds |
+| A16–A18 | schema inventory/metadata parity, no startup grant, stale0003 refusal/recovery, reset preview/execute, pinned historical ownership8 and lock refusal |
+| A19 | separate auth0004 PostgreSQL/Redis/outage-recovery receipt with safe aggregate metrics and cleanup |
+| A20 | one explicit ownership `all/2`, complete4: metadata348/delete-race2 twice plus FOVE310/actors2 twice |
+| A21 | two independent schema/credit invocations at the same non-document code, bounded work/cleanup and independently confirmed resources0 |
+| A22 local | Linux1229/3 guarded skips, Compose and unchanged frontend lint/build/Session48/Chromium34 PASS; final-head CI/merge remains Todo8 |
+
+**F1 APPROVE (scope/schema):** cumulative diff is exactly the frozen17 code
+paths and allowed docs, with one new migration. Revisions0001–0003, identity,
+frontend, CI, Compose and infrastructure are unchanged. The small pure policy
+Interface and four-table database Implementation follow the codebase-design
+boundary without a pass-through repository. There is no lifecycle, generation,
+billing, Master mutation, provider or cloud scope creep.
+
+**F2 APPROVE (contract/security):** A01–A22 have unit or actual PostgreSQL/runtime
+evidence as mapped above. Fixed safe errors and receipt fields avoid credentials,
+identity and prompt data. SQL constraints and triggers prove persistence behavior;
+A11 is only uniqueness evidence. No reserve/settle or billed-product semantics are
+claimed before G5C.
+
+**F3 APPROVE (runtime/regression):** schema2, auth1 and ownership all2 used the
+same final non-document tree at head0004 and stayed inside fixed deadlines. Every
+owned project was cleaned independently and preview resources were preserved.
+Linux and frontend passed; the sole Windows failure was independently reproduced
+from untouched base. No timeout, skip, assertion or workload was weakened.
+
+**F4 pending delivery:** documentation truthfully marks only local mock
+verification. Ready PR, final-head `verify` and both Scan/SBOM checks, actual
+protected squash merge, Issue115 closure and parent114 remaining open are required
+before F4 APPROVE. G5B consumes the merged four-table/pure-policy Interface only;
+it adds initialization, 30-day renewal, Plan changes and grant writers in its own
+frozen Goal.

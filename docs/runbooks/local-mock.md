@@ -338,7 +338,7 @@ unchanged frontend auth/browser suites separately, as described in [testing](../
 
 ### Owner schema and admission (G4.2A)
 
-Packaged head is `0003_content_ownership`. New Jobs/PromptEnhancements require an
+At the G4.2A checkpoint, packaged head was `0003_content_ownership`. New Jobs/PromptEnhancements require an
 authenticated User owner; Asset ownership comes from its Job. Master uses the same
 owner-only mutation policy. Missing/foreign references return identical404;
 client-supplied owner/user/role fields return422. Mock mode does not relax these rules.
@@ -574,6 +574,26 @@ error codes only. Do not paste raw Session/email/prompt/response logs into evide
 The default command proves ownership only; final G4.3B requires explicit all.
 Unattended `/metrics` now returns401 without a Session; do not add a scrape bypass.
 Ready PR, final-head CI and actual merge remain separately linked from Issue112.
+
+## G5A credit schema and safe rollback
+
+The current G5A branch packages `0004_credit_foundation`. Its additive upgrade
+creates empty credit account/cycle/grant/ledger tables; it does not backfill Users,
+issue monthly credit or connect generation. Start or migrate only an explicitly
+chosen environment after checking its revision; Goal verification never migrates
+the developer or preview database.
+
+Use `scripts/verify_schema_migrations.py --env-file .env.example --include-reset`
+only for its generated `schema-verify-*` project. It proves credit constraints,
+append-only ledger behavior, legacy data preservation and guarded reset. Do not
+substitute a default Compose project or use `down -v` on development/preview.
+
+Downgrade acquires bounded exclusive locks and proceeds only when all four credit
+tables are empty. If any contains data, `credit_foundation_requires_empty_tables`
+is the expected safe refusal: preserve the records and deploy a reviewed forward
+fix. Never disable the ledger triggers or delete accounting rows to force rollback.
+G5A has no lifecycle writer, so operational account creation and renewal remain
+G5B work rather than a manual runbook procedure.
 
 ## Stop
 

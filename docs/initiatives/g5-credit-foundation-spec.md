@@ -1,11 +1,18 @@
 # G5 — Credit delivery split and G5A executable specification
 
-Status: `In Progress`, 2026-09-04. G5A code/structural tests implemented;
-real isolated proof and delivery pending. B/C remain Planned.
+Status: `Mock Verified locally`, 2026-09-04. G5A Todo1–7 and all local gates
+passed; Ready PR/final-head CI/merge remain pending. B/C remain Planned.
 Parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
 The user approved execution with the matching frozen G5A Goal hash on2026-09-04.
 The original preparation/contract below is preserved; execution evidence is in
 the [Issue115 record](../portfolio/issue-115-credit-foundation.md).
+
+Actual G5A Interface is the four empty additive tables described below plus the
+pure immutable `plan_policy`, `quote_usage`, and `cycle_bounds` functions. No
+account, cycle, grant, Reservation or Usage writer exists yet. Runtime proof at
+revision0004 passed two schema/credit cycles, auth once, and the full ownership/
+file aggregate; exact results are retained in the Issue115 record. G5B may consume
+only this Interface after G5A merge and must preserve caller-owned transactions.
 
 ## 1. Inputs and scope
 

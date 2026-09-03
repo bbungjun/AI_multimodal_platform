@@ -31,7 +31,7 @@ python scripts/verify_auth_sessions.py --env-file .env.example
 
 Install backend development dependencies and start Docker first. The verifier
 creates two distinct fresh `auth-verify-*` projects, starts only Postgres/Redis,
-upgrades to packaged head `0003_content_ownership`, then runs host-side integration tests through
+upgrades to the packaged Alembic head (currently `0004_credit_foundation`), then runs host-side integration tests through
 ephemeral loopback ports. Tests cover HTTP-to-storage login/me/logout, User
 invariants, digest storage, transactional rollback, max-five admission races,
 expiry, touch races, one-time flow consumption, Redis outage/recovery and cleanup.
@@ -258,7 +258,7 @@ python -m pytest `
   tests/test_verify_schema_migrations_script.py -q
 ```
 
-The packaged head must be exactly `0003_content_ownership`. Application
+The packaged head must be exactly `0004_credit_foundation`. Application
 startup checks are read-only and must return a typed failure for a missing,
 empty, outdated, multiple-head, or unreachable schema.
 
@@ -608,6 +608,33 @@ Separate unchanged schema2/include-reset and auth1 PASS; Linux1128 PASS/3 existi
 guarded skips; frontend48+34 PASS. Windows1127 PASS with sole native127 Bash-path
 failure, freshly reproduced on untouched cd654e5. Linux/CI must pass that node.
 Final head CI/actual merge are separate delivery evidence, not inferred from local tests.
+
+## G5A credit foundation verification
+
+G5A adds only four empty persistence tables and pure policy; it does not create
+accounts, grant credit or charge generation. Unit tests cover immutable Free/Pro/
+Max policy, all seven V1 integer rates and exact elapsed 30-day boundaries. Real
+PostgreSQL proof covers metadata parity, populated legacy preservation, named
+constraints, append-only ledger triggers and three observed uniqueness races.
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+python scripts/verify_auth_sessions.py --env-file .env.example
+python scripts/verify_ownership.py --env-file .env.example --suite all --cycles 2
+```
+
+At implementation `b2900a4`, schema work was141.406/119.000s with credit90/
+races3 each; reset preview preserved fixtures and execution emptied every table.
+Auth passed PostgreSQL, Redis and outage recovery. Ownership/file aggregate was
+complete4/993.610s: ownership metadata348/delete races2 twice and file-ops FOVE310/
+actors2 twice. All generated projects independently left zero resources; preview
+and developer volumes remained. Linux full backend1229 PASS/3 existing guarded
+skips; Windows had only the known native127 WSL-path failure, reproduced from
+untouched6537025. Frontend lint/build, Session48 and Chromium34 passed unchanged.
+See the [Issue115 record](portfolio/issue-115-credit-foundation.md). These are
+local mock results, not billing enforcement, live OAuth/provider or cloud proof.
 
 ## Secret Hygiene
 
