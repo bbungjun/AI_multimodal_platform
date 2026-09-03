@@ -77,9 +77,9 @@ paste credential contents.
 
 ## Active Work
 
-### G4.3A execution preparation — 2026-09-03
+### G4.3A execution — 2026-09-03
 
-- **Goal Prepared — implementation NOT started.** User accepted G4.3A/B and A
+- **In Progress — Todo1 preflight complete.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
@@ -98,8 +98,11 @@ paste credential contents.
 - Frozen Todo1–8/F1–F4 includes real2cycle,8 metadata groups,2 observed deletion
   races/cycle, previous proof groups, full backend/frontend regression, safe
   documentation, Ready PR/final-head CI/actual squash MERGED. No admin bypass.
-- Next: explicit Issue110 Goal execution request with matching SHA. No Goal,
-  Docker/DB mutation, OAuth/provider/cloud or frontend implementation started here.
+- Execution baseline: SHA matched, main unchanged c84394a, tracked/staged clean.
+  B0 **385 PASS/4.75s**, S **94 PASS/2 existing guarded skips/1.72s**.
+  Local Docker desktop-linux/npipe checked; four existing login-preview containers
+  are preserved and no runtime mutations performed. Next Todo2 Ownership Interface.
+  No OAuth/provider/cloud or frontend implementation is authorized.
   G4 remains incomplete/private until B; #99/live/machine-metrics gates remain.
 
 ### G4.3 design preparation — 2026-09-03
