@@ -5,7 +5,8 @@
 - Branch: `codex/issue-103-authenticated-mock-harness`, base `100f5e7`.
 - 검증된 harness revision: `471b76ee7f3e900ab112e39df297bd1797b34a47`.
 - [Accepted spec](../initiatives/g4-ownership-access-control-spec.md), [G4 설계 판단](g4-ownership-design.md).
-- Ready PR의 최종 head 필수 CI와 squash 병합 상태는 Issue의 연결 PR에서 확인한다.
+- Ready [PR #104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)에서
+  최종 head 필수 CI와 squash 병합 상태/결과 SHA를 확인한다.
 
 ## 배경과 문제
 

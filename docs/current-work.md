@@ -84,6 +84,8 @@ paste credential contents.
   [evidence](portfolio/issue-103-authenticated-mock-harness.md), [spec](initiatives/g4-ownership-access-control-spec.md).
   Harness implementation `471b76e`; Ready PR delivery uses strict final-head
   verify + both Scan/SBOM checks and squash auto-merge, without bypass.
+  Delivery source of truth: [PR #104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)
+  (final checks, merge state and resulting squash SHA).
 - Run `python scripts/verify_ownership.py --env-file .env.example --cycles 2`.
   Two committed-code cycles: projects `ownership-verify-6a554904eeb2` / `ownership-verify-1d16da8309e6`,
   auth12 + scenarios3 + cleanup=true each, 32.81s /32.47s. Schema head remains

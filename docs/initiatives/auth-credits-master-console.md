@@ -341,6 +341,7 @@ at `100f5e7`, final-head required CI all passed. G4 consumes G3 `require_user` /
 The [G4 specification](g4-ownership-access-control-spec.md) is accepted. G4.1
 [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) now
 provides the authenticated test harness; see its [evidence](../portfolio/issue-103-authenticated-mock-harness.md)
+and [PR #104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)
 for verification and delivery. Next is G4.2 design/Issue/Goal preparation, not
 implicit implementation authorization. G4.1/G4.2/G4.3 budgets remain13/20/20;
 only G4.2 adds a migration. Reuse injected clients and hash-only fixtures, updating
