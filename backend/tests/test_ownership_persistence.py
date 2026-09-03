@@ -107,7 +107,7 @@ def test_schema_harness_and_verifier_head_parity():
 async def test_access_foreign_or_null_owner_is_same_not_found(role, kind, actual_owner):
     module = ownership()
     row = SimpleNamespace(id=UUID(int=201), owner_user_id=actual_owner)
-    session = SimpleNamespace(scalars=AsyncMock(), execute=AsyncMock())
+    session = SimpleNamespace(scalars=AsyncMock(return_value=Mock()), execute=AsyncMock(return_value=Mock()))
     session.scalars.return_value.first.return_value = row
     session.execute.return_value.one_or_none.return_value = (row, actual_owner)
     access = module.OwnershipAccess(session, SimpleNamespace(id=OWNER, role=role))
@@ -120,7 +120,7 @@ async def test_access_foreign_or_null_owner_is_same_not_found(role, kind, actual
 @pytest.mark.parametrize("kind", ["job", "enhancement", "asset"])
 async def test_access_missing_is_same_not_found(kind):
     module = ownership()
-    session = SimpleNamespace(scalars=AsyncMock(), execute=AsyncMock())
+    session = SimpleNamespace(scalars=AsyncMock(return_value=Mock()), execute=AsyncMock(return_value=Mock()))
     session.scalars.return_value.first.return_value = None
     session.execute.return_value.one_or_none.return_value = None
     access = module.OwnershipAccess(session, SimpleNamespace(id=OWNER, role="master"))
@@ -134,7 +134,7 @@ async def test_access_missing_is_same_not_found(kind):
 async def test_access_scoped_sql_returns_owned_row_without_transaction_effects(kind):
     module = ownership()
     row = SimpleNamespace(id=UUID(int=201), owner_user_id=OWNER)
-    session = SimpleNamespace(scalars=AsyncMock(), execute=AsyncMock(),
+    session = SimpleNamespace(scalars=AsyncMock(return_value=Mock()), execute=AsyncMock(return_value=Mock()),
                               commit=AsyncMock(), rollback=AsyncMock())
     session.scalars.return_value.first.return_value = row
     session.execute.return_value.one_or_none.return_value = (row, OWNER)

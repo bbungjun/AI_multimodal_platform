@@ -100,3 +100,11 @@ schema/auth/harness/seeder head와 reset owner fixture를 맞췄다.
 추가했지만 실제 runtime 실행은 Todo6으로 남겼다. 내장 proof의 문자열 구문 오류를
 단위 검사에서 잡고 수정했으며 재발 방지를 위해 compile 검사도 추가했다.
 S 새 schema13 PASS + 기존/확장 회귀68 PASS, H106 PASS. Access25 RED는 Todo4 입력이다.
+
+### Todo4 — Ownership Interface
+
+owner-scoped SQL과 반환 row 재검증, Master 동일 정책, null/missing404,
+의도하지 않은 intent 거절과 Asset row만 잠그는 join을 구현했다. commit/rollback은 하지 않는다.
+AsyncSession 결과의 first/one_or_none는 동기 메서드이므로 초기 AsyncMock 결과를
+동기 Mock으로 정정했다. 제품 코드를 fake에 맞춰 바꾸지 않았다.
+Access25 PASS, schema13 PASS, schema 회귀68 PASS. writer 적용 전이며 실제 DB proof는 미실행이다.

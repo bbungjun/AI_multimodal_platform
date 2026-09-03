@@ -107,7 +107,8 @@ paste credential contents.
   local Docker Desktop29.2.1 available; existing default/preview resources untouched.
   Todo2 expected RED complete; Todo3 schema13 + regressions68 + harness106 PASS.
   Sole0003 and owner metadata/head compatibility implemented, runtime unverified.
-  Next: Todo4 Ownership Interface. B worker/pipeline/race and G4.3 read/file/delete/ops are
+  Todo4 access25/schema13/regressions68 PASS. Next: Todo5 four authenticated writers.
+  B worker/pipeline/race and G4.3 read/file/delete/ops are
   excluded from A; no public multi-user deployment at this checkpoint.
 
 ### G4.1 authenticated mock harness — 2026-09-03
