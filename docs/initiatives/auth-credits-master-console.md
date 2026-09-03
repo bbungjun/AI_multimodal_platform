@@ -351,6 +351,8 @@ is now Ownership Admission Mock Verified at implementation `e3c98f1`; final deli
 is tracked by its PR link in current-work and the portfolio record. After actual A
 merge, the next separate task is G4.2B design/Goal preparation. Budgets are G4.1=13,
 G4.2A=20, G4.2B<=20 (candidate10), G4.3<=20. Only A adds one migration.
+Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
+Use that PR for actual final-head checks and merge SHA; this document is a pre-merge evidence snapshot.
 Reuse injected clients and hash-only fixtures; schema/auth/harness/seeder expected
 revisions are now0003. B consumes OwnershipAccess and persisted owner relationships.
 

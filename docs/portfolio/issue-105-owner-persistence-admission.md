@@ -1,6 +1,6 @@
 # Issue #105 — Owner persistence and authenticated admission
 
-- 상태: **Ownership Admission Mock Verified — Todo1–7 완료 / Todo8 delivery 진행**, 2026-09-03.
+- 상태: **Ownership Admission Mock Verified — 구현·문서 완료 / delivery는 PR 기준**, 2026-09-03.
   아래 준비 기록과 실행 기록을 구분한다.
 - [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`.
@@ -9,6 +9,9 @@
   [initiative](../initiatives/auth-credits-master-console.md).
 - Runtime verification: **PASS**, 최종 구현 `e3c98f1fe5d5a05fb04dee2f1814dcad3ad9b527`.
   Ready PR/최종 CI/merge는 아래 delivery 링크를 기준으로 확인한다.
+- Delivery: [Ready PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
+  이 문서는 병합 전 증거 snapshot이며 최종 head CI/실제 squash merge SHA는 PR/Issue가
+  source of truth다. 문서 commit의 backend/scripts tree가 검증한 구현 SHA와 같음을 확인했다.
 
 ## 배경과 문제
 
@@ -236,3 +239,8 @@ Rollback/남은 위험:
 APPROVE. F4 문서 검토는 APPROVE이며 **delivery는 최종 PR head의 verify + 양쪽
 Scan/SBOM 성공 및 실제 squash MERGED 관측 전까지 PENDING**이다. 최종 merge SHA는
 PR/Issue와 종료 보고에 기록하며 사후 상태를 위해 추가 문서 PR을 반복하지 않는다.
+
+인수 문서 검증: Todo8 W/H298 PASS, schema/access/regression106 PASS, 상대 문서 링크91개
+오류0, cumulative allowlist20/migration1/historical bytes/hygiene PASS. 실행 중 read-only
+AST 보존 검사의 Windows 기본 cp949 decoding 오류는 UTF-8 명시 후 재실행하여90개 기존
+test 이름 보존을 확인했다. 제품 실패나 scope 확장으로 처리하지 않았다.

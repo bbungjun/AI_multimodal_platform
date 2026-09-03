@@ -79,11 +79,14 @@ paste credential contents.
 
 ### G4.2A execution — 2026-09-03
 
-- **Ownership Admission Mock Verified — Todo1–7 complete; Todo8 delivery in progress.**
+- **Ownership Admission Mock Verified — implementation/docs complete; delivery tracked by PR.**
   [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`,
   [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
   [execution evidence](portfolio/issue-105-owner-persistence-admission.md).
+- Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
+  This handoff is the pre-merge snapshot; the PR/Issue records final-head CI,
+  squash merge state and merge SHA. Do not infer actual merge from this snapshot.
 - Main synchronized to `4dd359ab39285e536e713a452577e19c07b3ec67` (G4.1 PR104).
   Existing five design files preserved through targeted stash/restore, no conflict.
   Prior single-G4.2 estimate is superseded: A exact20 paths/migration1,
