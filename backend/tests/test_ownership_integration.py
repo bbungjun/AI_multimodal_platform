@@ -82,6 +82,7 @@ async def test_access_actual_auth_dependency_errors_before_content(path,code,mon
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url="http://test") as client:
             response = await client.get(path)
         assert response.status_code == code
+        assert response.headers["cache-control"] == "private, no-store"
         assert content.scalar_statements == [] and content.get_calls == []
     finally:
         app.dependency_overrides.pop(generations.get_session,None)
@@ -107,3 +108,81 @@ async def test_access_list_corrupt_reference_returns_whole404():
     row.retry_of_job_id = reference.id
     response = await _get_generations("/api/generations",FakeGenerationSession(jobs=[row,reference],scalar_results=[[row]]))
     assert response.status_code==404 and response.json()=={"detail":"content_not_found"}
+
+
+@pytest.mark.parametrize("code", [200,201,204,401,403,404,405,422,500])
+async def test_access_cache_all_response_statuses_and_unhandled500(code):
+    from fastapi import Response
+    from app.main import ContentApplication
+    instance = ContentApplication()
+    @instance.get("/api/generations/probe")
+    async def probe():
+        if code == 500:
+            raise RuntimeError("fixed_failure")
+        return Response(status_code=code,headers={"Cache-Control":"public, max-age=3600"})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=instance,raise_app_exceptions=False),base_url="http://test") as client:
+        response = await client.get("/api/generations/probe")
+    assert response.status_code==code
+    assert response.headers.get_list("cache-control")==["private, no-store"]
+    assert "fixed_failure" not in response.text
+
+
+async def test_access_cache_redirect_head_and_exact_prefix():
+    from fastapi import Response
+    from app.main import ContentApplication
+    instance=ContentApplication()
+    @instance.get("/api/assets/probe")
+    async def probe():
+        return Response()
+    @instance.get("/api/health")
+    async def health():
+        return Response(headers={"Cache-Control":"public, max-age=1"})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=instance),base_url="http://test") as client:
+        redirect=await client.get("/api/assets/probe/")
+        head=await client.head("/api/assets/probe")
+        unrelated=await client.get("/api/assets-unrelated")
+        health=await client.get("/api/health")
+    assert redirect.status_code==307 and redirect.headers["cache-control"]=="private, no-store"
+    assert head.status_code==405 and head.content==b"" and head.headers["cache-control"]=="private, no-store"
+    assert "cache-control" not in unrelated.headers
+    assert health.headers["cache-control"]=="public, max-age=1"
+
+
+async def test_access_cache_streaming_not_buffered_or_exception_swallowed():
+    from app.main import PrivateContentResponses
+    sent=[]
+    async def send(message):
+        sent.append(message)
+    async def stream(scope,receive,send):
+        await send({"type":"http.response.start","status":200,"headers":[]})
+        await send({"type":"http.response.body","body":b"a","more_body":True})
+        assert len(sent)==2
+        await send({"type":"http.response.body","body":b"b","more_body":False})
+        raise RuntimeError("fixed_stream_failure")
+    with pytest.raises(RuntimeError,match="fixed_stream_failure"):
+        await PrivateContentResponses(stream)({"type":"http","path":"/api/generations"},None,send)
+    assert [message.get("body") for message in sent[1:]]==[b"a",b"b"]
+
+
+async def test_access_delete_commit_failure_retains_existing_nonatomic_risk(monkeypatch):
+    target=_job_with_asset()
+    session=FakeGenerationSession(jobs=[target],scalar_results=[[],[],[]],commit_error=RuntimeError("fixed_commit_failure"))
+    deleted=Mock()
+    monkeypatch.setattr(generations.storage,"delete_file",deleted)
+    with pytest.raises(RuntimeError,match="fixed_commit_failure"):
+        await _delete_generation(f"/api/generations/{target.id}",session)
+    deleted.assert_called_once()
+    assert session.commit_count==1  # Files already removed; no false atomicity claim.
+
+
+async def test_access_delete_refetch_collection_change_fails_before_storage(monkeypatch):
+    target=_job_with_asset()
+    session=FakeGenerationSession(jobs=[target])
+    async def refresh(row,**kwargs):
+        row.assets=[]
+    session.refresh=refresh
+    deleted=Mock()
+    monkeypatch.setattr(generations.storage,"delete_file",deleted)
+    response=await _delete_generation(f"/api/generations/{target.id}",session)
+    assert response.status_code==409
+    deleted.assert_not_called()
