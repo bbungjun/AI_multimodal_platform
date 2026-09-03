@@ -77,9 +77,49 @@ paste credential contents.
 
 ## Active Work
 
+### G5B execution — 2026-09-04
+
+- **Locally Mock Verified — Todo1–7 complete; delivery pending.** User approved spec section3 and
+  matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
+  starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
+  preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
+  Interface and fixed proof/runner implemented; H+C+M537 PASS, B0452 PASS.
+  Exact20 code paths/new migration1 at code65cdbb4. Final schema2 each credit90/
+  races3, lifecycle2 each groups8/races8/checks320, auth1 and ownership-file4
+  cycles passed with independent cleanup0. Linux1321 PASS/3 guarded skips;
+  Windows1320 PASS plus sole known native127 Bash-path failure reproduced on
+  untouched a003257. Frontend lint/build/Session48/Chromium34 PASS.
+  Final review C102/M23/H413/B0452 PASS; F1–F3 APPROVE, F4 delivery pending.
+  [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
+  branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
+  squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
+- [G5B spec](initiatives/g5-credit-lifecycle-spec.md),
+  [problem/design/execution evidence](portfolio/issue-116-credit-lifecycle.md),
+  [Ready PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119).
+  Three-operation transaction-composable lifecycle; exact20 code paths and one
+  additive0005 operation-replay table. Current four-table DDL/credit_policy unchanged.
+  This new table is necessary for immutable no-op/downgrade/cancellation receipts,
+  not only credit-moving ledger events. No generation or public Master wiring.
+- Frozen local Goal `.omo/plans/issue-116-g5b-credit-lifecycle-goal.md`;
+  SHA256 `d17f47ac85b21ff11f3c95081794fb81517277368c6b1196427fd53669dcb590`.
+  Transfer exact file bytes across machines; never stage .omo wholesale.
+  Execution request approves spec section3 refinements. Todo1–8/F1–F4 require
+  schema2/lifecycle2/auth1/ownership all2, full Linux/backend/frontend and final
+  required3 CI/Ready PR/protected squash actual MERGED. Parent114/117 stay open.
+  PR119 is Ready; next: last docs push, final-head CI and protected squash delivery.
+- First execution checks: Goal SHA, branch/base, clean tracked/index, B0.
+  Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
+  command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,
+  development/preview migration/reset, actual OAuth/provider/cloud during preparation.
+  That preparation used head0004. Current implementation packages0005; actual
+  lifecycle/local regressions are complete; delivery remains pending.
+
 ### G5A execution — 2026-09-04
 
-- **Mock Verified locally — Todo1–7 complete; Ready [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118) delivery pending.** User authorized frozen-SHA execution.
+- **Mock Verified — Todo1–8/F1–F4 complete; [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118) merged a003257.**
+  [Final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729):
+  final head b940be2 all3 CI SUCCESS; merged tree equals tested final tree.
+  Issue115 closed, parent114 open. User authorized frozen-SHA execution.
   SHA matches; main remains6537025, starting documentation checkpoint aeafaba.
   Fresh B0:384 PASS/2 existing guarded skips/2.96s. Local desktop-linux/npipe;
   preview4 running and developer/preview volumes preserved. Pure policy, four-table
@@ -94,7 +134,7 @@ paste credential contents.
   FAIL/3 skips, identically reproduced from untouched6537025. Compose, frontend
   lint/build, Session48 and Chromium34 PASS. F1–F3 APPROVE: exact17 paths,
   migration1, A01–A22 local traceability, same-code bounded proofs and truthful
-  scope. F4 remains pending Ready PR/final-head3 CI/protected squash actual merge.
+  scope. F4 subsequently approved after actual protected squash and tree verification.
   [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
   has A[#115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
   B[#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),

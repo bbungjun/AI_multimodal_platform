@@ -575,11 +575,11 @@ The default command proves ownership only; final G4.3B requires explicit all.
 Unattended `/metrics` now returns401 without a Session; do not add a scrape bypass.
 Ready PR, final-head CI and actual merge remain separately linked from Issue112.
 
-## G5A credit schema and safe rollback
+## G5A/G5B credit schema, lifecycle proof and safe rollback
 
-The current G5A branch packages `0004_credit_foundation`. Its additive upgrade
-creates empty credit account/cycle/grant/ledger tables; it does not backfill Users,
-issue monthly credit or connect generation. Start or migrate only an explicitly
+Current code packages `0005_credit_lifecycle_operations`. G5A creates empty credit
+account/cycle/grant/ledger tables;0005 adds immutable operation receipts. Neither
+migration backfills Users nor connects generation. Start or migrate only an explicitly
 chosen environment after checking its revision; Goal verification never migrates
 the developer or preview database.
 
@@ -592,8 +592,15 @@ Downgrade acquires bounded exclusive locks and proceeds only when all four credi
 tables are empty. If any contains data, `credit_foundation_requires_empty_tables`
 is the expected safe refusal: preserve the records and deploy a reviewed forward
 fix. Never disable the ledger triggers or delete accounting rows to force rollback.
-G5A has no lifecycle writer, so operational account creation and renewal remain
-G5B work rather than a manual runbook procedure.
+Never invoke lifecycle writes manually against a user DB. Validate G5B only with:
+
+```powershell
+python scripts/verify_credit_lifecycle.py --env-file .env.example
+```
+
+Run it twice. Each invocation owns a fresh project and proves lazy renewal,
+Plan/bonus/replay/expiry, caller rollback and eight observed lock races. Populated
+operations deliberately block downgrade to0004. G5B does not debit generation.
 
 ## Stop
 

@@ -1,7 +1,8 @@
 # G5 — Credit delivery split and G5A executable specification
 
-Status: `Mock Verified locally`, 2026-09-04. G5A Todo1–7 and all local gates
-passed; Ready PR/final-head CI/merge remain pending. B/C remain Planned.
+Status: `Mock Verified — Merged`, 2026-09-04. G5A Todo1–8/F1–F4 complete;
+PR118 squash a003257, final-head required3 CI SUCCESS. B design is now frozen in
+[its executable spec](g5-credit-lifecycle-spec.md); C remains a planning envelope.
 Parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
 The user approved execution with the matching frozen G5A Goal hash on2026-09-04.
 The original preparation/contract below is preserved; execution evidence is in
@@ -259,6 +260,9 @@ overspend/settlement races remain C and are not claimed by this Goal.
 ## 7. Successor planning envelopes (not executable Goals)
 
 ### G5B — after A merge
+
+This historical planning envelope is superseded by the implemented, locally
+Mock Verified [G5B executable spec](g5-credit-lifecycle-spec.md) on merged a003257.
 
 Proposed small Interface: `ensure_cycle(session, user_id, now)`,
 `change_plan(session, user_id, target, now, operation_key)`,

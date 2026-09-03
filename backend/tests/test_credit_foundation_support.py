@@ -55,7 +55,7 @@ def test_default_fixtures_match_named_persistence_contract():
     assert p.cycle()["ends_at"] - p.cycle()["starts_at"] == p.timedelta(seconds=2_592_000)
     assert p.grant()["granted_microcredits"] == 0
     assert p.event()["rate_card_version"] == "v1"
-    assert p.HEAD == "0004_credit_foundation"
+    assert p.HEAD == "0005_credit_lifecycle_operations"
     assert set(p.CREDIT) == {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
 
 
@@ -68,3 +68,14 @@ def test_output_is_closed_and_failure_does_not_echo_exception_or_sql():
         expression = ast.unparse(node)
         assert expression in ('print(json.dumps(result))', "print('credit_proof_failed:' + phase)")
     assert "sys.exit(124)" in PATH.read_text()
+
+
+def test_populated_four_table_real_round_trip_and_operation_guards_are_additive():
+    source = PATH.read_text()
+    assert 'await migrate("downgrade", "0004_credit_foundation")' in source
+    assert 'credit_operations_requires_empty_table' in source
+    assert 'LOCK TABLE credit_operations IN ROW EXCLUSIVE MODE' in source
+    assert 'await snapshot(connection, LEGACY+CREDIT) == before and await schema() == old_schema' in source
+    assert source.index('"checks": await credit(connection, dsn)') < source.index('await operation_migration(connection)')
+    assert 'credit_foundation_requires_empty_tables' in source
+    assert 'DISABLE TRIGGER' not in source

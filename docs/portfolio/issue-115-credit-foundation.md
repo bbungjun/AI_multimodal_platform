@@ -237,3 +237,11 @@ protected squash merge, Issue115 closure and parent114 remaining open are requir
 before F4 APPROVE. G5B consumes the merged four-table/pure-policy Interface only;
 it adds initialization, 30-day renewal, Plan changes and grant writers in its own
 frozen Goal.
+
+### Todo8 — final delivery (recorded during successor preparation)
+
+Ready PR118 actually squash merged `a003257c88e09d3e5404a73b44ebdf6deb4650db`.
+Final PR head b940be2 passed verify and both Scan/SBOM; merge tree equals final
+PR tree and non-document code equals runtime b2900a4. Issue115 CLOSED, parent114
+OPEN. F4 APPROVE. [Final evidence and CI links](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729)
+supersede the pre-merge pending checkpoint above. No additional G5A runtime claim.

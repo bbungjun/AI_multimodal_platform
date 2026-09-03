@@ -3,7 +3,7 @@
 ## Document Contract
 
 - Status: `Accepted / Planned`
-- Last updated: `2026-09-03`
+- Last updated: `2026-09-04`
 - This document is the single source of truth for the initiative-wide product
   decisions, invariants, Goal order, and current progress.
 - Implementation details that apply to only one Goal belong in that Goal's
@@ -244,8 +244,8 @@ document or inherit the full design interview.
 | G4.3A | Metadata ownership access and safe deletion | Mock Verified — Merged | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) squash cd654e5, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. Final head5738c0d all3 required CI SUCCESS; B receives read/batch/cache/client Interfaces |
 | G4.3B | File/Range, Master ops and final proof | Mock Verified — Merged | [PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) squash6537025, [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/112#issuecomment-5525436934), [record](../portfolio/issue-112-file-ops-access.md) | Original No-Go preserved; v2 c05b815 aggregate4/998.187s, each legacy348/races2 or FOVE310/A-B10, cleanup0. Schema2/auth1/Linux1128/frontend48+34 PASS. Final head8aa6ba8 all3 required CI SUCCESS; Issues112/109 closed |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned — split A/B/C | [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114), [split spec](g5-credit-foundation-spec.md) | Aggregate requires all three children; not closed by foundation alone |
-| G5A | Credit persistence and pure Plan/rate/time policy | Mock Verified locally — delivery pending | [Issue115](https://github.com/bbungjun/AI_multimodal_platform/issues/115), Ready [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118), [spec](g5-credit-foundation-spec.md), [execution record](../portfolio/issue-115-credit-foundation.md) | Exact17 paths/migration0004 one; four empty tables plus immutable policy. Schema2/credit90/races3, auth1, ownership all4/993.610s, Linux1229 and frontend48+34 PASS; exact-project cleanup0. No accounts/grants/renewal/deduction or product wiring. Final CI/merge pending |
-| G5B | Account initialization, 30-day cycles, Plan transitions and grants | Planned — blocked by G5A | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [planning envelope](g5-credit-foundation-spec.md#7-successor-planning-envelopes-not-executable-goals) | Consume A's four tables/pure policy after merge; freeze own exact paths/commands/Goal then. No generation or public Master mutation wiring |
+| G5A | Credit persistence and pure Plan/rate/time policy | Mock Verified — Merged | [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118), [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729), [record](../portfolio/issue-115-credit-foundation.md) | Squash a003257; final b940be2 required3 CI SUCCESS. Exact17/migration1; schema2/credit90/races3, auth1, ownership all4/993.610s, Linux1229/frontend48+34/cleanup0. No automatic credit or product wiring |
+| G5B | Account initialization, 30-day cycles, Plan transitions and grants | Locally Mock Verified — delivery pending | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119), [spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | code65cdbb4; exact20/new0005; schema2 credit90/races3, lifecycle2 groups8/races8/checks320, auth1, ownership-file4, Linux1321, frontend48+34. No billing wiring; final-head CI/merge pending |
 | G5C | Reservation allocations, Usage and atomic settlement/release | Planned — blocked by G5B | [Issue117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [planning envelope](g5-credit-foundation-spec.md#7-successor-planning-envelopes-not-executable-goals) | Consume B's caller-owned transaction Interface; freeze own Goal after merge. G6/G7 product wiring and G8 concurrency remain separate |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -370,6 +370,21 @@ G5B/C remain dependency-gated planning envelopes until predecessor Interfaces
 are implemented. [Detailed split](g5-credit-foundation-spec.md). Preparation is
 not authorization to execute, and no new capability is marked Implemented.
 
+### G5B design refinement proposal — 2026-09-04
+
+G5B design consumes merged A without changing accepted prices/entitlements.
+The user's hash-bearing execution request approved the bounded refinements in
+[B spec section3](g5-credit-lifecycle-spec.md#3-lifecycle-rules-proposed-for-execution-approval):
+current-cycle-only lazy issuance, replacement/cancellation of pending downgrades,
+allowance-difference upgrades preserving consumed/held credit, available-only
+expiry, and immutable payload-equivalent command replay before renewal.
+A small append-only operation table is needed because scheduled/cancel/no-op Plan
+requests cannot be represented by zero-valued credit ledger events. Exactly one
+new migration and20 code paths include new-head proof compatibility. Internal
+accounting access does not authenticate users or expose public Master mutations.
+The bounded B Module is now implemented and undergoing isolated verification;
+no B/C product wiring or charged-generation behavior is claimed.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
@@ -388,11 +403,12 @@ mode:
 
 ## Next Goal
 
-G5A Issue115 is locally Mock Verified on branch
-`codex/issue-115-credit-foundation`; delivery is pending Ready PR/final CI/merge.
-After its actual merge, the next executable design slice is **G5B Issue116**.
-Inspect the merged four-table/pure-policy Interface before freezing B's exact
-paths, transaction tests, commands and Goal SHA. Do not begin B from this branch.
+G5A Issue115 is actually merged at a003257. **G5B Issue116** is in progress on
+`codex/issue-116-credit-lifecycle`, with [spec](g5-credit-lifecycle-spec.md),
+exact20 paths, one additive migration, Todo1–8/F1–F4 and a frozen local Goal.
+Read [current-work](../current-work.md) for its SHA and first verification command.
+Execution approval is recorded; completion still requires every frozen runtime
+and delivery gate, not merely the existence of the Module.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;

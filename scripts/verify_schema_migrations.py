@@ -21,12 +21,13 @@ DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
 PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
 G1_REVISION = "0001_generation_baseline"
-EXPECTED_REVISION = "0004_credit_foundation"
+EXPECTED_REVISION = "0005_credit_lifecycle_operations"
+CREDIT_REVISION = "0004_credit_foundation"
 OWNERSHIP_REVISION = "0003_content_ownership"
 IDENTITY_REVISION = "0002_user_session_persistence"
 G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
 CREDIT_TABLES = {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
-EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions"} | CREDIT_TABLES
+EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions", "credit_operations"} | CREDIT_TABLES
 WORK_SECONDS = 300
 CLEANUP_SECONDS = 90
 _COMMAND_TIMEOUT = ContextVar("schema_command_timeout", default=120.0)
@@ -52,6 +53,7 @@ EXPECTED_FOREIGN_KEYS = {
     "fk_user_sessions_user_id_users",
     "fk_credit_accounts_user", "fk_credit_cycles_account", "fk_credit_grants_account",
     "fk_credit_grants_cycle_owner", "fk_credit_ledger_account", "fk_credit_ledger_grant_owner",
+    "fk_credit_operations_account", "fk_credit_operations_cycle_owner", "fk_credit_operations_grant_owner",
 }
 EXPECTED_INDEXES = {
     "ix_jobs_owner_created_at_id",
@@ -70,6 +72,7 @@ EXPECTED_INDEXES = {
     "ix_user_sessions_active_user_id",
     "ix_credit_cycles_user_start", "uq_credit_grants_base_cycle",
     "ix_credit_grants_user_expiry", "ix_credit_ledger_user_created",
+    "ix_credit_operations_user_effective",
 }
 
 
@@ -627,7 +630,7 @@ def verify_revision_refusal(
     stale_revision: str = "0000_stale_revision",
 ) -> None:
     expected_revision = EXPECTED_REVISION
-    if stale_revision not in ("0000_stale_revision", OWNERSHIP_REVISION):
+    if stale_revision not in ("0000_stale_revision", OWNERSHIP_REVISION, CREDIT_REVISION):
         raise VerificationError("invalid_stale_revision")
     update_revision = (
         "UPDATE alembic_version SET version_num="
@@ -832,7 +835,9 @@ def verify_reset(
     database = values["POSTGRES_DB"]
     before = _reset_row_counts(runner, project_name, env_file, values)
     _seed_reset_rows(runner, project_name, env_file, values)
-    expected = {table: count + (table not in CREDIT_TABLES) for table, count in before.items()}
+    # The fixed seed adds only the six legacy application rows, not accounting history.
+    seeded_tables = {"users", "user_sessions", "jobs", "assets", "prompt_enhancements", "outbox_events"}
+    expected = {table: count + (table in seeded_tables) for table, count in before.items()}
     _assert_reset_row_counts(
         runner, project_name, env_file, values, expected=expected
     )
@@ -1037,7 +1042,7 @@ def verify_credit_foundation(runner, project_name, env_file, values, mode):
     except (ValueError, TypeError):
         raise VerificationError("invalid_credit_proof_receipt") from None
     if (not isinstance(payload, dict) or set(payload) != {"mode", "checks"} or payload["mode"] != mode
-            or type(payload["checks"]) is not int or payload["checks"] < (80 if mode == "credit" else 1)):
+            or type(payload["checks"]) is not int or payload["checks"] < (90 if mode == "credit" else 1)):
         raise VerificationError("invalid_credit_proof_receipt")
     return payload["checks"]
 
@@ -1054,7 +1059,7 @@ def write_receipt(project_name: str, *, cleanup: bool, completed: bool, commit: 
             or any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
                    for value in (work_seconds, cleanup_seconds))
             or (completed and (not cleanup or failure_code != "none" or cleanup_failure_code != "none"
-                               or credit_checks < 80 or work_seconds > WORK_SECONDS or cleanup_seconds > CLEANUP_SECONDS))):
+                               or credit_checks < 90 or work_seconds > WORK_SECONDS or cleanup_seconds > CLEANUP_SECONDS))):
         raise VerificationError("invalid_schema_receipt")
     DEFAULT_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     path = DEFAULT_EVIDENCE_DIR / f"migration-{project_name}.json"
@@ -1081,6 +1086,9 @@ def write_receipt(project_name: str, *, cleanup: bool, completed: bool, commit: 
         "credit_uniqueness_races": 3 if completed else 0,
         "credit_downgrade_refusal": status,
         "credit_append_only": status,
+        "operation_additive_round_trip": status,
+        "operation_populated_lock_refusal": status,
+        "stale_credit_revision": status,
         "reset": status if include_reset else "not_requested",
         "work_seconds": round(work_seconds, 3),
         "cleanup_seconds": round(cleanup_seconds, 3),
@@ -1112,6 +1120,8 @@ def verify(
     credit_checks = 0
     print(f"phase=start project={project_name}", flush=True)
     try:
+        _run(runner, compose_command(project_name, env_file, "build", "migrate", "backend", "worker", "dispatcher"),
+             action="current source image build")
         _run(
             runner,
             compose_command(
@@ -1167,6 +1177,7 @@ def verify(
         print("phase=revision_refusal", flush=True)
         verify_revision_refusal(runner, project_name, env_file, values)
         verify_revision_refusal(runner, project_name, env_file, values, OWNERSHIP_REVISION)
+        verify_revision_refusal(runner, project_name, env_file, values, CREDIT_REVISION)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)
         if code_revision(runner) != commit:

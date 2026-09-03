@@ -146,3 +146,62 @@ def test_upgrade_uses_no_old_table_ddl_or_data_write(monkeypatch):
     for call in op.mock_calls:
         assert call[0] in {"create_table", "create_index", "execute"}
     assert not op.get_bind.called
+
+
+def operation_migration():
+    path = ROOT / "backend/migrations/versions/0005_credit_lifecycle_operations.py"
+    spec = importlib.util.spec_from_file_location("operation_migration_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_operation_schema_is_typed_owned_and_immutable():
+    table = models().CreditOperation.__table__
+    assert set(table.columns.keys()) == set("user_id operation_key kind target_plan amount_microcredits expires_at reason_code rate_card_version effective_at result_cycle_id result_grant_id outcome".split())
+    assert {c.name for c in table.columns if c.nullable} == {
+        "target_plan", "amount_microcredits", "expires_at", "reason_code", "result_grant_id"}
+    assert [c.name for c in table.primary_key] == ["user_id", "operation_key"]
+    assert {fk.name for fk in table.foreign_key_constraints} == {
+        "fk_credit_operations_account", "fk_credit_operations_cycle_owner", "fk_credit_operations_grant_owner"}
+    assert all(fk.ondelete == "RESTRICT" for fk in table.foreign_key_constraints)
+    checks = " ".join(str(c.sqltext) for c in table.constraints if isinstance(c, CheckConstraint))
+    for token in ("target_plan IS NOT NULL", "amount_microcredits IS NOT NULL",
+                  "reason_code IS NOT NULL", "upgraded", "scheduled", "cancelled",
+                  "unchanged", "expires_at > effective_at", "{1,96}"):
+        assert token in checks
+    assert table.c.operation_key.type.length == 96
+    assert table.c.effective_at.type.timezone
+    assert isinstance(table.c.amount_microcredits.type, BigInteger)
+    assert all(c.server_default is None for c in table.columns)
+
+
+def test_operation_upgrade_adds_only_one_table_and_no_data(monkeypatch):
+    m = operation_migration()
+    assert (m.revision, m.down_revision) == ("0005_credit_lifecycle_operations", "0004_credit_foundation")
+    op = Mock()
+    monkeypatch.setattr(m, "op", op)
+    m.upgrade()
+    assert [c.args[0] for c in op.create_table.call_args_list] == ["credit_operations"]
+    assert [c.args[0] for c in op.create_index.call_args_list] == ["ix_credit_operations_user_effective"]
+    sql = " ".join(c.args[0] for c in op.execute.call_args_list)
+    for token in ("UPDATE OR DELETE", "TRUNCATE", "credit_operation_append_only", "23514"):
+        assert token in sql
+    assert not op.get_bind.called
+
+
+@pytest.mark.parametrize("nonempty", [False, True])
+def test_operation_downgrade_guard_before_ddl(monkeypatch, nonempty):
+    m = operation_migration()
+    op = Mock()
+    op.get_bind.return_value.execute.return_value.scalar.return_value = nonempty
+    monkeypatch.setattr(m, "op", op)
+    if nonempty:
+        with pytest.raises(RuntimeError, match="^credit_operations_requires_empty_table$"):
+            m.downgrade()
+        assert not op.drop_table.called and not op.execute.called
+    else:
+        m.downgrade()
+        op.drop_table.assert_called_once_with("credit_operations")
+    statements = [str(c.args[0]) for c in op.get_bind.return_value.execute.call_args_list]
+    assert statements[:2] == ["SET LOCAL lock_timeout = '5s'", "LOCK TABLE credit_operations IN ACCESS EXCLUSIVE MODE"]
