@@ -236,8 +236,8 @@ document or inherit the full design interview.
 | G2 | User and Session persistence | Mock Verified | [Issue #96](https://github.com/bbungjun/AI_multimodal_platform/issues/96), [spec](g2-user-session-persistence-spec.md), [portfolio record](../portfolio/issue-96-user-session-persistence.md), PR #97 merged at `58f405b` | Complete; cloud rollout Deferred / No-Go |
 | G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
 | G3.1 | Authenticated workspace entry and browser Session UX | Mock Verified — Merged | [Spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) merged at `100f5e7`, [portfolio](../portfolio/issue-101-authenticated-workspace-ux.md); final head `85cb215` verify + both scans PASS; module48, browser34, backend467 PASS / 3 conditional SKIP; isolated golden/cleanup PASS | G3 interfaces consumed; G4 receives browser Session interface and must enforce backend ownership. 17 paths / zero migrations; no live login |
-| G4.1 | Authenticated mock verification harness | In Progress | [Accepted spec](g4-ownership-access-control-spec.md), [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103), [record](../portfolio/issue-103-authenticated-mock-harness.md); base `100f5e7`, branch `codex/issue-103-authenticated-mock-harness`; hash verified | Input: G3 require_user/Session hash contract. First focused smoke/workflow pytest: 31 PASS. 13-path hard limit, zero migrations, local Docker/mock only |
-| G4.2 | Owner persistence and admission/reference invariants | Planned | [Accepted G4 spec](g4-ownership-access-control-spec.md); not implemented | Blocked by G4.1 harness; 20-path budget, exactly one G4 migration; no public multi-user deployment |
+| G4.1 | Authenticated mock verification harness | Mock Verified | [Spec](g4-ownership-access-control-spec.md), [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103), [record](../portfolio/issue-103-authenticated-mock-harness.md); implementation `471b76e`, branch `codex/issue-103-authenticated-mock-harness` | Two fresh Docker cycles: auth12/scenarios3/cleanup each; focused106, Linux542 PASS / 3 existing SKIP; frontend48+34 PASS. Exactly13 paths, zero migrations. Delivery status tracked by Issue/PR |
+| G4.2 | Owner persistence and admission/reference invariants | Planned | [Accepted G4 spec](g4-ownership-access-control-spec.md); not implemented | Input: G4.1 MemoryIdentity/ScopedClient/OwnedRuntime, run_smoke(args, client=...), canonical --cycles2. Update expected schema head with its one migration; 20-path budget, no public multi-user deployment |
 | G4.3 | Complete ownership access enforcement | Planned | [Accepted G4 spec](g4-ownership-access-control-spec.md); not implemented | Blocked by G4.2; read/mutation/file/ops enforcement, 20-path budget, zero migrations; only then close aggregate G4 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -339,15 +339,16 @@ at `100f5e7`, final-head required CI all passed. G4 consumes G3 `require_user` /
 `AuthenticatedUser` and the existing same-origin browser Session flow.
 
 The [G4 specification](g4-ownership-access-control-spec.md) is accepted. G4.1
-[Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) and
-`codex/issue-103-authenticated-mock-harness` prepare the first sequential Goal.
-Its frozen local plan/hash are recorded in current-work and the Issue. Await an
-explicit execution request before Todo 1. G4.1/G4.2/G4.3 budgets are 13/20/20;
-only the final slice may close aggregate G4 as Mock Verified. Neither earlier
-slice is safe for public multi-user deployment. No paid Redis service is needed.
+[Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) now
+provides the authenticated test harness; see its [evidence](../portfolio/issue-103-authenticated-mock-harness.md)
+for verification and delivery. Next is G4.2 design/Issue/Goal preparation, not
+implicit implementation authorization. G4.1/G4.2/G4.3 budgets remain13/20/20;
+only G4.2 adds a migration. Reuse injected clients and hash-only fixtures, updating
+both expected schema revisions when ownership persistence changes.
 
-Existing generation/file/ops endpoints are not yet protected. There is no product
-mock-login bypass, and no new code was added by design preparation. Live operation
+Existing generation/file/ops endpoints are not yet protected. No product mock-login
+bypass was added. No partial slice is safe for public multi-user deployment.
+Live operation
 also remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
 real OAuth/browser/proxy verification, and the proposed machine-metrics access contract.
 Plan/Credit/Usage/Reservation and Master mutations remain later Goals.

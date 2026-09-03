@@ -77,38 +77,36 @@ paste credential contents.
 
 ## Active Work
 
-### G4.1 execution — 2026-09-03
+### G4.1 authenticated mock harness — 2026-09-03
 
-- Local `main` fast-forwarded to `100f5e7`; G3.1 PR #102 is MERGED and Issue #101
-  closed. Final PR head `85cb215` passed verify and both Scan/SBOM checks.
-- [G4 specification](initiatives/g4-ownership-access-control-spec.md) is accepted.
-  [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) and
-  `codex/issue-103-authenticated-mock-harness` execution started after exact hash verification.
-  Todo 1 baseline: existing focused smoke/workflow suite 31 PASS; local Docker Desktop
-  and Compose 5.0.2 confirmed. Existing preview and unrelated resources remain untouched.
-- Inspection found unscoped Job/Prompt/Asset routes, direct DB-free file serving,
-  global ops exposure and anonymous smoke clients. A single Goal exceeds the
-  20-path budget. Accepted G4.1 harness (13), G4.2 persistence/admission (20),
-  G4.3 access enforcement (20), exactly one migration across G4.
-- Accepted Master inspection is read-only across owners; all mutations and
-  generation inputs remain owner-only. Ops/metrics become Master-only, with
-  machine scraping explicitly left as a deployment gate. Only local Docker
-  PostgreSQL/Redis and AI_PROVIDER=mock are authorized; no paid managed service.
-- Frozen local/untracked plan: `.omo/plans/issue-103-g4-1-authenticated-mock-harness-goal.md`.
-  SHA-256: `ad8b5899d39b23b1f5ec58467658db5d4c20c91d67ee9ed940473607b3fea718`.
-  Transfer the exact file separately between machines; it is not in Git.
-- Next: explicitly execute that Goal, verify hash, then Todo 1–8 and F1–F4.
-  First focused baseline from backend: `python -m pytest tests/test_smoke_mock_golden_path_script.py tests/test_smoke_mock_retry_script.py tests/test_smoke_mock_i2v_duplicate_script.py tests/test_mock_smoke_workflow.py -q` with AI_PROVIDER=mock.
-  Hard scope: 13 allowlisted paths, zero migrations. Delivery: Ready PR, final-head
-  verify + both Scan/SBOM checks, squash auto-merge (no protection bypass).
-  No partial slice constitutes user isolation; no public deployment before G4.3
-  and the remaining #99/live environment gates.
-- Design evidence: [G4 design record](portfolio/g4-ownership-design.md).
-  Execution record: [Issue #103](portfolio/issue-103-authenticated-mock-harness.md).
-  Preparation validates document links/path counts/hash and diff hygiene, not runtime tests.
-- Local login preview remains at `http://localhost:5173/login` under the separate
-  `creativeops-login-preview` Compose project. Do not reset/delete its volumes
-  or use it for destructive verification. No real OAuth is configured there.
+- **Implemented / Mock Verified** on `codex/issue-103-authenticated-mock-harness`.
+  [Issue103](https://github.com/bbungjun/AI_multimodal_platform/issues/103),
+  [evidence](portfolio/issue-103-authenticated-mock-harness.md), [spec](initiatives/g4-ownership-access-control-spec.md).
+  Harness implementation `471b76e`; Ready PR delivery uses strict final-head
+  verify + both Scan/SBOM checks and squash auto-merge, without bypass.
+- Run `python scripts/verify_ownership.py --env-file .env.example --cycles 2`.
+  Two committed-code cycles: projects `ownership-verify-6a554904eeb2` / `ownership-verify-1d16da8309e6`,
+  auth12 + scenarios3 + cleanup=true each, 32.81s /32.47s. Schema head remains
+  `0002_user_session_persistence`; no migrations, exactly13 allowed non-document paths.
+- Focused106 PASS; Linux full542 PASS /3 pre-existing conditional SKIP.
+  Windows541 PASS /3 SKIP /1 existing Bash-path failure independently reproduced
+  at base100f5e7. Frontend lint/build PASS; module48/browser34 PASS. Compose/hygiene PASS.
+- Windows plugin discovery initially failed because ProgramFiles was filtered;
+  allowlist corrected without exposing credentials. Real binding inspection and
+  Redis tmpfs added; runtime failures/cleanup are covered by negative tests.
+- Frozen plan remains local/untracked: `.omo/plans/issue-103-g4-1-authenticated-mock-harness-goal.md`.
+  SHA256 `ad8b5899d39b23b1f5ec58467658db5d4c20c91d67ee9ed940473607b3fea718` unchanged.
+  Do not stage .omo wholesale. Bounded per-Todo receipts are local under .omo/evidence/issue-103/.
+- Next: prepare G4.2 spec/Issue/Goal for owner persistence and admission/reference
+  invariants (20-path budget, exactly one G4 migration), after G4.1 delivery.
+  Reuse MemoryIdentity/ScopedClient/OwnedRuntime and `run_smoke(args, client=...)`;
+  update both expected schema-head constants with that migration.
+- Generation/file/ops remain unprotected. No public multi-user deployment before
+  G4.3, emergency revocation #99 and real OAuth/proxy gates. No real provider/cloud
+  or paid Redis service was called. Old smoke --base-url/--compose options now refuse.
+- Existing `creativeops-login-preview` at localhost5173/login and its DB were not
+  altered. Never use default/preview volumes for verifier cleanup. See the
+  [runbook](runbooks/local-mock.md#authenticated-isolated-verification-g41) for guarded recovery.
 
 ### G3.1 execution handoff — 2026-09-03
 

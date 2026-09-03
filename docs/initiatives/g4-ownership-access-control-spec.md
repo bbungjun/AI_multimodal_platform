@@ -2,7 +2,8 @@
 
 ## 상태와 입력
 
-- **Accepted / Planned — 2026-09-03. 사용자 승인 완료; 구현·검증 완료는 아니다.**
+- **Accepted — G4.1 harness Mock Verified; G4.2/G4.3 Planned (2026-09-03).**
+  전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
 - 상위 합의: [initiative](auth-credits-master-console.md)의 Ownership Invariants,
@@ -12,7 +13,7 @@
 - 세 slice 분할, Master의 타인 데이터 읽기만 허용, 운영 endpoint Master 제한을 승인했다.
   비용 범위는 로컬 Docker PostgreSQL/Redis와 AI_PROVIDER=mock이며 유료 관리형 서비스는 제외한다.
 - G4.1 Tracker: [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103).
-  Branch: `codex/issue-103-authenticated-mock-harness`. 실행은 별도 Goal 요청 후 시작한다.
+  Branch: `codex/issue-103-authenticated-mock-harness`. 사용자 Goal 요청으로 구현·격리 검증을 수행했다.
 - Frozen Goal: `.omo/plans/issue-103-g4-1-authenticated-mock-harness-goal.md` (local/untracked).
   SHA-256: `ad8b5899d39b23b1f5ec58467658db5d4c20c91d67ee9ed940473607b3fea718`.
   파일은 PC 간 별도 전달해야 한다. G4.1은 13개 allowlist, migration 0개로 실행한다.
@@ -353,9 +354,10 @@ git status --short --branch
 git diff --cached --name-only
 ```
 
-`python scripts/verify_ownership.py --env-file .env.example`는 **G4.1에서 만들 후보 명령**이다.
-현재 실행 가능한 도구로 표현하지 않는다. CI의 backend 전체 pytest는 보안 matrix의
-mock 계약을 실행하고, real-runtime 2회 receipt는 별도 필수 delivery gate로 남긴다.
+`python scripts/verify_ownership.py --env-file .env.example --cycles 2`는 G4.1에서 구현·검증한
+명령이다. 기존 smoke CLI는 이를 위임하고 arbitrary base URL/Compose 옵션을 거절한다.
+후속 G4 보안 matrix는 아직 미구현이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
+인증12 × 2, 세 시나리오 × 2, cleanup과 전체 회귀 결과를 구분해 남긴다.
 
 ## 8. 종료·중단 조건
 
@@ -378,7 +380,14 @@ mock 계약을 실행하고, real-runtime 2회 receipt는 별도 필수 delivery
 
 설계/분할 승인을 반영하고 G4.1 Issue #103과 main `100f5e7` 기반 branch를 만들었다.
 G4.1 전용 Todo 1–8, F1–F4, 로컬 격리 검증 2회와 Ready PR/CI/squash auto-merge를 고정한다.
-계획 준비는 구현 실행이 아니다. DB reset·provider/cloud 호출·새 PR은 수행하지 않는다.
+G4.1 구현은 frozen Goal 범위에서 완료했고 test-only harness만 Mock Verified다.
+DB reset·새 migration·실제 OAuth/provider/cloud 호출은 수행하지 않았다.
+
+G4.2 입력 interface: `MemoryIdentity`, `ScopedClient`, `OwnedRuntime`과
+`verify_ownership.py --cycles 2`; scenario는 `run_smoke(args, client=...)`를 받는다.
+서버가 검증한 A/B/Master 및 인증 거절 fixture를 후속 owner/reference 검사에 재사용한다.
+현재 schema head는 `0002_user_session_persistence`; G4.2에서 head가 바뀌면
+harness/seeder의 expected revision과 비어 있는 DB/fixture 계약을 함께 갱신한다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.
