@@ -11,6 +11,7 @@ from app.api.generations import get_session
 from app.api.auth_dependencies import require_user
 from app.auth.service import AuthenticatedUser
 from app.models import GenerationMode, Job, JobState, utc_now
+from app.ownership import OwnershipAccess, assert_same_owner
 from app.schemas import PipelineCreateRequest, PipelineResponse, job_response_from_job
 from app.services.jobs.outbox import add_job_dispatch_event
 from app.services.rate_limit import DEFAULT_MODEL_LIMITS
@@ -97,20 +98,19 @@ async def create_pipeline(
 async def get_pipeline(
     parent_job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> PipelineResponse:
-    parent = await session.get(Job, parent_job_id, options=[selectinload(Job.assets)])
-    if parent is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pipeline parent job was not found.",
-        )
+    access = OwnershipAccess(session, actor)
+    parent = await access.job(parent_job_id, intent="read")
 
     child = await _get_pipeline_child(session, parent_job_id)
-    if child is None:
+    if child is None or child.parent_job_id != parent.id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pipeline child job was not found.",
+            detail="content_not_found",
         )
+    assert_same_owner(parent, child)
+    await access.validate_read_jobs([parent, child])
 
     return PipelineResponse(
         id=parent.id,

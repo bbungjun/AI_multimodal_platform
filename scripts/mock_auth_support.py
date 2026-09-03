@@ -13,7 +13,7 @@ import threading
 from contextlib import contextmanager
 from uuid import uuid4, uuid5, NAMESPACE_URL
 from urllib.error import HTTPError
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
@@ -26,6 +26,11 @@ EXECUTION_RESULTS = {
     "race_completed": "race_completed", "expire_session": "expired", "check_completed": "completed_records",
 }
 RACE_CASES = ("create_create", "create_retry", "retry_retry")
+ACCESS_RESULTS = {"prepare_metadata":"prepared", "inspect_metadata":"inspected",
+    "check_read_queries":"query_checks", "clear_metadata":"cleared",
+    "prepare_delete_race":"prepared", "inspect_delete_race":"race_checks", "delete_waiters":"lock_waiters"}
+DELETE_CASES = ("delete_create", "delete_retry")
+ACCESS_GROUPS = ("L", "D", "P", "X", "R", "C", "S", "Q")
 
 
 def protocol_line(process, expected, timeout):
@@ -116,8 +121,21 @@ class ScopedClient:
         self._secret = secret
         self._transport = transport or http_transport
 
-    def request_bytes(self, method, path, *, expected_status, step_name="request", payload=None, headers=None):
+    def request_bytes(self, method, path, *, expected_status, step_name="request", payload=None, headers=None, query=None):
         url = safe_url(self.base_url, path)
+        if query is not None:
+            allowed = {"scope","mode","asset_kind","model","state","limit","offset"}
+            if (method != "GET" or path != "/api/generations" or type(query) is not dict
+                    or not set(query).issubset(allowed)):
+                raise HarnessError("query_refused")
+            for key,value in query.items():
+                if key in ("limit","offset"):
+                    if type(value) is not int or not (1 <= value <= 100 if key=="limit" else 0 <= value <= 10000):
+                        raise HarnessError("query_refused")
+                elif type(value) is not str or not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}",value):
+                    raise HarnessError("query_refused")
+            if query:
+                url += "?" + urlencode(query)
         if method not in ("GET", "POST", "DELETE"):
             raise HarnessError("invalid_method")
         supplied = dict(headers or {})
@@ -145,11 +163,13 @@ class ScopedClient:
             raise HarnessError("response_too_large")
         return body, response_headers, status
 
-    def request_json(self, method, path, **kwargs):
+    def request_json(self, method, path, *, expected_type=dict, **kwargs):
+        if expected_type not in (dict,list):
+            raise HarnessError("invalid_json_type")
         body, _, _ = self.request_bytes(method, path, **kwargs)
         try:
             result = json.loads(body)
-            if not isinstance(result, dict):
+            if not isinstance(result, expected_type) or (expected_type is list and any(type(row) is not dict for row in result)):
                 raise ValueError
         except (ValueError, UnicodeError):
             raise HarnessError("invalid_json") from None
@@ -377,6 +397,55 @@ class OwnedRuntime:
             raise HarnessError("unsafe_execution_result") from None
         return result
 
+    def access_payload(self, operation, case="", records=None):
+        if not self.started or not self.base_url:
+            raise HarnessError("fixture_before_owned_runtime")
+        race = operation in {"prepare_delete_race","inspect_delete_race","hold_delete_source","delete_waiters"}
+        if operation not in {*ACCESS_RESULTS,"hold_delete_source"} or case not in (DELETE_CASES if race else ("",)):
+            raise HarnessError("access_operation_refused")
+        records = [] if records is None else records
+        if type(records) is not list or len(records)>16 or (records and operation != "inspect_delete_race"):
+            raise HarnessError("access_records_refused")
+        from uuid import UUID
+        try:
+            for record in records:
+                if type(record) is not dict or set(record)!={"kind","id"} or record["kind"]!="admitted":
+                    raise ValueError
+                UUID(record["id"])
+        except (ValueError,TypeError,AttributeError):
+            raise HarnessError("access_records_refused") from None
+        return json.dumps(dict(project=self.project,access_operation=operation,case=case,records=records))+"\n"
+
+    def access_fixture(self, operation, case="", records=None):
+        payload=self.access_payload(operation,case,records)
+        if operation not in ACCESS_RESULTS:
+            raise HarnessError("access_operation_refused")
+        self.assert_owned()
+        value=self.docker(*self.compose,"exec","-T","backend","python","tests/ownership_support.py",input=payload)
+        field=ACCESS_RESULTS[operation]
+        try:
+            result=json.loads(value)
+            expected=bool if field in ("prepared","inspected","cleared") else int
+            if type(result) is not dict or set(result)!={field} or type(result[field]) is not expected or result[field]<0:
+                raise ValueError
+        except (ValueError,TypeError):
+            raise HarnessError("unsafe_access_result") from None
+        return result
+
+    def observe_delete_waiters(self, case):
+        previous=self.deadline
+        self.deadline=min(previous,time.monotonic()+5)
+        try:
+            while time.monotonic()<self.deadline:
+                if self.access_fixture("delete_waiters",case)=={"lock_waiters":2} and time.monotonic()<self.deadline:
+                    return
+            raise HarnessError("delete_lock_overlap_missing")
+        finally:
+            self.deadline=previous
+
+    def delete_source_lock(self, case):
+        return self._source_lock(case,access=True)
+
     def observe_source_waiters(self, case):
         # Clamp every label check and command to the same five-second window.
         previous_deadline = self.deadline
@@ -390,14 +459,17 @@ class OwnedRuntime:
         finally:
             self.deadline = previous_deadline
 
-    @contextmanager
     def source_lock(self, case):
-        payload = self.execution_payload("hold_source", case)
+        return self._source_lock(case,access=False)
+
+    @contextmanager
+    def _source_lock(self, case, *, access):
+        payload = self.access_payload("hold_delete_source",case) if access else self.execution_payload("hold_source", case)
         self.assert_owned()
         if self.deadline - time.monotonic() < 25:
             raise HarnessError("cycle_deadline")
         args = ["docker", "--context", self.context, *self.compose, "exec", "-T", "backend",
-                "python", "tests/ownership_execution_support.py"]
+                "python", "tests/ownership_support.py" if access else "tests/ownership_execution_support.py"]
         process = None
         try:
             process = subprocess.Popen(args, cwd=ROOT, env=self.env, stdin=subprocess.PIPE,
@@ -485,6 +557,15 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                     if type(value) is not int or value < 0:
                         raise HarnessError("unsafe_execution_receipt")
                     receipt[field] = value
+                if scenario is not None and getattr(scenario,"requires_access",False):
+                    groups=getattr(runtime,"access_completed",None)
+                    checks=getattr(runtime,"access_checks",None)
+                    races=getattr(runtime,"delete_race_checks",None)
+                    if (type(groups) is not dict or set(groups)!=set(ACCESS_GROUPS)
+                            or any(value is not True for value in groups.values())
+                            or type(checks) is not int or checks<=0 or type(races) is not int or races!=2):
+                        raise HarnessError("unsafe_access_receipt")
+                    receipt.update(access_groups=8,access_checks=checks,delete_race_checks=races)
                 receipt["passed"] = True
             except (Exception, KeyboardInterrupt):
                 # Persist only the fixed phase, never the exception or raw command output.

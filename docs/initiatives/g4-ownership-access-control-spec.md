@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1/G4.2A/B Mock Verified; G4.3 Planned (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -185,14 +185,14 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 단일 G4는 production, 기존 endpoint/파일 테스트, migration verifier, mock scripts까지
 **20개 이상**의 non-document 경로에 영향을 준다. 파일 수를 숨기거나 인증 테스트를
 전역 skip/override로 우회하지 않는다. 최초 세 단계 중 G4.2를 A/B로 나누는
-추가 승인을 반영해 아래 **네 개의 순차 Goal**로 실행한다.
+추가 승인과 G4.3A/B 분할을 반영해 **다섯 개의 순차 Goal**로 실행한다.
 
 | Slice | 주된 산출물 | 예상 non-document / migration | 단독 완료의 의미 |
 |---|---|---|---|
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
 | G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
 | G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 구현11, 최대20 / 0 | [Issue107 기록](../portfolio/issue-107-worker-ownership-invariants.md): ff808b0, 실제2cycle/전체 회귀 PASS; delivery는 기록의 PR 참조. 읽기·파일 격리는 G4.3 |
-| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 20 / 0 | 아래 최종 gate 통과 시에만 G4 Mock Verified |
+| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 합집합23 / 0 | 단일20개 예상 폐기; A/B 분할 승인. A16 고정/B16 후보. 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
 공개 배포 완료가 아니다. 공개 노출은 G4.3 및 기존 #99/live 환경 gate 전까지 No-Go.
@@ -279,7 +279,12 @@ create/retry/pipeline/enhance의 authenticated fixture 전환과 owner assertion
 명시한다. 전역 autouse Master override는 금지한다. 비동기 worker가 owner를 임의로
 보정하거나 로그인 actor 대신 시스템 User를 넣지 않게 검사한다.
 
-### G4.3 경로 예산 (20)
+### G4.3 이전 경로 예상 (20, 실행 금지)
+
+main `c84394a`에서 재검토한 결과 아래 예상에는 `scripts/mock_auth_support.py`와
+`backend/tests/test_mock_auth_support.py`가 빠져 있었다. 기존 client는 query string,
+JSON 배열, `/metrics`를 거절하므로 목록·scope·운영 endpoint 실검증에 두 경로가 필요하다.
+합집합22개를 단일 Goal로 실행하지 않는다. 이 목록은 과거 추정이며 allowlist가 아니다.
 
 ```text
 backend/app/ownership.py
@@ -307,6 +312,175 @@ backend/tests/test_verify_ownership_script.py
 전 HTTP 노출면에 정책을 연결한다. main 변경이 필요하면 보호 응답 cache header 적용에만
 제한한다. 이 slice는 migration/새 permission model/frontend redesign을 추가하지 않는다.
 구현 중 테스트 fake/query 전환이 예산보다 커지면 뒤늦게 파일을 합치지 말고 재분할한다.
+
+### G4.3A/B 분할 — 승인 완료, A 실행 준비
+
+[설계 Issue #109](https://github.com/bbungjun/AI_multimodal_platform/issues/109)는 aggregate
+설계/종료 추적용이다. 사용자가 A/B 분할과 A 실행 준비를 승인했다.
+[A Issue #110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
+`codex/issue-110-metadata-ownership-access`, main `c84394a` 기반으로 준비했다.
+Goal은 `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`이며 SHA는 current-work에
+기록한다. 사용자의 frozen-SHA 요청으로 A 구현·실제 검증을 완료했다. B는 A 실제 병합 후 확정한다.
+제품 권한 정책은 바꾸지 않으며 migration은 두 단계 모두0이다.
+
+| Slice | 책임 | 종료 의미 |
+|---|---|---|
+| G4.3A | 목록·상세·삭제, JSON cache 경계, harness 호환성 | metadata 접근 제어만 검증; 파일·ops는 아직 미보호, 공개 배포 금지 |
+| G4.3B | 파일·Range, Master ops, 최종 전체 보안 검증 | 아래 전체 matrix와 두 실제 cycle/CI/merge를 닫은 뒤 G4 Mock Verified |
+
+#### A 실행 경로 (16)
+
+```text
+backend/app/ownership.py
+backend/app/api/generations.py
+backend/app/api/pipelines.py
+backend/app/api/assets.py
+backend/app/main.py
+backend/tests/test_generation_api.py
+backend/tests/test_pipeline_api.py
+backend/tests/test_asset_api.py
+backend/tests/test_ownership_access.py
+backend/tests/test_ownership_integration.py
+backend/tests/test_ownership_persistence.py
+backend/tests/ownership_support.py
+scripts/verify_ownership.py
+scripts/mock_auth_support.py
+backend/tests/test_verify_ownership_script.py
+backend/tests/test_mock_auth_support.py
+```
+
+#### B 후보 경로 (16)
+
+```text
+backend/app/ownership.py
+backend/app/api/files.py
+backend/app/api/ops.py
+backend/app/api/metrics.py
+backend/app/api/auth_dependencies.py
+backend/app/main.py
+backend/tests/test_storage.py
+backend/tests/test_ops_api.py
+backend/tests/test_ops_runtime.py
+backend/tests/test_ownership_access.py
+backend/tests/test_ownership_integration.py
+backend/tests/ownership_support.py
+scripts/verify_ownership.py
+scripts/mock_auth_support.py
+backend/tests/test_verify_ownership_script.py
+backend/tests/test_mock_auth_support.py
+```
+
+`test_ownership_access.py`와 `test_ownership_integration.py`만 신규 코드 후보다.
+최초 제안은 A15/B16/합집합22였다. A 준비 중 기존 persistence 테스트가 `read`를
+미지원 intent로 검사하는 것을 발견했다. `test_ownership_persistence.py`의 해당 테스트만
+실제 미지원 intent로 바꿔 보호를 유지하도록 A16으로 확정했다. 합집합23/공통9, 최대20
+원칙과 분할 책임은 그대로다. 테스트를 합치거나 생략하지 않는다. A allowlist 밖 코드가
+필요하면 최대20 이하여도 먼저 재설계한다. B16은 A 병합 후 다시 확인할 후보이다.
+
+#### A Interface와 실패 계약
+
+- 기존 `OwnershipAccess(session, actor)`를 확장한다. `job`/`asset`의 read와
+  owner-only mutate/use를 구분하고 목록용 scoped statement를 제공한다. Master read
+  예외가 mutate/use로 전파되지 않게 한다. Ownership Module 내부에서 commit, storage,
+  provider 호출을 하지 않는다. worker validator의 계약은 그대로 유지한다.
+- 목록은 SQL에서 owner/scope → 기존 filters → `created_at DESC, id DESC` →
+  limit/offset을 적용한다. 기본 mine, Master만 all, 일반 all403, 그 외 scope422.
+  Python 사후 필터로 pagination을 맞추지 않는다. 기존 최대100 제한을 유지한다.
+- read는 기존 serializer 전에 알려진 Job/Asset/parent/retry/source/enhancement
+  관계의 owner 정합성을 확인한다. 목록은 일괄 조회로 page 길이에 비례하는 N+1을
+  피한다. pipeline은 parent 권한을 먼저 확인한 뒤 same-owner child를 읽는다.
+  타인/없는 객체는 동일404 `content_not_found`; Master read도 구조적으로 잘못된
+  cross-owner 참조는 노출하지 않는다. 정상 blocked I2V의 null source와 SET NULL
+  이력은 허용한다. worker 실행 조건을 read 조건으로 그대로 재사용하지 않는다.
+- 임의 JSON 전체나 과거 prompt snapshot을 재귀 탐색하는 범용 sanitizer는 추가하지
+  않는다. 알려진 참조와 반환 Asset graph를 검증하는 범위를 A 계획에 명시한다.
+- delete는 먼저 own target을 확인한다. cross-owner dependent가 있으면 고정409,
+  detach/delete/storage 부수효과0으로 거절한다. 정상 active dependent409는 유지한다.
+  lock 순서는 출력 Asset을 id 순으로 잠근 뒤 Job을 잠그고 상태·참조를 fresh
+  조회하는 것이다. 기존 create/retry의 Asset → parent FK 순서와 역전되지 않게
+  실제 PostgreSQL 동시 요청으로 검증한다. own target → lock/fresh → terminal 확인 →
+  모든 incoming reference owner 확인 → active dependent 확인 → storage/detach/delete 순서다.
+  cross-owner incoming reference는 `409 ownership_reference_mismatch`로 통일한다.
+- 기존 파일 삭제 후 DB commit의 비원자성은 남는 위험으로 기록한다. 새 복구 store,
+  saga, DB schema를 이 단계에 추가하지 않는다. foreign target404는 상태 정보보다 앞선다.
+- 보호 응답에 `Cache-Control: private, no-store`를 붙인다. JSON 성공/오류와 B의
+  streaming/Range/HEAD 거절까지 재사용 가능한 response header 경계를 main에 한정한다.
+  unhandled500도 포함하는지 테스트하며, body buffering이나 예외 삼키기를 도입하지 않는다.
+  auth/health의 기존 계약, Origin 우선403, Session401/저장소 장애503을 바꾸지 않는다.
+
+#### B Interface와 실패 계약
+
+- 정확한 `Asset.local_path` + Job owner DB 조회가 resolve/stat/open/Range보다 먼저다.
+  고아 파일은 Master도404/storage0. 타인 파일과 잘못된 Range의 조합도404이며
+  Content-Range/size/bytes가 없어야 한다. 본인200/206/400/416 계약은 유지한다.
+- `/api/ops/health`, `/api/ops/metrics`, `/metrics`에 좁은 `require_master` dependency를
+  적용한다. collector/render 전에 Master200, User403, 익명/invalid401을 판정한다.
+  기존 public health/auth는 그대로다. machine scraper bypass나 cloud 설정 변경은 금지한다.
+- HEAD는 새 기능으로 추가하지 않는다. 기존405를 포함한 오류에 파일 metadata가
+  없어야 한다. Session 폐기 후 새 Range는401; 이미 보낸 bytes 회수는 주장하지 않는다.
+
+#### Harness와 검증 분담
+
+- query는 raw URL 허용이 아니라 목록 GET의 제한된 key/value를 받는 구조화된
+  Interface로 추가한다. 배열 응답은 명시적 타입 검증을 거친다. B에서 정확한 GET
+  `/metrics`만 허용한다. same-origin/loopback/no-redirect/secret-in-memory guard 유지.
+  traversal 공격 probe가 필요해도 임의 URL/percent 인코딩 전역 허용으로 바꾸지 않는다.
+- 현재 B execution proof는 A Session 만료 후 A Job도 B client로 poll한다. A 적용 후
+  올바르게404가 되므로 해당 한 Job은 Master의 허용된 read로 관찰하고 B Job은 B로
+  유지한다. Session 재발급, anonymous fallback, 인증 dependency override는 금지한다.
+- A는 A1–A13/A23/A24의 관련 read/delete 부분 및 JSON A19를 검증한다. 기존 admission,
+  worker, pipeline, race, expiry proof를 보존하고 두 fresh project에서 metadata 보안을
+  실제 HTTP+Postgres로 확인한다. file/ops는 A의 보안 성공으로 계산하지 않는다.
+- B는 전체 A1–A24와 A/B 각각 enhance→generate→poll→metadata→file/Range,
+  pipeline/retry/delete/cross-user 거절을 2cycle 검증한다. A21/A22의 기존 schema
+  증거와 새 head 회귀를 구별하고 G4.3 migration을 추가하지 않는다.
+- 각 cycle 기존 work360s + cleanup90s, 전체900s, HTTP10s, lock holder20s/observe5s를
+  유지한다. B 선행 cycle 약275s 대비 추가 proof의 예산을 설계한다. 초과하면 fixture와
+  책임을 재검토하고 보고한다. timeout/limit/검증 guard를 몰래 완화하지 않는다.
+- FK를 깨는 가짜 실제 fixture나 SQLite로 보안 증거를 대체하지 않는다. 통합 검증은
+  실제 Session을 사용하고, unit fake는 명시적 일반 actor를 사용한다. 전역 Master override 금지.
+
+#### A 실행 계획 연결과 B 준비 체크포인트
+
+각 Goal의 Todo 순서는 1 baseline/상태표, 2 Ownership Interface,
+3 route 적용, 4 경계·실패 테스트, 5 guarded harness, 6 실제2cycle/전체 회귀,
+7 문서·포트폴리오, 8 Ready PR/CI/실제 squash merge로 고정한다. A와 B에서 2–5의
+세부 테스트/commit 경로는 A frozen Goal에 고정했으며 B는 후속 확정한다. 각 Todo는 focused test,
+diff/status/staged 검사 후 작은 commit을 남긴다.
+
+F1 경로/무migration, F2 해당 보안 matrix, F3 실제2cycle/전체 회귀,
+F4 문서/최종 head의 verify + 양쪽 Scan/SBOM/실제 MERGED를 모두 APPROVE해야 한다.
+A의 APPROVE는 G4 전체 승인이나 공개 배포 허가가 아니다. 검증 우회/관리자 강제 merge 금지.
+회귀 명령은 아래7절을 사용하며, 실행 계획 동결 시 실제 CLI/test 존재와 native exit
+전파를 확인한다. 초기385 PASS는 기존 코드 baseline이다. A 실제 검증 결과는 아래에 구분한다.
+
+#### A 구현 결과와 B 입력 Interface
+
+Implementation `acb44a9`, [Issue110 실행 기록](../portfolio/issue-110-metadata-ownership-access.md).
+16개 코드 경로/migration0, head0003 동일. 실제2cycle337.73/338.12s, 각8개 access group/
+348 checks/delete-race2와 기존 proof 유지, cleanup0. Linux928 PASS/3 existing skips,
+frontend48+34 PASS. 최종 PR/CI/실제 merge는 실행 기록의 delivery 링크를 확인한다.
+
+- `OwnershipAccess.jobs_statement(scope)` 및 job/asset read, `validate_read_jobs(jobs)`:
+  작은 Interface로 목록·상세 권한과 direct reference 검증을 수행한다. Master read와
+  owner-only mutate/use는 분리. page1/20/100에서 content SELECT5 실제 측정.
+- delete는 Asset id-order lock → fresh Job lock/Asset refresh → terminal → incoming
+  owner → active dependent → storage/detach/delete. 실제 delete/create·delete/retry의
+  lock 대기를 관측했다. 이전 file-delete/DB-commit 비원자성은 남는다.
+- `ContentApplication`/`PrivateContentResponses`는 response-start만 처리하며
+  ServerErrorMiddleware 바깥에서 JSON family4개의 no-store를 적용한다. B는 file/ops를
+  명시적으로 확장·검증해야 한다. body buffering/예외 삼키기 없음.
+- `ScopedClient`는 GET generations의 구조화된 query와 명시적 `expected_type=list`를
+  지원한다. `/metrics`는 아직 거절한다. same-origin/no-redirect guard는 유지한다.
+- canonical scenario는 `requires_access=True`; access_groups8/access_checks 양수/
+  delete_race_checks2와 기존 groups를 검증한다. 고정 access fixture/lock helper만 추가,
+  Session fixture9/head0003 유지. 만료A 작업은 Master로 관찰하고 B 작업은 B로 관찰한다.
+- 실패한 첫 실행은 Master의 기본 mine을 all로 오해한 probe 문제였다. 해당 요청만
+  explicit all로 수정하고 두 cycle을 새로 통과했다. 제품 기본 mine은 변경하지 않았다.
+
+남은 제약: corrupted reference가 포함된 page는 전체404 fail-closed; arbitrary DBA
+동시 변경, 파일 원자적 복구, 이미 전송된 bytes 회수는 보장하지 않는다. A만으로 전체
+G4/공개 배포를 완료했다고 표시하지 않는다. B의16개 후보는 실제 A merge 후 재검토한다.
 
 ## 7. 필수 검증 matrix
 
@@ -398,10 +572,13 @@ G4.2 입력 interface: `MemoryIdentity`, `ScopedClient`, `OwnedRuntime`과
 G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함께 갱신했다.
 신규 owner와 접수 단계 참조 검증은 [Issue105 실행 기록](../portfolio/issue-105-owner-persistence-admission.md)
 범위까지 Mock Verified다. B는 `OwnershipAccess(session, actor)`와 `assert_same_owner`,
-저장된 owner 및 기존 authenticated harness를 이어받는다. 실제 worker 강화는 B에 남는다.
-B의 상세 B1–B4와 frozen Goal은 [Issue107 준비 기록](../portfolio/issue-107-worker-ownership-invariants.md)에
-연결한다. 원래10개 후보에 guarded execution proof helper1개를 더한11개 경로로 준비했으며
-migration0이다. 준비 단계에는 제품 코드나 DB를 변경하지 않았다.
+저장된 owner 및 기존 authenticated harness를 이어받았다. B worker 강화는
+[PR108](https://github.com/bbungjun/AI_multimodal_platform/pull/108)에서 실제 병합되었다
+(`c84394a`). 상세 B5 handoff와 [Issue107 실행 기록](../portfolio/issue-107-worker-ownership-invariants.md)을
+G4.3 입력으로 사용한다. B는11개 경로/migration0, 실제2cycle과 전체 회귀를 검증했다.
+G4.3 설계 준비는 [Issue109 기록](../portfolio/issue-109-ownership-access-design.md)에 남긴다.
+분할 승인을 반영한 [Issue110 준비 기록](../portfolio/issue-110-metadata-ownership-access.md)과
+frozen Goal을 실행해 A metadata 구현·격리 검증을 완료했다. 파일/Range/ops는 B에 남으며 개발/preview DB는 보존했다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

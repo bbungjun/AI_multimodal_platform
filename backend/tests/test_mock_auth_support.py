@@ -7,6 +7,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import mock_auth_support as support
 
 
+def test_access_structured_list_query_and_array_response():
+    observed=[]
+    def transport(request):
+        observed.append(request.full_url)
+        return b'[{"state":"completed"}]',{},200
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=transport)
+    rows=client.request_json("GET","/api/generations",query={"scope":"mine","limit":20,"offset":2},expected_type=list,expected_status=200)
+    assert rows==[{"state":"completed"}]
+    assert observed==["http://127.0.0.1:1234/api/generations?scope=mine&limit=20&offset=2"]
+
+
+@pytest.mark.parametrize("query", [{"limit":True},{"limit":101},{"offset":-1},{"offset":10001},
+    {"unknown":"x"},{"model":"a&scope=all"},{"scope":"x\r\n"},{"model":"x"*129},[("scope","all")]])
+def test_access_query_refuses_unbounded_or_unstructured_values(query):
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=lambda _:pytest.fail("must not send"))
+    with pytest.raises(support.HarnessError):
+        client.request_bytes("GET","/api/generations",query=query,expected_status=200)
+
+
+@pytest.mark.parametrize("method,path", [("POST","/api/generations"),("GET","/api/auth/me"),("GET","/metrics")])
+def test_access_query_cannot_expand_transport_routes(method,path):
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=lambda _:pytest.fail("must not send"))
+    with pytest.raises(support.HarnessError):
+        client.request_bytes(method,path,query={"scope":"all"},expected_status=200)
+
+
+@pytest.mark.parametrize("data,kind", [(b'[]',dict),(b'{}',list),(b'[1]',list),(b'["SECRET_CANARY"]',list)])
+def test_access_array_type_is_explicit_and_validated(data,kind):
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=lambda _:(data,{},200))
+    with pytest.raises(support.HarnessError) as exc:
+        client.request_json("GET","/api/generations",expected_status=200,expected_type=kind)
+    assert "SECRET_CANARY" not in str(exc.value)
+
+
 @pytest.mark.parametrize("project", ["", "default", "creativeops-login-preview", "ownership-verify-../",
                                     "ownership-verify-abcdef", "ownership-verify-AAAAAAAAAAAA"])
 def test_project_refuses_unowned_names(project):

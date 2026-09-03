@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
+from types import SimpleNamespace
 
 import httpx
 
 from app.api import assets
 from app.main import app
 from app.models import Asset, AssetKind, utc_now
+
+ACTOR = SimpleNamespace(id=UUID(int=101), role="user")
 
 
 class FakeAssetSession:
@@ -21,12 +24,17 @@ class FakeAssetSession:
             return self.asset
         return None
 
+    async def execute(self, statement):
+        row = await self.get(Asset, statement.compile().params["id_1"])
+        return SimpleNamespace(one_or_none=lambda: (row,ACTOR.id) if row else None)
+
 
 async def _get_asset(path: str, session: FakeAssetSession):
     async def override_session() -> AsyncIterator[FakeAssetSession]:
         yield session
 
     app.dependency_overrides[assets.get_session] = override_session
+    app.dependency_overrides[assets.require_user] = lambda: ACTOR
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -35,6 +43,7 @@ async def _get_asset(path: str, session: FakeAssetSession):
         ) as client:
             return await client.get(path)
     finally:
+        app.dependency_overrides.pop(assets.require_user, None)
         app.dependency_overrides.pop(assets.get_session, None)
 
 
@@ -126,7 +135,7 @@ async def test_get_asset_returns_404_for_missing_asset():
     response = await _get_asset(f"/api/assets/{missing_asset_id}", session)
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Asset was not found."
+    assert response.json()["detail"] == "content_not_found"
     assert session.get_calls == [(Asset, missing_asset_id)]
 
 

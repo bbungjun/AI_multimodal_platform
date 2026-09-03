@@ -50,7 +50,37 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await close_db_connection()
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+class PrivateContentResponses:
+    """Only intercept response-start; keep streaming and exception propagation intact."""
+
+    prefixes = ("/api/generations", "/api/pipelines", "/api/assets", "/api/prompts")
+
+    def __init__(self, application):
+        self.application = application
+
+    async def __call__(self, scope, receive, send):
+        path = scope.get("path", "")
+        protected = scope["type"] == "http" and any(
+            path == prefix or path.startswith(prefix + "/") for prefix in self.prefixes
+        )
+
+        async def send_private(message):
+            if protected and message["type"] == "http.response.start":
+                headers = [(key, value) for key, value in message.get("headers", [])
+                           if key.lower() != b"cache-control"]
+                message = {**message, "headers": [*headers, (b"cache-control", b"private, no-store")]}
+            await send(message)
+
+        await self.application(scope, receive, send_private)
+
+
+class ContentApplication(FastAPI):
+    def build_middleware_stack(self):
+        # Outside ServerErrorMiddleware so even unhandled500 cannot be cached.
+        return PrivateContentResponses(super().build_middleware_stack())
+
+
+app = ContentApplication(title=settings.app_name, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

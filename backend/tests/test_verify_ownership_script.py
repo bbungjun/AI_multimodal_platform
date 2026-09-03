@@ -306,7 +306,8 @@ def test_lock_protocol_timeout(monkeypatch):
 
 
 @pytest.mark.parametrize("failure", [None,"body","broken_pipe","timeout","eof"])
-def test_source_lock_reaps_its_fixed_helper(failure,monkeypatch):
+@pytest.mark.parametrize("access", [False,True])
+def test_source_lock_reaps_its_fixed_helper(failure,access,monkeypatch):
     from io import StringIO
     runtime = support.OwnedRuntime(support.ROOT/".env.example")
     runtime.started,runtime.base_url,runtime.compose,runtime.context = True,"http://127.0.0.1:1234",["compose"],"local"
@@ -326,12 +327,13 @@ def test_source_lock_reaps_its_fixed_helper(failure,monkeypatch):
         def kill(self): self.killed = True
     process = Process()
     def popen(args,**kw):
-        assert args[-1] == "tests/ownership_execution_support.py" and args[0:3] == ["docker","--context","local"]
+        assert args[-1] == ("tests/ownership_support.py" if access else "tests/ownership_execution_support.py")
+        assert args[0:3] == ["docker","--context","local"]
         assert kw["stderr"] is support.subprocess.DEVNULL
         return process
     monkeypatch.setattr(support.subprocess,"Popen",popen)
     def run():
-        with runtime.source_lock("create_create"):
+        with (runtime.delete_source_lock("delete_create") if access else runtime.source_lock("create_create")):
             if failure == "body": raise support.HarnessError("test_body")
     if failure:
         with pytest.raises(support.HarnessError) as error: run()
@@ -340,6 +342,75 @@ def test_source_lock_reaps_its_fixed_helper(failure,monkeypatch):
         run()
     assert process.waited and process.stdin.closed and process.stdout.closed
     assert process.killed is (failure == "timeout")
+
+
+def access_helper():
+    import importlib.util
+    spec=importlib.util.spec_from_file_location("access_helper_test",support.ROOT/"backend/tests/ownership_support.py")
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize("change", [{"project":"default"},{"access_operation":"sql"},{"case":"wrong"},
+    {"records":[{"kind":"admitted","id":"not-uuid"}]},{"sql":"SECRET_CANARY"}])
+def test_access_fixture_payload_refusal(change):
+    from types import SimpleNamespace
+    module=access_helper()
+    payload=dict(project="ownership-verify-012345abcdef",access_operation="prepare_metadata",case="",records=[])
+    with pytest.raises((ValueError,TypeError)):
+        module.validate_access_payload(payload|change,SimpleNamespace(host="db",database="ownership_verify_012345abcdef"),"mock","local")
+
+
+@pytest.mark.parametrize("host,database,provider,app_env", [("remote","ownership_verify_012345abcdef","mock","local"),
+    ("db","multimodal","mock","local"),("db","ownership_verify_012345abcdef","vertex","local"),
+    ("db","ownership_verify_012345abcdef","mock","production")])
+def test_access_fixture_never_targets_other_environment(host,database,provider,app_env):
+    from types import SimpleNamespace
+    payload=dict(project="ownership-verify-012345abcdef",access_operation="prepare_metadata",case="",records=[])
+    with pytest.raises(ValueError):
+        access_helper().validate_access_payload(payload,SimpleNamespace(host=host,database=database),provider,app_env)
+
+
+@pytest.mark.parametrize("value", ['{"email":"SECRET_CANARY"}','{"prepared":1}','{"prepared":true,"id":"SECRET_CANARY"}',
+    '[]','{"prepared":-1}'])
+def test_access_fixture_output_safety(value,monkeypatch):
+    runtime=support.OwnedRuntime(support.ROOT/".env.example")
+    runtime.started,runtime.base_url,runtime.compose=True,"http://127.0.0.1:1234",["compose"]
+    monkeypatch.setattr(runtime,"assert_owned",lambda:[])
+    monkeypatch.setattr(runtime,"docker",lambda *a,**kw:value)
+    with pytest.raises(support.HarnessError) as exc:
+        runtime.access_fixture("prepare_metadata")
+    assert "SECRET_CANARY" not in str(exc.value)
+
+
+@pytest.mark.parametrize("bad", ["missing","zero","negative","type","group","race",None])
+def test_access_receipt_requires_all_groups_and_safe_counts(bad,monkeypatch,capsys):
+    monkeypatch.setattr(support,"command",lambda *a,**kw:"0"*40)
+    monkeypatch.setattr(support,"auth_proof",lambda *a:12)
+    class Runtime:
+        project="ownership-verify-012345abcdef"
+        def __init__(self,*a): pass
+        def preflight(self): pass
+        def start(self,*a): pass
+        def seed(self,*a): pass
+        def cleanup(self): pass
+    def scenario(runtime,identity):
+        runtime.access_completed=dict.fromkeys(support.ACCESS_GROUPS,True)
+        runtime.access_checks={"zero":0,"negative":-1,"type":"SECRET_CANARY"}.get(bad,10)
+        runtime.delete_race_checks=1 if bad=="race" else 2
+        if bad=="missing": del runtime.access_completed["Q"]
+        if bad=="group": runtime.access_completed["Q"]=1
+        return 3
+    scenario.requires_access=True
+    receipt=support.verify_cycles(support.ROOT/".env.example",1,runtime_factory=Runtime,scenario=scenario)[0]
+    assert receipt["passed"] is (bad is None)
+    assert receipt["cleanup"] and "SECRET_CANARY" not in capsys.readouterr().out
+
+
+def test_access_canonical_scenario_requires_proof():
+    import verify_ownership
+    assert verify_ownership.scenarios.requires_access is True
 
 
 @pytest.mark.parametrize("line", ['{"release":true}\n','{"release":true}\r\n'])

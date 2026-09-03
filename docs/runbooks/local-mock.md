@@ -522,6 +522,34 @@ Do not use this backend smoke to judge AI output quality or frontend preview
 behavior. It verifies the backend HTTP flow: API, worker runner, database,
 storage, and file streaming.
 
+## Authenticated Metadata and G4.3A
+
+G4.3A metadata GET/list/delete requires the existing Session. Default generation
+list is mine (including Master); only Master may request scope=all and read other
+owners. Master cannot delete/retry/reuse other owners. Foreign/missing objects have
+the same404. Protected JSON responses, including errors, are private,no-store.
+
+For credential-free verification use the owned harness rather than a product mock
+login or manually fabricated cookie:
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_ownership.py --env-file .env.example --cycles 2
+if ($LASTEXITCODE) { throw 'Metadata verification failed' }
+```
+
+It seeds only hashes in two fresh owned projects and cleans its exact-label resources.
+Do not aim it at default/preview DBs or change work360s/cleanup90s budgets to hide a
+failure. Preserve first failure evidence and rerun complete cycles after an in-scope fix.
+Details: [Issue110](../portfolio/issue-110-metadata-ownership-access.md).
+
+File/Range and ops remain unprotected until G4.3B; A alone is NOT safe for public
+multi-user deployment. Corrupt relationship pages fail closed404; do not add a Master
+bypass. File deletion followed by failed DB commit is still non-atomic. Rollback uses
+a private/stopped backend and previous code, not a schema downgrade; older code loses
+metadata protection and must not be publicly exposed. No actual rollback/live deployment
+was performed by this verification.
+
 ## Stop
 
 ```powershell

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.generations import get_session
-from app.models import Asset
+from app.api.auth_dependencies import require_user
+from app.auth.service import AuthenticatedUser
+from app.ownership import OwnershipAccess
 from app.schemas import AssetResponse
 
 
@@ -17,11 +19,7 @@ router = APIRouter(prefix="/api/assets", tags=["assets"])
 async def get_asset(
     asset_id: UUID,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> AssetResponse:
-    asset = await session.get(Asset, asset_id)
-    if asset is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Asset was not found.",
-        )
+    asset = await OwnershipAccess(session, actor).asset(asset_id, intent="read")
     return AssetResponse.model_validate(asset)

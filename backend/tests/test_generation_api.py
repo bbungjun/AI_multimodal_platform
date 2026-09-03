@@ -303,6 +303,9 @@ class FakeGenerationSession:
     async def rollback(self) -> None:
         self.events.append("rollback")
 
+    async def refresh(self, instance, *, attribute_names):
+        assert instance in self.jobs and attribute_names == ["assets"]
+
     async def get(self, model, entity_id, **_kwargs):
         self.get_calls.append((model, entity_id))
         if model is PromptEnhancement:
@@ -332,7 +335,10 @@ class FakeGenerationSession:
             where = str(statement.whereclause)
             entity = statement.column_descriptions[0]["entity"]
             params = statement.compile().params
-            if entity in (Job, PromptEnhancement) and f"{entity.__tablename__}.owner_user_id =" in where:
+            if entity is Asset and "assets.job_id =" in where:
+                return FakeScalarsResult([a for j in self.jobs for a in j.assets if a.job_id == params["job_id_1"]])
+            if (entity in (Job, PromptEnhancement) and f"{entity.__tablename__}.id =" in where
+                    and isinstance(params.get("id_1"), UUID)):
                 row = await self.get(entity, params["id_1"])
                 return FakeScalarsResult([row] if row is not None else [])
         if self.scalar_results is not None:
@@ -346,6 +352,15 @@ class FakeGenerationSession:
 
     async def execute(self, statement):
         self.scalar_statements.append(statement)
+        if statement.column_descriptions[0]["name"] == "id":
+            entity = statement.column_descriptions[0]["entity"]
+            ids = statement.compile().params["id_1"]
+            if entity is Job:
+                return FakeScalarsResult([(j.id,j.owner_user_id) for j in self.jobs if j.id in ids])
+            if entity is PromptEnhancement:
+                p = self.prompt_enhancement
+                return FakeScalarsResult([(p.id,p.owner_user_id)] if p is not None and p.id in ids else [])
+            return FakeScalarsResult([(a.id,j.owner_user_id) for j in self.jobs for a in j.assets if a.id in ids])
         asset = await self.get(Asset, statement.compile().params["id_1"])
         if asset is None or asset.job is None:
             return FakeScalarsResult([])
@@ -424,10 +439,11 @@ async def _post_retry(path: str, session: FakeGenerationSession, *, actor=ACTOR)
         app.dependency_overrides.pop(generations.get_session, None)
 
 
-async def _get_generations(path: str, session: FakeGenerationSession):
+async def _get_generations(path: str, session: FakeGenerationSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakeGenerationSession]:
         yield session
 
+    app.dependency_overrides[generations.require_user] = lambda: actor
     app.dependency_overrides[generations.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -437,13 +453,15 @@ async def _get_generations(path: str, session: FakeGenerationSession):
         ) as client:
             return await client.get(path)
     finally:
+        app.dependency_overrides.pop(generations.require_user, None)
         app.dependency_overrides.pop(generations.get_session, None)
 
 
-async def _delete_generation(path: str, session: FakeGenerationSession):
+async def _delete_generation(path: str, session: FakeGenerationSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakeGenerationSession]:
         yield session
 
+    app.dependency_overrides[generations.require_user] = lambda: actor
     app.dependency_overrides[generations.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -453,6 +471,7 @@ async def _delete_generation(path: str, session: FakeGenerationSession):
         ) as client:
             return await client.delete(path)
     finally:
+        app.dependency_overrides.pop(generations.require_user, None)
         app.dependency_overrides.pop(generations.get_session, None)
 
 
@@ -1404,7 +1423,7 @@ async def test_retry_response_includes_retry_of_job_id():
     source = _failed_mock_provider_job()
     retry = _failed_mock_provider_job()
     retry.retry_of_job_id = source.id
-    session = FakeGenerationSession(jobs=[retry])
+    session = FakeGenerationSession(jobs=[retry, source])
 
     response = await _get_generations(f"/api/generations/{retry.id}", session)
 
@@ -1419,7 +1438,7 @@ async def test_get_generation_returns_404_for_missing_job():
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Generation job was not found."
+    assert response.json()["detail"] == "content_not_found"
 
 
 async def test_list_generations_returns_jobs_with_asset_dtos():
