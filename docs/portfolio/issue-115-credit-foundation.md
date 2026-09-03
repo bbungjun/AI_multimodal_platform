@@ -117,3 +117,17 @@ No old migration/data writer/identity changes. Grant available is derived, not
 another stored total. M+P combined **87 PASS/1.18s**. These are structural tests,
 not real PostgreSQL proof. Current-head helper compatibility is Todo4; no runtime
 test is run at this transitional checkpoint. Code7/17, one new migration; D PASS.
+
+### Todo4 — fixed proof and compatibility
+
+Implemented credential-free proof through fixed stdin source in a newly owned
+migrate container (no pytest/image assumption). Added additive data/schema
+preservation, metadata parity, direct PostgreSQL rejection probes, append-only
+checks, ledger reconstruction/rollback and three lock-observed uniqueness races.
+These probes are implemented, **not yet real-runtime verified** at this checkpoint.
+Historical0003 proof stays pinned; new auth/ownership heads0004. Monotonic work300s/
+cleanup90s gates preserve first failure and sanitized receipts. Reset validates
+all populated tables and row snapshots through preview, then every count zero.
+H372 PASS/1.76s; M32/0.84s; P55/0.06s; B0 402/2 existing guarded skips/2.17s.
+Exact17 paths/new migration1, old revisions unchanged; D PASS. Next S two fresh
+projects on this clean committed code, no source edits while proof runs.

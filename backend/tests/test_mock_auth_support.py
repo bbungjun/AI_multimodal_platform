@@ -7,6 +7,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import mock_auth_support as support
 
 
+def test_credit_head_compatibility_preserves_explicit_revision_guard():
+    assert support.REVISION == "0004_credit_foundation"
+
+
 def test_access_structured_list_query_and_array_response():
     observed=[]
     def transport(request):

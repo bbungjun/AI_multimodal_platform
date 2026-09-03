@@ -1,9 +1,11 @@
 # G5 — Credit delivery split and G5A executable specification
 
-Status: `Planned / execution prepared`, 2026-09-03. No G5 code is implemented.
+Status: `In Progress`, 2026-09-04. G5A code/structural tests implemented;
+real isolated proof and delivery pending. B/C remain Planned.
 Parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
-The user requested split design and Goal preparation, not execution.
-An explicit request carrying the frozen G5A Goal hash starts implementation.
+The user approved execution with the matching frozen G5A Goal hash on2026-09-04.
+The original preparation/contract below is preserved; execution evidence is in
+the [Issue115 record](../portfolio/issue-115-credit-foundation.md).
 
 ## 1. Inputs and scope
 
