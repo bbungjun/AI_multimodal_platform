@@ -25,7 +25,13 @@ exit0. Both preserve auth12/admission111/smoke3/worker20/pipeline4/race3/expiry1
 Real PostgreSQL content-query measurement is5 SELECTs at page1/20/100. Both cleanup
 receipts true and separate exact-label container/volume/network inventory0;4 existing
 preview containers remain running. Combined675.85s, no deadline/quota relaxation.
-Full Linux/Windows/frontend regression and final-head CI/merge are still pending.
+Full regression at identical code tree: Linux tracked-only Python3.11 archive
+**928 PASS/3 existing guarded skips/4.76s**; Windows **927 PASS/1 known FAIL/3 skips/10.96s**.
+Untouched `c84394a` archive reproduced exactly
+`test_supply_chain_release.py::test_release_script_guards_plan_scope_and_uses_terraform_rollback`
+failure (0.39s, Bash native127 interpreting a Windows absolute path). This test passes
+in Linux; no new skip/xfail or cloud script modification. Frontend lint/build PASS,
+Session48 PASS/0.927s and Chromium34 PASS/24.9s. Final-head CI/merge remain pending.
 
 Execution checkpoint:1588911 Ownership Interface,6f9a1a5 metadata routes,
 671599e response cache,2042f8c guarded proof. O102/M248/H201/S94 tests pass with
