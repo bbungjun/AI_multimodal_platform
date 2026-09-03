@@ -107,3 +107,19 @@ def test_fixture_hash_contract_matches_database_lifetimes():
     assert {row["case"] for row in rows if row["role"] == "master"} == {"master"}
     with pytest.raises(ValueError):
         module.fixture_rows({}, datetime.now(timezone.utc))
+
+
+@pytest.mark.parametrize("field,value", [("project", "default"), ("host", "localhost"),
+    ("database", "app"), ("provider", "vertex"), ("app_env", "production")])
+def test_seed_target_guard_refuses_nonowned_or_nonmock(field, value):
+    import importlib.util
+    from types import SimpleNamespace
+    spec = importlib.util.spec_from_file_location("fixture_support", Path(__file__).with_name("ownership_support.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    fields = dict(project="ownership-verify-012345abcdef", host="db",
+                  database="ownership_verify_012345abcdef", provider="mock", app_env="local")
+    fields[field] = value
+    with pytest.raises(ValueError, match="seed_target_refused"):
+        module.validate_target({"project": fields["project"], "hashes": {}},
+            SimpleNamespace(host=fields["host"], database=fields["database"]), fields["provider"], fields["app_env"])

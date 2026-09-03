@@ -87,6 +87,7 @@ def test_foreign_labels_prevent_volume_removal(monkeypatch):
 @pytest.mark.parametrize("phase", ["preflight", "start", "seed", "auth", "scenarios", "cleanup", None])
 def test_failure_receipts_and_cleanup_are_safe(phase, monkeypatch, capsys):
     calls = []
+    monkeypatch.setattr(support, "command", lambda *a, **kw: "0" * 40)
     class FakeRuntime:
         project = "ownership-verify-012345abcdef"
         def __init__(self, _): pass
@@ -118,6 +119,19 @@ def test_default_runtime_environment_drops_ambient_credentials(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "SECRET_CANARY")
     runtime = support.OwnedRuntime(support.ROOT / ".env.example")
     assert "SECRET_CANARY" not in repr(runtime.env)
+
+
+def test_windows_plugin_discovery_system_path_is_preserved(monkeypatch):
+    monkeypatch.setenv("ProgramFiles", "system-programs")
+    runtime = support.OwnedRuntime(support.ROOT / ".env.example")
+    assert any(k.upper() == "PROGRAMFILES" and v == "system-programs" for k, v in runtime.env.items())
+
+
+def test_cleanup_total_deadline_is_bounded(monkeypatch):
+    runtime = support.OwnedRuntime(support.ROOT / ".env.example")
+    runtime.cleanup_deadline = 0
+    with pytest.raises(support.HarnessError, match="cycle_deadline"):
+        runtime._call(["docker"], cleanup=True)
 
 
 def test_runtime_command_failure_output_is_never_exposed(monkeypatch):

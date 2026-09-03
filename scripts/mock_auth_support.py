@@ -162,17 +162,18 @@ class OwnedRuntime:
         # Do not let ambient app credentials/configuration become Compose inputs.
         system_keys = {"PATH", "SYSTEMROOT", "WINDIR", "HOME", "USERPROFILE", "TEMP", "TMP",
                        "DOCKER_CONFIG", "DOCKER_CONTEXT", "DOCKER_HOST", "COMSPEC", "PATHEXT",
-                       "PROGRAMDATA", "APPDATA", "LOCALAPPDATA"}
+                       "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "APPDATA", "LOCALAPPDATA"}
         self.env = {k: v for k, v in os.environ.items() if k.upper() in system_keys}
         self.env.update(AI_PROVIDER="mock", APP_ENV="local", GOOGLE_APPLICATION_CREDENTIALS="",
                         AUTH_GOOGLE_CLIENT_ID="", AUTH_GOOGLE_CLIENT_SECRET="", AUTH_GOOGLE_REDIRECT_URI="",
                         AUTH_FRONTEND_ORIGIN=ORIGIN, AUTH_COOKIE_SECURE="true")
 
     def _call(self, args, *, input=None, cleanup=False):
-        remaining = self.deadline - time.monotonic()
-        if not cleanup and remaining <= 0:
+        deadline = getattr(self, "cleanup_deadline", self.deadline) if cleanup else self.deadline
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
             raise HarnessError("cycle_deadline")
-        return self.run(args, env=self.env, input=input, timeout=90 if cleanup else min(180, max(1, remaining)))
+        return self.run(args, env=self.env, input=input, timeout=min(90 if cleanup else 180, max(0.1, remaining)))
 
     def docker(self, *args, input=None, cleanup=False):
         prefix = ["docker"] + (["--context", self.context] if self.context else [])
@@ -280,6 +281,7 @@ class OwnedRuntime:
     def cleanup(self):
         if not self.started:
             return
+        self.cleanup_deadline = time.monotonic() + 90
         self.assert_owned(cleanup=True)
         self.docker(*self.compose, "down", "--volumes", "--remove-orphans", cleanup=True)
         if self.resources(cleanup=True):
@@ -310,9 +312,12 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
     if type(cycles) is not int or cycles not in (1, 2):
         raise HarnessError("invalid_cycle_count")
     results = []
+    revision = command(["git", "rev-parse", "HEAD"])
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise HarnessError("invalid_code_revision")
     for _ in range(cycles):
         runtime = runtime_factory(env_file)
-        receipt = dict(project=runtime.project, provider="mock", revision=REVISION, phase="preflight",
+        receipt = dict(project=runtime.project, provider="mock", revision=REVISION, code_revision=revision, phase="preflight",
                        auth_checks=0, scenarios=0, cleanup=False, passed=False)
         start = time.monotonic()
         with tempfile.TemporaryDirectory(prefix="ownership-verifier-") as directory:

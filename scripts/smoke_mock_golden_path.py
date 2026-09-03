@@ -163,7 +163,7 @@ def run_smoke(args: argparse.Namespace, *, client: HttpClient) -> None:
         if not asset_body.startswith(PNG_SIGNATURE):
             raise SmokeError("Asset bytes did not start with PNG signature.")
         if "image/png" not in content_type:
-            raise SmokeError(f"Asset Content-Type expected image/png, got {content_type!r}.")
+            raise SmokeError("Asset Content-Type expected image/png.")
         if content_length is not None and int(content_length) <= 0:
             raise SmokeError("Asset Content-Length was not positive.")
         if len(asset_body) <= 0:
@@ -243,10 +243,7 @@ def poll_generation(
         if state in {"failed", "cancelled"}:
             raise SmokeError("Generation reached unsuccessful terminal state.")
         time.sleep(interval_sec)
-    raise SmokeError(
-        f"Timed out waiting for generation completion; last state was "
-        f"{None if last_body is None else last_body.get('state')}"
-    )
+    raise SmokeError("Timed out waiting for generation completion.")
 
 
 def assert_completed_job(job: dict[str, Any]) -> dict[str, Any]:
@@ -257,9 +254,9 @@ def assert_completed_job(job: dict[str, Any]) -> dict[str, Any]:
         raise SmokeError(f"Completed job expected exactly one asset, got {len(assets or [])}.")
     asset = assets[0]
     if asset.get("mime") != "image/png":
-        raise SmokeError(f"Completed job asset expected image/png, got {asset.get('mime')!r}.")
+        raise SmokeError("Completed job asset expected image/png.")
     if not isinstance(asset.get("url"), str) or not asset["url"].startswith("/files/"):
-        raise SmokeError(f"Completed job asset URL expected /files/ path, got {asset.get('url')!r}.")
+        raise SmokeError("Completed job asset URL expected /files/ path.")
     states = [
         entry.get("state")
         for entry in job.get("state_history", [])
@@ -269,7 +266,7 @@ def assert_completed_job(job: dict[str, Any]) -> dict[str, Any]:
     missing = [state for state in expected_states if state not in states]
     if missing:
         raise SmokeError(
-            f"Completed job state_history missing {missing}; observed states were {states}."
+            "Completed job state_history missing required states."
         )
     if job.get("vertex_charged") is not True:
         raise SmokeError("Completed job expected vertex_charged true in mock mode.")

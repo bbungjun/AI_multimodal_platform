@@ -1,5 +1,6 @@
 """Run the credential-free G4 harness; no product login or external services."""
 import argparse
+import json
 from pathlib import Path
 import sys
 import time
@@ -30,7 +31,7 @@ def main(argv=None):
     try:
         results = verify_cycles(args.env_file, args.cycles, scenario=scenarios)
     except (Exception, KeyboardInterrupt):
-        print("verification_failed", file=sys.stderr)
+        print(json.dumps({"phase": "preflight", "provider": "mock", "passed": False}), file=sys.stderr)
         return 1
     return 0 if len(results) == args.cycles and all(row["passed"] for row in results) else 1
 

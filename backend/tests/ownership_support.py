@@ -11,6 +11,14 @@ CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthe
 EXPECTED_REVISION = "0002_user_session_persistence"
 
 
+def validate_target(payload, url, provider, app_env):
+    if (set(payload) != {"project", "hashes"}
+            or not re.fullmatch(r"ownership-verify-[0-9a-f]{12}", payload["project"])
+            or url.host != "db" or url.database != payload["project"].replace("-", "_")
+            or provider != "mock" or app_env != "local"):
+        raise ValueError("seed_target_refused")
+
+
 def fixture_rows(hashes, now):
     if set(hashes) != set(CASES) or len(set(hashes.values())) != len(CASES):
         raise ValueError("invalid_fixture_hashes")
@@ -37,11 +45,7 @@ async def seed(payload):
 
     settings = get_settings()
     url = make_url(os.environ.get("DATABASE_URL", ""))
-    if (set(payload) != {"project", "hashes"}
-            or not re.fullmatch(r"ownership-verify-[0-9a-f]{12}", payload["project"])
-            or url.host != "db" or url.database != payload["project"].replace("-", "_")
-            or settings.ai_provider != "mock" or settings.app_env != "local"):
-        raise ValueError("seed_target_refused")
+    validate_target(payload, url, settings.ai_provider, settings.app_env)
     now = datetime.now(timezone.utc)
     rows = fixture_rows(payload["hashes"], now)
     async with AsyncSessionLocal() as session:

@@ -178,23 +178,19 @@ def poll_generation_terminal(
         if time.monotonic() > deadline:
             break
         time.sleep(interval_sec)
-    raise SmokeError(
-        f"Timed out waiting for generation terminal state; last state was "
-        f"{None if last_body is None else last_body.get('state')}"
-    )
+    raise SmokeError("Timed out waiting for generation terminal state.")
 
 
 def assert_failed_source_job(source: dict[str, Any]) -> None:
     if source.get("state") != "failed":
-        raise SmokeError(f"Source job expected state failed, got {source.get('state')!r}.")
+        raise SmokeError("Source job expected state failed.")
     _assert_no_assets(source, "Source job")
     if source.get("vertex_charged") is not False:
         raise SmokeError("Source job expected vertex_charged false.")
     error = source.get("error")
     if not isinstance(error, dict) or error.get("code") != "mock_provider_failure":
         raise SmokeError(
-            "Source job expected error.code mock_provider_failure, "
-            f"got {None if not isinstance(error, dict) else error.get('code')!r}."
+            "Source job expected error.code mock_provider_failure."
         )
 
 
@@ -216,7 +212,7 @@ def assert_retry_job(retry: dict[str, Any], *, source_id: str) -> None:
     attempts = retry.get("attempts")
     error = retry.get("error")
     if not isinstance(attempts, int):
-        raise SmokeError(f"Retry job expected integer attempts, got {attempts!r}.")
+        raise SmokeError("Retry job expected integer attempts.")
 
     if state == "pending":
         if attempts != 0 or error is not None:
@@ -235,7 +231,7 @@ def assert_retry_job(retry: dict[str, Any], *, source_id: str) -> None:
             raise SmokeError("Failed retry job expected error.code mock_provider_failure.")
         return
 
-    raise SmokeError(f"Retry job reached unsupported state {state!r}.")
+    raise SmokeError("Retry job reached unsupported state.")
 
 
 def _assert_no_assets(job: dict[str, Any], label: str) -> None:
