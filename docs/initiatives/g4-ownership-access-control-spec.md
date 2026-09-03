@@ -191,7 +191,7 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 |---|---|---|---|
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
 | G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
-| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 후보10, 최대20 / 0 | A와 함께 G4.2 종료; 읽기·파일 격리 아직 미완료 |
+| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 실행 준비11, 최대20 / 0 | Issue107/Goal Prepared, 미구현; A와 함께 G4.2 종료, 읽기·파일 격리는 G4.3 |
 | G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 20 / 0 | 아래 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
@@ -399,6 +399,9 @@ G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함�
 신규 owner와 접수 단계 참조 검증은 [Issue105 실행 기록](../portfolio/issue-105-owner-persistence-admission.md)
 범위까지 Mock Verified다. B는 `OwnershipAccess(session, actor)`와 `assert_same_owner`,
 저장된 owner 및 기존 authenticated harness를 이어받는다. 실제 worker 강화는 B에 남는다.
+B의 상세 B1–B4와 frozen Goal은 [Issue107 준비 기록](../portfolio/issue-107-worker-ownership-invariants.md)에
+연결한다. 원래10개 후보에 guarded execution proof helper1개를 더한11개 경로로 준비했으며
+migration0이다. 준비 단계에는 제품 코드나 DB를 변경하지 않았다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

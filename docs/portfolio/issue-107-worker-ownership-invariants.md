@@ -1,0 +1,81 @@
+# Issue #107 — Worker ownership and pipeline/race proof
+
+- 상태: **Planned / Goal Prepared**, 2026-09-03. 구현 및 실행 Goal 시작 전이다.
+- [Issue107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
+  branch `codex/issue-107-worker-ownership-invariants`.
+- Base: A [PR106](https://github.com/bbungjun/AI_multimodal_platform/pull/106)의 실제 squash merge
+  `d40a8f704df583c050a6a89c235c311a0d4aef77`; schema head0003 그대로.
+- [상세 spec B1–B4](../initiatives/g4-2-owner-persistence-admission-spec.md),
+  [전체 정책](../initiatives/auth-credits-master-console.md#ownership-invariants).
+
+## 배경과 문제
+
+A는 요청 접수 시 owner와 참조를 검사한다. 비동기 worker는 이후 다른 시점에 실행되며,
+직접 handler 호출이나 polling 재개에서도 저장된 관계를 다시 확인해야 한다.
+pipeline 연결은 parent/child/Asset/outbox를 함께 다루므로 같은 owner 보존과 반복 실행의
+안전성을 실제 PostgreSQL에서 검증할 필요가 있다. 이는 아직 B의 구현 성과가 아니다.
+
+## 관측과 원인 분석
+
+- 직접 T2I/T2V/I2V와 polling 경로가 분리돼 있다. dispatch만 감싸는 설계로는 호출을 놓친다.
+- 현재 pipeline child 조회에는 row lock/blocked 재검사가 없어 반복 link가 outbox를
+  중복 생성할 수 있는 구조다. 이 준비 단계에서 실제 경합을 실행한 것은 아니다.
+- T2I completion/link가 같은 try에 있고, handlers는 rollback 후 Job id를 읽는다.
+  A에서 확인한 expired ORM 위험이 이 경계에도 있어 별도 회귀가 필요하다.
+- handler/pipeline 기존 fake는 owner와 source parent 관계가 불완전하다. ownership을
+  우회하지 말고 명시적 owner/관계를 제공하도록 test adapter를 갱신해야 한다.
+- 원래10개 후보에 real proof까지 모두 넣으면 identity helper의 책임이 커진다.
+  guarded execution helper1개를 추가한11개 allowlist로 실제 proof를 분리했다.
+
+## 해결 설계와 판단 근거
+
+codebase-design의 작은 Interface/Locality 원칙으로 기존 Ownership Module에
+`validate_execution_references(session, job)`를 추가한다. actor/Session을 새로 만들지 않고
+저장된 Job owner를 기준으로 남은 관계를 검증한다. 실패는 해당 Job에만 고정 safe code를
+기록한다. Session 만료를 이미 접수된 Job의 취소로 해석하지 않는다.
+
+pipeline은 child row lock 후 owner/state/blocked를 재검사하고 unblock과 outbox를 같은
+transaction에 둔다. completed parent와 link 실패를 구분하고 실패 전파는 safe result로
+외부 식별자 없이 표현한다. 범용 ACL, 새 queue, recovery service, migration은 추가하지 않는다.
+
+실경합은 단순 thread 동시 실행이나 임의 sleep을 성공 근거로 삼지 않는다. 테스트 전용
+source lock holder와 실제 DB waiter 관측 뒤 해제하는 절차를 고정했다. 한정된 protocol,
+timeout/EOF 정리와 실패 canary를 포함한다. worker corruption 함수 proof와 실제 Celery
+pipeline E2E, unit provider/storage spy의 증거도 서로 구분한다.
+
+## 실행 준비 검증
+
+- PR106 MERGED 및 main의 `d40a8f7` 확인, `git fetch origin` 후 local main fast-forward.
+- 시작 시 unrelated tracked/staged 변경0; 기존 `.omo` 계획/evidence 보존.
+- `AI_PROVIDER=mock`, backend에서 다음 기존10개 파일 **282 PASS /3.59s**:
+  `python -m pytest tests/test_job_handlers.py tests/test_pipeline_link.py
+  tests/test_generation_api.py tests/test_pipeline_api.py tests/test_ownership_persistence.py
+  tests/test_verify_ownership_script.py tests/test_mock_auth_support.py tests/test_job_runner.py
+  tests/test_outbox.py tests/test_outbox_dispatcher.py -q` (한 줄로 실행).
+- spec/Goal exact11 중복0, 신규 파일2개, Todo1–8/F1–F4 구조 일치 검사 PASS.
+- 최종 준비 재검증 **282 PASS /3.14s**, 상대 문서 링크77개/오류0,
+  `git diff --check`/status/staged 경로 검사 PASS, 제품/config/test 변경0.
+- frozen local/untracked plan:
+  `.omo/plans/issue-107-g4-2b-worker-ownership-invariants-goal.md`.
+  SHA256 `16f6cda60a7306b86bbd909c84241e25394117bb2953ae4445c70c550e271064`.
+  다른 기기에서는 exact bytes를 별도로 전달해야 한다. hash는 파일 백업이 아니다.
+
+## 결과와 영향
+
+Issue/branch와 한 Todo씩 실행할 수 있는 계획을 준비했다. 현재 변경은 문서뿐이며
+worker 보안 PASS, race 성공 횟수, Docker 정리 결과, B PR/merge 성과를 주장하지 않는다.
+미래 종료 조건은 P11–P16 + 기존 A 회귀, 독립 전체2cycle/cleanup0, Linux 전체와
+frontend 무변경 회귀, Ready PR의 최종 head verify/양쪽 Scan-SBOM 및 실제 squash merge다.
+
+## Rollback·남은 위험·다음 단계
+
+- 다음 단계는 frozen SHA를 포함한 명시적인 G4.2B Goal 실행 요청이다.
+- schema/model/migration은 바꾸지 않는다. 향후 코드 rollback은 A 호환 head0003을
+  유지하되 worker 보호가 사라짐을 명시하고 공개 배포 금지 상태를 유지한다. DB reset은 하지 않는다.
+- 비정상 pipeline link의 자동 복구는 범위 밖이다. parent 완료/child 미연결 상태를
+  숨기지 않고 안전한 실패 결과와 운영상 잔여 위험을 기록해야 한다.
+- 임의 동시 DB 변경과 provider side effect를 원자적으로 묶지는 않는다. 검증 시점과
+  provider 성공/DB 실패의 비원자성을 성과와 섞지 않는다.
+- 11개 외 코드 경로나 migration, developer/preview reset이 필요하면 구현 전 재설계한다.
+- G4.3 조회/list/delete/file/ops/cache와 긴급 폐기/live 검증은 별도다. 외부 provider,
+  Google OAuth, managed Redis/cloud 비용을 발생시키지 않는다.

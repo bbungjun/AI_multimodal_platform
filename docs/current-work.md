@@ -77,6 +77,35 @@ paste credential contents.
 
 ## Active Work
 
+### G4.2B execution preparation — 2026-09-03
+
+- **Planned / Goal Prepared; implementation NOT started.**
+  [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
+  branch `codex/issue-107-worker-ownership-invariants`,
+  [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
+  [preparation record](portfolio/issue-107-worker-ownership-invariants.md).
+- Main fast-forwarded to A squash `d40a8f704df583c050a6a89c235c311a0d4aef77`.
+  PR106 actually MERGED; required final-head verify/both Scan-SBOM succeeded.
+  Tracked/staged user edits0 at start; existing .omo files preserved.
+- Frozen local/untracked plan:
+  `.omo/plans/issue-107-g4-2b-worker-ownership-invariants-goal.md`.
+  SHA256 `16f6cda60a7306b86bbd909c84241e25394117bb2953ae4445c70c550e271064`.
+  Transfer exact bytes when changing machines; hash is not backup. Never stage .omo wholesale.
+- gpt-5.6-sol / medium, sequential executor, Todo1–8/F1–F4. Exact11 code paths,
+  hard cap20, migration0; schema head0003 unchanged. New guarded execution helper
+  separates real proof from hash-only identity fixtures. No product changes during preparation.
+- Fresh existing-code baseline B0: **282 PASS /3.59s**, not B feature proof.
+  Final preparation recheck: **282 PASS /3.14s**, relative links77/broken0,
+  exact11/spec/Goal/Todo8/F4 parity PASS; product/config/test modifications0.
+  Inputs only: A OwnershipAccess/assert_same_owner, stored owner, head0003 and
+  MemoryIdentity/ScopedClient/OwnedRuntime. Main/Issue/branch prepared, no Docker QA run.
+- Future execution: handler/attempt/poll references, safe current-job failure,
+  same-owner locked/idempotent pipeline, real lock-observed create/retry races,
+  two complete isolated cycles preserving auth12/admission111/smoke3; Linux and
+  unchanged frontend regression, Ready PR/final-head CI/actual squash merge.
+- Next: explicit execution request with frozen SHA. Do not start G4.3 or reset
+  developer/preview DB; live OAuth/provider/cloud and frontend changes remain excluded.
+
 ### G4.2A execution — 2026-09-03
 
 - **Ownership Admission Mock Verified — implementation/docs complete; delivery tracked by PR.**
@@ -85,8 +114,8 @@ paste credential contents.
   [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
   [execution evidence](portfolio/issue-105-owner-persistence-admission.md).
 - Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
-  This handoff is the pre-merge snapshot; the PR/Issue records final-head CI,
-  squash merge state and merge SHA. Do not infer actual merge from this snapshot.
+  Confirmed MERGED at `d40a8f704df583c050a6a89c235c311a0d4aef77`;
+  final head615fb1b verify and both Scan/SBOM succeeded. Issue105 CLOSED.
 - Main synchronized to `4dd359ab39285e536e713a452577e19c07b3ec67` (G4.1 PR104).
   Existing five design files preserved through targeted stash/restore, no conflict.
   Prior single-G4.2 estimate is superseded: A exact20 paths/migration1,
@@ -98,8 +127,8 @@ paste credential contents.
 - Model request: gpt-5.6-sol / medium, sequential Todo1–8 and F1–F4 self-review.
   First execution check is SHA, branch/base, then plan B0 focused baseline.
   Runtime gates passed: schema2 + auth1 + final ownership admission2 on fresh local
-  Docker projects. Delivery still requires Ready PR, final-head verify + both
-  Scan/SBOM success and actual squash MERGED; use the PR link below for final state.
+  Docker projects. Ready PR, final-head CI and actual squash delivery completed;
+  use the PR link above for immutable delivery evidence.
 - Preparation baseline: plan B0 existing11 files **212 PASS /2.69s**.
   Plan/spec allowlist20, Todo8/F4 and SHA parity PASS; relative links71/broken0,
   diff/status/staged hygiene PASS. Preparation checkpoint contains seven docs only.
@@ -117,7 +146,7 @@ paste credential contents.
   Windows657 PASS/3 existing SKIP/1 independently reproduced main Bash-path failure.
   Frontend lint/build, Session48/browser34 PASS. Final ownership2 again passed
   auth12/admission111/smoke3 each, exact-label leftovers0. No developer DB reset.
-  Next: finalize Ready PR/CI/squash delivery, then separately prepare G4.2B.
+  Next: G4.2B preparation above; A execution is complete.
   B input: head0003; `OwnershipAccess(session, actor)` scoped job/enhancement/asset,
   `assert_same_owner`, immutable owner on new writers and existing authenticated harness.
   B worker/pipeline/race and G4.3 read/file/delete/ops are
