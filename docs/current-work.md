@@ -136,6 +136,10 @@ paste credential contents.
   Exact16/migration0/D PASS; local Docker endpoint verified, preview/developer preserved.
   Current frozen file/SHA remains unchanged; see Issue112 portfolio for evidence.
   B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
+- v2 Todo1–4:7e9efa1 baseline,52c1cc6 diagnostics,48562bc split/aggregate. Fresh
+  H290/F231/M248/S94 PASS (S existing2 skips). New verification4 paths only; product/
+  migration/frontend/CI/Compose unchanged. Matrix mapping in Issue112 portfolio.
+  Next: Todo5 explicit all4cycle runtime at committed checkpoint; no new success yet.
 
 ### G4.3A execution — 2026-09-03
 

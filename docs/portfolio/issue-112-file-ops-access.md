@@ -15,6 +15,34 @@
 
 ## 배경과 문제
 
+### v2 실행 진행 (최초 실패 기록 보존)
+
+사용자 frozen-v2 실행 요청으로 재개했다. Todo1 7e9efa1 기준검증, Todo2 52c1cc6
+고정 phase/error 계측, Todo3 48562bc suite/aggregate 구현을 완료했다. 제품 코드는
+변경하지 않고 기존 verification4개 경로만 수정했다(허용5개 이내, 누적16/migration0).
+
+Todo4 재검증: H290 PASS/1.39s, F231 PASS/5.23s, M248 PASS/4.26s,
+S94 PASS/기존2 skip/1.77s. 제품/기존 migration/frontend/CI/Compose diff0 확인.
+실제 v2 Docker proof는 아직 실행 전이며 아래는 검증 배치와 코드 검토 결과다.
+
+| Matrix | Retained verification | Evidence level before R-v2 |
+|---|---|---|
+| A1–A3/A23 | auth12, admission111, existing Origin/owner/session tests | unit verified; fresh runtime pending |
+| A4–A9/A12–A13 | metadata L/D/P/X/R/C/S/Q, >=348 checks; ownership A golden/retry/duplicate | unit verified; fresh runtime pending |
+| A10–A11 | worker20/pipeline4/HTTP races3/expiry1; observed delete/create and delete/retry races2 | call paths preserved; fresh runtime pending |
+| A14–A20 | unchanged product F231; file-ops F/O/V and each actor E ten stages | unit verified; real bytes/logout/ops pending |
+| A21–A22 | existing schema head0003 and guarded schema verifier2 | schema code unchanged; fresh runtime pending |
+| A24 | guards/canaries/phase timing/aggregate fail-closed, exact cleanup labels | H290 verified; actual cleanup pending |
+
+Coordinator review: ownership runs all three original A smokes then execution proof;
+file-ops runs all original selected A/B smokes and both complete pipeline paths.
+Actor E runs sequentially with deadline-clamped clients to avoid a failed actor
+leaving a background executor during cleanup. No assertion or stage is removed.
+All requires four distinct projects and one SHA; single-suite/one-cycle success
+returns complete=false. Per-cycle clocks and per-suite/command limits are separate.
+Earlier H failed on the obsolete combined-scenario assertion; its replacement
+asserts both explicit suite contracts. No new skip/xfail or weakened product tests.
+
 ### 최신 실행 결과 (준비 기록보다 우선)
 
 사용자의 frozen-SHA 요청으로 실행했다. SHA 일치, main cd654e5 유지, 브랜치와 사용자
