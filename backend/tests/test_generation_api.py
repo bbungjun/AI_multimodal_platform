@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -9,6 +9,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
 from app.api import generations
+from app.auth.service import AuthenticatedUser
 from app.config import Settings
 from app.main import app
 from app.models import (
@@ -29,8 +30,224 @@ from app.prompt_enhancement import (
     prompt_sha256,
 )
 from app.services.jobs import outbox
-from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME
+from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME, ACTIVE_I2V_STATES
 from app.services.vertex import storage as vertex_storage
+
+
+def _database_unique_violation(constraint):
+    original = Exception(constraint)
+    original.sqlstate = "23505"
+    cause = Exception(constraint)
+    cause.constraint_name = constraint
+    original.__cause__ = cause
+    return original
+
+
+@pytest.mark.parametrize("retry", [False,True])
+@pytest.mark.parametrize("sqlstate", ["23505","23503"])
+async def test_admission_untrusted_parameters_cannot_spoof_conflict(retry, sqlstate):
+    parent = _job_with_asset()
+    source = _failed_i2v_job(parent.assets[0].id)
+    original = _database_unique_violation("unrelated_constraint")
+    original.sqlstate = sqlstate
+    error = IntegrityError("fixed", {"prompt":ACTIVE_I2V_UNIQUE_INDEX_NAME}, original)
+    assert generations.i2v_guard.is_active_i2v_unique_violation(error)  # Legacy text-only false positive.
+    session = FakeGenerationSession(jobs=[parent,source], commit_error=error)
+    with pytest.raises(IntegrityError):
+        if retry:
+            await _post_retry(f"/api/generations/{source.id}/retry",session)
+        else:
+            payload = dict(_admission_payload(),mode="i2v",model="veo-3.0-fast-generate-001",
+                           source_asset_id=str(parent.assets[0].id))
+            await _post_generation(payload,session)
+    assert session.events[-1] == "rollback"
+
+
+def _admission_payload():
+    return {"mode": "t2i", "model": "imagen-4.0-fast-generate-001", "prompt": "fixture"}
+
+
+@pytest.mark.parametrize("actor_id,role", [(101,"user"), (102,"user"), (103,"master")])
+@pytest.mark.parametrize("mode", ["t2i", "t2v", "i2v", "retry"])
+async def test_admission_p02_persists_actual_actor(actor_id, role, mode):
+    actor = AuthenticatedUser(id=UUID(int=actor_id), role=role, status="active", email="fixture@invalid.test")
+    parent = _job_with_asset()
+    parent.owner_user_id = actor.id
+    source = _failed_i2v_job(parent.assets[0].id)
+    source.owner_user_id = actor.id
+    session = FakeGenerationSession(jobs=[parent, source])
+    if mode == "retry":
+        response = await _post_retry(f"/api/generations/{source.id}/retry", session, actor=actor)
+        assert source.state == JobState.FAILED
+    else:
+        payload = _admission_payload()
+        payload["mode"] = mode
+        if mode != "t2i":
+            payload["model"] = "veo-3.0-fast-generate-001"
+        if mode == "i2v":
+            payload["source_asset_id"] = str(parent.assets[0].id)
+        response = await _post_generation(payload, session, actor=actor)
+    assert response.status_code == 201
+    assert _added_jobs(session)[0].owner_user_id == actor.id
+    assert len(_added_outbox_events(session)) == 1
+
+
+@pytest.mark.parametrize("role", ["user", "master"])
+@pytest.mark.parametrize("reference", ["enhancement", "source", "retry"])
+@pytest.mark.parametrize("missing", [False, True])
+async def test_admission_p04_p05_foreign_missing_same404_before_semantics(role, reference, missing):
+    actor = AuthenticatedUser(id=ACTOR.id, role=role, status="active", email="fixture@invalid.test")
+    parent = _job_with_video_asset()
+    parent.owner_user_id = UUID(int=999)
+    enhancement = PromptEnhancement(id=uuid4(), owner_user_id=UUID(int=999),
+                                    target_mode=GenerationMode.T2V, target_model="wrong")
+    source = _failed_mock_provider_job()
+    source.owner_user_id = UUID(int=999)
+    source.state = JobState.COMPLETED
+    session = FakeGenerationSession(jobs=[] if missing else [parent,source],
+                                    prompt_enhancement=None if missing else enhancement)
+    payload = _admission_payload()
+    if reference == "retry":
+        response = await _post_retry(f"/api/generations/{source.id}/retry", session, actor=actor)
+    else:
+        if reference == "enhancement":
+            payload["enhancement_id"] = str(enhancement.id)
+        else:
+            payload.update(mode="i2v", source_asset_id=str(parent.assets[0].id))
+        response = await _post_generation(payload, session, actor=actor)
+    assert response.status_code == 404
+    assert response.json() == {"detail": "content_not_found"}
+    assert session.added == [] and session.commit_count == 0
+
+
+@pytest.mark.parametrize("field", ["owner_user_id", "user_id", "role"])
+@pytest.mark.parametrize("mode", ["t2i", "t2v", "i2v"])
+async def test_admission_p03_spoofed_owner_fields_are_forbidden(field, mode):
+    payload = _admission_payload()
+    payload.update(mode=mode)
+    if mode == "i2v":
+        payload["source_asset_id"] = str(uuid4())
+    payload[field] = "forged"
+    session = FakeGenerationSession()
+    response = await _post_generation(payload, session)
+    assert response.status_code == 422
+    assert session.added == [] and session.scalar_statements == []
+
+
+@pytest.mark.parametrize("reference", ["enhancement", "parent", "source"])
+async def test_admission_p06_retry_revalidates_all_remaining_links(reference):
+    parent = _job_with_asset()
+    parent.owner_user_id = UUID(int=999)
+    enhancement = PromptEnhancement(id=uuid4(), owner_user_id=UUID(int=999))
+    source = _failed_mock_provider_job()
+    if reference == "enhancement":
+        source.enhancement_id = enhancement.id
+    elif reference == "parent":
+        source.parent_job_id = parent.id
+    else:
+        source = _failed_i2v_job(parent.assets[0].id)
+    session = FakeGenerationSession(jobs=[parent,source], prompt_enhancement=enhancement)
+    response = await _post_retry(f"/api/generations/{source.id}/retry", session)
+    assert response.status_code == 404
+    assert session.added == [] and source.state == JobState.FAILED
+
+
+@pytest.mark.parametrize("retry", [False, True])
+async def test_admission_p06_failed_commit_rolls_back_job_and_outbox(retry):
+    session = FakeGenerationSession(commit_error=RuntimeError("commit_failed"))
+    source = _failed_mock_provider_job()
+    session.jobs = [source]
+    with pytest.raises(RuntimeError, match="^commit_failed$"):
+        if retry:
+            await _post_retry(f"/api/generations/{source.id}/retry", session)
+        else:
+            await _post_generation(_admission_payload(), session)
+    assert session.events == ["add_job", "add_outbox", "commit", "rollback"]
+    assert source.state == JobState.FAILED
+
+
+@pytest.mark.parametrize("known", [False, True])
+@pytest.mark.parametrize("expire_on_rollback", [False, True])
+async def test_admission_p06_retry_locks_and_only_maps_known_unique_violation(known, expire_on_rollback, monkeypatch):
+    parent = _job_with_asset()
+    source = _failed_i2v_job(parent.assets[0].id)
+    constraint = ACTIVE_I2V_UNIQUE_INDEX_NAME if known else "unrelated_constraint"
+    session = FakeGenerationSession(jobs=[parent,source],
+        commit_error=IntegrityError("fixed", {}, _database_unique_violation(constraint)))
+    if expire_on_rollback:
+        from sqlalchemy.orm import Session, make_transient_to_detached
+
+        original_rollback = session.rollback
+        orm_session = Session()
+
+        async def rollback_and_expire():
+            await original_rollback()
+            make_transient_to_detached(source)
+            orm_session.add(source)
+            orm_session.expire(source, ["mode"])
+            # No bind: an accidental post-rollback ORM refresh fails this test.
+
+        monkeypatch.setattr(session, "rollback", rollback_and_expire)
+    if known:
+        response = await _post_retry(f"/api/generations/{source.id}/retry", session)
+        assert response.status_code == 409
+    else:
+        with pytest.raises(IntegrityError):
+            await _post_retry(f"/api/generations/{source.id}/retry", session)
+    assert session.events[-1] == "rollback"
+    statements = [str(s.compile(dialect=postgresql.dialect())).lower() for s in session.scalar_statements]
+    assert "for update of assets" in statements[1]
+    assert "jobs.source_asset_id =" in statements[2]
+
+
+@pytest.mark.parametrize("route", ["generation", "retry", "pipeline", "prompt"])
+@pytest.mark.parametrize("origin,expected", [(None,403), ("http://untrusted.invalid",403), ("http://localhost:5173",401)])
+async def test_admission_p01_real_dependency_rejects_before_generation_effects(monkeypatch, route, origin, expected):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+    from app.api import auth_dependencies, prompts
+    from app.auth.service import AuthError
+    session = FakeGenerationSession()
+    authenticate = AsyncMock(side_effect=AuthError("authentication_required"))
+    provider = AsyncMock(side_effect=AssertionError("unexpected_provider"))
+    storage_write = Mock(side_effect=AssertionError("unexpected_storage"))
+    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", provider)
+    monkeypatch.setattr(generations.storage, "delete_file", storage_write)
+    monkeypatch.setattr(auth_dependencies, "get_settings",
+                        lambda: SimpleNamespace(auth_frontend_origin="http://localhost:5173", cors_origins=[]))
+    async def override_session():
+        yield session
+    async def override_service():
+        return SimpleNamespace(authenticate=authenticate)
+    previous = dict(app.dependency_overrides)
+    app.dependency_overrides[generations.get_session] = override_session
+    app.dependency_overrides[prompts.get_session] = override_session
+    app.dependency_overrides[auth_dependencies.get_auth_service] = override_service
+    assert auth_dependencies.require_user not in app.dependency_overrides
+    routes = {
+        "generation": ("/api/generations", _admission_payload()),
+        "retry": (f"/api/generations/{UUID(int=999)}/retry", None),
+        "pipeline": ("/api/pipelines", {"image_prompt":"fixture","video_prompt":"fixture",
+                     "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"}),
+        "prompt": ("/api/prompts/enhance", {"prompt":"fixture","target_mode":"t2i",
+                                         "target_model":"imagen-4.0-fast-generate-001"}),
+    }
+    try:
+        path, payload = routes[route]
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(path, json=payload, headers={"Origin":origin} if origin else {})
+        assert response.status_code == expected
+        assert session.added == [] and session.commit_count == 0 and session.scalar_statements == []
+        provider.assert_not_called()
+        storage_write.assert_not_called()
+        assert authenticate.await_count == (1 if expected == 401 else 0)
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous)
+
+
+
+ACTOR = AuthenticatedUser(id=UUID(int=101), role="user", status="active", email="fixture@invalid.test")
 
 
 class FakeScalarsResult:
@@ -42,6 +259,9 @@ class FakeScalarsResult:
 
     def all(self) -> list[object]:
         return self.rows
+
+    def one_or_none(self):
+        return self.first()
 
 
 class FakeGenerationSession:
@@ -108,10 +328,28 @@ class FakeGenerationSession:
     async def scalars(self, *args, **_kwargs) -> FakeScalarsResult:
         if args:
             self.scalar_statements.append(args[0])
+            statement = args[0]
+            where = str(statement.whereclause)
+            entity = statement.column_descriptions[0]["entity"]
+            params = statement.compile().params
+            if entity in (Job, PromptEnhancement) and f"{entity.__tablename__}.owner_user_id =" in where:
+                row = await self.get(entity, params["id_1"])
+                return FakeScalarsResult([row] if row is not None else [])
         if self.scalar_results is not None:
             rows = self.scalar_results.pop(0) if self.scalar_results else []
             return FakeScalarsResult(rows)
+        if args and "jobs.source_asset_id =" in str(args[0].whereclause) and "jobs.mode =" in str(args[0].whereclause):
+            source = args[0].compile().params["source_asset_id_1"]
+            return FakeScalarsResult([j for j in self.jobs if j.mode == GenerationMode.I2V
+                                      and j.source_asset_id == source and j.state in ACTIVE_I2V_STATES])
         return FakeScalarsResult(self.jobs)
+
+    async def execute(self, statement):
+        self.scalar_statements.append(statement)
+        asset = await self.get(Asset, statement.compile().params["id_1"])
+        if asset is None or asset.job is None:
+            return FakeScalarsResult([])
+        return FakeScalarsResult([(asset, asset.job.owner_user_id)])
 
 
 class RoutingScalarGenerationSession(FakeGenerationSession):
@@ -146,10 +384,13 @@ class RoutingScalarGenerationSession(FakeGenerationSession):
         return FakeScalarsResult([])
 
 
-async def _post_generation(payload: dict, session: FakeGenerationSession):
+async def _post_generation(payload: dict, session: FakeGenerationSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakeGenerationSession]:
         yield session
 
+    async def override_user():
+        return actor
+    app.dependency_overrides[generations.require_user] = override_user
     app.dependency_overrides[generations.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -159,13 +400,17 @@ async def _post_generation(payload: dict, session: FakeGenerationSession):
         ) as client:
             return await client.post("/api/generations", json=payload)
     finally:
+        app.dependency_overrides.pop(generations.require_user, None)
         app.dependency_overrides.pop(generations.get_session, None)
 
 
-async def _post_retry(path: str, session: FakeGenerationSession):
+async def _post_retry(path: str, session: FakeGenerationSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakeGenerationSession]:
         yield session
 
+    async def override_user():
+        return actor
+    app.dependency_overrides[generations.require_user] = override_user
     app.dependency_overrides[generations.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -175,6 +420,7 @@ async def _post_retry(path: str, session: FakeGenerationSession):
         ) as client:
             return await client.post(path)
     finally:
+        app.dependency_overrides.pop(generations.require_user, None)
         app.dependency_overrides.pop(generations.get_session, None)
 
 
@@ -216,6 +462,7 @@ def _job_with_asset() -> Job:
     asset_id = uuid4()
     job = Job(
         id=job_id,
+        owner_user_id=ACTOR.id,
         mode=GenerationMode.T2I,
         model="imagen-4.0-fast-generate-001",
         state=JobState.COMPLETED,
@@ -250,6 +497,7 @@ def _job_with_video_asset() -> Job:
     asset_id = uuid4()
     job = Job(
         id=job_id,
+        owner_user_id=ACTOR.id,
         mode=GenerationMode.T2V,
         model="veo-3.0-fast-generate-001",
         state=JobState.FAILED,
@@ -284,6 +532,7 @@ def _failed_mock_provider_job() -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=ACTOR.id,
         mode=GenerationMode.T2I,
         model="imagen-4.0-fast-generate-001",
         state=JobState.FAILED,
@@ -315,6 +564,7 @@ def _failed_i2v_job(source_asset_id=None) -> Job:
     now = utc_now()
     return Job(
         id=uuid4(),
+        owner_user_id=ACTOR.id,
         mode=GenerationMode.I2V,
         model="veo-3.0-fast-generate-001",
         state=JobState.FAILED,
@@ -469,6 +719,7 @@ async def test_create_i2v_generation_rejects_active_job_for_same_source_asset():
     source_asset = parent.assets[0]
     active_i2v = Job(
         id=uuid4(),
+        owner_user_id=ACTOR.id,
         mode=GenerationMode.I2V,
         model="veo-3.0-fast-generate-001",
         state=JobState.POLLING,
@@ -486,7 +737,7 @@ async def test_create_i2v_generation_rejects_active_job_for_same_source_asset():
     )
     session = FakeGenerationSession(
         jobs=[parent],
-        scalar_results=[[source_asset], [active_i2v]],
+        scalar_results=[[active_i2v]],
     )
 
     response = await _post_generation(
@@ -554,11 +805,11 @@ async def test_create_i2v_generation_maps_unique_index_error_to_conflict():
     integrity_error = IntegrityError(
         statement="INSERT INTO jobs ...",
         params={},
-        orig=Exception(ACTIVE_I2V_UNIQUE_INDEX_NAME),
+        orig=_database_unique_violation(ACTIVE_I2V_UNIQUE_INDEX_NAME),
     )
     session = FakeGenerationSession(
         jobs=[parent],
-        scalar_results=[[source_asset], []],
+        scalar_results=[[]],
         commit_error=integrity_error,
     )
 
@@ -765,8 +1016,9 @@ async def test_create_i2v_generation_rejects_imagen_model_before_source_lookup()
         session,
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Unsupported Veo model."
+    # G4.2A deliberately checks reference ownership before model semantics.
+    assert response.status_code == 404
+    assert response.json()["detail"] == "content_not_found"
     assert session.added == []
     assert session.commit_count == 0
 
@@ -776,6 +1028,7 @@ async def test_create_generation_links_matching_prompt_enhancement():
     session = FakeGenerationSession(
         prompt_enhancement=PromptEnhancement(
             id=enhancement_id,
+            owner_user_id=ACTOR.id,
             original="desk lamp",
             enhanced="cinematic quiet desk lamp",
             components={"subject": "desk lamp"},
@@ -820,6 +1073,7 @@ async def test_create_generation_preserves_edited_execution_prompt_and_provenanc
     session = FakeGenerationSession(
         prompt_enhancement=PromptEnhancement(
             id=enhancement_id,
+            owner_user_id=ACTOR.id,
             original="잠자는 사자",
             enhanced=enhanced_draft,
             components={
@@ -896,8 +1150,8 @@ async def test_create_generation_rejects_missing_prompt_enhancement_without_job(
         session,
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Prompt enhancement was not found."
+    assert response.status_code == 404
+    assert response.json()["detail"] == "content_not_found"
     assert session.get_calls == [(PromptEnhancement, enhancement_id)]
     assert session.added == []
     assert session.commit_count == 0
@@ -918,6 +1172,7 @@ async def test_create_generation_rejects_prompt_enhancement_target_mismatch_with
     session = FakeGenerationSession(
         prompt_enhancement=PromptEnhancement(
             id=enhancement_id,
+            owner_user_id=ACTOR.id,
             original="desk lamp",
             enhanced="cinematic quiet desk lamp",
             components={"subject": "desk lamp"},
@@ -993,10 +1248,12 @@ async def test_get_generation_serializes_failed_job_error_contract():
 async def test_retry_failed_generation_creates_new_pending_job_without_mutating_original():
     source = _failed_mock_provider_job()
     source.enhanced_prompt = "cinematic quiet desk lamp"
-    source.enhancement_id = uuid4()
-    source.parent_job_id = uuid4()
+    enhancement = PromptEnhancement(id=uuid4(), owner_user_id=ACTOR.id)
+    parent = _job_with_asset()
+    source.enhancement_id = enhancement.id
+    source.parent_job_id = parent.id
     source.parameters = {"aspect_ratio": "1:1", "nested": {"style": "soft"}}
-    session = FakeGenerationSession(jobs=[source])
+    session = FakeGenerationSession(jobs=[source, parent], prompt_enhancement=enhancement)
 
     response = await _post_retry(f"/api/generations/{source.id}/retry", session)
 
@@ -1062,7 +1319,7 @@ async def test_retry_generation_returns_404_for_missing_job():
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Generation job was not found."
+    assert response.json()["detail"] == "content_not_found"
 
 
 @pytest.mark.parametrize(
@@ -1094,8 +1351,8 @@ async def test_retry_i2v_rejects_missing_source_asset_without_job():
 
     response = await _post_retry(f"/api/generations/{source.id}/retry", session)
 
-    assert response.status_code == 409
-    assert response.json()["detail"] == "Retry source asset is no longer available."
+    assert response.status_code == 404
+    assert response.json()["detail"] == "content_not_found"
     assert session.added == []
     assert session.commit_count == 0
 

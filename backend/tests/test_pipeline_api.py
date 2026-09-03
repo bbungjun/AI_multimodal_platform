@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from app.api import pipelines
+from app.auth.service import AuthenticatedUser
 from app.main import app
 from app.models import (
     Asset,
@@ -19,6 +20,26 @@ from app.models import (
     utc_now,
 )
 from app.services.jobs import outbox
+
+
+@pytest.mark.parametrize("field", ["owner_user_id", "user_id", "role"])
+async def test_admission_p03_pipeline_rejects_spoofed_owner(field):
+    session = FakePipelineSession()
+    response = await _post_pipeline(_pipeline_payload() | {field:"forged"}, session)
+    assert response.status_code == 422
+    assert session.added == [] and session.commit_count == 0
+
+
+async def test_admission_p06_pipeline_commit_failure_rolls_back(monkeypatch):
+    from unittest.mock import AsyncMock
+    session = FakePipelineSession()
+    monkeypatch.setattr(session, "commit", AsyncMock(side_effect=RuntimeError("commit_failed")))
+    rollback = AsyncMock()
+    monkeypatch.setattr(session, "rollback", rollback, raising=False)
+    with pytest.raises(RuntimeError, match="^commit_failed$"):
+        await _post_pipeline(_pipeline_payload(), session)
+    assert len(_added_jobs(session)) == 2 and len(_added_outbox_events(session)) == 1
+    rollback.assert_awaited_once()
 
 
 class FakeScalarsResult:
@@ -70,10 +91,16 @@ class FakePipelineSession:
         return FakeScalarsResult(self.child_rows)
 
 
-async def _post_pipeline(payload: dict, session: FakePipelineSession):
+ACTOR = AuthenticatedUser(id=UUID(int=101), role="user", status="active", email="fixture@invalid.test")
+
+
+async def _post_pipeline(payload: dict, session: FakePipelineSession, *, actor=ACTOR):
     async def override_session() -> AsyncIterator[FakePipelineSession]:
         yield session
 
+    async def override_user():
+        return actor
+    app.dependency_overrides[pipelines.require_user] = override_user
     app.dependency_overrides[pipelines.get_session] = override_session
     try:
         transport = httpx.ASGITransport(app=app)
@@ -83,6 +110,7 @@ async def _post_pipeline(payload: dict, session: FakePipelineSession):
         ) as client:
             return await client.post("/api/pipelines", json=payload)
     finally:
+        app.dependency_overrides.pop(pipelines.require_user, None)
         app.dependency_overrides.pop(pipelines.get_session, None)
 
 
@@ -201,16 +229,19 @@ def _assert_job_dispatch_event(
     return event
 
 
-async def test_create_pipeline_persists_parent_and_blocked_child():
+@pytest.mark.parametrize("actor_id,role", [(101,"user"), (102,"user"), (103,"master")])
+async def test_create_pipeline_persists_parent_and_blocked_child(actor_id, role):
     session = FakePipelineSession()
+    actor = AuthenticatedUser(id=UUID(int=actor_id), role=role, status="active", email="fixture@invalid.test")
 
-    response = await _post_pipeline(_pipeline_payload(), session)
+    response = await _post_pipeline(_pipeline_payload(), session, actor=actor)
 
     assert response.status_code == 201
     assert session.commit_count == 1
     jobs = _added_jobs(session)
     assert len(jobs) == 2
     parent, child = jobs
+    assert parent.owner_user_id == child.owner_user_id == actor.id
 
     assert parent.mode == GenerationMode.T2I
     assert parent.state == JobState.PENDING

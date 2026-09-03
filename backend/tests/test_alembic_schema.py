@@ -10,6 +10,7 @@ MIGRATIONS_ROOT = BACKEND_ROOT / "migrations"
 VERSIONS_ROOT = MIGRATIONS_ROOT / "versions"
 BASELINE_REVISION = VERSIONS_ROOT / "0001_generation_baseline.py"
 IDENTITY_REVISION = VERSIONS_ROOT / "0002_user_session_persistence.py"
+OWNERSHIP_REVISION = VERSIONS_ROOT / "0003_content_ownership.py"
 
 
 def _text(path: Path) -> str:
@@ -30,13 +31,16 @@ def test_alembic_runtime_dependency_and_required_files_exist() -> None:
 def test_exactly_two_ordered_revisions_are_packaged() -> None:
     revisions = sorted(VERSIONS_ROOT.glob("*.py")) if VERSIONS_ROOT.exists() else []
 
-    assert revisions == [BASELINE_REVISION, IDENTITY_REVISION]
+    assert revisions == [BASELINE_REVISION, IDENTITY_REVISION, OWNERSHIP_REVISION]
     baseline = _text(BASELINE_REVISION)
     identity = _text(IDENTITY_REVISION)
     assert 'revision = "0001_generation_baseline"' in baseline
     assert "down_revision = None" in baseline
     assert 'revision = "0002_user_session_persistence"' in identity
     assert 'down_revision = "0001_generation_baseline"' in identity
+    ownership = _text(OWNERSHIP_REVISION)
+    assert 'revision = "0003_content_ownership"' in ownership
+    assert 'down_revision = "0002_user_session_persistence"' in ownership
 
     dockerfile = _text(BACKEND_ROOT / "Dockerfile")
     assert "COPY alembic.ini" in dockerfile
@@ -100,4 +104,3 @@ def test_alembic_configuration_uses_application_settings_without_committed_url()
     assert "database_url" in env
     assert "compare_type=True" in env
     assert "Base.metadata" in env
-

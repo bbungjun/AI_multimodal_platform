@@ -77,6 +77,52 @@ paste credential contents.
 
 ## Active Work
 
+### G4.2A execution — 2026-09-03
+
+- **Ownership Admission Mock Verified — implementation/docs complete; delivery tracked by PR.**
+  [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
+  branch `codex/issue-105-owner-persistence-admission`,
+  [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
+  [execution evidence](portfolio/issue-105-owner-persistence-admission.md).
+- Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
+  This handoff is the pre-merge snapshot; the PR/Issue records final-head CI,
+  squash merge state and merge SHA. Do not infer actual merge from this snapshot.
+- Main synchronized to `4dd359ab39285e536e713a452577e19c07b3ec67` (G4.1 PR104).
+  Existing five design files preserved through targeted stash/restore, no conflict.
+  Prior single-G4.2 estimate is superseded: A exact20 paths/migration1,
+  B candidate10 (cap20)/migration0; G4.3 policy unchanged.
+- Frozen local/untracked plan:
+  `.omo/plans/issue-105-g4-2a-owner-persistence-admission-goal.md`.
+  SHA256 `e7f40b1d993cbdc9e4d3edb116dfcf2ebf6c17b379e0bab170f6550a303d87ab`.
+  Transfer exact file bytes between machines; do not stage .omo wholesale.
+- Model request: gpt-5.6-sol / medium, sequential Todo1–8 and F1–F4 self-review.
+  First execution check is SHA, branch/base, then plan B0 focused baseline.
+  Runtime gates passed: schema2 + auth1 + final ownership admission2 on fresh local
+  Docker projects. Delivery still requires Ready PR, final-head verify + both
+  Scan/SBOM success and actual squash MERGED; use the PR link below for final state.
+- Preparation baseline: plan B0 existing11 files **212 PASS /2.69s**.
+  Plan/spec allowlist20, Todo8/F4 and SHA parity PASS; relative links71/broken0,
+  diff/status/staged hygiene PASS. Preparation checkpoint contains seven docs only.
+  This is existing-code regression, not P01–P10/P16 implementation evidence.
+  Only docs and local plan changed; no migration, Docker runtime, DB reset,
+  OAuth/provider/cloud operation, Goal execution or PR creation in preparation.
+- Execution authorized: frozen SHA matched, main unchanged, B0 **212 PASS /2.84s**,
+  local Docker Desktop29.2.1 available; existing default/preview resources untouched.
+  Todo2 expected RED complete; Todo3 schema13 + regressions68 + harness106 PASS.
+  Sole0003 and owner metadata/head compatibility implemented.
+  Todo4 access25/schema13/regressions68 PASS. Todo5 W179/S68/H106 PASS.
+  Todo6 schema2/auth1/ownership2 PASS; each ownership auth12/admission111/smoke3,
+  cleanup=true at code2232ba6. See Issue105 portfolio for safe project receipts.
+  Final implementation `e3c98f1fe5d5a05fb04dee2f1814dcad3ad9b527`: Linux658 PASS/3 existing SKIP;
+  Windows657 PASS/3 existing SKIP/1 independently reproduced main Bash-path failure.
+  Frontend lint/build, Session48/browser34 PASS. Final ownership2 again passed
+  auth12/admission111/smoke3 each, exact-label leftovers0. No developer DB reset.
+  Next: finalize Ready PR/CI/squash delivery, then separately prepare G4.2B.
+  B input: head0003; `OwnershipAccess(session, actor)` scoped job/enhancement/asset,
+  `assert_same_owner`, immutable owner on new writers and existing authenticated harness.
+  B worker/pipeline/race and G4.3 read/file/delete/ops are
+  excluded from A; no public multi-user deployment at this checkpoint.
+
 ### G4.1 authenticated mock harness — 2026-09-03
 
 - **Implemented / Mock Verified** on `codex/issue-103-authenticated-mock-harness`.

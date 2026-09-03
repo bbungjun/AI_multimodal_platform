@@ -237,7 +237,9 @@ document or inherit the full design interview.
 | G3 | Backend Google OAuth and Session lifecycle | Mock Verified | [Issue #98](https://github.com/bbungjun/AI_multimodal_platform/issues/98), [PR #100](https://github.com/bbungjun/AI_multimodal_platform/pull/100), [spec](g3-auth-session-lifecycle-spec.md), [portfolio record](../portfolio/issue-98-auth-session-lifecycle.md), code/tests `ec42d61`: two real Postgres/Redis cycles, mock generation passed, 17 paths / zero migrations | G3.1 interface available; live readiness blocked by #99 and browser/proxy gates |
 | G3.1 | Authenticated workspace entry and browser Session UX | Mock Verified — Merged | [Spec](g3-1-authenticated-workspace-ux-spec.md), [Issue #101](https://github.com/bbungjun/AI_multimodal_platform/issues/101), [PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) merged at `100f5e7`, [portfolio](../portfolio/issue-101-authenticated-workspace-ux.md); final head `85cb215` verify + both scans PASS; module48, browser34, backend467 PASS / 3 conditional SKIP; isolated golden/cleanup PASS | G3 interfaces consumed; G4 receives browser Session interface and must enforce backend ownership. 17 paths / zero migrations; no live login |
 | G4.1 | Authenticated mock verification harness | Mock Verified | [Spec](g4-ownership-access-control-spec.md), [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103), [record](../portfolio/issue-103-authenticated-mock-harness.md); implementation `471b76e`, branch `codex/issue-103-authenticated-mock-harness` | Two fresh Docker cycles: auth12/scenarios3/cleanup each; focused106, Linux542 PASS / 3 existing SKIP; frontend48+34 PASS. Exactly13 paths, zero migrations. Delivery status tracked by Issue/PR |
-| G4.2 | Owner persistence and admission/reference invariants | Planned | [Accepted G4 spec](g4-ownership-access-control-spec.md); not implemented | Input: G4.1 MemoryIdentity/ScopedClient/OwnedRuntime, run_smoke(args, client=...), canonical --cycles2. Update expected schema head with its one migration; 20-path budget, no public multi-user deployment |
+| G4.2 | Owner persistence and admission/reference invariants | Partial — A Mock Verified, B Planned | [Accepted G4 policy](g4-ownership-access-control-spec.md), [accepted split spec](g4-2-owner-persistence-admission-spec.md) | Aggregate closes after A and B; no public multi-user deployment |
+| G4.2A | Owner persistence and authenticated admission | Ownership Admission Mock Verified; delivery tracked below | [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105), branch `codex/issue-105-owner-persistence-admission`, [execution record](../portfolio/issue-105-owner-persistence-admission.md); implementation `e3c98f1` | Exact20 paths/migration1/head0003; schema2/auth1/final admission2 PASS, cleanup0. Linux658 PASS/3 existing SKIP; frontend48+34 PASS. Developer/preview preserved; final CI/merge use delivery link |
+| G4.2B | Worker references and pipeline/race proof | Planned | [Accepted split spec](g4-2-owner-persistence-admission-spec.md), no Issue/Goal yet | Input after A merge: head0003, OwnershipAccess(session, actor), assert_same_owner, persisted owner + authenticated harness; use A delivery link for merge SHA. Candidate10 paths, hard cap20, migration0; P11–P15 not implemented |
 | G4.3 | Complete ownership access enforcement | Planned | [Accepted G4 spec](g4-ownership-access-control-spec.md); not implemented | Blocked by G4.2; read/mutation/file/ops enforcement, 20-path budget, zero migrations; only then close aggregate G4 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
@@ -315,6 +317,8 @@ At the end of a Goal:
 | 2026-09-03 | After Goal completion, user explicitly authorized Ready and squash auto-merge for PR #102 once required CI passes. | Supersedes Draft-only delivery for this follow-up; check the final head without bypassing protection. Frozen Goal/hash and mock-only implementation scope remain unchanged. |
 | 2026-09-03 | Recorded G3.1 merge at `100f5e7` and drafted G4 ownership design. | Inspection found more than 20 affected paths including anonymous verification tooling. Three bounded slices and detailed Master/metrics policies are proposed, not accepted product-policy changes. |
 | 2026-09-03 | User accepted G4.1/G4.2/G4.3, owner-only mutations even for Master, and Master-only ops/metrics; clarified local Docker-only Redis/PostgreSQL and mock AI. | Keep each execution context bounded, prevent cross-owner side effects and avoid managed-cloud/provider cost. Issue #103 and its frozen Goal prepare G4.1 without starting implementation. |
+| 2026-09-03 | Proposed, not accepted: split G4.2 into A persistence/admission and B worker/reference proof; keep product policy and one total migration. | Post-G4.1 inspection found missing harness-head, identity-column and handler/runtime paths in the old20-path estimate. Detailed spec records exact candidates and approval gate; no implementation started. |
+| 2026-09-03 | User accepted G4.2A/B split and authorized A execution preparation only. Issue #105 and branch created from synchronized main4dd359a; A frozen Goal fixes20 paths, one migration, Todo1–8/F1–F4. | Preserve prior design, bound one delivery slice for sol/medium, retain real schema2/auth1/admission2 gates. Future execution ends Ready PR, final-head CI and actual squash merge; no implementation or DB operations during preparation. |
 
 ## Initiative Completion Gate
 
@@ -342,12 +346,18 @@ The [G4 specification](g4-ownership-access-control-spec.md) is accepted. G4.1
 [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) now
 provides the authenticated test harness; see its [evidence](../portfolio/issue-103-authenticated-mock-harness.md)
 and [PR #104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)
-for verification and delivery. Next is G4.2 design/Issue/Goal preparation, not
-implicit implementation authorization. G4.1/G4.2/G4.3 budgets remain13/20/20;
-only G4.2 adds a migration. Reuse injected clients and hash-only fixtures, updating
-both expected schema revisions when ownership persistence changes.
+for verification and delivery. [G4.2A Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105)
+is now Ownership Admission Mock Verified at implementation `e3c98f1`; final delivery
+is tracked by its PR link in current-work and the portfolio record. After actual A
+merge, the next separate task is G4.2B design/Goal preparation. Budgets are G4.1=13,
+G4.2A=20, G4.2B<=20 (candidate10), G4.3<=20. Only A adds one migration.
+Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
+Use that PR for actual final-head checks and merge SHA; this document is a pre-merge evidence snapshot.
+Reuse injected clients and hash-only fixtures; schema/auth/harness/seeder expected
+revisions are now0003. B consumes OwnershipAccess and persisted owner relationships.
 
-Existing generation/file/ops endpoints are not yet protected. No product mock-login
+The four new-content/retry writers authenticate and enforce reference ownership.
+Read/list/delete/file/ops enforcement remains G4.3. No product mock-login
 bypass was added. No partial slice is safe for public multi-user deployment.
 Live operation
 also remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),

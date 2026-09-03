@@ -8,6 +8,62 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import mock_auth_support as support
 
 
+def test_admission_fixture_refuses_unowned_and_unknown_operations(monkeypatch):
+    runtime = support.OwnedRuntime(support.ROOT / ".env.example")
+    with pytest.raises(support.HarnessError, match="fixture_before_owned_runtime"):
+        runtime.admission_fixture("counts")
+    runtime.started, runtime.base_url = True, "http://127.0.0.1:1234"
+    with pytest.raises(support.HarnessError, match="fixture_operation_refused"):
+        runtime.admission_fixture("arbitrary_sql")
+
+
+@pytest.mark.parametrize("value", ['{"email":"SECRET_CANARY"}', '{"jobs":-1}', '{"owners":"SECRET_CANARY"}', '[]'])
+def test_admission_fixture_allows_only_safe_boolean_count_output(value, monkeypatch):
+    runtime = support.OwnedRuntime(support.ROOT / ".env.example")
+    runtime.started, runtime.base_url, runtime.compose = True, "http://127.0.0.1:1234", ["compose"]
+    monkeypatch.setattr(runtime, "assert_owned", lambda: [])
+    monkeypatch.setattr(runtime, "docker", lambda *a, **kw: value)
+    with pytest.raises(support.HarnessError, match="unsafe_fixture_result") as error:
+        runtime.admission_fixture("counts")
+    assert "SECRET_CANARY" not in str(error.value)
+
+
+def test_admission_counter_is_validated_before_receipt_serialization(monkeypatch, capsys):
+    monkeypatch.setattr(support, "command", lambda *a, **kw: "0"*40)
+    monkeypatch.setattr(support, "auth_proof", lambda *a:12)
+    class Runtime:
+        project = "ownership-verify-012345abcdef"
+        admission_checks = "SECRET_CANARY"
+        def __init__(self,*a): pass
+        def preflight(self): pass
+        def start(self,*a): pass
+        def seed(self,*a): pass
+        def cleanup(self): pass
+    results = support.verify_cycles(support.ROOT / ".env.example",1,runtime_factory=Runtime,scenario=lambda *a:3)
+    assert not results[0]["passed"] and results[0]["cleanup"]
+    assert "SECRET_CANARY" not in capsys.readouterr().out
+    assert "admission_checks" not in results[0]
+
+
+def test_admission_database_helper_rejects_arbitrary_target_and_records():
+    import importlib.util
+    from types import SimpleNamespace
+    path = support.ROOT / "backend/tests/ownership_support.py"
+    spec = importlib.util.spec_from_file_location("admission_fixture_test",path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    payload = {"project":"ownership-verify-012345abcdef","operation":"counts","records":[]}
+    url = SimpleNamespace(host="db",database="ownership_verify_012345abcdef")
+    module.validate_admission_target(payload,url,"mock","local")
+    for change in ({"operation":"execute"},{"sql":"SELECT secret"},{"records":[{"id":"unsafe"}]}):
+        with pytest.raises(ValueError):
+            module.validate_admission_target(payload | change,url,"mock","local")
+    with pytest.raises(ValueError):
+        module.validate_admission_target(payload,SimpleNamespace(host="db",database="multimodal"),"mock","local")
+    with pytest.raises(ValueError):
+        module.validate_admission_target(payload,url,"vertex","local")
+
+
 def test_canonical_env_only(tmp_path):
     with pytest.raises(support.HarnessError, match="only_env_example_allowed"):
         support.OwnedRuntime(tmp_path / ".env")

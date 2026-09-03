@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.generations import get_session
+from app.api.auth_dependencies import require_user
+from app.auth.service import AuthenticatedUser
 from app.models import GenerationMode, Job, JobState, utc_now
 from app.schemas import PipelineCreateRequest, PipelineResponse, job_response_from_job
 from app.services.jobs.outbox import add_job_dispatch_event
@@ -25,6 +27,7 @@ router = APIRouter(prefix="/api/pipelines", tags=["pipelines"])
 async def create_pipeline(
     payload: PipelineCreateRequest,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> PipelineResponse:
     _validate_pipeline_model(
         payload.image_model,
@@ -40,6 +43,7 @@ async def create_pipeline(
     now = utc_now()
     parent = Job(
         id=uuid4(),
+        owner_user_id=actor.id,
         mode=GenerationMode.T2I,
         model=payload.image_model,
         state=JobState.PENDING,
@@ -57,6 +61,7 @@ async def create_pipeline(
     )
     child = Job(
         id=uuid4(),
+        owner_user_id=actor.id,
         mode=GenerationMode.I2V,
         model=payload.video_model,
         state=JobState.PENDING,
@@ -75,7 +80,11 @@ async def create_pipeline(
     )
     session.add_all([parent, child])
     add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
-    await session.commit()
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
 
     return PipelineResponse(
         id=parent.id,

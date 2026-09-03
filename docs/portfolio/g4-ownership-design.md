@@ -1,7 +1,8 @@
 # G4 설계 기록 — 로그인에서 사용자 데이터 격리로
 
-- 상태: **Accepted / Planned**, 2026-09-03. 설계만 완료; 구현은 시작하지 않았다.
-  후속 [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103)의 G4.1 Goal을 준비했다.
+- 상태: **G4.2A admission Mock Verified / G4.2B·G4.3 Planned**, 2026-09-03.
+  G4.1은 [PR104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)로 병합됐다.
+  아래 최초 설계 당시 기록과 [G4.1 구현 증거](issue-103-authenticated-mock-harness.md)를 구분한다.
 - 기준: `100f5e7` (G3.1 PR #102 병합), [설계 초안](../initiatives/g4-ownership-access-control-spec.md).
 - 이 문서는 설계 판단 기록이다. runtime 검증이나 이미 구현한 접근 제어의 증거가 아니다.
 
@@ -57,5 +58,30 @@ storage를 사용하며, 없는 대상과 타인의 대상은 동일한 404로 �
 - `/metrics`를 Master로 제한하면 무인 scrape가 중단되므로 별도 배포 gate로 남긴다.
 - G4.2의 FK만으로 모든 cross-owner 관계를 DB에서 강제하지는 않는다.
 - 기존 파일 삭제/DB commit 비원자성과 이미 전송된 stream 회수 한계를 숨기지 않는다.
-- G4.1 Issue/branch/고정 Goal 준비 완료. 별도 실행 요청 후 Todo를 시작한다.
-- 구현 이후 이 설계 기록을 해당 Issue 포트폴리오와 연결하고 실제 실패/수정/검증 수치를 추가한다.
+- G4.1 구현·검증·병합 완료. A 구현·검증은 [Issue105 기록](issue-105-owner-persistence-admission.md)에
+  연결했다. Linux658 PASS/기존 SKIP3, schema2/auth1/final admission2 PASS이며 PR delivery는 그 링크를 따른다.
+- B worker 강화와 G4.3 read/file/delete/ops는 미구현이다. 아래는 최초 설계 당시 기록이다.
+
+## G4.2 상세화 — 2026-09-03
+
+문제: 최초20-path 예상표에 G4.1 신설 harness의 head0002 상수, identity column 집합 검사,
+직접 I2V/polling handler와 runtime admission matrix 변경이 빠져 있었다. 구현 단계에서
+한도를 넘기거나 검사를 생략할 위험이므로 기존 단일 Goal은 No-Go로 판단했다.
+
+해결 제안: [G4.2 상세 spec](../initiatives/g4-2-owner-persistence-admission-spec.md)에
+A(저장·모든 writer·접수20개/migration1), B(worker·pipeline·실경합10개 후보/migration0)를
+분리했다. codebase-design의 작은 interface 원칙으로 actor/SQL session을 주입받는
+Ownership module은 유지하고, caller transaction과 worker 저장 owner 책임을 구분했다.
+nullable owner/자동 Master backfill, schema-only 중간 배포, 테스트 삭제는 선택하지 않았다.
+
+검증: G4.1 merge와 checkout tree 일치, 호출/상수/fixture 정적 검사, 관련10개 test 파일
+`python -m pytest ... -q`로137 PASS. 대상은 generation/pipeline/prompt API, model relationships,
+identity models, Alembic, schema/auth verifier, pipeline_link, job_handlers 테스트다.
+이는 baseline이며 제안 기능의 pass count가 아니다. 새 경로 예산과 문서 링크도 검사한다.
+
+결과: P01–P16, A/B별 Todo1–8 후보와 F1–F4, migration refusal/복구, foreign 참조,
+Master 재사용, worker 부수효과0, 동시성/cleanup 검증을 연결했다. 현재는 문서만 변경했다.
+분할 승인 후 [A Issue #105 준비 기록](issue-105-owner-persistence-admission.md)에
+main 동기화, 작업 branch와 frozen Goal/hash를 연결했다. DB reset/provider/cloud 실행은 하지 않았다.
+A의20개 예산에는 여유가 없으므로 추가 필요 시 구현을 멈추고 재설계한다.
+G4.3 전까지 read/file/delete/ops 노출은 남는다.

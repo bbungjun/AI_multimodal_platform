@@ -173,7 +173,7 @@ def test_generation_metadata_is_unchanged_when_identity_models_are_registered() 
     from app.models import Asset, Job, OutboxEvent, PromptEnhancement
 
     assert set(Job.__table__.columns.keys()) == {
-        "id", "mode", "model", "state", "prompt", "enhanced_prompt",
+        "id", "owner_user_id", "mode", "model", "state", "prompt", "enhanced_prompt",
         "enhancement_id", "parent_job_id", "retry_of_job_id", "source_asset_id",
         "blocked", "vertex_operation_name", "attempts", "parameters",
         "state_history", "error", "vertex_charged", "created_at", "updated_at",
@@ -183,7 +183,7 @@ def test_generation_metadata_is_unchanged_when_identity_models_are_registered() 
         "height", "duration_sec", "created_at",
     }
     assert set(PromptEnhancement.__table__.columns.keys()) == {
-        "id", "original", "enhanced", "components", "target_mode",
+        "id", "owner_user_id", "original", "enhanced", "components", "target_mode",
         "target_model", "llm_model", "latency_ms", "tokens_in", "tokens_out",
         "created_at",
     }

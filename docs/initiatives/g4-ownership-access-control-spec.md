@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1 harness Mock Verified; G4.2/G4.3 Planned (2026-09-03).**
+- **Accepted — G4.1 harness / G4.2A admission Mock Verified; G4.2B/G4.3 Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -184,12 +184,14 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 
 단일 G4는 production, 기존 endpoint/파일 테스트, migration verifier, mock scripts까지
 **20개 이상**의 non-document 경로에 영향을 준다. 파일 수를 숨기거나 인증 테스트를
-전역 skip/override로 우회하지 않고 아래 **세 개의 순차 Goal**로 나눈다.
+전역 skip/override로 우회하지 않는다. 최초 세 단계 중 G4.2를 A/B로 나누는
+추가 승인을 반영해 아래 **네 개의 순차 Goal**로 실행한다.
 
 | Slice | 주된 산출물 | 예상 non-document / migration | 단독 완료의 의미 |
 |---|---|---|---|
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
-| G4.2 | non-null owner·생성/재사용/worker 관계 검증 | 20 / 1 | 저장/접수 규칙 구현; 읽기·파일 격리 아직 미완료 |
+| G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
+| G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 후보10, 최대20 / 0 | A와 함께 G4.2 종료; 읽기·파일 격리 아직 미완료 |
 | G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 20 / 0 | 아래 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
@@ -236,9 +238,16 @@ workflow는 해당 guarded runner를 호출하고 실패 시 raw Compose/auth/SQ
 항상 자신의 project만 정리한다. 폐기된 기존 smoke 명령은 문서에서 새 명령으로 교체하며
 보호 활성화 후 익명 fallback을 남기지 않는다. G4.1 frozen Goal에서 canonical CLI를
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`로 고정했다.
-아직 구현되지 않은 실행 산출물이다.
+G4.1에서 구현·검증을 완료했으며 PR104로 병합됐다.
 
 ### G4.2 경로 예산 (20)
+
+아래는 최초 승인 당시 **예상표**이며 실행 allowlist가 아니다. G4.1 병합 후 재조사에서
+harness head, identity metadata test, 직접 worker와 runtime 검증 경로 누락을 확인했다.
+[G4.2 상세 설계](g4-2-owner-persistence-admission-spec.md)의 A/B 분할을 승인했다.
+아래 단일 Goal 예상표는 대체되었으며 실행하지 않는다. A는 상세 spec A5의20개만
+허용하고 [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105)로 준비했다.
+제품 권한 계약은 변경하지 않으며 구현은 별도 Goal 요청 후 시작한다.
 
 ```text
 backend/app/models.py
@@ -386,8 +395,10 @@ DB reset·새 migration·실제 OAuth/provider/cloud 호출은 수행하지 않�
 G4.2 입력 interface: `MemoryIdentity`, `ScopedClient`, `OwnedRuntime`과
 `verify_ownership.py --cycles 2`; scenario는 `run_smoke(args, client=...)`를 받는다.
 서버가 검증한 A/B/Master 및 인증 거절 fixture를 후속 owner/reference 검사에 재사용한다.
-현재 schema head는 `0002_user_session_persistence`; G4.2에서 head가 바뀌면
-harness/seeder의 expected revision과 비어 있는 DB/fixture 계약을 함께 갱신한다.
+G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함께 갱신했다.
+신규 owner와 접수 단계 참조 검증은 [Issue105 실행 기록](../portfolio/issue-105-owner-persistence-admission.md)
+범위까지 Mock Verified다. B는 `OwnershipAccess(session, actor)`와 `assert_same_owner`,
+저장된 owner 및 기존 authenticated harness를 이어받는다. 실제 worker 강화는 B에 남는다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

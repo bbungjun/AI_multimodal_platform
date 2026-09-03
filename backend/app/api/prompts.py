@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import AsyncSessionLocal
+from app.api.auth_dependencies import require_user
+from app.auth.service import AuthenticatedUser
 from app.models import PromptEnhancement
 from app.prompt_enhancement import (
     PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY,
@@ -35,6 +37,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 async def enhance_prompt(
     payload: PromptEnhanceRequest,
     session: AsyncSession = Depends(get_session),
+    actor: AuthenticatedUser = Depends(require_user),
 ) -> PromptEnhancementResponse:
     try:
         result = await enhancer.enhance_prompt(
@@ -70,6 +73,7 @@ async def enhance_prompt(
         "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
     }
     prompt_enhancement = PromptEnhancement(
+        owner_user_id=actor.id,
         original=result.original,
         enhanced=result.enhanced,
         components=components,
@@ -81,7 +85,11 @@ async def enhance_prompt(
         tokens_out=result.tokens_out,
     )
     session.add(prompt_enhancement)
-    await session.commit()
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
     await session.refresh(prompt_enhancement)
 
     return PromptEnhancementResponse(

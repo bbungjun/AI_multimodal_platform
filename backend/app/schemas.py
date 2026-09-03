@@ -25,6 +25,7 @@ from app.prompt_enhancement import (
 
 
 class GenerationRequestBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     prompt: str = Field(min_length=1, max_length=4000)
     model: str = Field(min_length=1, max_length=128)
     auto_enhance: bool = False
@@ -32,6 +33,7 @@ class GenerationRequestBase(BaseModel):
 
 
 class PromptEnhanceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     prompt: str = Field(min_length=1, max_length=4000)
     target_mode: GenerationMode
     target_model: str = Field(min_length=1, max_length=128)
@@ -39,6 +41,7 @@ class PromptEnhanceRequest(BaseModel):
 
 
 class PipelineCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     image_prompt: str = Field(min_length=1, max_length=4000)
     video_prompt: str = Field(min_length=1, max_length=4000)
     image_model: str = Field(min_length=1, max_length=128)
