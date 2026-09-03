@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db import AsyncSessionLocal
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.ownership import OwnershipReferenceMismatch, validate_execution_references
 from app.state_machine import TERMINAL_STATES, transition
 from app.services import rate_limit, storage
 from app.services.jobs import pipeline_link
@@ -52,7 +53,9 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
     if job.state in TERMINAL_STATES:
         return
 
+    job_id = job.id
     try:
+        await validate_execution_references(session, job)
         if job.state == JobState.PENDING:
             transition(job, JobState.QUEUED, detail={"runner": "direct-handler"})
             await session.commit()
@@ -105,11 +108,12 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
         await pipeline_link.link_completed_parent(session, job)
     except Exception as exc:
         await session.rollback()
-        refreshed = await session.get(Job, job.id)
-        if refreshed is not None:
-            job = refreshed
+        refreshed = await session.get(Job, job_id)
+        if refreshed is None:
+            return
+        job = refreshed
         await _mark_failed(session, job, exc)
-        if job.state == JobState.FAILED:
+        if job.state == JobState.FAILED and not isinstance(exc, OwnershipReferenceMismatch):
             await pipeline_link.fail_blocked_children_for_parent(session, job)
 
 
@@ -120,6 +124,7 @@ async def _attempt_imagen_generation(
     number_of_images: int,
     aspect_ratio: str,
 ) -> list[bytes]:
+    await validate_execution_references(session, job)
     job.attempts += 1
     await session.commit()
     return await imagen.generate_image(
@@ -137,6 +142,7 @@ async def _attempt_veo_submit(
     aspect_ratio: str,
     duration_sec: int,
 ) -> object:
+    await validate_execution_references(session, job)
     job.attempts += 1
     await session.commit()
     return await veo.submit_video(
@@ -156,6 +162,7 @@ async def _attempt_veo_i2v_submit(
     image_bytes: bytes,
     image_mime: str,
 ) -> object:
+    await validate_execution_references(session, job)
     job.attempts += 1
     await session.commit()
     return await veo.submit_video(
@@ -191,6 +198,12 @@ def _public_error(
     at: datetime,
     max_retry_attempts: int,
 ) -> dict[str, object]:
+    if isinstance(exc, OwnershipReferenceMismatch):
+        return {
+            "code": exc.code,
+            "message": "Content ownership reference validation failed.",
+            "retryable": False,
+        }
     if isinstance(exc, I2VSourceAssetNotFoundError):
         error = {
             "code": "i2v_source_asset_not_found",
@@ -291,17 +304,20 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
     if job.state in TERMINAL_STATES:
         return
 
+    job_id = job.id
     try:
+        await validate_execution_references(session, job)
         params = job.parameters or {}
         aspect_ratio = str(params.get("aspect_ratio", "16:9"))
         duration_sec = int(params.get("duration_sec", 4))
 
         if job.state == JobState.POLLING and job.vertex_operation_name:
             try:
+                await validate_execution_references(session, job)
                 video_bytes = await veo.poll_operation_name(job.vertex_operation_name)
             except veo.VeoTimeoutError:
                 raise
-            except VertexServiceError:
+            except (VertexServiceError, OwnershipReferenceMismatch):
                 raise
             except Exception as exc:
                 raise map_vertex_error(exc) from exc
@@ -352,7 +368,7 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
                 ),
                 policy=build_retry_policy(get_settings()),
             )
-        except VertexServiceError:
+        except (VertexServiceError, OwnershipReferenceMismatch):
             raise
         except Exception as exc:
             raise map_vertex_error(exc) from exc
@@ -367,10 +383,11 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
         await session.commit()
 
         try:
+            await validate_execution_references(session, job)
             video_bytes = await veo.poll_operation(operation)
         except veo.VeoTimeoutError:
             raise
-        except VertexServiceError:
+        except (VertexServiceError, OwnershipReferenceMismatch):
             raise
         except Exception as exc:
             raise map_vertex_error(exc) from exc
@@ -399,9 +416,10 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        refreshed = await session.get(Job, job.id)
-        if refreshed is not None:
-            job = refreshed
+        refreshed = await session.get(Job, job_id)
+        if refreshed is None:
+            return
+        job = refreshed
         await _mark_failed(session, job, exc)
 
 
@@ -409,17 +427,20 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
     if job.state in TERMINAL_STATES:
         return
 
+    job_id = job.id
     try:
+        await validate_execution_references(session, job)
         params = job.parameters or {}
         aspect_ratio = str(params.get("aspect_ratio", "16:9"))
         duration_sec = int(params.get("duration_sec", 4))
 
         if job.state == JobState.POLLING and job.vertex_operation_name:
             try:
+                await validate_execution_references(session, job)
                 video_bytes = await veo.poll_operation_name(job.vertex_operation_name)
             except veo.VeoTimeoutError:
                 raise
-            except VertexServiceError:
+            except (VertexServiceError, OwnershipReferenceMismatch):
                 raise
             except Exception as exc:
                 raise map_vertex_error(exc) from exc
@@ -460,11 +481,9 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
         )
         await session.commit()
 
-        if job.source_asset_id is None:
-            raise JobHandlerError("I2V source asset is required.")
-        source_asset = await session.get(Asset, job.source_asset_id)
+        source_asset = await validate_execution_references(session, job)
         if source_asset is None:
-            raise I2VSourceAssetNotFoundError("I2V source asset was not found.")
+            raise OwnershipReferenceMismatch()
         if source_asset.kind != AssetKind.IMAGE:
             raise I2VSourceAssetNotImageError("I2V source asset must be an image.")
 
@@ -481,7 +500,7 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
                 ),
                 policy=build_retry_policy(get_settings()),
             )
-        except VertexServiceError:
+        except (VertexServiceError, OwnershipReferenceMismatch):
             raise
         except Exception as exc:
             raise map_vertex_error(exc) from exc
@@ -496,10 +515,11 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
         await session.commit()
 
         try:
+            await validate_execution_references(session, job)
             video_bytes = await veo.poll_operation(operation)
         except veo.VeoTimeoutError:
             raise
-        except VertexServiceError:
+        except (VertexServiceError, OwnershipReferenceMismatch):
             raise
         except Exception as exc:
             raise map_vertex_error(exc) from exc
@@ -528,7 +548,8 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
         await session.commit()
     except Exception as exc:
         await session.rollback()
-        refreshed = await session.get(Job, job.id)
-        if refreshed is not None:
-            job = refreshed
+        refreshed = await session.get(Job, job_id)
+        if refreshed is None:
+            return
+        job = refreshed
         await _mark_failed(session, job, exc)

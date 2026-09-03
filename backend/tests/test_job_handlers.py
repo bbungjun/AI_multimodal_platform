@@ -621,21 +621,17 @@ async def test_handle_i2v_fails_when_source_asset_is_missing(monkeypatch):
     assert job.attempts == 0
     assert session.added == []
     assert [entry["state"] for entry in job.state_history] == [
-        "queued",
-        "generating",
         "failed",
     ]
     assert job.state_history[-1]["detail"] == {
-        "error": "i2v_source_asset_not_found"
+        "error": "ownership_reference_mismatch"
     }
     assert job.error == {
-        "code": "i2v_source_asset_not_found",
-        "message": "I2V source asset was not found.",
+        "code": "ownership_reference_mismatch",
+        "message": "Content ownership reference validation failed.",
         "retryable": False,
-        "retry_count": 0,
-        "last_attempt_at": job.error["last_attempt_at"],
     }
-    assert session.commit_count == 3
+    assert session.commit_count == 1
     assert session.rollback_count == 1
 
 

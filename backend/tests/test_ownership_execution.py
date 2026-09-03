@@ -212,8 +212,10 @@ async def test_execution_rollback_refetch_uses_cached_identifier(entry, monkeypa
         orm.expire(job, ["id", "mode"])
         session.rollbacks += 1
     async def get(model, value):
+        from sqlalchemy.orm.attributes import set_committed_value
         assert value == job_id
-        job.id, job.mode = job_id, mode
+        set_committed_value(job, "id", job_id)
+        set_committed_value(job, "mode", mode)
         return job
     monkeypatch.setattr(session, "rollback", rollback)
     monkeypatch.setattr(session, "get", get)
@@ -224,3 +226,38 @@ async def test_execution_rollback_refetch_uses_cached_identifier(entry, monkeypa
         assert job.state == JobState.FAILED and session.rollbacks == 1
     finally:
         orm.close()
+
+
+@pytest.mark.parametrize("entry", ("t2i", "t2v", "i2v"))
+async def test_execution_nested_attempt_mismatch_is_not_provider_error_or_retried(entry, monkeypatch):
+    job, session = linked_session(entry)
+    spies = effect_spies(monkeypatch)
+    async def change_after_entry(_model):
+        session.rows[job.enhancement_id].owner_user_id = FOREIGN
+        return 0
+    monkeypatch.setattr(handlers.rate_limit,"acquire",change_after_entry)
+    await getattr(handlers,"handle_" + entry)(session,job)
+    assert job.error["code"] == "ownership_reference_mismatch" and job.error["retryable"] is False
+    assert job.attempts == 0
+    for spy in spies:
+        spy.assert_not_called()
+
+
+@pytest.mark.parametrize("entry", ("t2v", "i2v"))
+async def test_execution_poll_rechecks_relations_after_successful_submit(entry, monkeypatch):
+    job, session = linked_session(entry)
+    poll = AsyncMock(side_effect=AssertionError("unexpected_poll"))
+    save = Mock(side_effect=AssertionError("unexpected_save"))
+    async def submit(*args, **kwargs):
+        session.rows[job.enhancement_id].owner_user_id = FOREIGN
+        return SimpleNamespace(name="mock-operation")
+    monkeypatch.setattr(handlers.rate_limit,"acquire",AsyncMock(return_value=0))
+    monkeypatch.setattr(handlers.storage,"read_bytes",Mock(return_value=b"fixture"))
+    monkeypatch.setattr(handlers.storage,"save_bytes",save)
+    monkeypatch.setattr(handlers.veo,"submit_video",submit)
+    monkeypatch.setattr(handlers.veo,"poll_operation",poll)
+    await getattr(handlers,"handle_"+entry)(session,job)
+    assert job.error["code"] == "ownership_reference_mismatch"
+    assert job.attempts == 1
+    poll.assert_not_called()
+    save.assert_not_called()

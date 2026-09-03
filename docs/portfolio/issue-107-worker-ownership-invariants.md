@@ -98,3 +98,13 @@ pipeline foreign 관계, 반복 outbox, lock, commit 실패, 혼합 owner cascad
 W/E 합계 **70 expected FAIL /22 PASS /2.79s**, collection 오류0. 실패는 누락된
 검증 Interface와 기존 pipeline 계약 때문이며 기존 무변경 schema 회귀106개는 PASS다.
 기존 factory에는 명시적 일반 User owner와 source parent 관계를 제공했다. bypass/skip은 없다.
+
+### Todo3 — worker Interface
+
+저장된 owner와 남아 있는 참조의 SQL scope/반환 row를 검사하고 직접 실행, 각 attempt,
+poll/source-read 직전에 적용했다. mismatch는 고정 오류로 현재 Job만 실패시키며 cascade는
+하지 않는다. nested provider 변환에서도 이 예외를 유지하고 재시도하지 않는다.
+rollback 전에 id를 보존했다. expire 테스트의 fake refetch도 일반 attribute 대입 시
+ORM load를 유발해 `set_committed_value`로 실제 재조회 완료 상태를 모사하도록 정정했다.
+기존 missing-source 테스트는 승인된 조기 실패 계약(queued/generating 없이 mismatch)으로
+기대값을 바꿨다. E/handler **84 PASS /2.48s**, S106 PASS. pipeline9 RED는 Todo4에 남았다.
