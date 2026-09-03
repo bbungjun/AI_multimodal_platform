@@ -543,12 +543,37 @@ Do not aim it at default/preview DBs or change work360s/cleanup90s budgets to hi
 failure. Preserve first failure evidence and rerun complete cycles after an in-scope fix.
 Details: [Issue110](../portfolio/issue-110-metadata-ownership-access.md).
 
-File/Range and ops remain unprotected until G4.3B; A alone is NOT safe for public
-multi-user deployment. Corrupt relationship pages fail closed404; do not add a Master
+A alone does NOT protect file/Range and ops; G4.3B supplies that enforcement and its
+delivery is tracked below. Corrupt relationship pages fail closed404; do not add a Master
 bypass. File deletion followed by failed DB commit is still non-atomic. Rollback uses
 a private/stopped backend and previous code, not a schema downgrade; older code loses
 metadata protection and must not be publicly exposed. No actual rollback/live deployment
 was performed by this verification.
+
+## G4.3B file/ops verification
+
+B file/Range/Master ops code and v2 verification are implemented. The original
+combined runtime exceeded its work budget; that failure remains recorded.
+The v2 verifier splits ownership2 and file-ops2 into four fresh
+owned projects, same code revision; work360s/cleanup90s per cycle, suite900s, all1800s.
+`--suite all` is the full-acceptance selector; local c05b815 proof passed4/998.187s.
+Default ownership preserves the existing manual smoke20-minute budget, but only
+explicit all proves complete G4.3B. No CI workflow change or dispatch is authorized.
+Do not retry the over-budget combined proof or run any reset against preview/default
+resources. Follow the new frozen Goal and [failure/approval record](../portfolio/issue-112-file-ops-access.md).
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_ownership.py --env-file .env.example --suite all --cycles 2
+```
+
+Require complete=true, two cycles per suite, matching code revision and independent
+exact-label cleanup0. Missing/false groups, stale SHA, reused project or failed cleanup
+must not be combined manually into success. Diagnostics emit fixed phase timings and
+error codes only. Do not paste raw Session/email/prompt/response logs into evidence.
+The default command proves ownership only; final G4.3B requires explicit all.
+Unattended `/metrics` now returns401 without a Session; do not add a scrape bypass.
+Ready PR, final-head CI and actual merge remain separately linked from Issue112.
 
 ## Stop
 

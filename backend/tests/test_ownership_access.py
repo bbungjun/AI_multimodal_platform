@@ -109,3 +109,55 @@ async def test_access_interface_lock_is_fresh_and_table_scoped(kind):
     statement = (session.scalars if kind=="job" else session.execute).call_args.args[0]
     assert statement.get_execution_options()["populate_existing"] is True
     assert "FOR UPDATE OF " + ("jobs" if kind=="job" else "assets") in str(statement.compile(dialect=postgresql.dialect()))
+
+
+@pytest.mark.parametrize("role", ["user", "master"])
+@pytest.mark.parametrize("owner", [OWNER, OTHER, None])
+async def test_file_ops_interface_exact_path_and_owner(role, owner):
+    path = f"{ITEM}/output.png"
+    row = SimpleNamespace(local_path=path, job_id=ITEM)
+    session = SimpleNamespace(execute=AsyncMock(return_value=result([(row, owner)])))
+    access = OwnershipAccess(session, actor(role))
+    if owner is not None and (owner == OWNER or role == "master"):
+        assert await access.file_asset(path) is row
+    else:
+        with pytest.raises(HTTPException, match="content_not_found"):
+            await access.file_asset(path)
+    statement = session.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "JOIN jobs ON assets.job_id = jobs.id" in sql
+    assert "assets.local_path =" in sql and path not in sql
+    assert ("jobs.owner_user_id =" in sql) == (role == "user")
+    assert path in statement.compile().params.values()
+
+
+@pytest.mark.parametrize("path", ["", "no/output.png", f"{ITEM}//a", f"{ITEM}/../a",
+    f"{ITEM}/.", f"{ITEM}/%61", f"{ITEM}/a\\b", f"{ITEM}/a\x00", f"{ITEM}/a/b",
+    "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA/a", f"{ITEM.hex}/a"])
+async def test_file_ops_interface_bad_path_no_query(path):
+    session = SimpleNamespace(execute=AsyncMock())
+    with pytest.raises(HTTPException, match="content_not_found"):
+        await OwnershipAccess(session, actor("master")).file_asset(path)
+    session.execute.assert_not_called()
+
+
+@pytest.mark.parametrize("kind", ["missing", "path", "job"])
+async def test_file_ops_interface_missing_or_confused_row(kind):
+    path = f"{ITEM}/output.png"
+    row = SimpleNamespace(local_path=path if kind != "path" else f"{ITEM}/other.png",
+                          job_id=REF if kind == "job" else ITEM)
+    session = SimpleNamespace(execute=AsyncMock(return_value=result([] if kind == "missing" else [(row, OWNER)])))
+    with pytest.raises(HTTPException, match="content_not_found"):
+        await OwnershipAccess(session, actor("master")).file_asset(path)
+
+
+@pytest.mark.parametrize("role", ["user", "master", "admin", "MASTER", None])
+async def test_file_ops_interface_master_role_only(role):
+    from app.api.auth_dependencies import require_master
+    current = actor(role)
+    if role == "master":
+        assert await require_master(current) is current
+    else:
+        with pytest.raises(HTTPException) as exc:
+            await require_master(current)
+        assert (exc.value.status_code, exc.value.detail) == (403, "master_required")

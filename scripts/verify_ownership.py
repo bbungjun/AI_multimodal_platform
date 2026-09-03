@@ -8,7 +8,8 @@ from types import SimpleNamespace
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-from mock_auth_support import HarnessError, ROOT, verify_cycles
+from mock_auth_support import (HarnessError, ROOT, measured, phase, verify_cycles,
+    command, validate_aggregate, failure_code)
 
 
 def content_id(case, kind):
@@ -16,6 +17,7 @@ def content_id(case, kind):
     return str(uuid5(NAMESPACE_URL, "ownership-content/" + case + "/" + kind))
 
 
+@measured("admission")
 def admission_proof(runtime, identity):
     # Quiesce only this run's owned consumers; admission rows remain deterministic.
     from urllib.request import Request
@@ -130,18 +132,205 @@ def scenarios(runtime, identity):
     import smoke_mock_golden_path as golden
     import smoke_mock_retry_flow as retry
     import smoke_mock_i2v_duplicate_guard as duplicate
-    for module in (golden, retry, duplicate):
-        remaining = runtime.deadline - time.monotonic()
-        if remaining <= 0:
-            raise HarnessError("cycle_deadline")
-        args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
-                               keep_job=False, keep_jobs=False)
-        module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
+    with phase(runtime, "smokes"):
+        for module in (golden, retry, duplicate):
+            remaining = runtime.deadline - time.monotonic()
+            if remaining <= 0:
+                raise HarnessError("cycle_deadline")
+            args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
+                                   keep_job=False, keep_jobs=False)
+            module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
     execution_proof(runtime, identity)
     return 3
 
 
 scenarios.requires_access = True
+scenarios.suite = "ownership"
+
+
+def file_ops_scenarios(runtime, identity):
+    import smoke_mock_golden_path as golden
+    import smoke_mock_retry_flow as retry
+    import smoke_mock_i2v_duplicate_guard as duplicate
+    from mock_auth_support import E2E_STAGES
+    runtime.e2e_completed={case:dict.fromkeys(E2E_STAGES,False) for case in ("a","b")}
+    def actor_flow(case):
+        with phase(runtime, "e_" + case):
+            run_actor(case)
+    def run_actor(case):
+        client=TrackedActor(runtime,identity,case)
+        modules=(golden,retry,duplicate) if case=="a" else (golden,retry)
+        for module in modules:
+            remaining=runtime.deadline-time.monotonic()
+            if remaining<=0:
+                raise HarnessError("cycle_deadline")
+            args=SimpleNamespace(timeout_sec=min(90,remaining),poll_interval_sec=0.5,
+                                 keep_job=False,keep_jobs=False)
+            module.run_smoke(args,client=client)
+        pipeline_end_to_end(runtime,client)
+    # Sequential bounded clients avoid executor shutdown waits on a failed actor.
+    # No assertion/workload is dropped; each actor still executes its complete flow.
+    for case in ("a", "b"):
+        actor_flow(case)
+    if not all(all(stages.values()) for stages in runtime.e2e_completed.values()):
+        raise HarnessError("actor_flow_incomplete")
+    runtime.file_ops_completed["E"]=True
+    return 2
+
+
+file_ops_scenarios.requires_file_ops = True
+file_ops_scenarios.suite = "file-ops"
+
+
+def file_id(case, kind="job"):
+    from uuid import uuid5,NAMESPACE_URL
+    return str(uuid5(NAMESPACE_URL,"ownership-files/"+case+"/"+kind))
+
+
+def file_check(runtime, condition):
+    if not condition:
+        raise HarnessError("file_ops_assertion_failed")
+    runtime.file_ops_checks+=1
+
+
+def private_request(runtime,client,path,code=200,*,method="GET",headers=None):
+    body,raw_headers,status=client.request_bytes(method,path,expected_status=code,headers=headers)
+    result={k.lower():v for k,v in raw_headers.items()}
+    file_check(runtime,status==code and result.get("cache-control")=="private, no-store")
+    if code in (401,403,404):
+        expected={401:"authentication_required",403:"master_required",404:"content_not_found"}[code]
+        file_check(runtime,json.loads(body)=={"detail":expected})
+        file_check(runtime,"content-range" not in result and "accept-ranges" not in result)
+    return body,result
+
+
+def file_ops_before_auth(runtime,identity):
+    from mock_auth_support import FILE_OPS_GROUPS,ScopedClient
+    runtime.file_ops_completed=dict.fromkeys(FILE_OPS_GROUPS,False)
+    runtime.file_ops_checks=0
+    if runtime.access_fixture("prepare_files")!={"prepared":True}:
+        raise HarnessError("file_fixture_failed")
+    clients={c:identity.client(runtime.base_url,c) for c in ("a","b","master")}
+    for case in ("a","b"):
+        path="/files/"+file_id(case)+"/output.bin"
+        for who in ("a","b","master"):
+            permitted=who==case or who=="master"
+            body,headers=private_request(runtime,clients[who],path,200 if permitted else 404)
+            if permitted:
+                file_check(runtime,body==b"0123456789" and headers.get("content-length")=="10")
+            for header,code,expected in (("bytes=2-4",206,b"234"),("bytes=7-",206,b"789"),
+                ("bytes=-2",206,b"89"),("bytes=8-99",206,b"89"),("items=0-1",400,None),
+                ("bytes=0-1,3-4",400,None),("bytes=99-",416,None)):
+                body,headers=private_request(runtime,clients[who],path,code if permitted else 404,headers={"Range":header})
+                if permitted and expected is not None:
+                    file_check(runtime,body==expected and headers.get("content-length")==str(len(expected))
+                        and headers.get("accept-ranges")=="bytes")
+                    start={"bytes=2-4":2,"bytes=7-":7,"bytes=-2":8,"bytes=8-99":8}[header]
+                    file_check(runtime,headers.get("content-range")==f"bytes {start}-{start+len(expected)-1}/10")
+                if permitted and code==416:
+                    file_check(runtime,headers.get("content-range")=="bytes */10")
+        for probe in ("encoded","encoded_slash","double","traversal","dot","duplicate","head"):
+            body,headers,code=clients[case].file_probe(probe,file_id(case),expected_status=405 if probe=="head" else 404)
+            lower={k.lower():v for k,v in headers.items()}
+            file_check(runtime,lower.get("cache-control")=="private, no-store" and "content-range" not in lower)
+            file_check(runtime,body==b"" if probe=="head" else json.loads(body)=={"detail":"content_not_found"})
+    for case in ("orphan","missing","confused","absent"):
+        for client in clients.values():
+            private_request(runtime,client,"/files/"+file_id(case)+"/output.bin",404,headers={"Range":"bad"})
+    runtime.file_ops_completed["F"]=True
+    ops=("/api/ops/health","/api/ops/metrics","/metrics")
+    negative={"anonymous":ScopedClient(runtime.base_url,secret=None),
+              **{c:identity.client(runtime.base_url,c) for c in ("idle","absolute","revoked","suspended","synthetic")}}
+    for path in ops:
+        for case,client in clients.items():
+            body,headers=private_request(runtime,client,path,200 if case=="master" else 403)
+            if case=="master":
+                if path=="/metrics":
+                    file_check(runtime,headers.get("content-type","").startswith("text/plain;")
+                        and b"creativeops_http_requests_total" in body)
+                else:
+                    file_check(runtime,type(json.loads(body)) is dict)
+        for client in negative.values():
+            private_request(runtime,client,path,401)
+    anonymous=negative["anonymous"]
+    for path in ("/api/health","/api/health/live"):
+        _,headers,code=anonymous.request_bytes("GET",path,expected_status=200)
+        file_check(runtime,code==200 and "cache-control" not in {k.lower():v for k,v in headers.items()})
+    runtime.file_ops_completed["O"]=True
+    runtime.file_logout_client=identity.client(runtime.base_url,"logout")
+    path="/files/"+file_id("logout")+"/output.bin"
+    body,_=private_request(runtime,runtime.file_logout_client,path)
+    file_check(runtime,body==b"0123456789")
+    body,_=private_request(runtime,runtime.file_logout_client,path,206,headers={"Range":"bytes=0-2"})
+    file_check(runtime,body==b"012")
+    for client in negative.values():
+        private_request(runtime,client,path,401,headers={"Range":"bad"})
+    print(json.dumps({"file_ops_group":"F_O"}),flush=True)
+
+
+def file_ops_after_auth(runtime,identity):
+    path="/files/"+file_id("logout")+"/output.bin"
+    private_request(runtime,runtime.file_logout_client,path,401)
+    private_request(runtime,runtime.file_logout_client,path,401,headers={"Range":"bytes=0-2"})
+    del runtime.file_logout_client
+    runtime.file_ops_completed["V"]=True
+    if runtime.access_fixture("clear_files")!={"cleared":True}:
+        raise HarnessError("file_cleanup_failed")
+    print(json.dumps({"file_ops_group":"V"}),flush=True)
+
+
+class TrackedActor:
+    """Reuse existing smoke assertions, recording only fixed stage booleans."""
+    def __init__(self,runtime,identity,case):
+        self.runtime=runtime
+        self.client=identity.client(runtime.base_url,case)
+        self.foreign=identity.client(runtime.base_url,"b" if case=="a" else "a")
+        self.stages=runtime.e2e_completed[case]
+
+    def request_json(self,method,path,**kwargs):
+        body=self.client.request_json(method,path,**kwargs)
+        if method=="POST" and path=="/api/prompts/enhance":
+            self.stages["enhance"]=True
+        if method=="POST" and path=="/api/generations":
+            self.stages["generate"]=True
+        if method=="GET" and path.startswith("/api/generations/") and body.get("state")=="completed":
+            self.stages["poll"]=True
+        if method=="GET" and path.startswith("/api/assets/"):
+            self.stages["metadata"]=True
+            private_request(self.runtime,self.foreign,path,404)
+            private_request(self.runtime,self.foreign,body["url"],404,headers={"Range":"bad"})
+            self.stages["foreign"]=True
+        if method=="POST" and path.endswith("/retry"):
+            source=path.split("/")[-2]
+            if body.get("retry_of_job_id")!=source or body.get("id")==source:
+                raise HarnessError("actor_retry_lineage_failed")
+            self.stages["retry"]=True
+        return body
+
+    def request_bytes(self,method,path,**kwargs):
+        result=self.client.request_bytes(method,path,**kwargs)
+        if method=="GET" and path.startswith("/files/"):
+            if result[2]==200: self.stages["file"]=True
+            if result[2]==206: self.stages["range"]=True
+        if method=="DELETE" and result[2]==204:
+            self.stages["delete"]=True
+        return result
+
+
+def pipeline_end_to_end(runtime,client):
+    from smoke_mock_golden_path import poll_generation
+    pipeline=client.request_json("POST","/api/pipelines",expected_status=201,payload={
+        "image_prompt":"fixture","video_prompt":"fixture","image_model":"imagen-4.0-fast-generate-001",
+        "video_model":"veo-3.0-fast-generate-001"})
+    for kind in ("parent","child"):
+        poll_generation(client,job_id=pipeline[kind]["id"],deadline=runtime.deadline,interval_sec=0.5)
+    read=client.request_json("GET","/api/pipelines/"+pipeline["id"],expected_status=200)
+    if any(read[kind]["state"]!="completed" for kind in ("parent","child")):
+        raise HarnessError("actor_pipeline_incomplete")
+    client.stages["pipeline"]=True
+    private_request(runtime,client.foreign,"/api/pipelines/"+pipeline["id"],404)
+    for kind in ("child","parent"):
+        client.request_bytes("DELETE","/api/generations/"+pipeline[kind]["id"],expected_status=204)
 
 
 def access_id(case,kind):
@@ -178,6 +367,7 @@ def delete_race(runtime,client,case):
         raise HarnessError("access_race_persistence_failed")
 
 
+@measured("metadata")
 def access_proof(runtime,identity):
     from mock_auth_support import ScopedClient,ACCESS_GROUPS,DELETE_CASES
     clients={case:identity.client(runtime.base_url,case) for case in ("a","b","master")}
@@ -331,37 +521,42 @@ def execution_proof(runtime, identity):
     runtime.docker(*runtime.compose,"stop","dispatcher","worker")
     try:
         print(json.dumps({"proof":"worker"}),flush=True)
-        if runtime.execution_fixture("worker_proof") != {"execution_checks":20}:
-            raise HarnessError("worker_proof_incomplete")
+        with phase(runtime, "worker"):
+            if runtime.execution_fixture("worker_proof") != {"execution_checks":20}:
+                raise HarnessError("worker_proof_incomplete")
         print(json.dumps({"proof":"pipeline"}),flush=True)
-        if runtime.execution_fixture("pipeline_proof") != {"pipeline_checks":3}:
-            raise HarnessError("pipeline_proof_incomplete")
+        with phase(runtime, "pipeline"):
+            if runtime.execution_fixture("pipeline_proof") != {"pipeline_checks":3}:
+                raise HarnessError("pipeline_proof_incomplete")
         print(json.dumps({"proof":"http_races"}),flush=True)
-        winners = [(case,http_race(runtime,actor_b,case)) for case in RACE_CASES]
+        with phase(runtime, "http_races"):
+            winners = [(case,http_race(runtime,actor_b,case)) for case in RACE_CASES]
         print(json.dumps({"proof":"expiry"}),flush=True)
-        actor_a = identity.client(runtime.base_url,"a")
-        expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
-            payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
-        if runtime.execution_fixture("expire_session") != {"expired":True}:
-            raise HarnessError("session_expiry_failed")
-        actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
-        pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
-            payload={"image_prompt":"fixture","video_prompt":"fixture",
-                     "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
+        with phase(runtime, "expiry"):
+            actor_a = identity.client(runtime.base_url,"a")
+            expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
+                payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
+            if runtime.execution_fixture("expire_session") != {"expired":True}:
+                raise HarnessError("session_expiry_failed")
+            actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
+            pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
+                payload={"image_prompt":"fixture","video_prompt":"fixture",
+                         "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
     finally:
         runtime.assert_owned()
         runtime.docker(*runtime.compose,"start","dispatcher","worker")
     print(json.dumps({"proof":"celery_completion"}),flush=True)
-    for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners),
-                   pipeline["parent"]["id"], pipeline["child"]["id"]]:
-        poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
-    poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
-    for case,_ in winners:
-        if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:
-            raise HarnessError("race_completion_failed")
-    if runtime.execution_fixture("check_completed",records=[{"kind":"pipeline","id":pipeline["id"]},
-            {"kind":"expiry","id":expiry["id"]}]) != {"completed_records":2}:
-        raise HarnessError("completion_proof_failed")
+    with phase(runtime, "celery_completion"):
+        for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners),
+                       pipeline["parent"]["id"], pipeline["child"]["id"]]:
+            poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
+        for case,_ in winners:
+            if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:
+                raise HarnessError("race_completion_failed")
+        if runtime.execution_fixture("check_completed",records=[{"kind":"pipeline","id":pipeline["id"]},
+                {"kind":"expiry","id":expiry["id"]}]) != {"completed_records":2}:
+            raise HarnessError("completion_proof_failed")
     runtime.execution_checks = 20
     runtime.pipeline_checks = 4
     runtime.race_checks = 3
@@ -372,13 +567,57 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env.example")
     parser.add_argument("--cycles", type=int, choices=(1, 2), default=2)
+    parser.add_argument("--suite", choices=("ownership", "file-ops", "all"), default="ownership")
     args = parser.parse_args(argv)
     try:
-        results = verify_cycles(args.env_file, args.cycles, scenario=scenarios)
-    except (Exception, KeyboardInterrupt):
-        print(json.dumps({"phase": "preflight", "provider": "mock", "passed": False}), file=sys.stderr)
+        summary = run_suites(args.env_file, args.cycles, args.suite)
+        print(json.dumps(summary), flush=True)
+    except (Exception, KeyboardInterrupt) as error:
+        print(json.dumps({"phase": "validate", "provider": "mock", "passed": False,
+                          "complete": False, "failure_code": failure_code(error)}), file=sys.stderr)
         return 1
-    return 0 if len(results) == args.cycles and all(row["passed"] for row in results) else 1
+    return 0 if summary["passed"] else 1
+
+
+def code_revision():
+    revision = command(["git", "rev-parse", "HEAD"], timeout=10)
+    from re import fullmatch
+    if not fullmatch(r"[0-9a-f]{40}", revision):
+        raise HarnessError("invalid_code_revision")
+    changed = command(["git", "diff", "--name-only", "HEAD"], timeout=10).splitlines()
+    untracked = command(["git", "ls-files", "--others", "--exclude-standard"], timeout=10).splitlines()
+    if (any(not path.startswith("docs/") for path in changed)
+            or any(not path.startswith(".omo/") for path in untracked)):
+        raise HarnessError("uncommitted_code")
+    return revision
+
+
+def run_suites(env_file, cycles, suite, *, verify=None):
+    if suite not in ("ownership", "file-ops", "all") or type(cycles) is not int or cycles not in (1, 2):
+        raise HarnessError("invalid_suite")
+    started = time.monotonic()
+    revision = code_revision()
+    selected = ("ownership", "file-ops") if suite == "all" else (suite,)
+    deadline = started + (1800 if suite == "all" else 900)
+    rows = []
+    verify = verify or verify_cycles
+    for name in selected:
+        if time.monotonic() >= deadline:
+            raise HarnessError("cycle_deadline")
+        adapter = scenarios if name == "ownership" else file_ops_scenarios
+        current = verify(env_file, cycles, scenario=adapter, command_deadline=deadline)
+        # Validate each suite before starting another; failures never become success
+        # through a later receipt, and arbitrary payloads are never printed here.
+        validate_aggregate(current, (name,), cycles, revision)
+        rows.extend(current)
+    if code_revision() != revision:
+        raise HarnessError("code_revision_changed")
+    if time.monotonic() > deadline:
+        raise HarnessError("cycle_deadline")
+    validate_aggregate(rows, selected, cycles, revision)
+    return dict(provider="mock", code_revision=revision, suite=suite, cycles=cycles,
+                passed=True, complete=suite == "all" and cycles == 2,
+                verified_cycles=len(rows), duration_sec=round(time.monotonic()-started, 3))
 
 
 if __name__ == "__main__":

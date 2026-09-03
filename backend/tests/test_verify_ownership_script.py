@@ -411,6 +411,63 @@ def test_access_receipt_requires_all_groups_and_safe_counts(bad,monkeypatch,caps
 def test_access_canonical_scenario_requires_proof():
     import verify_ownership
     assert verify_ownership.scenarios.requires_access is True
+    assert verify_ownership.scenarios.suite == "ownership"
+    assert not getattr(verify_ownership.scenarios, "requires_file_ops", False)
+    assert verify_ownership.file_ops_scenarios.requires_file_ops is True
+    assert verify_ownership.file_ops_scenarios.suite == "file-ops"
+    assert not getattr(verify_ownership.file_ops_scenarios, "requires_access", False)
+
+
+@pytest.mark.parametrize("bad",[None,"missing_group","false_group","extra_group","bool_count","zero_count",
+    "missing_actor","missing_stage","false_stage","nonbool_stage","secret"])
+def test_file_ops_receipt_requires_exact_groups_and_both_actor_stages(bad):
+    from types import SimpleNamespace
+    runtime=SimpleNamespace(file_ops_completed=dict.fromkeys(support.FILE_OPS_GROUPS,True),
+        file_ops_checks=42,e2e_completed={case:dict.fromkeys(support.E2E_STAGES,True) for case in ("a","b")})
+    if bad=="missing_group": del runtime.file_ops_completed["V"]
+    if bad=="false_group": runtime.file_ops_completed["F"]=False
+    if bad=="extra_group": runtime.file_ops_completed["SECRET_CANARY"]=True
+    if bad=="bool_count": runtime.file_ops_checks=True
+    if bad=="zero_count": runtime.file_ops_checks=0
+    if bad=="missing_actor": del runtime.e2e_completed["b"]
+    if bad=="missing_stage": del runtime.e2e_completed["a"]["range"]
+    if bad=="false_stage": runtime.e2e_completed["b"]["pipeline"]=False
+    if bad=="nonbool_stage": runtime.e2e_completed["a"]["retry"]=1
+    if bad=="secret": runtime.file_ops_checks="SECRET_CANARY"
+    if bad is None:
+        support.validate_file_ops_receipt(runtime)
+    else:
+        with pytest.raises(support.HarnessError) as exc: support.validate_file_ops_receipt(runtime)
+        assert "SECRET_CANARY" not in str(exc.value)
+
+
+@pytest.mark.parametrize("operation",["prepare_files","clear_files"])
+def test_file_ops_fixture_guards_and_exact_namespace(operation):
+    from types import SimpleNamespace
+    helper=access_helper()
+    payload=dict(project="ownership-verify-012345abcdef",access_operation=operation,case="",records=[])
+    url=SimpleNamespace(host="db",database="ownership_verify_012345abcdef")
+    helper.validate_access_payload(payload,url,"mock","local")
+    for update in ({"records":[{"kind":"admitted","id":"00000000-0000-0000-0000-000000000123"}]},
+                   {"case":"a"},{"project":"creativeops-login-preview"},{"sql":"SECRET_CANARY"}):
+        with pytest.raises(ValueError): helper.validate_access_payload(payload|update,url,"mock","local")
+    for provider,env in (("vertex","local"),("mock","production")):
+        with pytest.raises(ValueError): helper.validate_access_payload(payload,url,provider,env)
+    assert str(helper.file_id("a","job"))!=str(helper.access_id("a","job"))
+
+
+def test_file_ops_end_to_end_trace_does_not_mark_missing_pipeline(monkeypatch):
+    from types import SimpleNamespace
+    import verify_ownership as verifier
+    class Client:
+        def request_json(self,*args,**kw): return {"id":"x","state":"pending"}
+        def request_bytes(self,*args,**kw): return b"",{},200
+    runtime=SimpleNamespace(base_url="http://127.0.0.1:1234",e2e_completed={"a":dict.fromkeys(support.E2E_STAGES,False)})
+    identity=SimpleNamespace(client=lambda *a:Client())
+    client=verifier.TrackedActor(runtime,identity,"a")
+    client.request_json("POST","/api/generations",expected_status=201)
+    client.request_json("GET","/api/generations/x",expected_status=200)
+    assert client.stages["generate"] and not client.stages["poll"] and not client.stages["pipeline"]
 
 
 @pytest.mark.parametrize("line", ['{"release":true}\n','{"release":true}\r\n'])
@@ -458,3 +515,231 @@ def test_waiter_window_clamps_commands_and_restores_cycle_deadline(failure,monke
         with pytest.raises(support.HarnessError): runtime.observe_source_waiters('create_create')
     else: runtime.observe_source_waiters('create_create')
     assert runtime.deadline == original
+@pytest.mark.parametrize("mode", ["unknown", "deadline", "cleanup", "both"])
+def test_v2_failure_receipt_preserves_work_and_cleanup_failures(mode, monkeypatch, capsys):
+    now = [0.0]
+    monkeypatch.setattr(support.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(support, "command", lambda *a, **kw: "0" * 40)
+    monkeypatch.setattr(support, "auth_proof", lambda *a: 12)
+    class Runtime:
+        project = "ownership-verify-012345abcdef"
+        deadline = 360
+        def __init__(self, *a): pass
+        def preflight(self): now[0] += 1
+        def start(self, *a): now[0] += 2
+        def seed(self, *a): now[0] += 3
+        def cleanup(self):
+            now[0] += 4
+            if mode in ("cleanup", "both"):
+                raise RuntimeError("SECRET_CANARY")
+    def scenario(runtime, identity):
+        with support.phase(runtime, "worker"):
+            if mode == "deadline":
+                now[0] = 361
+                raise support.HarnessError("cycle_deadline")
+            if mode in ("unknown", "both"):
+                raise RuntimeError("SECRET_CANARY")
+        return 3
+    row = support.verify_cycles(support.ROOT / ".env.example", 1,
+        runtime_factory=Runtime, scenario=scenario)[0]
+    assert row["passed"] is False
+    assert row["cleanup_sec"] == 4
+    assert row["work_sec"] == (361 if mode == "deadline" else 6)
+    assert row["failure_code"] == ({"unknown":"unexpected_failure", "both":"unexpected_failure",
+        "deadline":"deadline_exceeded", "cleanup":"none"}[mode])
+    assert row["cleanup_failure_code"] == ("cleanup_failed" if mode in ("cleanup", "both") else "none")
+    assert set(row["phase_seconds"]) <= support.PHASES
+    assert "SECRET_CANARY" not in capsys.readouterr().out
+
+
+def v2_receipts(suites=("ownership", "file-ops"), cycles=2):
+    rows = []
+    for suite in suites:
+        for index in range(1, cycles + 1):
+            row = dict(project="ownership-verify-" + format(len(rows)+1, "012x"),
+                provider="mock", revision=support.REVISION, code_revision="0"*40,
+                phase="validate", passed=True, cleanup=True, failure_code="none",
+                cleanup_failure_code="none", suite=suite, cycle=index,
+                work_sec=200, cleanup_sec=50, duration_sec=250)
+            phases = {"preflight", "start", "seed", "auth", "validate", "cleanup"}
+            if suite == "ownership":
+                row.update(support.LEGACY_COUNTS, access_checks=348,
+                           access_completed=dict.fromkeys(support.ACCESS_GROUPS, True))
+                phases |= {"admission", "metadata", "smokes", "worker", "pipeline", "http_races", "expiry", "celery_completion"}
+            else:
+                row.update(support.FILE_COUNTS, file_ops_checks=100,
+                    file_ops_completed=dict.fromkeys(support.FILE_OPS_GROUPS, True),
+                    e2e_completed={actor:dict.fromkeys(support.E2E_STAGES, True) for actor in ("a", "b")})
+                phases |= {"file_pre_auth", "file_post_auth", "e_a", "e_b"}
+            row["phase_seconds"] = dict.fromkeys(phases, 1)
+            rows.append(row)
+    return rows
+
+
+@pytest.mark.parametrize("changed,untracked,allowed", [("docs/current-work.md",".omo/local.md",True),
+    ("scripts/verify_ownership.py","",False),("","backend/new.py",False)])
+def test_v2_code_revision_refuses_dirty_or_untracked_code(changed, untracked, allowed, monkeypatch):
+    import verify_ownership as verifier
+    def command(args, **kwargs):
+        if "rev-parse" in args: return "0"*40
+        return changed if "diff" in args else untracked
+    monkeypatch.setattr(verifier,"command",command)
+    if allowed:
+        assert verifier.code_revision() == "0"*40
+    else:
+        with pytest.raises(support.HarnessError, match="uncommitted_code"):
+            verifier.code_revision()
+
+
+@pytest.mark.parametrize("suite", ["ownership","file-ops"])
+def test_v2_real_coordinator_receipt_shape_without_docker(suite, monkeypatch):
+    # Unit seam proof only; these fake runtimes never count as real DB evidence.
+    import verify_ownership as verifier
+    monkeypatch.setattr(support, "command", lambda *a, **kw: "0"*40)
+    monkeypatch.setattr(support, "auth_proof", lambda *a: 12)
+    proof = v2_receipts((suite,), 1)[0]
+    class Runtime:
+        project = "ownership-verify-012345abcdef"
+        def __init__(self, *a): pass
+        def preflight(self): pass
+        def start(self, *a): pass
+        def seed(self, *a): pass
+        def cleanup(self): pass
+    monkeypatch.setattr(verifier, "file_ops_before_auth", lambda *a: None)
+    monkeypatch.setattr(verifier, "file_ops_after_auth", lambda *a: None)
+    def scenario(runtime, identity):
+        for key, value in proof.items():
+            if key not in support.BASE_RECEIPT:
+                setattr(runtime, key, value)
+        for name in proof["phase_seconds"]:
+            if name not in {"preflight","start","seed","auth","validate","cleanup","file_pre_auth","file_post_auth"}:
+                with support.phase(runtime, name): pass
+        return proof["scenarios"]
+    scenario.suite = suite
+    scenario.requires_access = suite == "ownership"
+    scenario.requires_file_ops = suite == "file-ops"
+    rows = support.verify_cycles(support.ROOT / ".env.example", 1, runtime_factory=Runtime, scenario=scenario)
+    assert support.validate_aggregate(rows, (suite,), 1, "0"*40)
+
+
+@pytest.mark.parametrize("suite,cycles,complete", [("all",2,True),("all",1,False),
+    ("ownership",2,False),("file-ops",2,False)])
+def test_v2_coordinator_orders_fresh_suites_and_diagnostic_completion(suite, cycles, complete, monkeypatch):
+    import verify_ownership as verifier
+    monkeypatch.setattr(verifier, "code_revision", lambda: "0"*40)
+    rows = v2_receipts(cycles=cycles)
+    calls = []
+    def verify(env_file, count, *, scenario, command_deadline):
+        calls.append(scenario.suite)
+        assert count == cycles and command_deadline > verifier.time.monotonic()
+        return [row for row in rows if row["suite"] == scenario.suite]
+    result = verifier.run_suites(support.ROOT / ".env.example", cycles, suite, verify=verify)
+    assert calls == (["ownership","file-ops"] if suite == "all" else [suite])
+    assert result["passed"] is True and result["complete"] is complete
+    assert result["verified_cycles"] == len(calls)*cycles
+
+
+@pytest.mark.parametrize("field,value", [("suite","custom"),("cycle",True),("cycle",2),
+    ("code_revision","1"*40),("revision","0002"),("provider","vertex"),
+    ("passed",False),("cleanup",False),("failure_code","none-secret"),
+    ("auth_checks",True),("admission_checks",110),("access_checks",347),
+    ("scenarios",0),("work_sec",361),("cleanup_sec",91),("duration_sec",451),
+    ("work_sec",float("nan")),("phase","SECRET_CANARY")])
+def test_v2_aggregate_refuses_wrong_or_partial_receipts(field, value):
+    rows = v2_receipts()
+    rows[0][field] = value
+    with pytest.raises(support.HarnessError):
+        support.validate_aggregate(rows, ("ownership","file-ops"), 2, "0"*40)
+
+
+@pytest.mark.parametrize("change", ["missing","extra","duplicate","groups","stage",
+    "unknown_stage","timing","timing_key","file_counter","file_legacy","reorder"])
+def test_v2_aggregate_requires_exact_suites_groups_stages_projects_and_timing(change):
+    rows = v2_receipts()
+    if change == "missing": rows.pop()
+    if change == "extra": rows[0]["SECRET_CANARY"] = True
+    if change == "duplicate": rows[2]["project"] = rows[0]["project"]
+    if change == "groups": rows[2]["file_ops_completed"]["V"] = False
+    if change == "stage": del rows[2]["e2e_completed"]["b"]["pipeline"]
+    if change == "unknown_stage": rows[2]["e2e_completed"]["a"]["SECRET_CANARY"] = True
+    if change == "timing": rows[0]["phase_seconds"]["worker"] = float("inf")
+    if change == "timing_key": del rows[0]["phase_seconds"]["worker"]
+    if change == "file_counter": rows[2]["file_ops_checks"] = True
+    if change == "file_legacy": rows[2]["admission_checks"] = 111
+    if change == "reorder": rows.reverse()
+    with pytest.raises(support.HarnessError):
+        support.validate_aggregate(rows, ("ownership","file-ops"), 2, "0"*40)
+
+
+@pytest.mark.parametrize("failure", ["cleanup", "drift", "deadline"])
+def test_v2_coordinator_stops_on_failure_or_code_drift(failure, monkeypatch):
+    import verify_ownership as verifier
+    now = [1.0]
+    monkeypatch.setattr(verifier.time, "monotonic", lambda: now[0])
+    revisions = iter(("0"*40,"1"*40 if failure == "drift" else "0"*40))
+    monkeypatch.setattr(verifier, "code_revision", lambda: next(revisions))
+    rows, calls = v2_receipts(), []
+    def verify(env_file, cycles, *, scenario, command_deadline):
+        calls.append(scenario.suite)
+        if failure == "cleanup": rows[0]["cleanup"] = False
+        if failure == "deadline": now[0] = 1802
+        return [row for row in rows if row["suite"] == scenario.suite]
+    with pytest.raises(support.HarnessError):
+        verifier.run_suites(support.ROOT / ".env.example", 2, "all", verify=verify)
+    assert calls == (["ownership","file-ops"] if failure == "drift" else ["ownership"])
+
+
+def test_v2_cli_default_and_secret_safe_failure(monkeypatch, capsys):
+    import verify_ownership as verifier
+    calls = []
+    def run(env_file, cycles, suite):
+        calls.append((cycles,suite))
+        raise RuntimeError("SECRET_CANARY")
+    monkeypatch.setattr(verifier, "run_suites", run)
+    assert verifier.main([]) == 1
+    assert calls == [(2,"ownership")]
+    output = capsys.readouterr()
+    assert "SECRET_CANARY" not in output.out + output.err
+    assert json.loads(output.err)["complete"] is False
+
+
+def test_v2_ownership_adapter_keeps_original_smokes_and_proofs(monkeypatch):
+    import verify_ownership as verifier
+    import smoke_mock_golden_path as golden
+    import smoke_mock_retry_flow as retry
+    import smoke_mock_i2v_duplicate_guard as duplicate
+    from types import SimpleNamespace
+    calls = []
+    for name in ("admission_proof","access_proof","execution_proof"):
+        monkeypatch.setattr(verifier, name, lambda *a, name=name: calls.append(name))
+    for name, module in (("golden",golden),("retry",retry),("duplicate",duplicate)):
+        monkeypatch.setattr(module, "run_smoke", lambda args, client, name=name: calls.append((name,client)))
+    identity = SimpleNamespace(client=lambda base, actor: actor)
+    runtime = SimpleNamespace(base_url="http://127.0.0.1:1234", deadline=verifier.time.monotonic()+360)
+    assert verifier.scenarios(runtime, identity) == 3
+    assert calls == ["admission_proof","access_proof",("golden","a"),("retry","a"),
+                     ("duplicate","a"),"execution_proof"]
+
+
+def test_v2_file_adapter_keeps_both_actors_complete_without_legacy_mutation(monkeypatch):
+    import verify_ownership as verifier
+    import smoke_mock_golden_path as golden
+    import smoke_mock_retry_flow as retry
+    import smoke_mock_i2v_duplicate_guard as duplicate
+    from types import SimpleNamespace
+    calls = []
+    runtime = SimpleNamespace(deadline=verifier.time.monotonic()+360, file_ops_completed={})
+    monkeypatch.setattr(verifier, "TrackedActor", lambda runtime, identity, case: case)
+    for name, module in (("golden",golden),("retry",retry),("duplicate",duplicate)):
+        monkeypatch.setattr(module, "run_smoke", lambda args, client, name=name: calls.append((name,client)))
+    def pipeline(runtime, client):
+        calls.append(("pipeline",client))
+        runtime.e2e_completed[client] = dict.fromkeys(support.E2E_STAGES, True)
+    monkeypatch.setattr(verifier, "pipeline_end_to_end", pipeline)
+    def forbidden(*a): raise AssertionError("legacy proof in file suite")
+    for name in ("admission_proof","access_proof","execution_proof"):
+        monkeypatch.setattr(verifier, name, forbidden)
+    assert verifier.file_ops_scenarios(runtime, object()) == 2
+    assert calls == [("golden","a"),("retry","a"),("duplicate","a"),("pipeline","a"),
+                     ("golden","b"),("retry","b"),("pipeline","b")]
+    assert runtime.file_ops_completed["E"] is True

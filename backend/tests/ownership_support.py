@@ -192,7 +192,8 @@ async def validate_fixture_inventory(session):
 
 
 ACCESS_OPERATIONS = {"prepare_metadata","inspect_metadata","check_read_queries","clear_metadata",
-                     "prepare_delete_race","inspect_delete_race","hold_delete_source","delete_waiters"}
+                     "prepare_delete_race","inspect_delete_race","hold_delete_source","delete_waiters",
+                     "prepare_files","clear_files"}
 DELETE_CASES = ("delete_create","delete_retry")
 
 
@@ -393,6 +394,8 @@ async def access_run(payload):
     operation,case=payload["access_operation"],payload["case"]
     async with AsyncSessionLocal() as session:
         await validate_fixture_inventory(session)
+        if operation in ("prepare_files","clear_files"):
+            return await file_fixtures(session,operation)
         if case:
             return await access_race(session,operation,case,payload["records"])
         if operation=="prepare_metadata":
@@ -437,6 +440,50 @@ async def access_run(payload):
         await session.execute(delete(PromptEnhancement).where(PromptEnhancement.id.in_([access_id(c,"enhancement") for c in ("a","b","master")])))
         await session.commit()
         return {"cleared":True}
+
+
+def file_id(case, kind):
+    return uuid5(NAMESPACE_URL,"ownership-files/"+case+"/"+kind)
+
+
+async def file_fixtures(session, operation):
+    from sqlalchemy import select, delete
+    from app.models import Job, Asset, AssetKind, GenerationMode, JobState
+    from app.services import storage
+    cases=("a","b","logout","orphan","missing","confused")
+    ids=[file_id(case,"job") for case in cases]
+    existing=list((await session.scalars(select(Job).where(Job.id.in_(ids)))).all())
+    if operation=="prepare_files":
+        if existing:
+            raise ValueError("file_fixture_collision")
+        for case in cases:
+            owner=access_owner(case if case in ("a","b","logout") else "a")
+            session.add(Job(id=file_id(case,"job"),owner_user_id=owner,mode=GenerationMode.T2I,
+                model="imagen-4.0-fast-generate-001",prompt="fixture",parameters={},
+                state=JobState.COMPLETED,state_history=[],attempts=0))
+        await session.flush()
+        for case in cases:
+            path=f"{file_id(case,'job')}/output.bin"
+            if case!="missing":
+                storage.save_bytes(file_id(case,"job"),"output.bin",b"0123456789")
+            if case!="orphan":
+                session.add(Asset(id=file_id(case,"asset"),job_id=file_id("a" if case=="confused" else case,"job"),
+                    local_path=path,kind=AssetKind.IMAGE,mime="application/octet-stream",size_bytes=10))
+        await session.commit()
+        return {"prepared":True}
+    for row in existing:
+        case=next(case for case in cases if file_id(case,"job")==row.id)
+        if row.owner_user_id!=access_owner(case if case in ("a","b","logout") else "a"):
+            raise ValueError("file_cleanup_owner_refused")
+    assets=list((await session.scalars(select(Asset).where(Asset.job_id.in_(ids)))).all())
+    if any(row.id not in {file_id(c,"asset") for c in cases} for row in assets):
+        raise ValueError("file_cleanup_asset_refused")
+    for case in cases:
+        storage.delete_file(f"{file_id(case,'job')}/output.bin",missing_ok=True)
+    await session.execute(delete(Asset).where(Asset.id.in_([file_id(c,"asset") for c in cases])))
+    await session.execute(delete(Job).where(Job.id.in_(ids)))
+    await session.commit()
+    return {"cleared":True}
 
 
 if __name__ == "__main__":

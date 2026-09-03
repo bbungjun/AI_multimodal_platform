@@ -61,12 +61,53 @@ def test_client_rejects_non_exact_loopback_origin(base):
 
 @pytest.mark.parametrize("path", ["//evil.invalid/x", "http://127.0.0.1:9999/api/x", "/files/../a",
                                  "/files/%2e%2e/a", "/files/a%252fb", "/api//auth/me", "/api/a?x=1",
-                                 "/files/a\\b", "/files/a\n", "/metrics"])
+                                 "/files/a\\b", "/files/a\n", "/metrics/"])
 def test_paths_refused_before_transport(path):
     client = support.ScopedClient("http://127.0.0.1:1234", secret="a" * 43,
                                   transport=lambda _: pytest.fail("dispatch must not occur"))
     with pytest.raises(support.HarnessError):
         client.request_bytes("GET", path, expected_status=200)
+
+
+def test_file_ops_exact_metrics_get_only():
+    requests=[]
+    client=support.ScopedClient("http://127.0.0.1:1234",secret="a"*43,
+        transport=lambda request:(requests.append(request) or (b"metrics",{},200)))
+    assert client.request_bytes("GET","/metrics",expected_status=200)[0]==b"metrics"
+    assert requests[0].full_url=="http://127.0.0.1:1234/metrics"
+    with pytest.raises(support.HarnessError): support.safe_url(client.base_url,"/metrics")
+    for method,options in (("POST",{}),("HEAD",{}),("GET",{"payload":{}}),("GET",{"query":{}})):
+        with pytest.raises(support.HarnessError): client.request_bytes(method,"/metrics",expected_status=200,**options)
+    assert len(requests)==1
+
+
+@pytest.mark.parametrize("case",["encoded","encoded_slash","double","traversal","dot","duplicate","head"])
+def test_file_ops_fixed_probe_stays_on_loopback(case):
+    requests=[]
+    client=support.ScopedClient("http://127.0.0.1:1234",secret="a"*43,
+        transport=lambda request:(requests.append(request) or (b"",{},405 if case=="head" else 404)))
+    client.file_probe(case,"00000000-0000-0000-0000-000000000123",expected_status=(404,405))
+    assert requests[0].full_url.startswith("http://127.0.0.1:1234/files/00000000-0000-0000-0000-000000000123/")
+    assert requests[0].method == ("HEAD" if case=="head" else "GET")
+    assert requests[0].get_header("Cookie")=="creativeops_session="+"a"*43
+
+
+@pytest.mark.parametrize("case,job",[("https://evil.invalid","00000000-0000-0000-0000-000000000123"),
+    ("head","../a"),("head","00000000-0000-0000-0000-000000000123%0a"),(None,None)])
+def test_file_ops_probe_refuses_arbitrary_input(case,job):
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=lambda _:pytest.fail("no send"))
+    with pytest.raises(support.HarnessError): client.file_probe(case,job,expected_status=404)
+
+
+@pytest.mark.parametrize("kind",["redirect","exception","oversize"])
+def test_file_ops_probe_shared_response_guards(kind):
+    def transport(request):
+        if kind=="exception": raise RuntimeError("SECRET_CANARY")
+        return (b"x"*(8*1024*1024+1) if kind=="oversize" else b"",{},302 if kind=="redirect" else 200)
+    client=support.ScopedClient("http://127.0.0.1:1234",secret=None,transport=transport)
+    with pytest.raises(support.HarnessError) as exc:
+        client.file_probe("head","00000000-0000-0000-0000-000000000123",expected_status=200)
+    assert "SECRET_CANARY" not in str(exc.value)
 
 
 def test_memory_identity_hashes_and_client_are_not_represented():
@@ -157,3 +198,63 @@ def test_seed_target_guard_refuses_nonowned_or_nonmock(field, value):
     with pytest.raises(ValueError, match="seed_target_refused"):
         module.validate_target({"project": fields["project"], "hashes": {}},
             SimpleNamespace(host=fields["host"], database=fields["database"]), fields["provider"], fields["app_env"])
+@pytest.mark.parametrize("value", [True, -1, float("nan"), float("inf"), "SECRET_CANARY"])
+def test_v2_timing_refuses_unsafe_values(value):
+    from mock_auth_support import HarnessError, safe_seconds
+    with pytest.raises(HarnessError, match="unsafe_timing"):
+        safe_seconds(value)
+
+
+def test_v2_phase_clock_fixed_names_and_failed_duration():
+    from mock_auth_support import PhaseClock, HarnessError
+    values = iter((1.0, 3.5))
+    clock = PhaseClock(clock=lambda: next(values))
+    with pytest.raises(ValueError):
+        with clock.measure("auth"):
+            raise ValueError("SECRET_CANARY")
+    assert clock.failed_phase == "auth"
+    assert clock.snapshot() == {"auth": 2.5}
+    with pytest.raises(HarnessError, match="unsafe_phase"):
+        with clock.measure("SECRET_CANARY"):
+            pass
+    clock.timings["SECRET_CANARY"] = 0
+    with pytest.raises(HarnessError, match="unsafe_phase"):
+        clock.snapshot()
+
+
+@pytest.mark.parametrize("error,expired,expected", [
+    (RuntimeError("SECRET_CANARY"), False, "unexpected_failure"),
+    (KeyboardInterrupt("SECRET_CANARY"), False, "interrupted"),
+    (RuntimeError("SECRET_CANARY"), True, "deadline_exceeded"),
+])
+def test_v2_failure_codes_never_use_exception_payload(error, expired, expected):
+    from mock_auth_support import failure_code, HarnessError
+    assert failure_code(error, expired=expired) == expected
+    assert failure_code(HarnessError("SECRET_CANARY")) == "harness_failure"
+    assert failure_code(HarnessError("cycle_deadline")) == "deadline_exceeded"
+
+
+@pytest.mark.parametrize("late", [False, True])
+def test_v2_client_stops_before_or_after_cycle_deadline(late, monkeypatch):
+    now, calls = [11 if not late else 9], []
+    monkeypatch.setattr(support.time, "monotonic", lambda: now[0])
+    def transport(request):
+        calls.append(True)
+        now[0] = 11
+        return b"", {}, 200
+    client = support.ScopedClient("http://127.0.0.1:1234", secret=None, transport=transport, deadline=10)
+    with pytest.raises(support.HarnessError, match="cycle_deadline"):
+        client.request_bytes("GET", "/api/health", expected_status=200)
+    assert len(calls) == int(late)
+
+
+def test_v2_default_transport_is_clamped_to_remaining_time(monkeypatch):
+    monkeypatch.setattr(support.time, "monotonic", lambda: 9)
+    seen = []
+    def transport(request, *, timeout):
+        seen.append(timeout)
+        return b"", {}, 200
+    monkeypatch.setattr(support, "http_transport", transport)
+    client = support.ScopedClient("http://127.0.0.1:1234", secret=None, deadline=10)
+    client.request_bytes("GET", "/api/health", expected_status=200)
+    assert seen == [1]

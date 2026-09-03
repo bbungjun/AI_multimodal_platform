@@ -77,9 +77,46 @@ paste credential contents.
 
 ## Active Work
 
+### G4.3B execution — 2026-09-03
+
+- **Implemented; complete local mock proof. Delivery tracked in Issue112.**
+  [Ready PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) is the
+  delivery source; final CI/merge SHA/parent closure are recorded in Issue112.
+  [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
+  `codex/issue-112-file-ops-access`, parent109. v2 Todo1–7 complete; sequential
+  self-reviews F1–F3 APPROVE. Ready PR/final3 CI/protected squash merge finish delivery. Actual merge and
+  parent closure evidence are linked from Issue112; no Live claim.
+- [Contract](initiatives/g4-ownership-access-control-spec.md),
+  [durable problem/solution/evidence](portfolio/issue-112-file-ops-access.md).
+  Product checkpoint ebfd530; v2 code48562bc, runtime code c05b815. Exact16 cumulative
+  code paths,4 of5 allowed resume paths changed, migration0; other modules unchanged.
+- Both frozen local plans remain unchanged:
+  `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`,
+  SHA `005908f870551f84d952a11e18f7348e11811337ac1010adf422fdd2ae65a29f`;
+  `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md`,
+  SHA `55f4fcf9c737b764f6747d781344ebcfd5d6bd3ce4f6a2ea1da001f63a91d909`.
+  Transfer exact bytes; never stage .omo wholesale.
+- Original combined runtime failed417.17s; preserved as No-Go, not retroactively
+  counted. Approved split keeps work360s/cleanup90s per cycle, suite900s/all1800s.
+- Fresh `python scripts/verify_ownership.py --env-file .env.example --suite all --cycles 2`:
+  complete4/998.187s, ownership333.360/328.859s each metadata8/348/delete-race2 plus
+  all legacy proof; file-ops167.500/167.578s each FOVE310 and A/B ten stages.
+  All4 independent exact-label cleanup0; developer/preview4 and volumes preserved.
+- Separate schema2/include-reset76.1/77.0s and auth1/Redis outage-recovery27.373s PASS.
+  Linux1128 PASS/3 existing guarded skips; Windows1127 PASS/known Bash-path1 FAIL/
+  3 skips, same native127 reproduced from untouched cd654e5 archive. Frontend
+  lint/build + Session48/Chromium34 PASS. B0/F/M/H/S631/231/248/290/94 PASS.
+- Default verifier is ownership-only for existing manual CI20-minute compatibility.
+  Only explicit all2cycle can report complete=true. No workflow edit/dispatch.
+- Next Goal receives User.id/require_user, owner-tagged admission and read-only
+  Master exception; Credit/Plan and Master mutations remain unimplemented.
+  #99/live OAuth/browser/proxy/scraper gates remain separate. No cloud/provider call.
+  File-delete/DB-commit and concurrent filesystem/DBA mutation remain non-atomic;
+  already-sent bytes cannot be recalled. Stop exposure before a reviewed B revert.
+
 ### G4.3A execution — 2026-09-03
 
-- **Mock Verified — Todo1–7 complete; [Ready PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111), final-CI/merge delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
+- **Mock Verified — Todo1–8/F1–F4 complete; [PR #111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) actually squash merged cd654e5.** Final head5738c0d required3 checks SUCCESS; [completion evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/110#issuecomment-5524251068). User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
@@ -109,7 +146,8 @@ paste credential contents.
   checks348/delete-race2 plus all old proof groups; exact-label resources0/preview4
   preserved. Linux928 PASS/3 existing skips; Windows927 PASS/known Bash-path1 FAIL/
   3 skips, freshly reproduced at untouched c84394a. Frontend lint/build/Session48/
-  Chromium34 PASS. Fresh O102/M248/H201/S94 PASS. Next Ready PR/CI/actual merge.
+  Chromium34 PASS. Fresh O102/M248/H201/S94 PASS. Delivery subsequently completed;
+  next B preparation above supersedes historical candidate/next-merge notes below.
   B handoff: jobs_statement/read/batched refs, JSON-only no-store wrapper, structured
   ScopedClient queries/arrays and access8/checks348/delete-race2 receipt. File/ops still B.
   No OAuth/provider/cloud or frontend implementation is authorized.
