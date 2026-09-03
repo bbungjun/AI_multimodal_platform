@@ -1,8 +1,11 @@
 # Issue #107 — Worker ownership and pipeline/race proof
 
-- 상태: **Mock Verified — Todo1–7 / delivery pending**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
+- 상태: **Mock Verified — Todo1–8 local work**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
 - [Issue107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`.
+- Delivery: [Ready PR108](https://github.com/bbungjun/AI_multimodal_platform/pull/108).
+  아래 F4는 이 문서 commit 시점의 snapshot이며 최종 CI/merge SHA와 F4 판정은 PR timeline이
+  source of truth다. 실제 MERGED 전에는 delivery 완료로 해석하지 않는다.
 - Base: A [PR106](https://github.com/bbungjun/AI_multimodal_platform/pull/106)의 실제 squash merge
   `d40a8f704df583c050a6a89c235c311a0d4aef77`; schema head0003 그대로.
 - [상세 spec B1–B4](../initiatives/g4-2-owner-persistence-admission-spec.md),

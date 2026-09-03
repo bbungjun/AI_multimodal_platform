@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.2B execution — 2026-09-03
 
-- **Mock Verified — Todo1–8 local work complete; final-head CI/merge pending.**
+- **Mock Verified — Todo1–8 local work complete; [PR108 delivery status](https://github.com/bbungjun/AI_multimodal_platform/pull/108).**
   [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`,
   [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
@@ -113,7 +113,9 @@ paste credential contents.
   cleanup=true and independently checked container/volume/network0.
   Linux tracked snapshot d376ca1:782 PASS/3 existing SKIP; Windows781 PASS/1 baseline Bash-path
   FAIL/3 existing SKIP (fresh untouched d40a8f7 reproduction). U lint/build/session48/browser34 PASS.
-  B0/E/W/H/S=334/72/98/157/106 PASS. CI/merge pending; implementation still ff808b0.
+  B0/E/W/H/S=334/72/98/157/106 PASS. Implementation still ff808b0. At this documentation
+  checkpoint final-head CI/merge are pending; PR108 timeline is the live delivery source of truth.
+  Required verify/both Scan-SBOM and actual squash merge must succeed; no bypass/admin merge.
   Canonical status/spec/testing/runbook/portfolio updated. Next after actual merge: G4.3 design,
   consuming B5 Interface handoff only. No read/file/delete/ops isolation or live deployment claim.
   Failed/diagnostic owned projects were cleaned; default/preview preserved. Do not start G4.3 or reset
