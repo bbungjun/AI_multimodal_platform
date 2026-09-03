@@ -2,12 +2,14 @@
 
 ## 0. 상태 / 읽기 범위
 
-- **Accepted / G4.2A 실행 준비 — 2026-09-03. 구현 및 실행 Goal 시작 전.**
-- A 실행 준비: [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
+- **G4.2A Ownership Admission Mock Verified / G4.2B Planned — 2026-09-03.**
+- A 실행: [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`, main `4dd359a` 동기화 완료.
   frozen Goal은 `.omo/plans/issue-105-g4-2a-owner-persistence-admission-goal.md`이며
   SHA256은 `e7f40b1d993cbdc9e4d3edb116dfcf2ebf6c17b379e0bab170f6550a303d87ab`.
-  상태는 Planned / Goal Prepared다. Todo 실행 및 구현 검증은 아직 하지 않았다.
+  구현 `e3c98f1`의 schema2/auth1/final admission2, Linux658/기존 SKIP3,
+  frontend48+34 PASS. [실행 기록](../portfolio/issue-105-owner-persistence-admission.md)에
+  실패 분석·안전한 검증 근거와 PR delivery 상태를 연결한다. 전체 사용자 격리 완료는 아니다.
 - 선행: [G4.1 PR104](https://github.com/bbungjun/AI_multimodal_platform/pull/104),
   merge `4dd359ab39285e536e713a452577e19c07b3ec67`.
   설계 시 checkout `670a658`과 merge의 tree가 같음을 확인했다.
@@ -19,7 +21,7 @@
 - 로컬 Docker PostgreSQL/Redis + AI_PROVIDER=mock만 사용한다.
   실제 OAuth/AI provider/cloud, frontend 수정, Plan/Credit/Usage/Audit는 제외한다.
 
-## 1. 현재 코드에서 확인한 설계 수정 이유
+## 1. 설계 당시 코드에서 확인한 수정 이유
 
 | 관측 | 실행 계획에 미치는 영향 |
 |---|---|
@@ -250,7 +252,8 @@ B의 Todo1–8 후보: (1) A interface/baseline, (2) 오염·경합 계약,
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`,
 `python scripts/verify_schema_migrations.py --env-file .env.example --include-reset`,
 `python scripts/verify_auth_sessions.py --env-file .env.example`.
-각 command의 실행 횟수/timeout은 frozen Goal에서 확정한다. 이 설계 작업에서 Docker 검증은 실행하지 않았다.
+각 command의 실행 횟수/timeout은 frozen Goal에서 확정했다. 최초 설계 단계에는 Docker를
+실행하지 않았으며, 승인 후 A 실행 결과는 아래 §8과 Issue105 기록으로 구분한다.
 
 A frozen Goal은 schema verifier2회, auth verifier1회, ownership verifier2cycle로 고정했다.
 각각 schema1200s/run, auth900s, ownership900s의 전체 작업 예산과 안전한 owned cleanup을
@@ -267,3 +270,17 @@ Todo1–8의 focused command/commit과 F1–F4는 해당 계획이 실행 기준
 - 2026-09-03 사용자 승인: 단일 G4.2 대신 A/B로 분할한다. main 동기화 → A Issue/branch →
   A frozen Goal/hash 준비까지 진행한다. 구현/Goal 실행/DB reset/새 PR은 이번 준비 범위가 아니다.
 - read/list/delete/file/ops/cache, 공개 배포·실제 OAuth, 긴급 Session 폐기99는 후속 범위다.
+
+## 8. A 구현 검증과 B 전달 계약
+
+A는 정확히20개 non-document 경로와 신규 migration0003 하나로 구현됐다.
+기존0001/0002 bytes는 보존했고 실제 검증은 새 owned local Docker DB에서만 수행했다.
+`OwnershipAccess(session, actor)`는 job/enhancement/asset의 owner-scoped SQL과 반환 row
+재검증, 동일404, target row lock을 제공한다. `assert_same_owner`는 저장된 두 owner를
+비교한다. commit/rollback은 caller 책임이며 Master도 타인 mutation 예외가 없다.
+모든 신규 Job/PromptEnhancement는 actor owner를 저장하고 Asset owner는 Job에서 유도한다.
+
+B는 이 interface, head0003, 기존 hash-only authenticated harness를 입력으로 사용한다.
+worker handler/polling/pipeline link/race(P11–P15)는 A에서 수정하거나 완료로 주장하지 않았다.
+실행 검증 상세·수치·rollback은 [Issue105 기록](../portfolio/issue-105-owner-persistence-admission.md),
+안전한 운영 절차는 [local mock](../runbooks/local-mock.md#owner-schema-and-admission-g42a)을 따른다.

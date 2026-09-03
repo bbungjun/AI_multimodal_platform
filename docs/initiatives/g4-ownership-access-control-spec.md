@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1 harness Mock Verified; G4.2/G4.3 Planned (2026-09-03).**
+- **Accepted — G4.1 harness / G4.2A admission Mock Verified; G4.2B/G4.3 Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -395,8 +395,10 @@ DB reset·새 migration·실제 OAuth/provider/cloud 호출은 수행하지 않�
 G4.2 입력 interface: `MemoryIdentity`, `ScopedClient`, `OwnedRuntime`과
 `verify_ownership.py --cycles 2`; scenario는 `run_smoke(args, client=...)`를 받는다.
 서버가 검증한 A/B/Master 및 인증 거절 fixture를 후속 owner/reference 검사에 재사용한다.
-현재 schema head는 `0002_user_session_persistence`; G4.2에서 head가 바뀌면
-harness/seeder의 expected revision과 비어 있는 DB/fixture 계약을 함께 갱신한다.
+G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함께 갱신했다.
+신규 owner와 접수 단계 참조 검증은 [Issue105 실행 기록](../portfolio/issue-105-owner-persistence-admission.md)
+범위까지 Mock Verified다. B는 `OwnershipAccess(session, actor)`와 `assert_same_owner`,
+저장된 owner 및 기존 authenticated harness를 이어받는다. 실제 worker 강화는 B에 남는다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

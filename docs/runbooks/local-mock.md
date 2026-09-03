@@ -45,12 +45,19 @@ VITE_API_PROXY_TARGET=http://backend:8000
 VITE_ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
-Mock mode should not require live Google credentials.
+Mock AI and isolated verification require no live Google credentials. Mock AI does
+not bypass product authentication; credential-free browser use stops at login.
 
 ## Start
 
+Before upgrading an existing checkout, inspect the schema compatibility described
+under [G4.2A](#owner-schema-and-admission-g42a). Migration0003 refuses nonempty
+generation tables. Do not reset, remove volumes or restart an existing preview to
+make it pass. The following startup is for a separately approved compatible local
+stack; use the isolated verification commands for this change's QA.
+
 ```powershell
-docker compose config
+docker compose config --quiet
 docker compose up -d --build
 docker compose ps
 ```
@@ -97,8 +104,9 @@ retry/logout or state-check action. Ordinary health/job polling is not a session
 heartbeat. Five-minute activity validation runs only on visible user activity or
 focus; successful logout signals other tabs without account/credential payloads.
 
-This is UI gating only. Until G4, existing generation/file APIs still lack
-per-user ownership enforcement. Do not publicly deploy based on the login UI;
+G4.2A now also authenticates generation/retry/pipeline/enhance and validates owned
+references. Read/list/delete/file/ops still lack complete G4.3 enforcement.
+Do not publicly deploy based on login or admission checks alone;
 emergency revocation #99 and real browser/proxy readiness remain outstanding.
 
 ### Isolated G3.1 generation regression
@@ -310,12 +318,13 @@ URLs, traversal, redirects, proxies and auth-header overrides. Golden, retry and
 duplicate I2V requests (including both race requests, polling, Range and delete)
 all use that transport. Backend `/me` and logout are real G3 routes, not mocks.
 
-Expected: two JSON receipts, each `auth_checks=12`, `scenarios=3`, `passed=true`,
+Expected: two JSON receipts, each `auth_checks=12`, `admission_checks=111`, `scenarios=3`, `passed=true`,
 `cleanup=true`. Receipts also identify code/schema revision, generated project,
 phase, mock provider and elapsed seconds. Never attach raw Compose/application
 logs, SQL exceptions, profiles, prompt payloads, headers or cookie jars as evidence.
 A failed check gives a safe phase receipt/nonzero exit, without anonymous fallback.
-No-cookie and invalid Sessions must fail; G4.1 does NOT prove content ownership.
+No-cookie and invalid Sessions must fail. G4.2A extends the original G4.1 harness
+with authenticated admission proof, not full content access isolation.
 
 Per-cycle work deadline is360s, each scenario at most90s, HTTP timeout10s,
 subprocess at most180s and total cleanup budget90s. Startup/build timeout is a
@@ -325,6 +334,39 @@ Legacy smoke CLIs now delegate to the complete runner. Old `--compose`,
 `--base-url`, frontend URL and keep-job switches refuse; use `--cycles 1|2` instead.
 Frontend is not launched and static HTML is not considered UX proof. Run the
 unchanged frontend auth/browser suites separately, as described in [testing](../testing.md).
+
+### Owner schema and admission (G4.2A)
+
+Packaged head is `0003_content_ownership`. New Jobs/PromptEnhancements require an
+authenticated User owner; Asset ownership comes from its Job. Master uses the same
+owner-only mutation policy. Missing/foreign references return identical404;
+client-supplied owner/user/role fields return422. Mock mode does not relax these rules.
+
+Both upgrade and downgrade lock jobs/assets/prompt_enhancements/outbox_events in
+one transaction, with a5s lock timeout, and require these generation tables empty.
+User/Session-only data may remain. A refusal preserves schema/revision/data and
+returns `content_ownership_requires_empty_generation_tables` for nonempty content.
+There is no implicit Master backfill or nullable transition. Schema-only intermediate
+commits must not be deployed separately from their authenticated writers.
+
+Rollback: nonempty downgrade also refuses by design. Preserve data and use a
+compatible code/schema pair; do not run older anonymous writers against owner-NOT-NULL
+head0003. If existing development data prevents upgrade or downgrade, stop and
+request a separate data-preserving migration/rollback decision. No default/preview
+DB reset or `down -v` is authorized by this runbook's G4.2A verification procedure.
+
+For proof, run the sequential schema2/auth1/admission2 commands in
+[testing](../testing.md#owner-persistence-and-admission-g42a). Only freshly generated,
+label-verified projects are eligible for guarded reset or fixture cleanup. During
+admission tests the owned worker/dispatcher pause; fixed fixtures and a temporary
+outbox-failure trigger prove rollback, then are removed before consumers resume.
+Raw secrets, identities, prompt text and HTTP/SQL responses stay out of receipts.
+
+Implementation `e3c98f1` passed two final admission cycles with exact-label resource
+counts0. [Issue105](../portfolio/issue-105-owner-persistence-admission.md) records
+schema/auth evidence, regression counts, failure analysis and delivery. Worker
+reference rechecks/pipeline-race proof remain G4.2B; all read/file/delete/ops access
+controls remain G4.3. This is private local mock verification, not public deployment.
 
 ### Failure and owned-project recovery
 

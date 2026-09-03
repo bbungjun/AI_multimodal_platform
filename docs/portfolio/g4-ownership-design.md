@@ -1,6 +1,6 @@
 # G4 설계 기록 — 로그인에서 사용자 데이터 격리로
 
-- 상태: **G4 정책과 G4.2A/B 분할 Accepted / A Goal Prepared**, 2026-09-03.
+- 상태: **G4.2A admission Mock Verified / G4.2B·G4.3 Planned**, 2026-09-03.
   G4.1은 [PR104](https://github.com/bbungjun/AI_multimodal_platform/pull/104)로 병합됐다.
   아래 최초 설계 당시 기록과 [G4.1 구현 증거](issue-103-authenticated-mock-harness.md)를 구분한다.
 - 기준: `100f5e7` (G3.1 PR #102 병합), [설계 초안](../initiatives/g4-ownership-access-control-spec.md).
@@ -58,8 +58,9 @@ storage를 사용하며, 없는 대상과 타인의 대상은 동일한 404로 �
 - `/metrics`를 Master로 제한하면 무인 scrape가 중단되므로 별도 배포 gate로 남긴다.
 - G4.2의 FK만으로 모든 cross-owner 관계를 DB에서 강제하지는 않는다.
 - 기존 파일 삭제/DB commit 비원자성과 이미 전송된 stream 회수 한계를 숨기지 않는다.
-- G4.1 구현·검증·병합 완료. G4.2A/B 분할도 승인됐으며 A만 실행 준비했다.
-- 구현 이후 이 설계 기록을 해당 Issue 포트폴리오와 연결하고 실제 실패/수정/검증 수치를 추가한다.
+- G4.1 구현·검증·병합 완료. A 구현·검증은 [Issue105 기록](issue-105-owner-persistence-admission.md)에
+  연결했다. Linux658 PASS/기존 SKIP3, schema2/auth1/final admission2 PASS이며 PR delivery는 그 링크를 따른다.
+- B worker 강화와 G4.3 read/file/delete/ops는 미구현이다. 아래는 최초 설계 당시 기록이다.
 
 ## G4.2 상세화 — 2026-09-03
 

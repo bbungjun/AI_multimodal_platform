@@ -1,12 +1,14 @@
 # Issue #105 — Owner persistence and authenticated admission
 
-- 상태: **In Progress — Todo1**, 2026-09-03. 아래 준비 기록과 실행 기록을 구분한다.
+- 상태: **Ownership Admission Mock Verified — Todo1–7 완료 / Todo8 delivery 진행**, 2026-09-03.
+  아래 준비 기록과 실행 기록을 구분한다.
 - [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`.
 - Base: synchronized main `4dd359ab39285e536e713a452577e19c07b3ec67`, G4.1 PR104.
 - [Accepted spec](../initiatives/g4-2-owner-persistence-admission-spec.md),
   [initiative](../initiatives/auth-credits-master-console.md).
-- Runtime verification, PR/merge: **not started**.
+- Runtime verification: **PASS**, 최종 구현 `e3c98f1fe5d5a05fb04dee2f1814dcad3ad9b527`.
+  Ready PR/최종 CI/merge는 아래 delivery 링크를 기준으로 확인한다.
 
 ## 배경과 문제
 
@@ -39,8 +41,8 @@ commit/rollback은 HTTP caller에 남긴다. 이는 codebase-design의 Interface
 - A 완료는 Ownership Admission Mock Verified다. 전체 read/file/delete/ops 격리는 G4.3이며
   공개 배포 가능 또는 실제 OAuth/Vertex 검증으로 표현하지 않는다.
 
-rollback은 향후 데이터 상태와 code/schema 호환성에 따른 운영 절차로 남긴다.
-현재는 문서 준비뿐이므로 DB rollback이나 reset할 변경 자체가 없다.
+준비 단계에는 DB 변경이 없었다. 구현 후 rollback은 아래 Todo8 절과
+[운영 절차](../runbooks/local-mock.md#owner-schema-and-admission-g42a)를 따른다.
 
 ## 검증 — 실행 준비에서 실제 수행한 것
 
@@ -56,14 +58,14 @@ rollback은 향후 데이터 상태와 code/schema 호환성에 따른 운영 �
   파일: `.omo/plans/issue-105-g4-2a-owner-persistence-admission-goal.md`.
   계획은 local/untracked이므로 다른 기기에는 exact bytes를 별도로 전달해야 한다.
 
-## 결과와 영향
+## 준비 단계의 결과와 영향
 
 전체 합의와 이번 A 실행 범위를 구분하고 다음 실행자가 context를 한 Todo씩 읽도록 했다.
 Issue105와 작업 branch, frozen Goal/hash까지 준비했으며 제품 코드/migration은 추가하지 않았다.
 실제 기능 개선 수치, 보안 PASS, Docker 검증 횟수, CI 또는 PR merge 성과는 아직 없다.
 이 기록은 준비 결과이며 Goal Todo 완료 기록으로 사용하지 않는다.
 
-## 남은 위험과 다음 단계
+## 준비 단계에서 남긴 위험과 다음 단계
 
 - 명시적 Goal 실행 요청 후 hash/branch/base와 기존 변경부터 재확인한다.
 - 21번째 또는 allowlist 외 경로가 필요하면 테스트를 줄이지 말고 중단·재설계한다.
@@ -147,7 +149,7 @@ frontend lint/build, Session48, Chromium34 PASS; 기존 UI/CSS는 수정하지 �
 index 이름이 있으면 다른 constraint 오류를409로 오인할 수 있음을 재현했다.
 허용된 generations 경로에서 PostgreSQL SQLSTATE23505와 driver의 정확한 constraint metadata를
 먼저 확인하도록 보강했다. 공용 i2v_guard/worker 파일은 변경하지 않았다.
-네 adversarial 회귀를 추가한 W183/H113 PASS. 최종 구현
+네 adversarial 회귀를 추가한 W183/H113 PASS. 첫 보강 checkpoint
 `c8ee90a2d1d17774eac17900a936592b46c45090`에서 다시 검증했다.
 
 - Linux 전체 **656 PASS / 기존 SKIP3 /3.32s**; Windows **655 PASS / SKIP3 /
@@ -163,5 +165,74 @@ index 이름이 있으면 다른 constraint 오류를409로 오인할 수 있음
   `test_oauth_flow_store.py`의 guarded PostgreSQL/Redis 전제조건이다. 실제 통합 경계는
   Todo6 auth verifier와 최종 ownership verifier로 검증했다.
 
-최종 보강은 API 오류 분류와 단위 테스트뿐이다. schema/auth/harness 구현은 앞선 실제
+해당 보강은 API 오류 분류와 단위 테스트뿐이다. schema/auth/harness 구현은 앞선 실제
 검증 revision과 동일하며 이후 문서-only commit은 이 구현 SHA를 검증 근거로 사용한다.
+
+#### 최종 리뷰에서 재발견한 rollback 경계
+
+Todo8 인수 검토에서 retry의 IntegrityError 처리 중 rollback 후 `source.mode` 접근이
+만료된 ORM 속성의 재조회로 이어질 수 있음을 발견했다. 일반 fake는 이 만료 동작을
+재현하지 않아 이전 테스트에서 보이지 않았다. mode를 rollback 전에 저장하고,
+실제 SQLAlchemy Session의 `expire`를 적용한 회귀2개를 추가했다. 새로운 코드 경로는
+필요 없었으며 generations/test_generation_api 두 허용 경로 안에서 수정했다.
+따라서 Todo7 영향 검증을 최종 commit `e3c98f1`에서 다시 수행했다.
+Linux **658 PASS / 기존 SKIP3 /3.55s**, Windows **657 PASS / SKIP3 / 동일 baseline FAIL1 /9.07s**,
+B0 **290 PASS /3.72s**, W185+H113 **298 PASS /3.45s**. 프론트와 schema/auth/harness는 변경하지 않았다.
+최종 ownership2회는 `ownership-verify-25f997f898ce` **99.73s**와
+`ownership-verify-f39362666be5` **76.44s**이며 각각 auth12/admission111/smoke3 PASS,
+cleanup=true, exact-label container/volume/network0이었다. schema와 auth proof 코드가
+Todo6 이후 동일함을 diff로 확인했고, 읽기/list/delete endpoint4개의 AST 및 제외 경로도
+base와 동일했다. 기존 test 함수90개 이름이 모두 보존됐으며 skip/xfail 추가0이다.
+
+### Todo8 — 인수 근거와 운영 한계
+
+결과: 인증된 사용자의 신규 생성·재시도·pipeline·prompt owner가 DB에 저장되며,
+타인의 UUID를 알고 있어도 접수 시 동일404로 거절한다. Master도 타인 자료를 재사용해
+생성할 수 없다. strict extras가 owner 위조를422로 차단한다. Asset owner 중복 저장 없이
+Job join으로 검증하고, schema와 writer를 같은 delivery로 묶었다.
+
+검증 명령은 [testing](../testing.md#owner-persistence-and-admission-g42a)의 R 그룹과
+frozen Goal의 B0/S/A/W/H/L/U/D 그대로 실행했다. Windows의 Bash-path 실패는
+`tests/test_supply_chain_release.py::test_release_script_guards_plan_scope_and_uses_terraform_rollback`이며
+main4dd359a 독립 tracked archive에서도 같은 오류가 났다. Linux/CI는 통과를 별도 요구한다.
+최종 프론트 검증은 `npm run lint`, `npm run build`, `npm run test:auth`(48),
+`npm run test:auth:browser`(34)이며 frontend 파일은 변경하지 않았다.
+
+#### Acceptance traceability
+
+아래는 단일 실행자의 순차 검토이며 독립 reviewer 검증으로 표현하지 않는다.
+pytest node는 `backend/tests/` 기준이고 parameterization을 포함한다.
+
+| 계약 | 실행 가능한 근거 | 관측 결과 |
+| --- | --- | --- |
+| P01 | `test_generation_api.py::test_admission_p01_real_dependency_rejects_before_generation_effects`; `verify_ownership.py` admission matrix | 네 writer 인증/Origin 거절; actual invalid Session28/Origin8 checks per cycle, unit 부수효과0 |
+| P02 | `test_generation_api.py::test_admission_p02_persists_actual_actor`, `test_pipeline_api.py::test_create_pipeline_persists_parent_and_blocked_child`, `test_prompt_api.py::test_enhance_prompt_persists_result_and_returns_response` | A/B/Master 실제 actor owner, 실제 persisted checks18/cycle |
+| P03 | 세 API의 `test_admission_p03_*` | owner/user/role 위조422, actual HTTP9/cycle |
+| P04/P05 | `test_generation_api.py::test_admission_p04_p05_foreign_missing_same404_before_semantics`; ownership access25 | foreign/missing/Master 동일404, own400/409 유지; actual reference/semantic27/cycle |
+| P06 | `test_admission_p06_*`, `test_retry_failed_generation_creates_new_pending_job_without_mutating_original`, `test_admission_untrusted_parameters_cannot_spoof_conflict` | retry lineage/new id/원본 유지, rollback, exact unique409; 실제 outbox commit-failure3/cycle |
+| P07 | `test_ownership_persistence.py::test_schema_owner_fk_not_null_no_default_and_composite_index`, `test_schema_asset_unique_path_without_duplicated_owner`; schema verifier | 실제 제약 거절·Asset join PASS; composite 순서는 정적 metadata 검사 |
+| P08 | `test_schema_migration_refuses_nonempty_before_ddl`; schema verifier ownership proof | 매 run8개 upgrade/downgrade 거절, rows/schema/revision/identity 보존, lock-timeout rollback |
+| P09 | `test_schema_harness_and_verifier_head_parity`, Alembic/schema verifier 회귀와 real schema2 | old migrations 동일, head0003 parity, stale 거절/복구·guarded reset PASS |
+| P10 | `verify_ownership.py --env-file .env.example --cycles 2`; H113 | 최종 코드의 각 auth12/admission111/smoke3 PASS, distinct projects/cleanup0 |
+| P16 | `test_verify_ownership_script.py` target/collision/receipt canary, mock-auth 안전 회귀와 cumulative diff | non-document20, migration1, 민감 evidence 미기록, default/preview 미변경 |
+
+P11–P15는 B로 **미구현/미검증**이다. optional integration skip3을 해당 계약의 PASS로
+대체하지 않는다. 고정 schema proof는 Asset 케이스의 필수 parent fixture 등을 포함하며,
+FK가 필요한 경우를 독립 단일-row 검사로 잘못 표현하지 않는다.
+
+Rollback/남은 위험:
+
+- 신규 migration의 upgrade/downgrade는 content가 있으면 원자적으로 거절한다.
+  비어 있지 않은 DB를 지우거나 Master에 자동 귀속하지 않는다. 호환 code/schema를 유지하고
+  기존 데이터 처리에는 별도 설계·승인을 받는다. 개발/preview migration은 실행하지 않았다.
+- FK는 user 존재만 보장한다. worker의 사용 직전 관계 검사와 pipeline/race 강화는 B,
+  조회/list/delete/file/ops/cache 경계는 G4.3이다. 공개 multi-user 배포는 금지 상태다.
+- Prompt provider 성공 후 DB commit 실패의 비용 비원자성은 남는다. Credit/Reservation을
+  임의로 추가하지 않았다. 긴급 Session 폐기99와 live OAuth/proxy/provider 검증도 별도다.
+- 실제 고객 KPI/비용 절감이나 cloud 배포 결과를 주장하지 않는다. 여기의 수치는 로컬
+  mock 검증 횟수·테스트 통과와 재현 결과다.
+
+최종 self-review: F1 scope, F2 correctness/security, F3 runtime/regression은 위 증거로
+APPROVE. F4 문서 검토는 APPROVE이며 **delivery는 최종 PR head의 verify + 양쪽
+Scan/SBOM 성공 및 실제 squash MERGED 관측 전까지 PENDING**이다. 최종 merge SHA는
+PR/Issue와 종료 보고에 기록하며 사후 상태를 위해 추가 문서 PR을 반복하지 않는다.

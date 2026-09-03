@@ -31,7 +31,7 @@ python scripts/verify_auth_sessions.py --env-file .env.example
 
 Install backend development dependencies and start Docker first. The verifier
 creates two distinct fresh `auth-verify-*` projects, starts only Postgres/Redis,
-upgrades to the existing G2 head, then runs host-side integration tests through
+upgrades to packaged head `0003_content_ownership`, then runs host-side integration tests through
 ephemeral loopback ports. Tests cover HTTP-to-storage login/me/logout, User
 invariants, digest storage, transactional rollback, max-five admission races,
 expiry, touch races, one-time flow consumption, Redis outage/recovery and cleanup.
@@ -258,7 +258,7 @@ python -m pytest `
   tests/test_verify_schema_migrations_script.py -q
 ```
 
-The packaged head must be exactly `0002_user_session_persistence`. Application
+The packaged head must be exactly `0003_content_ownership`. Application
 startup checks are read-only and must return a typed failure for a missing,
 empty, outdated, multiple-head, or unreachable schema.
 
@@ -465,9 +465,54 @@ Failure/cleanup guards and manual recovery are in the
 The manual smoke workflow uses this same runner twice with contents:read and a
 20-minute job timeout, without raw Compose logs or default-project cleanup.
 
-G4.1 proves the harness and G3 Session lifecycle only. Generation/file/ops routes
-remain unprotected until subsequent G4 slices. See [Issue103 evidence](portfolio/issue-103-authenticated-mock-harness.md)
+G4.1 originally proved the harness and G3 Session lifecycle only. G4.2A now adds
+the admission proof below; read/list/delete/file/ops remain deferred to G4.3.
+See [Issue103 evidence](portfolio/issue-103-authenticated-mock-harness.md)
 for actual counts, the baseline Windows Bash-path failure and Linux results.
+
+## Owner Persistence and Admission (G4.2A)
+
+The same canonical ownership runner now preserves auth12 and smoke3, and adds
+`admission_checks=111` per cycle: 93 HTTP assertions plus 18 persisted-record checks.
+It tests actual G3 Session/Origin rejection on four writers, A/B/Master ownership,
+spoof422, foreign/missing404 before semantic errors, own400/409, retry lineage and
+actual PostgreSQL outbox-failure rollback. Rejected provider/storage effects are
+asserted in unit tests; HTTP/DB counts do not claim to measure provider internals.
+Only owned test consumers pause for admission fixtures and resume before smoke.
+
+Run sequentially from repository root, checking each exit code before continuing:
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+if ($LASTEXITCODE) { throw 'First schema proof failed' }
+python scripts/verify_schema_migrations.py --env-file .env.example --include-reset
+if ($LASTEXITCODE) { throw 'Second schema proof failed' }
+python scripts/verify_auth_sessions.py --env-file .env.example
+if ($LASTEXITCODE) { throw 'Auth proof failed' }
+python scripts/verify_ownership.py --env-file .env.example --cycles 2
+if ($LASTEXITCODE) { throw 'Admission proof failed' }
+docker compose --env-file .env.example config --quiet
+```
+
+Schema proof covers real NOT NULL/FK/RESTRICT/path uniqueness, identity preservation,
+eight nonempty upgrade/downgrade refusals, bounded lock contention, historical
+round-trip, stale revision refusal/recovery and guarded reset. Reset is confined
+to a newly created verifier database, never developer/preview data. Check exact
+project-label container/volume/network counts are zero after each schema run.
+Schema/auth receipts use `.omo/evidence/schema/` and `.omo/evidence/auth/`.
+Ownership prints safe JSON receipts; this Goal preserved the selected fields in
+`.omo/evidence/issue-105/`. Keep these local, not raw logs or Session data.
+
+Focused regression from `backend` with mock: `python -m pytest
+tests/test_generation_api.py tests/test_pipeline_api.py tests/test_prompt_api.py
+tests/test_ownership_persistence.py -q` (join on one command line). Run the complete
+backend suite and unchanged frontend lint/build/auth/browser suites too.
+Authoritative Linux result at implementation `e3c98f1`: 658 PASS, 3 pre-existing
+guarded-integration skips. Windows has one independently reproduced main Bash
+absolute-path failure; it is not skipped or waived in Linux/CI. Full counts,
+acceptance mapping and rollback are in [Issue105 evidence](portfolio/issue-105-owner-persistence-admission.md).
+No B worker/race or G4.3 complete isolation claim follows from A's passing gates.
 
 ## Secret Hygiene
 
