@@ -240,7 +240,9 @@ document or inherit the full design interview.
 | G4.2 | Owner persistence and admission/reference invariants | Mock Verified — A/B | [Accepted G4 policy](g4-ownership-access-control-spec.md), [split spec and implementation handoff](g4-2-owner-persistence-admission-spec.md) | G4.3 read/file/delete/ops/cache enforcement remains; no public multi-user deployment |
 | G4.2A | Owner persistence and authenticated admission | Ownership Admission Mock Verified; delivery tracked below | [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105), branch `codex/issue-105-owner-persistence-admission`, [execution record](../portfolio/issue-105-owner-persistence-admission.md); implementation `e3c98f1` | Exact20 paths/migration1/head0003; schema2/auth1/final admission2 PASS, cleanup0. Linux658 PASS/3 existing SKIP; frontend48+34 PASS. Developer/preview preserved; final CI/merge use delivery link |
 | G4.2B | Worker references and pipeline/race proof | Mock Verified — delivery tracked in execution record | [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107), branch `codex/issue-107-worker-ownership-invariants`, [B spec](g4-2-owner-persistence-admission-spec.md), [execution record](../portfolio/issue-107-worker-ownership-invariants.md); implementation ff808b0 | Exact11/migration0/head0003; two real cycles each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1/cleanup0. Linux782/3 existing SKIP, frontend48+34. G4.3 receives worker validator, safe pipeline results and expanded guarded harness; failed-link recovery/live verification remain excluded |
-| G4.3 | Complete ownership access enforcement | Planned — A/B split proposed, approval pending | [Accepted policy and proposed split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md); not implemented | B merged c84394a; old20-path estimate omits2 harness paths. Propose A15 metadata/delete and B16 file/ops/final proof, union22, each <=20, migration0; freeze child Goals only after approval |
+| G4.3 | Complete ownership access enforcement | Planned — accepted A/B split | [Accepted policy/split](g4-ownership-access-control-spec.md), [Issue109 design record](../portfolio/issue-109-ownership-access-design.md) | G4.2B merged c84394a; only A+B complete closes aggregate G4; no public multi-user deployment |
+| G4.3A | Metadata ownership access and safe deletion | Goal Prepared — not implemented | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch `codex/issue-110-metadata-ownership-access`, [preparation](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0; initial A15 plus existing unsupported-intent test adjustment. Input OwnershipAccess/B5/head0003; first baseline385 PASS; separate SHA execution request required |
+| G4.3B | File/Range, Master ops and final proof | Planned | [Accepted split](g4-ownership-access-control-spec.md) | Candidate16 paths, migration0; freeze after A actual merge; final security matrix/2cycle/CI/merge closes G4 |
 | G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned | None | Blocked by G2 |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -324,7 +326,13 @@ At the end of a Goal:
 2026-09-03 proposal update (not an accepted Decision Change): following B actual merge
 at `c84394a`, Issue109 records G4.3A/B split candidates because the existing transport
 rejects list queries/array responses and `/metrics`. Ownership policy is unchanged.
-Await explicit split approval before child execution planning; no implementation started.
+This proposal was subsequently accepted; see the following update. No implementation started.
+
+2026-09-03 accepted update: user approved G4.3A/B and A Goal preparation. Issue110
+fixes A16 paths (A15 plus the existing persistence unsupported-intent test), zero
+migrations, same ownership policy and Ready/final-CI/squash delivery. Candidate union23
+does not increase the per-Goal20 cap. A remains private/incomplete until B; preparation
+does not activate a Goal or authorize implementation without the frozen-SHA request.
 
 ## Initiative Completion Gate
 
@@ -356,10 +364,10 @@ for verification and delivery. [G4.2A Issue #105](https://github.com/bbungjun/AI
 is now Ownership Admission Mock Verified at implementation `e3c98f1`; A actually
 merged at `d40a8f7`. B is Mock Verified and actually merged through
 [PR #108](https://github.com/bbungjun/AI_multimodal_platform/pull/108) at `c84394a`.
-The next step is approval of the G4.3A/B split proposed in Issue109, then a bounded A
-Issue/branch/frozen Goal. No G4.3 implementation has started.
-Budgets are G4.1=13, G4.2A=20, G4.2B exact11 (cap20). G4.3 candidates are A15/B16
-(union22), not an approved exception to the per-Goal20 cap. Only G4.2A adds one migration.
+G4.3A/B split is accepted. Issue110 provides a bounded A Issue/branch/frozen Goal;
+next is an explicit execution request with its SHA in current-work. No G4.3 implementation
+has started. Budgets are G4.1=13, G4.2A=20, G4.2B exact11 (cap20), G4.3A exact16,
+G4.3B candidate16 (union23), not an exception to the per-Goal20 cap. Only G4.2A adds one migration.
 Ready delivery: [PR #106](https://github.com/bbungjun/AI_multimodal_platform/pull/106).
 That PR confirms A final-head checks and merge SHA; B evidence is in its execution record.
 Reuse injected clients and hash-only fixtures; schema/auth/harness/seeder expected

@@ -80,8 +80,9 @@
 
 ## Issue Records
 
-G4.3 준비: [Issue109 bounded access design](issue-109-ownership-access-design.md) —
-Planned, A15/B16 split approval pending; existing-code baseline385 PASS, no implementation.
+G4.3: [Issue109 design](issue-109-ownership-access-design.md)의 A/B 분할 승인 후
+[Issue110 A Goal 준비](issue-110-metadata-ownership-access.md) 완료. A16/B16 후보,
+existing-code baseline385 PASS; 구현/Goal 실행은 아직 시작하지 않았다.
 
 | Issue | Record | Status |
 |---|---|---|

@@ -77,7 +77,34 @@ paste credential contents.
 
 ## Active Work
 
+### G4.3A execution preparation — 2026-09-03
+
+- **Goal Prepared — implementation NOT started.** User accepted G4.3A/B and A
+  execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
+  branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
+  Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
+- [Accepted spec](initiatives/g4-ownership-access-control-spec.md),
+  [preparation/evidence](portfolio/issue-110-metadata-ownership-access.md).
+  Frozen local/untracked plan `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`.
+  SHA256 `e809a70b8ae7110e8585e357c1b769270d6c19b0251a0bfbc30883a25c426017`.
+  Transfer exact bytes between machines; hash is not backup; never stage .omo wholesale.
+- Target gpt-5.6-sol / medium, sequential executor. Exact16 code paths, migration0:
+  A15 candidate plus existing persistence unsupported-intent test adjustment only.
+  B16 remains candidate, union23/common9, each Goal<=20. Read/list/delete/cache and
+  guarded metadata proof only; file/Range/ops enforcement remains B.
+- Fresh B0 existing mock baseline **385 PASS /5.11s; final rerun4.43s**.
+  Spec/Goal16-path parity, Todo8/F4, existing test targets, SHA/doc links passed. Strict branch protection
+  requires verify and both Scan/SBOM. No runtime/implementation proof claimed.
+- Frozen Todo1–8/F1–F4 includes real2cycle,8 metadata groups,2 observed deletion
+  races/cycle, previous proof groups, full backend/frontend regression, safe
+  documentation, Ready PR/final-head CI/actual squash MERGED. No admin bypass.
+- Next: explicit Issue110 Goal execution request with matching SHA. No Goal,
+  Docker/DB mutation, OAuth/provider/cloud or frontend implementation started here.
+  G4 remains incomplete/private until B; #99/live/machine-metrics gates remain.
+
 ### G4.3 design preparation — 2026-09-03
+
+Historical proposal snapshot below; superseded by the accepted A preparation above.
 
 - **Planned — A/B split proposal awaiting approval; no G4.3 implementation/Goal started.**
   [Issue #109](https://github.com/bbungjun/AI_multimodal_platform/issues/109), branch

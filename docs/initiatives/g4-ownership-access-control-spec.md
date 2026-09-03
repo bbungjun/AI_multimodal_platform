@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted policy — G4.1/G4.2A/B Mock Verified; G4.3A/B split proposed, approval pending (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B Mock Verified; G4.3A Goal Prepared / B Planned (2026-09-03).**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -192,7 +192,7 @@ DB 없는 고아 파일은 Master라도 404. traversal/인코딩 변형은 유�
 | G4.1 | 인증된 mock 검증 harness와 smoke 운반 방식 | 13 / 0 | 검증 기반 준비; 제품 소유권 보호 아직 없음 |
 | G4.2A | non-null owner·모든 writer 인증·접수 참조 검증 | 20 / 1 | Ownership Admission Mock Verified까지만; worker/전체 격리 미완료 |
 | G4.2B | worker/polling 참조·pipeline 연결·실경합 검증 | 구현11, 최대20 / 0 | [Issue107 기록](../portfolio/issue-107-worker-ownership-invariants.md): ff808b0, 실제2cycle/전체 회귀 PASS; delivery는 기록의 PR 참조. 읽기·파일 격리는 G4.3 |
-| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 후보 합집합22 / 0 | 단일20개 예상은 폐기; 아래 A15/B16 분할 제안 승인 후 각각 실행 계획 고정. 최종 gate 통과 시에만 G4 Mock Verified |
+| G4.3 | 모든 읽기·변경·파일·운영 노출 차단 및 E2E | 합집합23 / 0 | 단일20개 예상 폐기; A/B 분할 승인. A16 고정/B16 후보. 최종 gate 통과 시에만 G4 Mock Verified |
 
 **G4.1/2는 비공개 mock 개발 체크포인트**다. 각각 PR/CI를 통과하더라도 사용자별 격리나
 공개 배포 완료가 아니다. 공개 노출은 G4.3 및 기존 #99/live 환경 gate 전까지 No-Go.
@@ -313,19 +313,22 @@ backend/tests/test_verify_ownership_script.py
 제한한다. 이 slice는 migration/새 permission model/frontend redesign을 추가하지 않는다.
 구현 중 테스트 fake/query 전환이 예산보다 커지면 뒤늦게 파일을 합치지 말고 재분할한다.
 
-### G4.3A/B 분할 제안 — Issue #109, 승인 대기
+### G4.3A/B 분할 — 승인 완료, A 실행 준비
 
 [설계 Issue #109](https://github.com/bbungjun/AI_multimodal_platform/issues/109)는 aggregate
-설계/종료 추적용이다. 아래는 후보 경로와 계약이며 실행 승인이 아니다. 승인 후 A의
-별도 Issue/branch 및 SHA-256으로 고정한 Todo1–8/F1–F4 Goal을 준비한다. B는 A 실제
-병합 후 확정한다. 제품 권한 정책은 바꾸지 않으며 migration은 두 단계 모두0이다.
+설계/종료 추적용이다. 사용자가 A/B 분할과 A 실행 준비를 승인했다.
+[A Issue #110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
+`codex/issue-110-metadata-ownership-access`, main `c84394a` 기반으로 준비했다.
+Goal은 `.omo/plans/issue-110-g4-3a-metadata-ownership-access-goal.md`이며 SHA는 current-work에
+기록한다. 별도 frozen-SHA 실행 요청 전에는 구현하지 않는다. B는 A 실제 병합 후 확정한다.
+제품 권한 정책은 바꾸지 않으며 migration은 두 단계 모두0이다.
 
 | Slice | 책임 | 종료 의미 |
 |---|---|---|
 | G4.3A | 목록·상세·삭제, JSON cache 경계, harness 호환성 | metadata 접근 제어만 검증; 파일·ops는 아직 미보호, 공개 배포 금지 |
 | G4.3B | 파일·Range, Master ops, 최종 전체 보안 검증 | 아래 전체 matrix와 두 실제 cycle/CI/merge를 닫은 뒤 G4 Mock Verified |
 
-#### A 후보 경로 (15)
+#### A 실행 경로 (16)
 
 ```text
 backend/app/ownership.py
@@ -338,6 +341,7 @@ backend/tests/test_pipeline_api.py
 backend/tests/test_asset_api.py
 backend/tests/test_ownership_access.py
 backend/tests/test_ownership_integration.py
+backend/tests/test_ownership_persistence.py
 backend/tests/ownership_support.py
 scripts/verify_ownership.py
 scripts/mock_auth_support.py
@@ -367,8 +371,11 @@ backend/tests/test_mock_auth_support.py
 ```
 
 `test_ownership_access.py`와 `test_ownership_integration.py`만 신규 코드 후보다.
-합집합22개, 공통9개이며 테스트를 합치거나 생략해 예산을 맞추지 않는다. 각 실행의
-allowlist는 승인 후 동결한다. 목록 밖 코드가 필요하면 최대20 이하여도 먼저 재설계한다.
+최초 제안은 A15/B16/합집합22였다. A 준비 중 기존 persistence 테스트가 `read`를
+미지원 intent로 검사하는 것을 발견했다. `test_ownership_persistence.py`의 해당 테스트만
+실제 미지원 intent로 바꿔 보호를 유지하도록 A16으로 확정했다. 합집합23/공통9, 최대20
+원칙과 분할 책임은 그대로다. 테스트를 합치거나 생략하지 않는다. A allowlist 밖 코드가
+필요하면 최대20 이하여도 먼저 재설계한다. B16은 A 병합 후 다시 확인할 후보이다.
 
 #### A Interface와 실패 계약
 
@@ -389,9 +396,11 @@ allowlist는 승인 후 동결한다. 목록 밖 코드가 필요하면 최대20
   않는다. 알려진 참조와 반환 Asset graph를 검증하는 범위를 A 계획에 명시한다.
 - delete는 먼저 own target을 확인한다. cross-owner dependent가 있으면 고정409,
   detach/delete/storage 부수효과0으로 거절한다. 정상 active dependent409는 유지한다.
-  제안 lock 순서는 출력 Asset을 id 순으로 잠근 뒤 Job을 잠그고 상태·참조를 fresh
+  lock 순서는 출력 Asset을 id 순으로 잠근 뒤 Job을 잠그고 상태·참조를 fresh
   조회하는 것이다. 기존 create/retry의 Asset → parent FK 순서와 역전되지 않게
-  실제 PostgreSQL 동시 요청으로 검증한다. 최종 lock/error 우선순위는 A 계획에서 고정한다.
+  실제 PostgreSQL 동시 요청으로 검증한다. own target → lock/fresh → terminal 확인 →
+  모든 incoming reference owner 확인 → active dependent 확인 → storage/detach/delete 순서다.
+  cross-owner incoming reference는 `409 ownership_reference_mismatch`로 통일한다.
 - 기존 파일 삭제 후 DB commit의 비원자성은 남는 위험으로 기록한다. 새 복구 store,
   saga, DB schema를 이 단계에 추가하지 않는다. foreign target404는 상태 정보보다 앞선다.
 - 보호 응답에 `Cache-Control: private, no-store`를 붙인다. JSON 성공/오류와 B의
@@ -431,12 +440,12 @@ allowlist는 승인 후 동결한다. 목록 밖 코드가 필요하면 최대20
 - FK를 깨는 가짜 실제 fixture나 SQLite로 보안 증거를 대체하지 않는다. 통합 검증은
   실제 Session을 사용하고, unit fake는 명시적 일반 actor를 사용한다. 전역 Master override 금지.
 
-#### 실행 준비 체크포인트 (아직 실행 Goal 아님)
+#### A 실행 계획 연결과 B 준비 체크포인트
 
-승인 후 각 Goal의 Todo 순서는 1 baseline/상태표, 2 Ownership Interface,
+각 Goal의 Todo 순서는 1 baseline/상태표, 2 Ownership Interface,
 3 route 적용, 4 경계·실패 테스트, 5 guarded harness, 6 실제2cycle/전체 회귀,
 7 문서·포트폴리오, 8 Ready PR/CI/실제 squash merge로 고정한다. A와 B에서 2–5의
-세부 테스트 이름과 commit 경로는 별도로 확정한다. 각 Todo는 focused test,
+세부 테스트/commit 경로는 A frozen Goal에 고정했으며 B는 후속 확정한다. 각 Todo는 focused test,
 diff/status/staged 검사 후 작은 commit을 남긴다.
 
 F1 경로/무migration, F2 해당 보안 matrix, F3 실제2cycle/전체 회귀,
@@ -540,7 +549,8 @@ G4.2A에서 schema/auth/harness/seeder head를 `0003_content_ownership`로 함�
 (`c84394a`). 상세 B5 handoff와 [Issue107 실행 기록](../portfolio/issue-107-worker-ownership-invariants.md)을
 G4.3 입력으로 사용한다. B는11개 경로/migration0, 실제2cycle과 전체 회귀를 검증했다.
 G4.3 설계 준비는 [Issue109 기록](../portfolio/issue-109-ownership-access-design.md)에 남긴다.
-분할은 아직 승인 대기이며 G4.3 제품 구현·Goal 실행·DB 작업은 시작하지 않았다.
+분할 승인을 반영한 [Issue110 준비 기록](../portfolio/issue-110-metadata-ownership-access.md)과
+frozen Goal을 작성했다. G4.3 제품 구현·Goal 실행·DB 작업은 시작하지 않았다.
 
 포트폴리오 메시지: “로그인 화면을 붙였다”에서 “타 사용자의 UUID·파일 URL·재시도 입력을
 알아도 서버가 동일 정책으로 거절하고, 실제 DB/worker 흐름에서 검증했다”로 발전시키는 작업이다.

@@ -1,6 +1,9 @@
 # Issue109 — Bounded ownership access design
 
 - Status: **Planned — split proposed, approval pending** (2026-09-03).
+- 후속 상태: 사용자가 분할을 승인했고 [Issue110 A 실행 준비](issue-110-metadata-ownership-access.md)를
+  완료했다. 아래는 승인 전 관측 기록이며 당시15개 후보는 기존 unsupported-intent 테스트
+  보존을 위해 A16개로 구체화되었다. G4.3 제품 구현은 아직 시작하지 않았다.
 - [Issue109](https://github.com/bbungjun/AI_multimodal_platform/issues/109), branch
   `codex/issue-109-ownership-access-design`.
 - Baseline: main `c84394a`, [G4.2B PR108](https://github.com/bbungjun/AI_multimodal_platform/pull/108)
