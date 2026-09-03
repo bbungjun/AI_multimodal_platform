@@ -71,6 +71,35 @@ to-apples speedup claim against the original all-in-one workload. It proves boun
 repeatability with all coverage retained. Runtime receipts are local under
 `.omo/evidence/issue-112/v2-*-cycle*.json` and `v2-aggregate.json`.
 
+### v2 Todo6 full regression
+
+At51ee0c2 (documentation-only since c05b815; executable code tree unchanged):
+
+- Two unchanged `verify_schema_migrations.py --env-file .env.example --include-reset`:
+  PASS76.100/77.000s. New projects d2a304395530/03beea0a3603, schema0003, round trips,
+  identity/ownership constraints, nonempty refusals8, lock refusal, stale revision
+  refusal/recovery and guarded reset; exact-label cleanup independently0 each.
+- `verify_auth_sessions.py --env-file .env.example`: PASS27.373s, PostgreSQL/Redis
+  outage/recovery, cleanup0. Admission12 -> active5; touch20 -> effective1; signup8;
+  authentication50/p95 7.158ms; flow consume12 -> consumed1, replay refusal12, expired1.
+- Fixed B0/F/M/H/S:631/231/248/290/94 PASS, respectively4.76/3.53/3.56/1.00/1.51s;
+  S has only2 existing guarded-runtime skips.
+- Authoritative tracked-only Linux archive:1128 PASS/3 existing guarded skips/4.38s;
+  environment setup plus tests35.487s. Exact container cleanup0. Linux passed the
+  real symlink test and the release-script syntax test. No private env/workspace mount.
+- Windows full:1127 PASS/3 existing skips/7.59s, sole known Bash-path/native127
+  failure in `test_supply_chain_release.py::test_release_script_guards_plan_scope_and_uses_terraform_rollback`.
+  Fresh untouched cd654e5 archive in a new OS temporary directory reproduced that
+  exact1 failure/native127 in0.39s. No test modification/skip/xfail to hide it.
+- Unchanged frontend: `npm run lint`, `npm run build` PASS; `npm run test:auth`
+  48 PASS/0.776s; `npm run test:auth:browser`34 PASS/18.3s, local mocked browser only.
+- Final H290/1.10s and F231/3.32s PASS; D cumulative16/resume4/migration0 and Compose
+  example PASS. Developer/preview unchanged, no live OAuth/provider/cloud operations.
+
+Schema/auth receipts remain in their existing local evidence folders; summarized
+results above are safe durable portfolio evidence. Deprecation warnings from test
+dependencies are recorded as non-blocking; no dependency update was added to scope.
+
 ### 최신 실행 결과 (준비 기록보다 우선)
 
 사용자의 frozen-SHA 요청으로 실행했다. SHA 일치, main cd654e5 유지, 브랜치와 사용자

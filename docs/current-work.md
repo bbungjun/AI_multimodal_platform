@@ -145,6 +145,10 @@ paste credential contents.
   file-ops167.500/167.578s (work161.078/161.360), each310/FOVE/A-B10 stages.
   All4 exact-label cleanup independently0, preview4/developer volumes preserved.
   F231/3.26s H290/1.15s recheck PASS. Next Todo6 schema2/auth1/full regression.
+- v2 Todo6 PASS: schema2/include-reset76.1/77.0s, auth27.373s/Redis recovery,
+  exact cleanup0; Linux1128 PASS/3 existing skips. Windows1127 PASS/known Bash-path1
+  failure/3 skips, independently reproduced at untouched cd654e5. Frontend lint/build,
+  Session48/browser34 PASS. Code unchanged since c05b815; next Todo7 docs/F1–F3.
 
 ### G4.3A execution — 2026-09-03
 
