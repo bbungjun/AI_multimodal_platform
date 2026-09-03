@@ -106,3 +106,14 @@ P first failed at expected `credit_policy_missing` assertion (not collection),
 then **55 PASS/0.07s** including all7 rates, BIGINT edges, invalid types, no Master
 bypass, leap-year/DST-equivalent instants and exact microsecond cycle boundaries.
 Scope2/17; diff/status/staged checks passed. Next: four-table schema/migration.
+
+### Todo3 — persistence
+
+Added CreditAccount/Cycle/Grant/LedgerEvent mappings and additive0004. Named
+composite ownership FKs, integer/check constraints, base-cycle uniqueness and
+operation uniqueness are explicit. Ledger UPDATE/DELETE/TRUNCATE triggers refuse
+mutation; downgrade takes5s bounded locks and checks all four tables before DDL.
+No old migration/data writer/identity changes. Grant available is derived, not
+another stored total. M+P combined **87 PASS/1.18s**. These are structural tests,
+not real PostgreSQL proof. Current-head helper compatibility is Todo4; no runtime
+test is run at this transitional checkpoint. Code7/17, one new migration; D PASS.
