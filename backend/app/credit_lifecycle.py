@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
+import re
 
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
@@ -192,3 +193,102 @@ async def ensure_cycle(session, *, user_id, now):
         user, account = await _load(session, user_id, now)
         account, cycle, base, _ = await _ensure(session, user, account, now)
         return _view(account, cycle, base)
+
+
+def _key(value):
+    if type(value) is not str or re.fullmatch(r"[A-Za-z0-9_-]{1,96}", value) is None:
+        raise CreditLifecycleError("credit_input_invalid")
+    return value
+
+
+def _receipt(operation, replayed):
+    return MutationReceipt(operation.operation_key, operation.kind, operation.outcome,
+                           operation.effective_at, operation.result_cycle_id,
+                           operation.result_grant_id, replayed)
+
+
+async def _replay(session, user_id, key, payload):
+    operation = await session.scalar(select(CreditOperation).where(
+        CreditOperation.user_id == user_id, CreditOperation.operation_key == key)
+        .execution_options(populate_existing=True))
+    if operation is None:
+        return None
+    if any(getattr(operation, name) != value for name, value in payload.items()):
+        raise CreditLifecycleError("credit_idempotency_conflict")
+    return _receipt(operation, True)
+
+
+async def _record(session, user_id, key, payload, now, cycle, grant_id, outcome):
+    operation = CreditOperation(user_id=user_id, operation_key=key,
+                                rate_card_version=RATE_CARD_VERSION, effective_at=now,
+                                result_cycle_id=cycle.id, result_grant_id=grant_id,
+                                outcome=outcome, **payload)
+    session.add(operation)
+    await session.flush()
+    return _receipt(operation, False)
+
+
+async def change_plan(session, *, user_id, target_plan, operation_key, now):
+    now = _inputs(user_id, now)
+    key = _key(operation_key)
+    if type(target_plan) is not str or target_plan not in _RANK:
+        raise CreditLifecycleError("credit_input_invalid")
+    payload = dict(kind="plan_change", target_plan=target_plan, amount_microcredits=None,
+                   expires_at=None, reason_code=None)
+    async with _transaction(session):
+        user, account = await _load(session, user_id, now)
+        replay = await _replay(session, user_id, key, payload)
+        if replay is not None:
+            return replay
+        if user.status == "suspended" or (user.role == "master" and target_plan != "max"):
+            raise CreditLifecycleError("credit_plan_refused")
+        account, cycle, base, grants = await _ensure(session, user, account, now)
+        grant_id = None
+        if _RANK[target_plan] > _RANK[account.plan]:
+            allowance = plan_policy(target_plan).allowance_microcredits
+            delta = allowance - cycle.allowance_microcredits
+            _capacity(grants, delta)
+            base.granted_microcredits += delta
+            cycle.plan = account.plan = target_plan
+            cycle.allowance_microcredits = allowance
+            account.pending_plan = None
+            _event(session, base, "adjust", "cmd_" + key, now, "plan_upgrade", granted=delta)
+            outcome, grant_id = "upgraded", base.id
+        elif _RANK[target_plan] < _RANK[account.plan]:
+            outcome = "unchanged" if account.pending_plan == target_plan else "scheduled"
+            account.pending_plan = target_plan
+        else:
+            outcome = "cancelled" if account.pending_plan is not None else "unchanged"
+            account.pending_plan = None
+        return await _record(session, user_id, key, payload, now, cycle, grant_id, outcome)
+
+
+async def grant_bonus(session, *, user_id, amount_microcredits, expires_at,
+                      reason_code, operation_key, now):
+    now = _inputs(user_id, now)
+    key = _key(operation_key)
+    if (type(amount_microcredits) is not int or not 0 < amount_microcredits <= _MAX
+            or type(reason_code) is not str or re.fullmatch(r"[a-z0-9_]{1,64}", reason_code) is None):
+        raise CreditLifecycleError("credit_input_invalid")
+    expiry = None if expires_at is None else _instant(expires_at)
+    payload = dict(kind="bonus", target_plan=None, amount_microcredits=amount_microcredits,
+                   expires_at=expiry, reason_code=reason_code)
+    async with _transaction(session):
+        user, account = await _load(session, user_id, now)
+        replay = await _replay(session, user_id, key, payload)
+        if replay is not None:
+            return replay
+        if user.status == "suspended":
+            raise CreditLifecycleError("credit_plan_refused")
+        if expiry is not None and expiry <= now:
+            raise CreditLifecycleError("credit_input_invalid")
+        _, cycle, _, grants = await _ensure(session, user, account, now)
+        _capacity(grants, amount_microcredits)
+        grant = CreditGrant(id=uuid4(), user_id=user_id, cycle_id=None, kind="bonus",
+                            created_at=now, expires_at=expiry, reason_code=reason_code,
+                            granted_microcredits=amount_microcredits, reserved_microcredits=0,
+                            consumed_microcredits=0, expired_microcredits=0)
+        session.add(grant)
+        await session.flush()
+        _event(session, grant, "grant", "cmd_" + key, now, reason_code, granted=amount_microcredits)
+        return await _record(session, user_id, key, payload, now, cycle, grant.id, "granted")

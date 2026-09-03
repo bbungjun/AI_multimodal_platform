@@ -8,8 +8,8 @@ from uuid import UUID
 
 import pytest
 
-from app.credit_lifecycle import CreditLifecycleError, ensure_cycle
-from app.credit_models import CreditAccount, CreditCycle, CreditGrant, CreditLedgerEvent
+from app.credit_lifecycle import CreditLifecycleError, ensure_cycle, change_plan, grant_bonus
+from app.credit_models import CreditAccount, CreditCycle, CreditGrant, CreditLedgerEvent, CreditOperation
 from app.identity_models import User
 
 NOW = datetime(2024, 2, 29, 10, 30, 0, 123456, tzinfo=timezone.utc)
@@ -184,3 +184,156 @@ def test_suspended_ensure_is_accounting_only_and_outer_rollback():
     run(scenario())
     assert ensure(s).plan == "free"
     assert s.rows[User][0].status == "suspended"
+
+
+def change(s, plan, key="plan", now=NOW):
+    return run(change_plan(s, user_id=UID, target_plan=plan, operation_key=key, now=now))
+
+
+def bonus(s, key="bonus", now=NOW, **extra):
+    values = dict(amount_microcredits=100, expires_at=None, reason_code="support")
+    values.update(extra)
+    return run(grant_bonus(s, user_id=UID, operation_key=key, now=now, **values))
+
+
+@pytest.mark.parametrize("current", ["free", "pro", "max"])
+@pytest.mark.parametrize("target", ["free", "pro", "max"])
+def test_all_plan_pairs_preserve_consumed_and_held(current, target):
+    s = MemorySession()
+    ensure(s)
+    change(s, current, "setup")
+    base = s.rows[CreditGrant][0]
+    base.consumed_microcredits, base.reserved_microcredits, base.expired_microcredits = 10, 20, 30
+    old = base.granted_microcredits
+    ledger_count = len(s.rows[CreditLedgerEvent])
+    receipt = change(s, target)
+    account = s.rows[CreditAccount][0]
+    rank = {"free": 0, "pro": 1, "max": 2}
+    if rank[target] > rank[current]:
+        assert account.plan == target and account.pending_plan is None
+        assert receipt.outcome == "upgraded" and len(s.rows[CreditLedgerEvent]) == ledger_count + 1
+        assert base.granted_microcredits > old
+    elif rank[target] < rank[current]:
+        assert account.plan == current and account.pending_plan == target
+        assert receipt.outcome == "scheduled" and len(s.rows[CreditLedgerEvent]) == ledger_count
+        assert base.granted_microcredits == old
+    else:
+        assert receipt.outcome == "unchanged" and base.granted_microcredits == old
+    assert (base.consumed_microcredits, base.reserved_microcredits, base.expired_microcredits) == (10, 20, 30)
+
+
+def test_pending_replace_cancel_and_same_pending_noop():
+    s = MemorySession()
+    change(s, "max", "upgrade")
+    assert change(s, "pro", "lower").outcome == "scheduled"
+    assert change(s, "free", "replace").outcome == "scheduled"
+    assert change(s, "free", "same").outcome == "unchanged"
+    assert change(s, "max", "cancel").outcome == "cancelled"
+    assert s.rows[CreditAccount][0].pending_plan is None
+    assert len(s.rows[CreditOperation]) == 5
+
+
+def test_replay_before_renewal_has_no_side_effects_even_suspended():
+    s = MemorySession()
+    original = change(s, "pro")
+    before = snapshot(s)
+    s.rows[User][0].status = "suspended"
+    replay = change(s, "pro", now=NOW + 9 * DAY30)
+    assert replay.replayed and replay.effective_at == original.effective_at
+    assert replay.cycle_id == original.cycle_id and replay.grant_id == original.grant_id
+    assert snapshot(s) == before
+    with pytest.raises(CreditLifecycleError, match="credit_plan_refused"):
+        change(s, "max", "new", NOW + DAY30)
+
+
+def snapshot(s):
+    return {cls: [tuple(getattr(row, col.name) for col in cls.__table__.columns)
+                  for row in s.rows.get(cls, [])]
+            for cls in (CreditAccount, CreditCycle, CreditGrant, CreditLedgerEvent, CreditOperation)}
+
+
+@pytest.mark.parametrize("field,value", [
+    ("amount_microcredits", 101), ("expires_at", NOW + DAY30),
+    ("reason_code", "different")])
+def test_bonus_payload_collision_before_renewal_is_atomic(field, value):
+    s = MemorySession()
+    bonus(s)
+    before = snapshot(s)
+    with pytest.raises(CreditLifecycleError, match="credit_idempotency_conflict"):
+        bonus(s, now=NOW + 8 * DAY30, **{field: value})
+    assert snapshot(s) == before
+
+
+def test_cross_kind_and_plan_target_collisions():
+    s = MemorySession()
+    change(s, "free", "same")
+    before = snapshot(s)
+    for call in (lambda: change(s, "pro", "same", NOW + DAY30),
+                 lambda: bonus(s, key="same", now=NOW + DAY30)):
+        with pytest.raises(CreditLifecycleError, match="credit_idempotency_conflict"):
+            call()
+        assert snapshot(s) == before
+
+
+def test_finite_bonus_expiry_and_replay_never_regrant():
+    s = MemorySession()
+    expiry = NOW + timedelta(seconds=10)
+    first = bonus(s, expires_at=expiry)
+    ensure(s, expiry)
+    before = snapshot(s)
+    replay = bonus(s, expires_at=expiry, now=expiry + DAY30)
+    assert replay.replayed and replay.grant_id == first.grant_id
+    assert snapshot(s) == before
+    grant = next(g for g in s.rows[CreditGrant] if g.id == first.grant_id)
+    assert grant.available_microcredits == 0 and grant.expired_microcredits == 100
+
+
+@pytest.mark.parametrize("amount", [True, 1.0, "1", 0, -1, 2**63])
+def test_invalid_bonus_rejected_without_account(amount):
+    s = MemorySession()
+    with pytest.raises(CreditLifecycleError, match="credit_input_invalid"):
+        bonus(s, amount_microcredits=amount)
+    assert set(s.rows) == {User}
+
+
+@pytest.mark.parametrize("key", ["", "a" * 97, "unsafe space", "new\nline", None])
+def test_unsafe_keys_rejected(key):
+    s = MemorySession()
+    with pytest.raises(CreditLifecycleError, match="credit_input_invalid"):
+        bonus(s, key=key)
+    assert set(s.rows) == {User}
+
+
+def test_outstanding_overflow_rolls_back_initial_cycle_and_bonus():
+    s = MemorySession()
+    with pytest.raises(CreditLifecycleError, match="credit_amount_overflow"):
+        bonus(s, amount_microcredits=2**63 - 1)
+    assert set(s.rows) == {User}
+
+
+def test_master_rejection_and_boundary_new_intent():
+    s = MemorySession(role="master")
+    with pytest.raises(CreditLifecycleError, match="credit_plan_refused"):
+        change(s, "pro")
+    assert set(s.rows) == {User}
+    s = MemorySession()
+    change(s, "pro", "up")
+    change(s, "free", "down")
+    receipt = change(s, "pro", "new", NOW + DAY30)
+    assert receipt.outcome == "upgraded"
+    assert len(s.rows[CreditCycle]) == 2
+    assert s.rows[CreditAccount][0].plan == "pro"
+    assert len(s.rows[CreditGrant]) == 2
+
+
+def test_database_contention_is_sanitized_and_savepoint_rolled_back():
+    from sqlalchemy.exc import DBAPIError
+    s = MemorySession()
+    async def failed_flush():
+        error = RuntimeError("private_canary")
+        error.sqlstate = "55P03"
+        raise DBAPIError("private_sql", {}, error)
+    s.flush = failed_flush
+    with pytest.raises(CreditLifecycleError, match="^credit_busy$"):
+        ensure(s)
+    assert set(s.rows) == {User}

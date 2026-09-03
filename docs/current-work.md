@@ -79,10 +79,12 @@ paste credential contents.
 
 ### G5B execution — 2026-09-04
 
-- **In Progress — Todo1 preflight complete.** User approved spec section3 and
+- **In Progress — Todo1–4 complete; actual DB proof pending.** User approved spec section3 and
   matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
   starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
-  preview4 and developer/preview DB/assets preserved. Next operation schema.
+  preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
+  Interface implemented; C102/M23 PASS. Six of20 code paths touched so far.
+  Next: fixed PostgreSQL proof/runner and current-head compatibility, then runtime.
   [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
   branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
   squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.

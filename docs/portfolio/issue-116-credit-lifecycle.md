@@ -102,6 +102,15 @@ Corrupt anchor/allowance/base/Master state and clock regression fail closed. No
 product caller or provider work. Unit fake tests prove Interface decisions, not
 PostgreSQL locking. C72 PASS/0.76s, M23 PASS/0.85s; scope6/20, D PASS.
 
+### Todo4 — Plan, bonus and immutable replay
+
+Added all Plan transitions with allowance-difference upgrades, pending replacement/
+cancellation/no-op records, strict bonus validation, outstanding BIGINT bound and
+replay-before-renewal. Conflicting keys roll back without lazy renewal; identical
+replay keeps original IDs/time even after expiry/suspension. Contention maps to a
+fixed safe code after savepoint rollback. No product caller. C102 PASS/1.02s and
+M23 PASS/0.97s; scope remains6/20. Real SQL/locking proof follows in Todo5/6.
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash
