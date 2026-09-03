@@ -108,3 +108,11 @@ rollback 전에 id를 보존했다. expire 테스트의 fake refetch도 일반 a
 ORM load를 유발해 `set_committed_value`로 실제 재조회 완료 상태를 모사하도록 정정했다.
 기존 missing-source 테스트는 승인된 조기 실패 계약(queued/generating 없이 mismatch)으로
 기대값을 바꿨다. E/handler **84 PASS /2.48s**, S106 PASS. pipeline9 RED는 Todo4에 남았다.
+
+### Todo4 — pipeline transaction
+
+child lock과 fresh 상태 재검사, 같은 owner/정확한 parent-Asset 관계 검증, 이미 unblocked
+child의 no-op을 적용했다. 실패 전파는 자신의 child만 변경하고 foreign/null은 safe result로
+건너뛴다. commit 실패는 rollback 후 safe result이며 generation 완료와 link를 분리했다.
+예상 밖 link 예외도 완료 parent를 재분류하지 않는 회귀를 추가했다.
+W/E **98 PASS /2.20s**, S **106 PASS /1.30s**; Todo2 RED 전부 해소. 실제 lock 경합은 아직 미검증이다.

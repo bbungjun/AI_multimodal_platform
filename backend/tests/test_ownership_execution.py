@@ -261,3 +261,18 @@ async def test_execution_poll_rechecks_relations_after_successful_submit(entry, 
     assert job.attempts == 1
     poll.assert_not_called()
     save.assert_not_called()
+
+
+async def test_execution_completed_parent_is_not_reclassified_by_unexpected_link_failure(monkeypatch):
+    job = execution_job()
+    session = ExecutionSession(job)
+    failed = AsyncMock(side_effect=AssertionError("completed_parent_reclassified"))
+    monkeypatch.setattr(handlers,"_mark_failed",failed)
+    monkeypatch.setattr(handlers.rate_limit,"acquire",AsyncMock(return_value=0))
+    monkeypatch.setattr(handlers.imagen,"generate_image",AsyncMock(return_value=[b"fixture"]))
+    monkeypatch.setattr(handlers.storage,"save_bytes",Mock(return_value="fixture/output.png"))
+    monkeypatch.setattr(handlers.pipeline_link,"link_completed_parent",AsyncMock(side_effect=RuntimeError("fixed_link_failure")))
+    with pytest.raises(RuntimeError, match="^fixed_link_failure$"):
+        await handlers.handle_t2i(session,job)
+    assert job.state == JobState.COMPLETED and job.error is None
+    failed.assert_not_called()

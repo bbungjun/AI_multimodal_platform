@@ -105,7 +105,6 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
 
         transition(job, JobState.COMPLETED)
         await session.commit()
-        await pipeline_link.link_completed_parent(session, job)
     except Exception as exc:
         await session.rollback()
         refreshed = await session.get(Job, job_id)
@@ -115,6 +114,10 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
         await _mark_failed(session, job, exc)
         if job.state == JobState.FAILED and not isinstance(exc, OwnershipReferenceMismatch):
             await pipeline_link.fail_blocked_children_for_parent(session, job)
+        return
+
+    # Generation has committed. Link failures cannot reclassify this parent.
+    await pipeline_link.link_completed_parent(session, job)
 
 
 async def _attempt_imagen_generation(
