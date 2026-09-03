@@ -38,3 +38,9 @@ async def require_user(request: Request, service=Depends(get_auth_service)):
     except AuthError as error:
         status = 503 if error.code == 'oauth_provider_unavailable' else 401
         raise HTTPException(status, detail=error.code) from None
+
+
+async def require_master(actor=Depends(require_user)):
+    if actor.role != 'master':
+        raise HTTPException(403, detail='master_required')
+    return actor

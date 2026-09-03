@@ -1,6 +1,7 @@
 """Content access and reference integrity. Callers retain transaction ownership."""
 from __future__ import annotations
 
+import re
 from typing import Literal
 from uuid import UUID
 
@@ -131,6 +132,26 @@ class OwnershipAccess:
         if asset.id != asset_id:
             raise _not_found()
         self._check_owner(owner, intent=intent)
+        return asset
+
+    async def file_asset(self, local_path: str) -> Asset:
+        """An exact registered path, never a filesystem/prefix ownership fallback."""
+        parts = local_path.split("/")
+        if (len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", parts[0])
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", parts[1])):
+            raise _not_found()
+        statement = select(Asset, Job.owner_user_id).join(Job, Asset.job_id == Job.id).where(
+            Asset.local_path == local_path,
+        )
+        if not self._master_read("read"):
+            statement = statement.where(Job.owner_user_id == self.actor.id)
+        row = (await self.session.execute(statement)).one_or_none()
+        if row is None:
+            raise _not_found()
+        asset, owner = row
+        if asset.local_path != local_path or str(asset.job_id) != parts[0]:
+            raise _not_found()
+        self._check_owner(owner, intent="read")
         return asset
 
     async def validate_read_jobs(self, jobs: list[Job]) -> None:
