@@ -43,6 +43,34 @@ returns complete=false. Per-cycle clocks and per-suite/command limits are separa
 Earlier H failed on the obsolete combined-scenario assertion; its replacement
 asserts both explicit suite contracts. No new skip/xfail or weakened product tests.
 
+### v2 Todo5 actual isolated runtime
+
+`python scripts/verify_ownership.py --env-file .env.example --suite all --cycles 2`
+passed exit0 at immutable `c05b815a29077b70d21da13cc8b592290455aebe`.
+One aggregate: passed=true, complete=true, verified_cycles4,998.187s/1800s.
+
+| Suite/cycle | Work seconds | Cleanup seconds | Total seconds | Actual proof |
+|---|---:|---:|---:|---|
+| ownership1 | 327.329 | 6.031 | 333.360 | auth12/admission111/smokes3/worker20/pipeline4/race3/expiry1/access8·348/delete-race2 |
+| ownership2 | 322.500 | 6.359 | 328.859 | same complete proof |
+| file-ops1 | 161.078 | 6.422 | 167.500 | auth12/FOVE4/checks310/A and B each10 stages |
+| file-ops2 | 161.360 | 6.218 | 167.578 | same complete proof |
+
+All four projects were distinct, schema0003/mock, same SHA, passed/cleanup true,
+failure codes none. Independent exact project-label container/volume/network0 after
+each run; preview4 and existing developer volumes preserved. An initial independent
+inventory command used unsupported volume `-a`; corrected to volume/network `-q`
+and verified0. This diagnostic CLI error did not mutate resources or affect runtime.
+F231/3.26s and H290/1.15s fresh post-runtime PASS. Full regression remains Todo6.
+
+Largest measured phase: ownership Celery completion143.188/142.563s. File suite
+actor A69.813/69.609s and B63.218/63.016s. Every work cycle stayed below360s and
+cleanup below90s; original failed combined417.17s remains failure, not overwritten.
+The redesign increases total work to four projects; these times are not an apples-
+to-apples speedup claim against the original all-in-one workload. It proves bounded
+repeatability with all coverage retained. Runtime receipts are local under
+`.omo/evidence/issue-112/v2-*-cycle*.json` and `v2-aggregate.json`.
+
 ### 최신 실행 결과 (준비 기록보다 우선)
 
 사용자의 frozen-SHA 요청으로 실행했다. SHA 일치, main cd654e5 유지, 브랜치와 사용자

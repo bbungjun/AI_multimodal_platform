@@ -140,6 +140,11 @@ paste credential contents.
   H290/F231/M248/S94 PASS (S existing2 skips). New verification4 paths only; product/
   migration/frontend/CI/Compose unchanged. Matrix mapping in Issue112 portfolio.
   Next: Todo5 explicit all4cycle runtime at committed checkpoint; no new success yet.
+- v2 Todo5 now PASS at c05b815: explicit all4cycle complete=true,998.187s/1800s.
+  ownership333.360/328.859s (work327.329/322.500), each old proof+348/races2;
+  file-ops167.500/167.578s (work161.078/161.360), each310/FOVE/A-B10 stages.
+  All4 exact-label cleanup independently0, preview4/developer volumes preserved.
+  F231/3.26s H290/1.15s recheck PASS. Next Todo6 schema2/auth1/full regression.
 
 ### G4.3A execution — 2026-09-03
 
