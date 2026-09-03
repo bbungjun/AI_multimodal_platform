@@ -1,8 +1,8 @@
 # Issue112 — G4.3B File/Range and Master Ops Access
 
-- **Implemented / runtime No-Go; verification redesign approved**,2026-09-03.
-  Original Todo1–5 committed; Todo6 stopped. v2 is prepared, not executed.
-  No successful full runtime cycle, final regression, delivery PR or merge.
+- **Implemented; v2 complete local mock proof and full regression**,2026-09-03.
+  Original combined failure is preserved; v2 Todo1–6 now complete. Delivery requires
+  Ready PR, final-head CI and actual merge; final evidence is linked from Issue112.
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, parent [Issue109](https://github.com/bbungjun/AI_multimodal_platform/issues/109).
 - [Spec/B contract](../initiatives/g4-ownership-access-control-spec.md),
@@ -100,7 +100,7 @@ Schema/auth receipts remain in their existing local evidence folders; summarized
 results above are safe durable portfolio evidence. Deprecation warnings from test
 dependencies are recorded as non-blocking; no dependency update was added to scope.
 
-### 최신 실행 결과 (준비 기록보다 우선)
+### 최초 combined 실행과 실패 (v2 이전 이력)
 
 사용자의 frozen-SHA 요청으로 실행했다. SHA 일치, main cd654e5 유지, 브랜치와 사용자
 변경 보존을 확인했다. 코드 변경은 정확한16개, migration0이다.
@@ -235,14 +235,31 @@ Git main fast-forwarded, existing untracked .omo preserved; no Docker runtime/DB
 
 ## 결과와 영향
 
-현재 결과는 실행 가능한 범위/경로/테스트/종료 기준을 정리한 준비 문서와 Issue/branch다.
-제품 동작 변화0, migration0, runtime 비용0. F1–F4 구현 승인은 아직 없다.
-예정된 성과는 “UUID/파일 URL을 알아도 요청마다 권한을 확인하고, 사용자와 Master의
-읽기 범위를 실제 파일 bytes/Range/운영 정보까지 검증한다”이다. 아직 구현 성과가 아니다.
+### v2 final review before delivery
+
+Sequential executor self-reviews (not independent-agent approvals): F1 APPROVE
+exact16/resume4/migration0, excluded code and both frozen SHA unchanged; F2 APPROVE
+A1–A24 mapped to unit/actual HTTP-DB/schema proof with all old and FOVE checks retained;
+F3 APPROVE aggregate4/schema2/auth1/Linux/frontend and independent cleanup0, sole
+freshly reproduced Windows exception. Final F231/M248/H290 PASS3.20/3.32/1.03s and
+114 relative documentation links PASS. F4 documentation review is ready, but F4
+delivery is not APPROVE until final-head verify/both Scan-SBOM SUCCESS, actual squash
+MERGED and justified parent109 closure. Final evidence is posted to Issue112.
+
+현재 결과는 Session/owner 확인을 실제 파일·Range·운영 정보까지 연결한 구현과 재현 가능한
+mock 검증이다. 사용자 A/B와 Master의 읽기 범위, 타인·고아·참조 혼선 거절, 로그아웃 후
+새 Range401, private/no-store를 실제 HTTP/DB와 unit 경계 테스트로 확인했다.
+codebase-design의 작은 Interface 원칙으로 제품은 기존 Ownership Module에 유지하고,
+검증은 두 suite와 엄격한 aggregate로 정리했다. 추가 migration과 provider 비용은 없다.
+Windows 고유 실패와 첫 runtime No-Go를 숨기지 않고 원인·복구·재검증 근거를 남겼다.
+Live OAuth, cloud rollout, machine-scraper 운영 성공을 주장하지 않는다.
 
 ## 남은 위험과 다음 단계
 
-- frozen SHA를 포함한 별도 Goal 요청 후 구현. Ready PR/필수3 CI/실제 squash merge까지 수행.
+- Ready PR/최종 head 필수3 CI/실제 squash merge와 parent109 종료는 Issue112 delivery
+  링크에서 확인한다. 자동 병합 설정만으로 완료를 인정하지 않는다.
+- 다음 Goal 입력은 User.id/require_user, 신규 Job owner와 owner-only mutation, Master
+  read exception이다. Credit/Plan/Usage/Audit와 Master mutation은 아직 구현하지 않았다.
 - schema reset은 새 verifier-owned DB에서만. 개발/preview DB와 사용자 변경은 보존.
 - G4 완료 후에도 #99 긴급 폐기, 실제 OAuth/browser/proxy, cloud deployment 및 machine
   scraper 인증은 미완료다. 무료 local Redis를 사용하며 유료 서비스는 실행하지 않는다.

@@ -77,78 +77,40 @@ paste credential contents.
 
 ## Active Work
 
-### G4.3B execution preparation — 2026-09-03
+### G4.3B execution — 2026-09-03
 
-- **In Progress — v2 resume Todo1 baseline verified.**
-  Original Todo1–5 and runtime No-Go preserved; user requested frozen-v2 execution.
+- **Implemented; complete local mock proof. Delivery tracked in Issue112.**
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
-  `codex/issue-112-file-ops-access`. User requested preparation through Goal command.
-- Main synchronized by fast-forward to actual [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)
-  squash `cd654e5003e70d78cd7390cc24e98f322a3383fe`; final head5738c0d required verify
-  and both Scan/SBOM SUCCESS. Issue110 CLOSED; parent109 stays OPEN until B completes.
-- [B contract](initiatives/g4-ownership-access-control-spec.md),
-  [preparation/evidence](portfolio/issue-112-file-ops-access.md). Existing16 code paths,
-  migration0; storage helper/worker/metadata writers/frontend/cloud excluded.
-- Frozen local plan `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`;
-  SHA-256 `005908f870551f84d952a11e18f7348e11811337ac1010adf422fdd2ae65a29f`.
-  Transfer exact bytes, not only
-  the hash, between machines. Existing .omo is preserved and not staged wholesale.
-- gpt-5.6-sol / medium, sequential Todo1–8/F1–F4. file_asset / require_master /
-  no-store extension; F/O/V/E real proof plus existing metadata8/348/delete-race2.
-  Original plan: two combined ownership cycles, separate schema2/include-reset and auth1,
-  Linux full + existing frontend, Ready PR/final3 CI/actual squash MERGED.
-- Fresh existing-code B0 **431 PASS/4.45s; final recheck4.99s**, Compose config PASS.
-  Plan/spec16-path parity,24 existing test
-  targets and96 relative doc links passed. No B feature verification claimed.
-  Existing work360s/cleanup90s/total900s preserved; full proof over budget means replan.
-  No developer/preview reset, live OAuth/provider/cloud or product mock-login.
-- Execution: frozen SHA matched; base/main cd654e5 unchanged; correct branch, tracked/
-  staged clean and existing .omo preserved. B0 431 PASS/4.04s, S94 PASS/2 existing
-  guarded skips/1.62s. Docker desktop-linux/local npipe; existing preview4 preserved.
-- Implementation checkpoints:01b1239 Interfaces, e9f38ec routes, e4291d1 cache,
-  ebfd530 guarded F/O/V/E proof. F231/M248/H230/S94 PASS (S existing2 skips).
-  Exact16 code paths, migration0. This is Implemented/unit-verified, not Mock Verified.
-- Actual first R attempt at ebfd530 failed in scenarios after celery_completion,
-  duration417.17s including cleanup. Docker events show cleanup about54s; work reached
-  its360s limit. Precise exception was deliberately not emitted by existing receipt,
-  so deadline is supported by timing, not an exposed exception code. No second cycle.
-  F/O/V markers and all8 metadata markers observed; E returned before worker proof.
-  Partial progress does NOT count as a successful full cycle or final group receipt.
-- Cleanup true and independent exact-label containers/volumes/networks0; preview4
-  unchanged. No timeout increase/retry, schema2/auth1/full regression or PR/merge.
-- User approved verification-only redesign on2026-09-03. Explicit `--suite all` runs legacy
-  ownership2 then file-ops/A-B2: four fresh projects at one immutable code revision.
-  Each cycle work360s/cleanup90s, each suite900s, aggregate1800s; no assertion removed.
-  Fixed safe phase durations/error codes and strict aggregate receipt are planned.
-  Default selector stays ownership-only to preserve the existing manual smoke CI's
-  20-minute budget; default/single-suite success is not full G4.3B completion.
-- Next execution uses `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md` and its
-  SHA-256 `55f4fcf9c737b764f6747d781344ebcfd5d6bd3ce4f6a2ea1da001f63a91d909`.
-  Original frozen file/hash and failed evidence remain unchanged. New
-  code edits limited to existing5 verification paths within cumulative16/migration0.
-  v2 Todo1–8/F1–F4 keep schema2/auth1/Linux/frontend/Ready/final-CI/merge/parent gates.
-  No redesigned runner, new runtime cycle, PR or merge performed during preparation.
-- Fresh preparation checks: F231 PASS/3.97s, H230 PASS/1.00s, Compose example and
-  diff hygiene PASS; existing16-path parity, new code0, migration diff0 verified.
-  v2 execution now authorized; both frozen hashes matched, origin/main still cd654e5.
-  First commands F/H/S:231 PASS/3.99s,230 PASS/1.03s,94 PASS/2 existing skips/1.58s.
-  Inputs: existing product ebfd530, v2 selector/aggregate contract, same Issue112/branch.
-  Exact16/migration0/D PASS; local Docker endpoint verified, preview/developer preserved.
-  Current frozen file/SHA remains unchanged; see Issue112 portfolio for evidence.
-  B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
-- v2 Todo1–4:7e9efa1 baseline,52c1cc6 diagnostics,48562bc split/aggregate. Fresh
-  H290/F231/M248/S94 PASS (S existing2 skips). New verification4 paths only; product/
-  migration/frontend/CI/Compose unchanged. Matrix mapping in Issue112 portfolio.
-  Next: Todo5 explicit all4cycle runtime at committed checkpoint; no new success yet.
-- v2 Todo5 now PASS at c05b815: explicit all4cycle complete=true,998.187s/1800s.
-  ownership333.360/328.859s (work327.329/322.500), each old proof+348/races2;
-  file-ops167.500/167.578s (work161.078/161.360), each310/FOVE/A-B10 stages.
-  All4 exact-label cleanup independently0, preview4/developer volumes preserved.
-  F231/3.26s H290/1.15s recheck PASS. Next Todo6 schema2/auth1/full regression.
-- v2 Todo6 PASS: schema2/include-reset76.1/77.0s, auth27.373s/Redis recovery,
-  exact cleanup0; Linux1128 PASS/3 existing skips. Windows1127 PASS/known Bash-path1
-  failure/3 skips, independently reproduced at untouched cd654e5. Frontend lint/build,
-  Session48/browser34 PASS. Code unchanged since c05b815; next Todo7 docs/F1–F3.
+  `codex/issue-112-file-ops-access`, parent109. v2 Todo1–7 complete; sequential
+  self-reviews F1–F3 APPROVE. Ready PR/final3 CI/protected squash merge finish delivery. Actual merge and
+  parent closure evidence are linked from Issue112; no Live claim.
+- [Contract](initiatives/g4-ownership-access-control-spec.md),
+  [durable problem/solution/evidence](portfolio/issue-112-file-ops-access.md).
+  Product checkpoint ebfd530; v2 code48562bc, runtime code c05b815. Exact16 cumulative
+  code paths,4 of5 allowed resume paths changed, migration0; other modules unchanged.
+- Both frozen local plans remain unchanged:
+  `.omo/plans/issue-112-g4-3b-file-ops-access-goal.md`,
+  SHA `005908f870551f84d952a11e18f7348e11811337ac1010adf422fdd2ae65a29f`;
+  `.omo/plans/issue-112-g4-3b-file-ops-access-v2-goal.md`,
+  SHA `55f4fcf9c737b764f6747d781344ebcfd5d6bd3ce4f6a2ea1da001f63a91d909`.
+  Transfer exact bytes; never stage .omo wholesale.
+- Original combined runtime failed417.17s; preserved as No-Go, not retroactively
+  counted. Approved split keeps work360s/cleanup90s per cycle, suite900s/all1800s.
+- Fresh `python scripts/verify_ownership.py --env-file .env.example --suite all --cycles 2`:
+  complete4/998.187s, ownership333.360/328.859s each metadata8/348/delete-race2 plus
+  all legacy proof; file-ops167.500/167.578s each FOVE310 and A/B ten stages.
+  All4 independent exact-label cleanup0; developer/preview4 and volumes preserved.
+- Separate schema2/include-reset76.1/77.0s and auth1/Redis outage-recovery27.373s PASS.
+  Linux1128 PASS/3 existing guarded skips; Windows1127 PASS/known Bash-path1 FAIL/
+  3 skips, same native127 reproduced from untouched cd654e5 archive. Frontend
+  lint/build + Session48/Chromium34 PASS. B0/F/M/H/S631/231/248/290/94 PASS.
+- Default verifier is ownership-only for existing manual CI20-minute compatibility.
+  Only explicit all2cycle can report complete=true. No workflow edit/dispatch.
+- Next Goal receives User.id/require_user, owner-tagged admission and read-only
+  Master exception; Credit/Plan and Master mutations remain unimplemented.
+  #99/live OAuth/browser/proxy/scraper gates remain separate. No cloud/provider call.
+  File-delete/DB-commit and concurrent filesystem/DBA mutation remain non-atomic;
+  already-sent bytes cannot be recalled. Stop exposure before a reviewed B revert.
 
 ### G4.3A execution — 2026-09-03
 

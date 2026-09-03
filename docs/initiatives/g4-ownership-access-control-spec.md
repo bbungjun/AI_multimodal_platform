@@ -2,7 +2,7 @@
 
 ## 상태와 입력
 
-- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Implemented, runtime No-Go; verification redesign approved (2026-09-03).**
+- **Accepted — G4.1/G4.2A/B and G4.3A Mock Verified; G4.3B Implemented with complete v2 local proof (2026-09-03). Delivery status: Issue112.**
   전체 G4 사용자 데이터 격리는 아직 구현·검증 완료가 아니다.
 - 기준 revision: `100f5e7ae52d0c4273a7556c8a4e3c1fec2d7e4c`,
   [G3.1 PR #102](https://github.com/bbungjun/AI_multimodal_platform/pull/102) squash 병합 확인.
@@ -379,6 +379,12 @@ backend/tests/test_mock_auth_support.py
 
 #### B 실행 준비 — Issue112 (2026-09-03)
 
+최신 결과: v2 c05b815에서 ownership2+file-ops2 aggregate4/998.187s 통과. 각 legacy cycle은
+metadata8/348/delete-race2와 이전 proof 전부, 파일 cycle은 FOVE310/A-B 각10단계 통과.
+schema2/auth1, Linux1128(기존3skip), frontend48+34와 cleanup0도 확인했다. 아래 frozen
+준비/No-Go 설명은 보존된 이력이며 현재 상태를 대체하지 않는다. [실행/전달 기록](../portfolio/issue-112-file-ops-access.md)
+및 Issue112의 최종 CI/실제 merge/parent109 closure를 통해 G4 종료를 확인한다.
+
 - [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`, **In Progress / runtime No-Go**. Todo1–5 구현은
   ebfd530에서 완료했지만 첫 실제 cycle417.17s(cleanup 약54s)에서 work360s 한도에
@@ -427,7 +433,7 @@ HTTP10s, lock20s/observe5s는 유지한다. A의 약338s 대비 여유가 작으
 최대2개의 독립 actor HTTP 흐름만 병행하고 공유 fixture/worker-stop/expiry는 순차 처리한다.
 완전한 proof가 예산에 들어오지 않으면 측정 결과를 보고하고 재설계한다.
 
-#### B 검증 재설계 승인 — v2 (2026-09-03, 실행 전)
+#### B 검증 재설계 — v2 (2026-09-03, 구현·로컬 검증 완료)
 
 최초 한 cycle의 모든 그룹 조건과 전체900s 조건은 다음 분할로 대체한다. 제품 권한과
 아래 A1–A24 matrix, schema2/auth1/전체 회귀/CI/merge 조건은 그대로다. 이전 frozen 파일은
@@ -438,11 +444,11 @@ HTTP10s, lock20s/observe5s는 유지한다. A의 약338s 대비 여유가 작으
 | ownership | auth12/admission111/scenarios3/metadata8·348 이상/delete-race2/execution20/pipeline4/race3/expiry1, 기존 A golden/retry/duplicate 전부 | 2 |
 | file-ops | auth12와 F/O/V/E 전부, A/B 각각 enhance/generate/poll/metadata/file/range/pipeline/retry/delete/foreign | 2 |
 
-계획된 CLI는 `--suite all`/`ownership`(기본)/`file-ops`; 기존 `--cycles 2`는 유지한다.
+구현된 CLI는 `--suite all`/`ownership`(기본)/`file-ops`; 기존 `--cycles 2`는 유지한다.
 명시적 all에서 ownership2 다음 file-ops2를 순차 실행하고, 네 프로젝트·DB·Redis·identity는
 모두 새로 만든다. 하나의 immutable code SHA에서4회 및 cleanup0이 모두 확인되어야
 aggregate complete=true다. 개별 suite/1cycle 진단 실행은 전체 완료가 아니다.
-현재 코드에는 아직 이 selector/aggregate 계약이 없으므로 새 실행 증거로 해석하지 않는다.
+이 selector/aggregate 계약은48562bc에 구현됐고 c05b815 실제4cycle로 확인했다.
 기본 ownership은 기존 수동 smoke CI의20분 한도를 유지하기 위한 호환 선택이다.
 그 workflow는 변경/실행하지 않으며, 기본 smoke 성공만으로 B 전체 완료를 주장하지 않는다.
 
@@ -624,8 +630,8 @@ git diff --cached --name-only
 
 `python scripts/verify_ownership.py --env-file .env.example --cycles 2`는 G4.1에서 구현·검증한
 명령이다. 기존 smoke CLI는 이를 위임하고 arbitrary base URL/Compose 옵션을 거절한다.
-현재 A metadata와 B F/O/V/E 코드는 구현됐지만 B의 합산 runtime은 실패했다. 위 v2 CLI는
-계획이며 아직 구현 전이다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
+현재 A metadata와 B F/O/V/E 및 v2 selector/aggregate가 구현·로컬 검증됐다. 첫 combined
+실패는 별도 보존하며 B 전체 proof는 명시적 `--suite all`을 요구한다. [Issue103 기록](../portfolio/issue-103-authenticated-mock-harness.md)에
 인증12 × 2, 세 시나리오 × 2, cleanup과 전체 회귀 결과를 구분해 남긴다.
 
 ## 8. 종료·중단 조건
