@@ -80,6 +80,9 @@
 
 ## Issue Records
 
+G4.3 준비: [Issue109 bounded access design](issue-109-ownership-access-design.md) —
+Planned, A15/B16 split approval pending; existing-code baseline385 PASS, no implementation.
+
 | Issue | Record | Status |
 |---|---|---|
 | [#87](https://github.com/bbungjun/AI_multimodal_platform/issues/87) | [Platform evidence design and record](issue-87-platform-evidence.md) | [PR #91](https://github.com/bbungjun/AI_multimodal_platform/pull/91) merged, CI passed |

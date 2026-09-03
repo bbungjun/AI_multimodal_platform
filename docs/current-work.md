@@ -77,6 +77,29 @@ paste credential contents.
 
 ## Active Work
 
+### G4.3 design preparation — 2026-09-03
+
+- **Planned — A/B split proposal awaiting approval; no G4.3 implementation/Goal started.**
+  [Issue #109](https://github.com/bbungjun/AI_multimodal_platform/issues/109), branch
+  `codex/issue-109-ownership-access-design`; [spec](initiatives/g4-ownership-access-control-spec.md),
+  [portfolio evidence](portfolio/issue-109-ownership-access-design.md).
+- Confirmed [PR108](https://github.com/bbungjun/AI_multimodal_platform/pull/108) actually
+  MERGED at `c84394a8e2b16748d1b4b4c877f9f491624f7a1b`; fetched and fast-forwarded main
+  before creating the design branch. Existing untracked `.omo/` is preserved.
+- Old G4.3 estimate20 misses transport/client tests: query/JSON-array/metrics proof
+  requires22 candidate paths. Propose A15 metadata/list/delete/cache and B16 file/Range/
+  Master ops/final proof, overlap9. Existing owner-only mutation/Master read policy unchanged.
+- Fresh mock baseline: generation/pipeline/asset/storage/ops/ownership/harness focused
+  pytest **385 PASS (4.71s; post-document rerun5.29s)**. Candidate counts and relative
+  document link targets passed. Exact command and limitations are in the portfolio record;
+  this is not proof of the unimplemented G4.3 protections.
+- Next: explicit split approval, then A child Issue/branch, exact allowlist/commands,
+  Todo1–8/F1–F4 and SHA-256 frozen Goal for `gpt-5.6-sol / medium`.
+  Do not execute the superseded20-path estimate. No migration, Docker/DB mutation,
+  frontend, OAuth/provider/cloud execution in this preparation.
+- A remains private/incomplete: file/ops protection only closes in B. Full G4 and
+  existing #99/live deployment gates remain open.
+
 ### G4.2B execution — 2026-09-03
 
 - **Mock Verified — Todo1–8 local work complete; [PR108 delivery status](https://github.com/bbungjun/AI_multimodal_platform/pull/108).**
