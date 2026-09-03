@@ -74,9 +74,41 @@ class CreditGrant(Base):
     expired_microcredits: Mapped[int] = mapped_column(BigInteger, nullable=False)
     reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
 
+
     @property
     def available_microcredits(self) -> int:
         return self.granted_microcredits - self.reserved_microcredits - self.consumed_microcredits - self.expired_microcredits
+
+
+class CreditOperation(Base):
+    """Immutable lifecycle command receipt, including commands with no money delta."""
+    __tablename__ = "credit_operations"
+    __table_args__ = (
+        PrimaryKeyConstraint("user_id", "operation_key", name="pk_credit_operations"),
+        ForeignKeyConstraint(["result_cycle_id", "user_id"], ["credit_cycles.id", "credit_cycles.user_id"], name="fk_credit_operations_cycle_owner", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["result_grant_id", "user_id"], ["credit_grants.id", "credit_grants.user_id"], name="fk_credit_operations_grant_owner", ondelete="RESTRICT"),
+        CheckConstraint("operation_key ~ '^[A-Za-z0-9_-]{1,96}$'", name="ck_credit_operations_key"),
+        CheckConstraint("rate_card_version ~ '^v[1-9][0-9]{0,8}$'", name="ck_credit_operations_version"),
+        CheckConstraint(
+            "(kind = 'plan_change' AND target_plan IS NOT NULL AND target_plan IN ('free','pro','max') AND amount_microcredits IS NULL AND expires_at IS NULL AND reason_code IS NULL AND "
+            "((outcome = 'upgraded' AND result_grant_id IS NOT NULL) OR (outcome IN ('scheduled','cancelled','unchanged') AND result_grant_id IS NULL))) OR "
+            "(kind = 'bonus' AND target_plan IS NULL AND amount_microcredits IS NOT NULL AND amount_microcredits > 0 AND reason_code IS NOT NULL AND reason_code ~ '^[a-z0-9_]{1,64}$' AND "
+            "(expires_at IS NULL OR expires_at > effective_at) AND outcome = 'granted' AND result_grant_id IS NOT NULL)",
+            name="ck_credit_operations_shape"),
+        Index("ix_credit_operations_user_effective", "user_id", "effective_at"),
+    )
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("credit_accounts.user_id", name="fk_credit_operations_account", ondelete="RESTRICT"), primary_key=True)
+    operation_key: Mapped[str] = mapped_column(String(96), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(11), nullable=False)
+    target_plan: Mapped[str | None] = mapped_column(String(4))
+    amount_microcredits: Mapped[int | None] = mapped_column(BigInteger)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reason_code: Mapped[str | None] = mapped_column(String(64))
+    rate_card_version: Mapped[str] = mapped_column(String(10), nullable=False)
+    effective_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    result_cycle_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    result_grant_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
 
 
 class CreditLedgerEvent(Base):

@@ -69,8 +69,6 @@ Frozen local plan: `.omo/plans/issue-116-g5b-credit-lifecycle-goal.md`.
 SHA256: `d17f47ac85b21ff11f3c95081794fb81517277368c6b1196427fd53669dcb590`.
 Transfer exact file bytes when changing machines; do not stage .omo wholesale.
 
-## Planned acceptance and remaining risk
-
 ## Execution checkpoints
 
 ### Todo1 — preflight
@@ -83,6 +81,17 @@ private configuration. First B0 command above:446 PASS/2.39s. Scope/hygiene chec
 pass; implementation is not yet runtime verified. Next: operation schema.
 
 ## Planned acceptance and remaining risk
+
+### Todo2 — operation persistence
+
+Added one typed append-only credit_operations table and additive0005 migration.
+Nullable request fields have explicit IS NOT NULL shape guards to avoid SQL CHECK
+null acceptance. Composite owner FKs and User/key PK prevent cross-owner receipt
+references; downgrade locks5s and refuses nonempty operations before DDL. Existing
+four-table contracts/migrations preserved. M23 PASS/1.63s; structural tests only,
+not real DB proof. Scope4/20; current-head compatibility is intentionally Todo5.
+The first staged check found a trailing blank line in the new migration; it was
+removed and the owned, unpushed checkpoint amended after fresh staged validation.
 
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
