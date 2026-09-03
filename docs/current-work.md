@@ -94,7 +94,8 @@ paste credential contents.
   branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
   squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
 - [G5B spec](initiatives/g5-credit-lifecycle-spec.md),
-  [problem/design/preparation evidence](portfolio/issue-116-credit-lifecycle.md).
+  [problem/design/execution evidence](portfolio/issue-116-credit-lifecycle.md),
+  [Ready PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119).
   Three-operation transaction-composable lifecycle; exact20 code paths and one
   additive0005 operation-replay table. Current four-table DDL/credit_policy unchanged.
   This new table is necessary for immutable no-op/downgrade/cancellation receipts,
@@ -105,7 +106,7 @@ paste credential contents.
   Execution request approves spec section3 refinements. Todo1–8/F1–F4 require
   schema2/lifecycle2/auth1/ownership all2, full Linux/backend/frontend and final
   required3 CI/Ready PR/protected squash actual MERGED. Parent114/117 stay open.
-  Next: Ready PR, record its link, final-head CI and protected squash delivery.
+  PR119 is Ready; next: last docs push, final-head CI and protected squash delivery.
 - First execution checks: Goal SHA, branch/base, clean tracked/index, B0.
   Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
   command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,

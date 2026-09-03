@@ -3,6 +3,7 @@
 Status: Locally Mock Verified, delivery pending, 2026-09-04.
 Issue [#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116);
 parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
+[Ready PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119).
 Branch: `codex/issue-116-credit-lifecycle`.
 Base: `a003257c88e09d3e5404a73b44ebdf6deb4650db`, actual G5A PR118 squash.
 The three-operation Module and additive0005 are implemented. Final local code

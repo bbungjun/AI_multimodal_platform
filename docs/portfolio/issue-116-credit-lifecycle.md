@@ -2,6 +2,7 @@
 
 Status: Locally Mock Verified / delivery pending, 2026-09-04.
 Issue [#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116);
+[Ready PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119);
 [spec](../initiatives/g5-credit-lifecycle-spec.md); parent114 remains open.
 
 ## Problem
@@ -210,8 +211,8 @@ Session48 and Chromium34 passed. No timeout/provider/OAuth/cloud execution.
   no G5C billing claim.
 - **F3 APPROVE:** final-code S2/R2/A1/Oall2, Linux/frontend and documented Windows
   exception have direct evidence; every owned project cleaned independently.
-- **F4 PENDING:** Ready PR, final-head three CI checks, protected squash and Issue
-  states are Todo8 and cannot be inferred from local tests.
+- **F4 PENDING:** PR119 is Ready; final-head three CI checks, protected squash and
+  Issue states remain and cannot be inferred from local tests.
 
 The20-path cap leaves no spare path. Any21st path, second migration, missing required
 Interface or runtime timeout requires redesign before scope expansion. No account/
