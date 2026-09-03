@@ -1,6 +1,6 @@
 # G5B — Credit lifecycle executable specification
 
-Status: Prepared / awaiting hash-bearing execution approval, 2026-09-04.
+Status: In Progress, 2026-09-04; user approved section3 with matching Goal SHA.
 Issue [#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116);
 parent [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114).
 Branch: `codex/issue-116-credit-lifecycle`.

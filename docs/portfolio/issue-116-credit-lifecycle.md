@@ -71,6 +71,19 @@ Transfer exact file bytes when changing machines; do not stage .omo wholesale.
 
 ## Planned acceptance and remaining risk
 
+## Execution checkpoints
+
+### Todo1 — preflight
+
+User approved spec section3 and the frozen SHA. Starting8e2f3fb, origin/main
+unchanged a003257; tracked/index clean and existing .omo preserved. Local daemon
+desktop-linux/npipe with no DOCKER_HOST override; preview4 running and developer/
+preview DB/media volumes present. Backend dotenv guard passed without reading
+private configuration. First B0 command above:446 PASS/2.39s. Scope/hygiene checks
+pass; implementation is not yet runtime verified. Next: operation schema.
+
+## Planned acceptance and remaining risk
+
 Todo1–8/F1–F4: exact20/new migration1, all24 acceptance IDs, schema2 and lifecycle2
 independent projects, auth1, unchanged ownership all/2, authoritative Linux full
 backend and existing frontend regression, Ready PR/final-head3 CI/protected squash
