@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.3A execution — 2026-09-03
 
-- **In Progress — Todo1 preflight complete.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
+- **In Progress — Todo1–6 complete; full regression/delivery pending.** User explicitly requested frozen-SHA execution. Previously accepted G4.3A/B and A
   execution preparation. [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110),
   branch `codex/issue-110-metadata-ownership-access`, main baseline `c84394a`.
   Existing design fd441f1 preserved as a39d8cf; no user changes discarded.
@@ -101,7 +101,13 @@ paste credential contents.
 - Execution baseline: SHA matched, main unchanged c84394a, tracked/staged clean.
   B0 **385 PASS/4.75s**, S **94 PASS/2 existing guarded skips/1.72s**.
   Local Docker desktop-linux/npipe checked; four existing login-preview containers
-  are preserved and no runtime mutations performed. Next Todo2 Ownership Interface.
+  are preserved. Todo2–5 commits1588911/6f9a1a5/671599e/2042f8c implemented16-path
+  metadata protection and guarded proof; O102/M248/H201/S94 PASS (existing skips only).
+  First actual runtime failed109.75s at Master corruption probe (mine versus all);
+  all its resources cleaned. Fix acb44a9 selects explicit all only for Master inspection,
+  focused265 PASS. Both full cycles at acb44a9 passed337.73/338.12s, each access8/
+  checks348/delete-race2 plus all old proof groups; exact-label resources0/preview4
+  preserved. Next Todo7 full Linux/Windows/frontend regression, then PR delivery.
   No OAuth/provider/cloud or frontend implementation is authorized.
   G4 remains incomplete/private until B; #99/live/machine-metrics gates remain.
 

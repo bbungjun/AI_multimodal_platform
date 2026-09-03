@@ -1,6 +1,6 @@
 # Issue110 — G4.3A Metadata Ownership Access
 
-- Status: **Goal Prepared / not implemented** (2026-09-03).
+- Status: **In Progress — Todo1–6 complete, real2cycle PASS; full regression/delivery pending** (2026-09-03).
 - [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), branch
   `codex/issue-110-metadata-ownership-access`.
 - Main base `c84394a8e2b16748d1b4b4c877f9f491624f7a1b` (G4.2B PR108 actual merge).
@@ -12,6 +12,29 @@
   Local/untracked: transfer exact bytes between machines; do not stage .omo wholesale.
 
 ## 배경과 문제
+
+Latest actual runtime evidence at `acb44a909e2b955275a995c9db935b7df57eb180`:
+
+| Independent local mock cycle | Duration | Per-cycle result |
+|---|---:|---|
+| 1 |337.73s|8 metadata groups /348 checks /2 observed deletion races, PASS |
+| 2 |338.12s|8 metadata groups /348 checks /2 observed deletion races, PASS |
+
+Canonical `python scripts/verify_ownership.py --env-file .env.example --cycles 2`
+exit0. Both preserve auth12/admission111/smoke3/worker20/pipeline4/race3/expiry1.
+Real PostgreSQL content-query measurement is5 SELECTs at page1/20/100. Both cleanup
+receipts true and separate exact-label container/volume/network inventory0;4 existing
+preview containers remain running. Combined675.85s, no deadline/quota relaxation.
+Full Linux/Windows/frontend regression and final-head CI/merge are still pending.
+
+Execution checkpoint:1588911 Ownership Interface,6f9a1a5 metadata routes,
+671599e response cache,2042f8c guarded proof. O102/M248/H201/S94 tests pass with
+existing guarded-auth skips only. First actual runtime stopped after L/D/P at109.75s:
+the Master corruption-list probe incorrectly assumed all instead of default mine.
+acb44a9 fixes only that probe's explicit scope; focused265 PASS. Cleanup succeeded;
+both complete cycles must be rerun. This is not yet Mock Verified or delivered.
+
+The preparation notes below describe the earlier snapshot, not final verification.
 
 G4.2B까지 owner persistence/worker 참조 검증은 끝났지만 목록·상세·삭제는 아직 서버의
 사용자별 접근 제어를 완료하지 못했다. A는 metadata 읽기와 삭제, B는 파일/Range와
