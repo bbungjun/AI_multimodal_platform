@@ -77,14 +77,15 @@ paste credential contents.
 
 ## Active Work
 
-### G4.1 execution preparation — 2026-09-03
+### G4.1 execution — 2026-09-03
 
 - Local `main` fast-forwarded to `100f5e7`; G3.1 PR #102 is MERGED and Issue #101
   closed. Final PR head `85cb215` passed verify and both Scan/SBOM checks.
 - [G4 specification](initiatives/g4-ownership-access-control-spec.md) is accepted.
   [Issue #103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) and
-  `codex/issue-103-authenticated-mock-harness` are ready. Implementation NOT started;
-  no product code/migration/DB reset/cloud/provider execution in preparation.
+  `codex/issue-103-authenticated-mock-harness` execution started after exact hash verification.
+  Todo 1 baseline: existing focused smoke/workflow suite 31 PASS; local Docker Desktop
+  and Compose 5.0.2 confirmed. Existing preview and unrelated resources remain untouched.
 - Inspection found unscoped Job/Prompt/Asset routes, direct DB-free file serving,
   global ops exposure and anonymous smoke clients. A single Goal exceeds the
   20-path budget. Accepted G4.1 harness (13), G4.2 persistence/admission (20),
