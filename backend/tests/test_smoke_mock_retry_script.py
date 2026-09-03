@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
-from http.client import RemoteDisconnected
 from pathlib import Path
 
 import pytest
@@ -166,42 +164,44 @@ def test_cleanup_jobs_reports_retry_contract_error_and_deletes_both_jobs(monkeyp
     ]
 
 
-def test_start_compose_includes_redis_dispatcher_worker_frontend_and_mock_env(
-    monkeypatch,
-    tmp_path,
-):
+def test_start_compose_refuses_default_project(tmp_path):
     module = load_smoke_module()
-    env_file = tmp_path / ".env.example"
-    env_file.write_text("AI_PROVIDER=mock\n", encoding="utf-8")
+    with pytest.raises(module.SmokeError, match="isolated_coordinator_required"):
+        module.start_compose(tmp_path / ".env.example")
+
+
+def test_wrapper_delegates_to_owned_runner(monkeypatch):
+    import verify_ownership
+    module = load_smoke_module()
     calls = []
-
-    def fake_run(command, env, text, stdout, stderr, check, **_kwargs):
-        calls.append((command, env))
-        return subprocess.CompletedProcess(command, 0, stdout="ok")
-
-    monkeypatch.setattr(module.subprocess, "run", fake_run)
-
-    module.start_compose(env_file)
-
-    command, env = calls[0]
-    assert command[-6:] == [
-        "db",
-        "redis",
-        "backend",
-        "dispatcher",
-        "worker",
-        "frontend",
-    ]
-    assert env["AI_PROVIDER"] == "mock"
+    monkeypatch.setattr(verify_ownership, "main", lambda argv: calls.append(argv) or 0)
+    assert module.main(["--cycles", "1"]) == 0
+    assert calls == [["--cycles", "1"]]
 
 
-def test_wait_for_frontend_wraps_remote_disconnect(monkeypatch):
+def test_retry_requests_use_one_authenticated_client_without_frontend():
+    import json
+    from types import SimpleNamespace
     module = load_smoke_module()
-
-    def disconnect(*args, **kwargs):
-        raise RemoteDisconnected("remote closed connection")
-
-    monkeypatch.setattr(module, "urlopen", disconnect)
-
-    with pytest.raises(module.SmokeError, match="Timed out waiting for frontend"):
-        module.wait_for_frontend("http://127.0.0.1:5173", deadline=0, interval_sec=0)
+    calls = []
+    def transport(request):
+        calls.append(request)
+        path = request.full_url.removeprefix("http://127.0.0.1:8000")
+        status = 200
+        if path == "/api/health":
+            body = {"ok": True, "ready": True, "db": "up", "vertex": {"status": "mock_provider", "credentials": "not_required"}}
+        elif request.method == "DELETE":
+            return b"", {}, 204
+        elif path == "/api/generations":
+            status, body = 201, {"id": "source"}
+        else:
+            retry = path.endswith("/retry")
+            status = 201 if request.method == "POST" else 200
+            body = {"id": "retry" if retry else "source", "retry_of_job_id": "source", "state": "failed", "attempts": 1, "assets": [], "vertex_charged": False, "error": {"code": "mock_provider_failure"}}
+        return json.dumps(body).encode(), {}, status
+    client = module.HttpClient("http://127.0.0.1:8000", secret="a" * 43, transport=transport)
+    module.run_smoke(SimpleNamespace(timeout_sec=1, poll_interval_sec=0, keep_jobs=False), client=client)
+    assert len(calls) == 7
+    assert all(r.get_header("Cookie") for r in calls)
+    assert all(r.get_header("Origin") for r in calls if r.method != "GET")
+    assert [r.method for r in calls[-2:]] == ["DELETE", "DELETE"]

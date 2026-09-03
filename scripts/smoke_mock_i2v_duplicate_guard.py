@@ -3,15 +3,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
-import subprocess
 import sys
 import time
-from http.client import RemoteDisconnected
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -22,9 +17,6 @@ from smoke_mock_golden_path import (  # noqa: E402
     HttpClient,
     SmokeError,
     assert_health,
-    assert_status,
-    join_url,
-    parse_env_file,
     poll_generation,
     step,
     wait_for_health,
@@ -35,40 +27,12 @@ DUPLICATE_DETAIL = "An active I2V generation already exists for this source asse
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run mock-only duplicate I2V smoke.")
-    parser.add_argument("--base-url", default="http://127.0.0.1:8000")
-    parser.add_argument("--env-file", default=".env.example")
-    parser.add_argument(
-        "--compose",
-        action="store_true",
-        help="Start db, redis, backend, dispatcher, and worker with docker compose.",
-    )
-    parser.add_argument("--timeout-sec", type=float, default=60)
-    parser.add_argument("--poll-interval-sec", type=float, default=1)
-    parser.add_argument("--keep-jobs", action="store_true", help="Skip deleting created jobs.")
-    args = parser.parse_args(argv)
-
-    try:
-        run_smoke(args)
-    except SmokeError as exc:
-        print(f"SMOKE FAILED: {exc}", file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        print("SMOKE FAILED: interrupted", file=sys.stderr)
-        return 130
-    print("SMOKE PASSED")
-    return 0
+    from verify_ownership import main as verify_main
+    return verify_main(argv)
 
 
-def run_smoke(args: argparse.Namespace) -> None:
-    env_file = Path(args.env_file)
-    parse_env_file(env_file)
-
-    if args.compose:
-        start_compose(env_file)
-
+def run_smoke(args: argparse.Namespace, *, client: HttpClient) -> None:
     deadline = time.monotonic() + args.timeout_sec
-    client = HttpClient(args.base_url)
     source_id: str | None = None
     i2v_id: str | None = None
 
@@ -106,7 +70,7 @@ def run_smoke(args: argparse.Namespace) -> None:
         step("Create duplicate I2V requests")
         responses = asyncio.run(
             create_duplicate_i2v_requests(
-                args.base_url,
+                client,
                 source_asset_id=source_asset_id,
             )
         )
@@ -126,42 +90,11 @@ def run_smoke(args: argparse.Namespace) -> None:
 
 
 def start_compose(env_file: Path) -> None:
-    step("Compose up db redis backend dispatcher worker")
-    command = [
-        "docker",
-        "compose",
-        "--env-file",
-        str(env_file),
-        "up",
-        "-d",
-        "--build",
-        "db",
-        "redis",
-        "backend",
-        "dispatcher",
-        "worker",
-    ]
-    env = os.environ.copy()
-    env["AI_PROVIDER"] = "mock"
-    completed = subprocess.run(
-        command,
-        env=env,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise SmokeError(
-            "docker compose failed while starting db/redis/backend/dispatcher/worker:\n"
-            + completed.stdout.strip()
-        )
+    raise SmokeError("isolated_coordinator_required")
 
 
 async def create_duplicate_i2v_requests(
-    base_url: str,
+    client: HttpClient,
     *,
     source_asset_id: str,
 ) -> list[dict[str, Any]]:
@@ -175,30 +108,18 @@ async def create_duplicate_i2v_requests(
         "auto_enhance": False,
     }
     first, second = await asyncio.gather(
-        asyncio.to_thread(post_generation_status, base_url, payload),
-        asyncio.to_thread(post_generation_status, base_url, payload),
+        asyncio.to_thread(post_generation_status, client, payload),
+        asyncio.to_thread(post_generation_status, client, payload),
     )
     return [first, second]
 
 
-def post_generation_status(base_url: str, payload: dict[str, Any]) -> dict[str, Any]:
-    request = Request(
-        join_url(base_url, "/api/generations"),
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
+def post_generation_status(client: HttpClient, payload: dict[str, Any]) -> dict[str, Any]:
+    body, _, status = client.request_bytes(
+        "POST", "/api/generations", payload=payload,
+        expected_status=(201, 409), step_name="Duplicate I2V",
     )
-    try:
-        with urlopen(request, timeout=10) as response:
-            body = response.read()
-            return {"status": response.status, "body": decode_json(body)}
-    except HTTPError as exc:
-        body = exc.read()
-        return {"status": exc.code, "body": decode_json(body)}
-    except URLError as exc:
-        raise SmokeError(f"Duplicate I2V request failed: {exc}") from exc
-    except RemoteDisconnected as exc:
-        raise SmokeError(f"Duplicate I2V request disconnected: {exc}") from exc
+    return {"status": status, "body": decode_json(body)}
 
 
 def assert_duplicate_i2v_responses(responses: list[dict[str, Any]]) -> None:
@@ -273,8 +194,8 @@ def cleanup_jobs(client: HttpClient, *, i2v_id: str | None, source_id: str | Non
 def decode_json(body: bytes) -> dict[str, Any]:
     try:
         decoded = json.loads(body.decode("utf-8"))
-    except json.JSONDecodeError as exc:
-        raise SmokeError(f"Response returned invalid JSON: {exc}") from exc
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise SmokeError("invalid_json") from None
     if not isinstance(decoded, dict):
         raise SmokeError("Response expected a JSON object.")
     return decoded

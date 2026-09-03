@@ -421,111 +421,53 @@ For Phase 2 local operations, observability lives in:
 This keeps Postgres job state clean while still making dispatch failures and
 worker no-op decisions diagnosable.
 
-## Backend HTTP Smoke
+## Authenticated Backend HTTP Smoke (G4.1)
 
-Use the mock-only golden-path smoke to verify the backend HTTP contract, worker
-runner, database persistence, local asset storage, and byte-range file
-streaming without calling Vertex AI, Gemini, Imagen, or Veo.
-
-From the repository root, start `db`, `redis`, `backend`, `dispatcher`, and
-`worker` through Compose and run the smoke:
+From the repository root with local Docker Desktop/Engine and Compose supporting
+`!override` (locally verified 5.0.2), run:
 
 ```powershell
-python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+python scripts/verify_ownership.py --env-file .env.example --cycles 2
 ```
 
-If `db`, `redis`, `backend`, `dispatcher`, and `worker` are already running in
-mock mode, run the same flow against the backend base URL:
+The standard-library coordinator owns two fresh PostgreSQL/Redis/backend/worker/
+dispatcher runtimes plus the existing migrate service. It never starts frontend.
+Only canonical repo `.env.example` is accepted; provider/OAuth configuration is
+forced mock/empty. Sessions are generated in memory; only hashes reach the guarded
+DB seeder via stdin. A/B/Master real `/api/auth/me` checks and nine negative/logout
+checks total 12 per cycle. No dependency override or Google request is involved.
 
-```powershell
-python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
-```
+All three scenarios use the same scoped authenticated transport:
 
-The script refuses `--env-file .env`, parses only plain `KEY=VALUE` names from
-the selected env file, requires `AI_PROVIDER=mock`, and passes
-`AI_PROVIDER=mock` to `docker compose` when `--compose` is used.
+- Golden: mock readiness, prompt enhancement, generation201, completed state
+  history, asset metadata, PNG signature, Range206, terminal DELETE204.
+- Retry: deterministic `[[mock-fail:imagen]]` failure, no assets/charge, retry201
+  with new id and correct lineage, terminal retry contract, child-before-parent cleanup.
+- I2V: completed T2I source, two concurrent authenticated requests, exactly one201
+  and one409 with expected conflict detail, completed I2V and cleanup.
 
-Expected coverage:
+In mock mode, `vertex_charged=true` indicates the mock handler completed, not billing.
+HTTP response contents are asserted only in memory, never copied into diagnostics.
+Receipts contain revision/project/phase/counts/duration/cleanup booleans only.
 
-- `GET /api/health` reports `ok`, `ready`, DB up, `mock_provider`, and
-  credentials `not_required`
-- `POST /api/prompts/enhance` creates a mock prompt draft
-- `POST /api/generations` creates a T2I Imagen job using the accepted enhanced
-  prompt
-- `GET /api/generations/{job_id}` reaches `completed` with
-  `queued -> generating -> downloading -> completed` history
-- `GET /api/assets/{asset_id}` returns matching asset metadata
-- `/files/...` returns PNG bytes and supports `Range: bytes=0-7` with HTTP 206
-- `DELETE /api/generations/{job_id}` removes the terminal job and local asset
+Compatibility: all three `smoke_mock_*.py` public CLIs now delegate to this runner
+and therefore execute all scenarios. Legacy `--base-url`, `--compose`,
+`--frontend-url`, `--timeout-sec` and keep-job switches are rejected. There is no
+arbitrary-target authenticated seed path or developer-stack smoke mode. Python
+scenario callers must inject `run_smoke(args, client=...)`.
 
-In mock mode, `vertex_charged: true` means the generation handler completed its
-provider step. It does not indicate real Vertex billing or external provider
-usage.
+The old retry static SPA-body check was removed; it was not browser/login proof.
+Keep frontend regression separate: `npm run lint`, `npm run build`,
+`npm run test:auth`, `npm run test:auth:browser`.
 
-## I2V Duplicate Guard Smoke
+Failure/cleanup guards and manual recovery are in the
+[local runbook](runbooks/local-mock.md#authenticated-isolated-verification-g41).
+The manual smoke workflow uses this same runner twice with contents:read and a
+20-minute job timeout, without raw Compose logs or default-project cleanup.
 
-Use the mock-only I2V duplicate guard smoke to verify that repeated or concurrent
-image-to-video requests for the same source image create only one active Veo job.
-
-From the repository root, start `db`, `redis`, `backend`, `dispatcher`, and
-`worker` through Compose and run:
-
-```powershell
-python scripts/smoke_mock_i2v_duplicate_guard.py --compose --env-file .env.example --timeout-sec 90
-```
-
-If those services are already running in mock mode, run:
-
-```powershell
-python scripts/smoke_mock_i2v_duplicate_guard.py --base-url http://127.0.0.1:8000 --timeout-sec 90
-```
-
-Expected coverage:
-
-- a source T2I job completes and returns one image asset
-- two near-simultaneous I2V requests use the same `source_asset_id`
-- one request returns HTTP 201 with a new I2V job id
-- the other request returns HTTP 409 with the duplicate-active-I2V message
-- the created I2V job reaches `completed` and can be cleaned up before deleting
-  the source T2I job
-
-## Retry HTTP Smoke
-
-Use the mock-only retry smoke to verify the failed-generation retry path across
-the backend API, worker runner, frontend SPA routes, and cleanup behavior.
-
-From the repository root, start the full local mock stack through Compose and run
-the smoke:
-
-```powershell
-python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
-```
-
-If `db`, `redis`, `backend`, `dispatcher`, `worker`, and `frontend` are already
-running in mock mode, run:
-
-```powershell
-python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90
-```
-
-The retry smoke reuses the golden-path env parsing, backend health checks, and
-HTTP client. It also refuses `--env-file .env`, requires `AI_PROVIDER=mock`, and
-forces `AI_PROVIDER=mock` into `docker compose` when `--compose` is used.
-
-Expected coverage:
-
-- `GET /api/health` reports mock readiness with no credentials required
-- `GET /history` on the frontend returns HTTP 200 with a non-empty SPA body
-- `POST /api/generations` creates a T2I Imagen job with the
-  `[[mock-fail:imagen]]` sentinel
-- the source job reaches `failed` with no assets, `vertex_charged: false`, and
-  `error.code: mock_provider_failure`
-- `POST /api/generations/{source_id}/retry` returns HTTP 201 with a new job id,
-  `retry_of_job_id` set to the source id, and no assets
-- `GET /jobs/{retry_id}` on the frontend returns HTTP 200 with a non-empty SPA
-  body
-- cleanup deletes the retry job first, then the source job, unless `--keep-jobs`
-  is passed
+G4.1 proves the harness and G3 Session lifecycle only. Generation/file/ops routes
+remain unprotected until subsequent G4 slices. See [Issue103 evidence](portfolio/issue-103-authenticated-mock-harness.md)
+for actual counts, the baseline Windows Bash-path failure and Linux results.
 
 ## Secret Hygiene
 

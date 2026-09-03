@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 from http.client import RemoteDisconnected
 from pathlib import Path
 
@@ -67,10 +66,8 @@ def test_join_url_handles_root_relative_paths():
         module.join_url("http://127.0.0.1:8000/", "/files/job/image.png")
         == "http://127.0.0.1:8000/files/job/image.png"
     )
-    assert (
+    with pytest.raises(module.SmokeError):
         module.join_url("http://127.0.0.1:8000/api", "assets/123")
-        == "http://127.0.0.1:8000/api/assets/123"
-    )
 
 
 def test_assert_status_reports_clear_error():
@@ -95,10 +92,9 @@ def test_request_bytes_wraps_remote_disconnected(monkeypatch):
     def disconnect(*args, **kwargs):
         raise RemoteDisconnected("remote closed connection")
 
-    monkeypatch.setattr(module, "urlopen", disconnect)
-    client = module.HttpClient("http://127.0.0.1:8000")
+    client = module.HttpClient("http://127.0.0.1:8000", secret=None, transport=disconnect)
 
-    with pytest.raises(module.SmokeError, match="Health request disconnected"):
+    with pytest.raises(module.SmokeError, match="http_transport_failed"):
         client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")
 
 
@@ -108,30 +104,63 @@ def test_request_bytes_wraps_connection_reset(monkeypatch):
     def reset(*args, **kwargs):
         raise ConnectionResetError("connection reset by peer")
 
-    monkeypatch.setattr(module, "urlopen", reset)
-    client = module.HttpClient("http://127.0.0.1:8000")
+    client = module.HttpClient("http://127.0.0.1:8000", secret=None, transport=reset)
 
-    with pytest.raises(module.SmokeError, match=r"Health request.*reset"):
+    with pytest.raises(module.SmokeError, match="http_transport_failed"):
         client.request_bytes("GET", "/api/health", expected_status=200, step_name="Health")
 
 
-def test_start_compose_includes_redis_dispatcher_worker_and_mock_env(
-    monkeypatch,
-    tmp_path,
-):
+def test_start_compose_refuses_default_runtime(tmp_path):
     module = load_smoke_module()
-    env_file = tmp_path / ".env.example"
-    env_file.write_text("AI_PROVIDER=mock\n", encoding="utf-8")
+    with pytest.raises(module.SmokeError, match="isolated_coordinator_required"):
+        module.start_compose(tmp_path / ".env.example")
+
+
+def test_wrapper_delegates_to_owned_runner(monkeypatch):
+    import verify_ownership
+    module = load_smoke_module()
+    seen = []
+    monkeypatch.setattr(verify_ownership, "main", lambda argv: seen.append(argv) or 0)
+    assert module.main(["--cycles", "1"]) == 0
+    assert seen == [["--cycles", "1"]]
+
+
+def test_golden_all_requests_use_injected_cookie_including_range_and_delete():
+    import json
+    from types import SimpleNamespace
+    module = load_smoke_module()
     calls = []
+    asset = {"id": "asset", "url": "/files/job/image.png", "mime": "image/png"}
+    def transport(request):
+        calls.append(request)
+        path = request.full_url.removeprefix("http://127.0.0.1:8000")
+        status, headers = 200, {}
+        if path == "/api/health":
+            body = {"ok": True, "ready": True, "db": "up", "vertex": {"status": "mock_provider", "credentials": "not_required"}}
+        elif path == "/api/prompts/enhance":
+            status, body = 201, {"id": "enhancement", "enhanced": "test", "components": {"provider": "mock"}}
+        elif path == "/api/generations":
+            status, body = 201, {"id": "job"}
+        elif request.method == "DELETE":
+            return b"", {}, 204
+        elif path == "/api/generations/job":
+            body = {"state": "completed", "assets": [asset], "vertex_charged": True, "state_history": [{"state": x} for x in ["queued", "generating", "downloading", "completed"]]}
+        elif path == "/api/assets/asset":
+            body = asset
+        else:
+            return module.PNG_SIGNATURE, {"Content-Type": "image/png", "Content-Length": "8"}, 206 if request.get_header("Range") else 200
+        return json.dumps(body).encode(), headers, status
+    client = module.HttpClient("http://127.0.0.1:8000", secret="a" * 43, transport=transport)
+    module.run_smoke(SimpleNamespace(timeout_sec=1, poll_interval_sec=0, keep_job=False), client=client)
+    assert len(calls) == 8
+    assert all(r.get_header("Cookie") for r in calls)
+    assert all(r.get_header("Origin") == "http://localhost:5173" for r in calls if r.method != "GET")
+    assert calls[-2].get_header("Range") == "bytes=0-7"
+    assert calls[-1].method == "DELETE"
 
-    def fake_run(command, env, text, stdout, stderr, check, **_kwargs):
-        calls.append((command, env))
-        return subprocess.CompletedProcess(command, 0, stdout="ok")
 
-    monkeypatch.setattr(module.subprocess, "run", fake_run)
-
-    module.start_compose(env_file)
-
-    command, env = calls[0]
-    assert command[-5:] == ["db", "redis", "backend", "dispatcher", "worker"]
-    assert env["AI_PROVIDER"] == "mock"
+def test_error_body_is_never_reported():
+    module = load_smoke_module()
+    with pytest.raises(module.SmokeError) as caught:
+        module.assert_status("Health", 503, 200, "private-canary")
+    assert "private-canary" not in str(caught.value)

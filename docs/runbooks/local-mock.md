@@ -103,48 +103,9 @@ emergency revocation #99 and real browser/proxy readiness remain outstanding.
 
 ### Isolated G3.1 generation regression
 
-Use a fresh `g31-verify-<8-32 lowercase alphanumeric>` Compose project, never the
-default developer project. Create a local untracked override with the following
-backend port replacement and mock-only service settings:
-
-```yaml
-services:
-  backend:
-    ports: !override
-      - "127.0.0.1:18102:8000"
-    environment:
-      AI_PROVIDER: mock
-      GOOGLE_APPLICATION_CREDENTIALS: ""
-      AUTH_GOOGLE_CLIENT_ID: ""
-      AUTH_GOOGLE_CLIENT_SECRET: ""
-      AUTH_GOOGLE_REDIRECT_URI: ""
-  worker:
-    environment:
-      AI_PROVIDER: mock
-      GOOGLE_APPLICATION_CREDENTIALS: ""
-  dispatcher:
-    environment:
-      AI_PROVIDER: mock
-```
-
-Before startup, require an unused port and zero matching Compose projects,
-containers and volumes. Pin every Compose command to `-p <fresh-project>`,
-`--env-file .env.example`, `-f docker-compose.yml` and the override. Validate
-`config --quiet`, exactly one loopback18102 mapping and project-prefixed,
-non-external volumes; refuse unsupported `!override`. Start only db/redis/backend/
-dispatcher/worker plus declared dependencies. Then run from repo root:
-
-```powershell
-python scripts/smoke_mock_golden_path.py --env-file .env.example --base-url http://127.0.0.1:18102 --timeout-sec 120
-```
-
-Do not pass `--compose` (it can select a default project) or `--keep-job`.
-In `finally`, verify exact project labels/names before that same pinned Compose
-invocation runs `down --volumes`; assert zero matching resources afterward.
-Do not clean resources with uncertain ownership. The local execution helper
-`.omo/evidence/issue-101/run-isolated-golden.ps1` implements these guards but is
-untracked; recreate it from this protocol on another machine. Its validated
-result is summarized in the [portfolio record](../portfolio/issue-101-authenticated-workspace-ux.md).
+The historical G3.1 protocol is superseded by the G4.1 authenticated runner below.
+Do not reuse its old arbitrary base URL or default-Compose smoke commands.
+Historical results remain in the [G3.1 portfolio record](../portfolio/issue-101-authenticated-workspace-ux.md).
 
 ## Backend Authentication (G3)
 
@@ -196,33 +157,9 @@ before live OAuth is enabled; G3 does not configure cloud Redis.
 
 ### Isolated generation regression
 
-For release evidence, use a new explicit project, not the default developer
-stack. Check its project label has no containers, networks or volumes first.
-The example below uses the normal backend port, so ensure it is free; when it
-is occupied, supply a local Compose override and matching `--base-url` rather
-than stopping the developer stack.
-
-```powershell
-$env:COMPOSE_PROJECT_NAME = "auth-verify-golden" + [guid]::NewGuid().ToString("N").Substring(0, 12)
-$env:AI_PROVIDER = "mock"
-$env:AUTH_GOOGLE_CLIENT_ID = ""
-$env:AUTH_GOOGLE_CLIENT_SECRET = ""
-$env:AUTH_GOOGLE_REDIRECT_URI = ""
-$label = "label=com.docker.compose.project=$env:COMPOSE_PROJECT_NAME"
-$existing = @(docker ps -aq --filter $label) + @(docker volume ls -q --filter $label) + @(docker network ls -q --filter $label)
-if ($existing.Count -gt 0) { throw "Isolated project collision; do not run cleanup" }
-try {
-  python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 120
-  if ($LASTEXITCODE -ne 0) { throw "Mock golden path failed" }
-} finally {
-  docker compose -p $env:COMPOSE_PROJECT_NAME --env-file .env.example down --volumes --remove-orphans
-  Remove-Item Env:COMPOSE_PROJECT_NAME
-}
-```
-
-Do not copy OAuth callback URLs, cookies, profiles or raw logs into evidence.
-Use bounded categories and counts. G3's concrete results are in the
-[portfolio record](../portfolio/issue-98-auth-session-lifecycle.md).
+Use the G4.1 runner below for current generation regression. The separate
+`verify_auth_sessions.py` command above remains the G3 service-specific verifier.
+Do not copy callback URLs, cookies, profiles or raw logs into evidence.
 
 ## Schema Migration and Readiness
 
@@ -344,50 +281,109 @@ database. Use it before and after k6 or smoke runs to inspect:
 
 The frontend exposes the same operational summary at `/ops`.
 
-## Smoke Flow
+## Authenticated Isolated Verification (G4.1)
 
-Create a text-to-image job, wait for completion, and verify that the returned
-asset URL streams from `/files/...`. The generated image should be deterministic
-mock PNG bytes.
-
-The backend golden-path smoke automates this flow from the repository root:
+With local Docker running, execute from repository root:
 
 ```powershell
-python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
+python scripts/verify_ownership.py --env-file .env.example --cycles 2
 ```
 
-Use this variant when `db`, `redis`, `backend`, `dispatcher`, and `worker` are
-already running:
+Prerequisites: Python, Git, Docker and Compose supporting `!override` (verified
+locally with Compose5.0.2). No host backend dependency install is needed for this
+standard-library CLI; the existing backend image supplies the seeder dependencies.
+The Windows launcher preserves ProgramFiles for Docker plugin discovery, but drops
+ambient app credentials and proxy settings. Remote Docker contexts/DOCKER_HOST
+are refused. No provider, OAuth or managed Redis service is called.
+
+Each cycle creates an unused `ownership-verify-<12 hex>` namespace, labels every
+container/named volume/network, replaces backend ports with one dynamic loopback
+binding and inspects all actual bindings before HTTP/seed. Redis /data is tmpfs;
+no anonymous Redis volume is needed. The unchanged migrate service upgrades only
+this fresh DB. Seeder checks DB name/host, mock/local mode, schema head and empty
+tables. It never resets an existing DB. A/B/Master and negative fixtures are
+synthetic test profiles, not OAuth account verification or a Master promotion CLI.
+
+Raw Session secrets remain in the coordinator memory. Hashes alone enter the
+seeder through stdin; neither form is printed. Scoped requests reject external
+URLs, traversal, redirects, proxies and auth-header overrides. Golden, retry and
+duplicate I2V requests (including both race requests, polling, Range and delete)
+all use that transport. Backend `/me` and logout are real G3 routes, not mocks.
+
+Expected: two JSON receipts, each `auth_checks=12`, `scenarios=3`, `passed=true`,
+`cleanup=true`. Receipts also identify code/schema revision, generated project,
+phase, mock provider and elapsed seconds. Never attach raw Compose/application
+logs, SQL exceptions, profiles, prompt payloads, headers or cookie jars as evidence.
+A failed check gives a safe phase receipt/nonzero exit, without anonymous fallback.
+No-cookie and invalid Sessions must fail; G4.1 does NOT prove content ownership.
+
+Per-cycle work deadline is360s, each scenario at most90s, HTTP timeout10s,
+subprocess at most180s and total cleanup budget90s. Startup/build timeout is a
+failure, not a reason to use the developer stack. Manual CI allows20 minutes.
+
+Legacy smoke CLIs now delegate to the complete runner. Old `--compose`,
+`--base-url`, frontend URL and keep-job switches refuse; use `--cycles 1|2` instead.
+Frontend is not launched and static HTML is not considered UX proof. Run the
+unchanged frontend auth/browser suites separately, as described in [testing](../testing.md).
+
+### Failure and owned-project recovery
+
+Normal completion and handled failure run label-checked cleanup and verify zero
+owned containers/volumes/networks. Forced process kill, Docker outage or repeated
+interrupt during cleanup can prevent finally from completing. Images/build cache
+may remain; no broad prune is performed. Developer/preview resources are never
+cleanup targets. Treat cleanup=false or missing receipt as incomplete verification.
+
+For manual recovery, take the exact project from the interrupted run's receipt.
+If there is no trustworthy project receipt, inspect local project labels first;
+do not infer a target from a wildcard or the default Compose name. The following
+procedure refuses mismatched ownership labels and never reads container env:
 
 ```powershell
-python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
+# Replace only after matching the interrupted run's safe receipt.
+$verifyProject = 'ownership-verify-REPLACE_FROM_RECEIPT'
+if ($verifyProject -cnotmatch '^ownership-verify-[0-9a-f]{12}$') { throw 'Invalid target' }
+$verifyEndpointPattern = '^(unix:///[^\r\n]+|npipe:////\./pipe/(dockerDesktopLinuxEngine|docker_engine))$'
+if ($env:DOCKER_HOST -and $env:DOCKER_HOST -notmatch $verifyEndpointPattern) { throw 'Remote daemon refused' }
+$verifyContext = docker context show
+if ($LASTEXITCODE -ne 0 -or $verifyContext -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Context failed' }
+$verifyEndpoint = docker context inspect $verifyContext --format '{{.Endpoints.docker.Host}}'
+if ($LASTEXITCODE -ne 0 -or $verifyEndpoint -notmatch $verifyEndpointPattern) { throw 'Remote daemon refused' }
+$verifyLabel = "label=com.docker.compose.project=$verifyProject"
+$verifyResources = @()
+foreach ($kind in @('container', 'volume', 'network')) {
+  $ids = if ($kind -eq 'container') { @(docker --context $verifyContext ps -aq --filter $verifyLabel) }
+         else { @(docker --context $verifyContext $kind ls -q --filter $verifyLabel) }
+  if ($LASTEXITCODE -ne 0) { throw 'Resource listing failed' }
+  foreach ($id in $ids) {
+    $selector = if ($kind -eq 'container') { '{{json .Config.Labels}}' } else { '{{json .Labels}}' }
+    $labelsJson = docker --context $verifyContext $kind inspect $id --format $selector
+    if ($LASTEXITCODE -ne 0) { throw 'Label inspection failed' }
+    $labels = $labelsJson | ConvertFrom-Json
+    if ($labels.'com.docker.compose.project' -cne $verifyProject -or
+        $labels.'creativeops.verifier' -cnotmatch '^[0-9a-f]{32}$') { throw 'Foreign resource' }
+    $verifyResources += $labels.'creativeops.verifier'
+  }
+}
+if ($verifyResources.Count -eq 0) { throw 'No resources; nothing to remove' }
+if (@($verifyResources | Sort-Object -Unique).Count -ne 1) { throw 'Mixed ownership; stop' }
+# Confirm this pinned local context matches the interrupted run's daemon.
+# Run only from this repo; no Vertex override, default project or remote daemon.
+docker --context $verifyContext compose --project-name $verifyProject --env-file .env.example -f docker-compose.yml down --volumes --remove-orphans
+if ($LASTEXITCODE -ne 0) { throw 'Cleanup failed; do not claim success' }
+foreach ($kind in @('container', 'volume', 'network')) {
+  $remaining = if ($kind -eq 'container') { @(docker --context $verifyContext ps -aq --filter $verifyLabel) }
+               else { @(docker --context $verifyContext $kind ls -q --filter $verifyLabel) }
+  if ($LASTEXITCODE -ne 0 -or $remaining.Count) { throw 'Cleanup not verified' }
+}
 ```
 
-The smoke intentionally starts `db`, `redis`, `backend`, `dispatcher`, and
-`worker` when `--compose` is used.
-It refuses `--env-file .env`, requires `AI_PROVIDER=mock` in the selected env
-file, checks prompt enhancement, T2I job completion, asset metadata, PNG file
-serving, byte-range streaming, and then deletes the generated job unless
-`--keep-job` is passed.
-
-The retry smoke covers the failure and retry workflow, including the frontend
-SPA history and job-detail routes:
-
-```powershell
-python scripts/smoke_mock_retry_flow.py --compose --env-file .env.example --timeout-sec 90
-```
-
-Use this variant when the full stack is already running:
-
-```powershell
-python scripts/smoke_mock_retry_flow.py --base-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173 --timeout-sec 90
-```
-
-It creates a T2I job with the `[[mock-fail:imagen]]` sentinel, waits for the
-source job to fail with no assets and `vertex_charged: false`, calls
-`POST /api/generations/{source_id}/retry`, checks the retry job contract, verifies
-`/jobs/{retry_id}` returns a non-empty SPA response, and deletes the retry job
-before the source job unless `--keep-jobs` is passed.
+This manual procedure is not an arbitrary-target seeder and must not be used for
+the default/preview project. Review any missing/mixed labels instead of bypassing
+the guard. Roll back harness changes through a reviewed Git revert; no schema
+downgrade or developer DB deletion is necessary. After a harness fix, rerun two
+fresh cycles. [Issue103 evidence](../portfolio/issue-103-authenticated-mock-harness.md)
+records the Windows plugin-discovery failure, successful runs and remaining gates.
 
 ## Pending Job Repair
 

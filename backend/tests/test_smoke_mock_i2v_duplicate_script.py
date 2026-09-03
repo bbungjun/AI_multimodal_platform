@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -51,20 +50,44 @@ def test_assert_duplicate_i2v_responses_rejects_two_created():
         )
 
 
-def test_start_compose_includes_worker_services_and_mock_env(monkeypatch, tmp_path):
+def test_start_compose_refuses_default_project(tmp_path):
     module = load_smoke_module()
-    env_file = tmp_path / ".env.example"
-    env_file.write_text("AI_PROVIDER=mock\n", encoding="utf-8")
+    with pytest.raises(module.SmokeError, match="isolated_coordinator_required"):
+        module.start_compose(tmp_path / ".env.example")
+
+
+def test_wrapper_delegates_to_owned_runner(monkeypatch):
+    import verify_ownership
+    module = load_smoke_module()
     calls = []
+    monkeypatch.setattr(verify_ownership, "main", lambda argv: calls.append(argv) or 0)
+    assert module.main(["--cycles", "1"]) == 0
+    assert calls == [["--cycles", "1"]]
 
-    def fake_run(command, env, text, encoding, errors, stdout, stderr, check):
-        calls.append((command, env))
-        return subprocess.CompletedProcess(command, 0, stdout="ok")
 
-    monkeypatch.setattr(module.subprocess, "run", fake_run)
+def test_both_race_requests_use_same_cookie_and_origin():
+    import asyncio
+    import json
+    from threading import Lock
+    module = load_smoke_module()
+    calls = []
+    lock = Lock()
+    def transport(request):
+        with lock:
+            calls.append(request)
+            status = 201 if len(calls) == 1 else 409
+        body = {"id": "created"} if status == 201 else {"detail": module.DUPLICATE_DETAIL}
+        return json.dumps(body).encode(), {}, status
+    client = module.HttpClient("http://127.0.0.1:8000", secret="a" * 43, transport=transport)
+    result = asyncio.run(module.create_duplicate_i2v_requests(client, source_asset_id="asset"))
+    module.assert_duplicate_i2v_responses(result)
+    assert len(calls) == 2
+    assert all(r.get_header("Cookie") and r.get_header("Origin") for r in calls)
+    assert calls[0].get_header("Cookie") == calls[1].get_header("Cookie")
 
-    module.start_compose(env_file)
 
-    command, env = calls[0]
-    assert command[-5:] == ["db", "redis", "backend", "dispatcher", "worker"]
-    assert env["AI_PROVIDER"] == "mock"
+def test_duplicate_invalid_json_does_not_leak_body():
+    module = load_smoke_module()
+    with pytest.raises(module.SmokeError, match="invalid_json") as caught:
+        module.decode_json(b"private-canary")
+    assert "private-canary" not in str(caught.value)

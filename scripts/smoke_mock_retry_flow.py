@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 import argparse
-import os
-import subprocess
 import sys
 import time
-from http.client import RemoteDisconnected
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -20,9 +15,6 @@ from smoke_mock_golden_path import (  # noqa: E402
     HttpClient,
     SmokeError,
     assert_health,
-    assert_status,
-    join_url,
-    parse_env_file,
     step,
     wait_for_health,
 )
@@ -39,41 +31,12 @@ RETRY_IN_PROGRESS_STATES = {
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run mock-only retry smoke flow.")
-    parser.add_argument("--base-url", default="http://127.0.0.1:8000")
-    parser.add_argument("--frontend-url", default="http://127.0.0.1:5173")
-    parser.add_argument("--env-file", default=".env.example")
-    parser.add_argument(
-        "--compose",
-        action="store_true",
-        help="Start db, redis, backend, dispatcher, worker, and frontend with docker compose.",
-    )
-    parser.add_argument("--timeout-sec", type=float, default=60)
-    parser.add_argument("--poll-interval-sec", type=float, default=1)
-    parser.add_argument("--keep-jobs", action="store_true", help="Skip deleting created jobs.")
-    args = parser.parse_args(argv)
-
-    try:
-        run_smoke(args)
-    except SmokeError as exc:
-        print(f"SMOKE FAILED: {exc}", file=sys.stderr)
-        return 1
-    except KeyboardInterrupt:
-        print("SMOKE FAILED: interrupted", file=sys.stderr)
-        return 130
-    print("SMOKE PASSED")
-    return 0
+    from verify_ownership import main as verify_main
+    return verify_main(argv)
 
 
-def run_smoke(args: argparse.Namespace) -> None:
-    env_file = Path(args.env_file)
-    parse_env_file(env_file)
-
-    if args.compose:
-        start_compose(env_file)
-
+def run_smoke(args: argparse.Namespace, *, client: HttpClient) -> None:
     deadline = time.monotonic() + args.timeout_sec
-    client = HttpClient(args.base_url)
     source_id: str | None = None
     retry_id: str | None = None
     body_error: BaseException | None = None
@@ -82,9 +45,6 @@ def run_smoke(args: argparse.Namespace) -> None:
         step("Health")
         health = wait_for_health(client, deadline, args.poll_interval_sec)
         assert_health(health)
-
-        step("Frontend /history")
-        wait_for_frontend(args.frontend_url, deadline, args.poll_interval_sec)
 
         step("Create failed generation")
         source = client.request_json(
@@ -122,12 +82,6 @@ def run_smoke(args: argparse.Namespace) -> None:
         retry_id = _require_id(retry, "Retry generation")
         assert_retry_job(retry, source_id=source_id)
 
-        step("Frontend retry detail")
-        assert_frontend_route(
-            args.frontend_url,
-            f"/jobs/{retry_id}",
-            step_name="Frontend retry detail",
-        )
     except BaseException as exc:
         body_error = exc
         raise
@@ -197,79 +151,7 @@ def cleanup_jobs(
 
 
 def start_compose(env_file: Path) -> None:
-    step("Compose up db redis backend dispatcher worker frontend")
-    command = [
-        "docker",
-        "compose",
-        "--env-file",
-        str(env_file),
-        "up",
-        "-d",
-        "--build",
-        "db",
-        "redis",
-        "backend",
-        "dispatcher",
-        "worker",
-        "frontend",
-    ]
-    env = os.environ.copy()
-    env["AI_PROVIDER"] = "mock"
-    completed = subprocess.run(
-        command,
-        env=env,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise SmokeError(
-            "docker compose failed while starting db/redis/backend/dispatcher/worker/frontend:\n"
-            + completed.stdout.strip()
-        )
-
-
-def wait_for_frontend(frontend_url: str, deadline: float, interval_sec: float) -> None:
-    last_error = "frontend was not requested"
-    first_attempt = True
-    while first_attempt or time.monotonic() <= deadline:
-        first_attempt = False
-        try:
-            _request_frontend_route(frontend_url, "/history", step_name="Frontend /history")
-            return
-        except SmokeError as exc:
-            last_error = str(exc)
-        if time.monotonic() > deadline:
-            break
-        time.sleep(interval_sec)
-    raise SmokeError(f"Timed out waiting for frontend /history: {last_error}")
-
-
-def assert_frontend_route(frontend_url: str, path: str, *, step_name: str) -> None:
-    _request_frontend_route(frontend_url, path, step_name=step_name)
-
-
-def _request_frontend_route(frontend_url: str, path: str, *, step_name: str) -> None:
-    request = Request(join_url(frontend_url, path), method="GET")
-    try:
-        with urlopen(request, timeout=10) as response:
-            body = response.read()
-            status = response.status
-    except HTTPError as exc:
-        body = exc.read()
-        assert_status(step_name, exc.code, 200, body)
-        raise
-    except URLError as exc:
-        raise SmokeError(f"{step_name} request failed: {exc}") from exc
-    except RemoteDisconnected as exc:
-        raise SmokeError(f"{step_name} request disconnected: {exc}") from exc
-
-    assert_status(step_name, status, 200, body)
-    if not body.strip():
-        raise SmokeError(f"{step_name} returned an empty body.")
+    raise SmokeError("isolated_coordinator_required")
 
 
 def poll_generation_terminal(
@@ -296,23 +178,19 @@ def poll_generation_terminal(
         if time.monotonic() > deadline:
             break
         time.sleep(interval_sec)
-    raise SmokeError(
-        f"Timed out waiting for generation terminal state; last state was "
-        f"{None if last_body is None else last_body.get('state')}"
-    )
+    raise SmokeError("Timed out waiting for generation terminal state.")
 
 
 def assert_failed_source_job(source: dict[str, Any]) -> None:
     if source.get("state") != "failed":
-        raise SmokeError(f"Source job expected state failed, got {source.get('state')!r}.")
+        raise SmokeError("Source job expected state failed.")
     _assert_no_assets(source, "Source job")
     if source.get("vertex_charged") is not False:
         raise SmokeError("Source job expected vertex_charged false.")
     error = source.get("error")
     if not isinstance(error, dict) or error.get("code") != "mock_provider_failure":
         raise SmokeError(
-            "Source job expected error.code mock_provider_failure, "
-            f"got {None if not isinstance(error, dict) else error.get('code')!r}."
+            "Source job expected error.code mock_provider_failure."
         )
 
 
@@ -324,8 +202,7 @@ def assert_retry_job(retry: dict[str, Any], *, source_id: str) -> None:
         raise SmokeError("Retry job expected a new job id, but reused the source id.")
     if str(retry.get("retry_of_job_id")) != str(source_id):
         raise SmokeError(
-            "Retry job expected retry_of_job_id to match source job id, "
-            f"got {retry.get('retry_of_job_id')!r}."
+            "Retry job expected retry_of_job_id to match source job id."
         )
     _assert_no_assets(retry, "Retry job")
     if retry.get("vertex_charged") is not False:
@@ -335,7 +212,7 @@ def assert_retry_job(retry: dict[str, Any], *, source_id: str) -> None:
     attempts = retry.get("attempts")
     error = retry.get("error")
     if not isinstance(attempts, int):
-        raise SmokeError(f"Retry job expected integer attempts, got {attempts!r}.")
+        raise SmokeError("Retry job expected integer attempts.")
 
     if state == "pending":
         if attempts != 0 or error is not None:
@@ -354,7 +231,7 @@ def assert_retry_job(retry: dict[str, Any], *, source_id: str) -> None:
             raise SmokeError("Failed retry job expected error.code mock_provider_failure.")
         return
 
-    raise SmokeError(f"Retry job reached unsupported state {state!r}.")
+    raise SmokeError("Retry job reached unsupported state.")
 
 
 def _assert_no_assets(job: dict[str, Any], label: str) -> None:
