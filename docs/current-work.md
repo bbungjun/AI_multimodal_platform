@@ -77,9 +77,9 @@ paste credential contents.
 
 ## Active Work
 
-### G4.2A execution preparation — 2026-09-03
+### G4.2A execution — 2026-09-03
 
-- **Planned / split Accepted / Goal Prepared**, NOT In Progress or implemented.
+- **In Progress — Todo1 baseline verified**, implementation not yet verified.
   [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`,
   [accepted spec](initiatives/g4-2-owner-persistence-admission-spec.md),
@@ -103,8 +103,9 @@ paste credential contents.
   This is existing-code regression, not P01–P10/P16 implementation evidence.
   Only docs and local plan changed; no migration, Docker runtime, DB reset,
   OAuth/provider/cloud operation, Goal execution or PR creation in preparation.
-- Next: explicit Issue105 Goal execution request with matching SHA. Only then mark
-  initiative A In Progress. B worker/pipeline/race and G4.3 read/file/delete/ops are
+- Execution authorized: frozen SHA matched, main unchanged, B0 **212 PASS /2.84s**,
+  local Docker Desktop29.2.1 available; existing default/preview resources untouched.
+  Next: Todo2 owner/schema failing contracts. B worker/pipeline/race and G4.3 read/file/delete/ops are
   excluded from A; no public multi-user deployment at this checkpoint.
 
 ### G4.1 authenticated mock harness — 2026-09-03

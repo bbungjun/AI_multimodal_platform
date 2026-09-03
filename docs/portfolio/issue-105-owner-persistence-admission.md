@@ -1,12 +1,12 @@
 # Issue #105 — Owner persistence and authenticated admission
 
-- 상태: **Planned / Accepted split / Goal Prepared**, 2026-09-03.
+- 상태: **In Progress — Todo1**, 2026-09-03. 아래 준비 기록과 실행 기록을 구분한다.
 - [Issue #105](https://github.com/bbungjun/AI_multimodal_platform/issues/105),
   branch `codex/issue-105-owner-persistence-admission`.
 - Base: synchronized main `4dd359ab39285e536e713a452577e19c07b3ec67`, G4.1 PR104.
 - [Accepted spec](../initiatives/g4-2-owner-persistence-admission-spec.md),
   [initiative](../initiatives/auth-credits-master-console.md).
-- Implementation, runtime verification, PR/merge: **not started**.
+- Runtime verification, PR/merge: **not started**.
 
 ## 배경과 문제
 
@@ -71,3 +71,13 @@ Issue105와 작업 branch, frozen Goal/hash까지 준비했으며 제품 코드/
 - Ready PR 생성 → 최종 head 필수 CI → squash auto-merge의 실제 병합이 실행 종료 조건이다.
 - B worker/pipeline/race와 G4.3 전체 접근 제어, 긴급 폐기99/live 검증은 미완료다.
 - 기존 개발/preview DB를 비우거나 managed Redis/실제 provider 비용을 발생시키지 않는다.
+
+## 실행 기록
+
+### Todo1 — baseline
+
+명시적인 실행 요청 후 frozen SHA, branch, main4dd359a ancestry를 확인했다.
+관련 tracked/staged 변경0, 기존 .omo 보존. B0 기존11파일 **212 PASS /2.84s**.
+Docker Desktop local named-pipe daemon29.2.1을 읽기 전용으로 확인했다.
+기존 default/preview DB volume과 preview5개 container는 손대지 않았다.
+이 단계는 preflight이며 새 owner 기능이나 runtime gate 통과를 뜻하지 않는다.
