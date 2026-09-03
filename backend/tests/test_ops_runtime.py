@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import httpx
+from types import SimpleNamespace
+from uuid import UUID
 from fastapi import Request
 from prometheus_client.parser import text_string_to_metric_families
 
 from app.api import health as health_api
+from app.api.auth_dependencies import require_user
 from app.main import app
 from app.services.ops.prometheus import render_prometheus_metrics
 from app.services.ops.runtime import RuntimeMetrics, runtime_metrics
@@ -203,6 +206,7 @@ async def test_ops_metrics_endpoint_reports_recorded_route_template(monkeypatch)
     runtime_metrics.reset()
     monkeypatch.setattr(health_api, "check_db_connection", _db_up)
     monkeypatch.setattr(health_api, "get_vertex_readiness", _vertex_ready)
+    app.dependency_overrides[require_user] = lambda: SimpleNamespace(id=UUID(int=1), role="master")
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -212,6 +216,7 @@ async def test_ops_metrics_endpoint_reports_recorded_route_template(monkeypatch)
             health_response = await client.get("/api/health")
             metrics_response = await client.get("/api/ops/metrics")
     finally:
+        app.dependency_overrides.pop(require_user, None)
         runtime_metrics.reset()
 
     assert health_response.status_code == 200
@@ -230,6 +235,7 @@ async def test_prometheus_metrics_endpoint_uses_standard_content_type(monkeypatc
     runtime_metrics.reset()
     monkeypatch.setattr(health_api, "check_db_connection", _db_up)
     monkeypatch.setattr(health_api, "get_vertex_readiness", _vertex_ready)
+    app.dependency_overrides[require_user] = lambda: SimpleNamespace(id=UUID(int=1), role="master")
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(
@@ -239,6 +245,7 @@ async def test_prometheus_metrics_endpoint_uses_standard_content_type(monkeypatc
             await client.get("/api/health")
             response = await client.get("/metrics")
     finally:
+        app.dependency_overrides.pop(require_user, None)
         runtime_metrics.reset()
 
     assert response.status_code == 200

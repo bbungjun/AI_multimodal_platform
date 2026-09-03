@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from uuid import UUID
 
 import httpx
 
 from app.api import ops
+from app.api.auth_dependencies import require_user
 from app.main import app
 from app.models import JobState, OutboxEventStatus
 from app.schemas import (
@@ -58,6 +61,7 @@ async def test_ops_health_endpoint_returns_operational_metrics(monkeypatch):
         )
 
     app.dependency_overrides[ops.get_session] = override_session
+    app.dependency_overrides[require_user] = lambda: SimpleNamespace(id=UUID(int=1), role="master")
     monkeypatch.setattr(ops, "collect_ops_health", fake_collect_ops_health)
     try:
         transport = httpx.ASGITransport(app=app)
@@ -68,6 +72,7 @@ async def test_ops_health_endpoint_returns_operational_metrics(monkeypatch):
             response = await client.get("/api/ops/health")
     finally:
         app.dependency_overrides.pop(ops.get_session, None)
+        app.dependency_overrides.pop(require_user, None)
 
     assert response.status_code == 200
     body = response.json()

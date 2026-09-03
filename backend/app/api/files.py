@@ -5,9 +5,15 @@ from dataclasses import dataclass
 from mimetypes import guess_type
 from pathlib import Path
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth_dependencies import require_user
+from app.api.generations import get_session
+from app.auth.service import AuthenticatedUser
+from app.config import get_settings
+from app.ownership import OwnershipAccess
 from app.services import storage
 
 
@@ -41,17 +47,27 @@ class RangeRequestError(ValueError):
 @router.get("/{local_path:path}")
 async def get_file(
     local_path: str,
+    request: Request,
     range_header: str | None = Header(default=None, alias="Range"),
+    actor: AuthenticatedUser = Depends(require_user),
+    session: AsyncSession = Depends(get_session),
 ) -> StreamingResponse:
+    raw_path = request.scope.get("raw_path")
+    if raw_path is not None and raw_path != ("/files/" + local_path).encode("utf-8"):
+        raise HTTPException(404, detail="content_not_found")
+    asset = await OwnershipAccess(session, actor).file_asset(local_path)
     try:
         path = storage.resolve_asset_path(local_path)
-    except storage.StoragePathError as exc:
+        expected = get_settings().data_dir.resolve() / str(asset.job_id) / local_path.split("/")[1]
+        if path != expected:
+            raise storage.StoragePathError("Asset path alias refused")
+        size = path.stat().st_size
+    except (storage.StoragePathError, OSError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Asset file was not found.",
-        ) from exc
+            detail="content_not_found",
+        ) from None
 
-    size = path.stat().st_size
     media_type = guess_type(path.name)[0] or "application/octet-stream"
     headers = {"Accept-Ranges": "bytes"}
 

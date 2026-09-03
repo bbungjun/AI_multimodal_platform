@@ -14,6 +14,78 @@ from test_generation_api import ACTOR, FakeGenerationSession, _job_with_asset, _
 from test_pipeline_api import FakePipelineSession, _get_pipeline, _job as pipeline_job
 
 
+async def _file_ops_request(path, *, role="user", row=None, owner=None, error=None,
+                            method="GET", headers=None):
+    """Assembled authentication/authorization, only the auth store and SQL are fake."""
+    current = SimpleNamespace(id=ACTOR.id, role=role)
+    authenticate = AsyncMock(return_value=current)
+    if error:
+        authenticate.side_effect = AuthError(error)
+    session = SimpleNamespace(execute=AsyncMock(return_value=Mock(
+        one_or_none=lambda: (row, owner) if row else None)))
+    async def db():
+        yield session
+    previous = app.dependency_overrides.copy()
+    app.dependency_overrides[auth_dependencies.get_auth_service] = lambda: SimpleNamespace(authenticate=authenticate)
+    app.dependency_overrides[generations.get_session] = db
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, raise_app_exceptions=False),
+                                     base_url="http://test") as client:
+            response = await client.request(method, path, headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+        app.dependency_overrides.update(previous)
+    return response, session, authenticate
+
+
+@pytest.mark.parametrize("kind", ["foreign", "missing", "null_owner", "wrong_job"])
+@pytest.mark.parametrize("header", [None, "bytes=0-2", "bytes=99999-", "bad"])
+async def test_file_ops_denial_before_storage_or_range(kind, header, monkeypatch):
+    from app.api import files
+    job_id = UUID(int=451)
+    row = None if kind == "missing" else SimpleNamespace(local_path=f"{job_id}/output.png",
+        job_id=UUID(int=452) if kind == "wrong_job" else job_id)
+    owner = None if kind == "null_owner" else (UUID(int=452) if kind == "foreign" else ACTOR.id)
+    resolve, parse, stream = Mock(), Mock(), Mock()
+    monkeypatch.setattr(files.storage, "resolve_asset_path", resolve)
+    monkeypatch.setattr(files, "_parse_range", parse)
+    monkeypatch.setattr(files, "_iter_file", stream)
+    response, _, _ = await _file_ops_request(f"/files/{job_id}/output.png", row=row, owner=owner,
+                                            headers={"Range": header} if header else None)
+    assert response.status_code == 404 and response.json() == {"detail": "content_not_found"}
+    assert "content-range" not in response.headers and "accept-ranges" not in response.headers
+    resolve.assert_not_called(); parse.assert_not_called(); stream.assert_not_called()
+
+
+@pytest.mark.parametrize("path", ["/api/ops/health", "/api/ops/metrics", "/metrics"])
+@pytest.mark.parametrize("role,error,status", [("user",None,403), ("master","invalid_session",401),
+                                             ("master","oauth_provider_unavailable",503)])
+async def test_file_ops_ops_denied_before_collectors(path, role, error, status, monkeypatch):
+    from app.api import ops, metrics
+    collect, snapshot, render = AsyncMock(), Mock(), Mock()
+    monkeypatch.setattr(ops, "collect_ops_health", collect)
+    monkeypatch.setattr(ops.runtime_metrics, "snapshot", snapshot)
+    monkeypatch.setattr(metrics, "render_prometheus_metrics", render)
+    response, _, _ = await _file_ops_request(path, role=role, error=error,
+                                            headers={"X-Role":"master"})
+    assert response.status_code == status
+    assert response.json()["detail"] == (AuthError(error).code if error else "master_required")
+    collect.assert_not_called(); snapshot.assert_not_called(); render.assert_not_called()
+
+
+@pytest.mark.parametrize("error,status", [("invalid_session",401),("session_expired",401),
+    ("session_revoked",401),("user_suspended",401),("oauth_provider_unavailable",503)])
+async def test_file_ops_session_before_path_query_and_range(error,status,monkeypatch):
+    from app.api import files
+    resolve = Mock()
+    monkeypatch.setattr(files.storage,"resolve_asset_path",resolve)
+    response, session, authenticate = await _file_ops_request("/files/not-a-uuid/output.png",error=error,
+                                                            headers={"Range":"bad"})
+    assert response.status_code == status and response.json()=={"detail":AuthError(error).code}
+    assert authenticate.await_count == 1
+    session.execute.assert_not_called(); resolve.assert_not_called()
+
+
 @pytest.mark.parametrize("role", ["user","master"])
 @pytest.mark.parametrize("missing", [False,True])
 async def test_access_foreign_delete_is_uniform404_without_storage(role,missing,monkeypatch):
