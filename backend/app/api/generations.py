@@ -220,6 +220,7 @@ async def retry_generation(
             detail="Only failed generation jobs can be retried.",
         )
 
+    source_mode = source.mode
     source_asset_id = source.source_asset_id
     if source.enhancement_id is not None:
         await access.enhancement(source.enhancement_id, intent="use")
@@ -273,7 +274,7 @@ async def retry_generation(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
-        if source.mode == GenerationMode.I2V and _is_active_i2v_conflict(exc):
+        if source_mode == GenerationMode.I2V and _is_active_i2v_conflict(exc):
             raise HTTPException(status_code=409, detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE) from None
         raise
     except Exception:

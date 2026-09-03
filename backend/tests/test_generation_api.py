@@ -167,12 +167,27 @@ async def test_admission_p06_failed_commit_rolls_back_job_and_outbox(retry):
 
 
 @pytest.mark.parametrize("known", [False, True])
-async def test_admission_p06_retry_locks_and_only_maps_known_unique_violation(known):
+@pytest.mark.parametrize("expire_on_rollback", [False, True])
+async def test_admission_p06_retry_locks_and_only_maps_known_unique_violation(known, expire_on_rollback, monkeypatch):
     parent = _job_with_asset()
     source = _failed_i2v_job(parent.assets[0].id)
     constraint = ACTIVE_I2V_UNIQUE_INDEX_NAME if known else "unrelated_constraint"
     session = FakeGenerationSession(jobs=[parent,source],
         commit_error=IntegrityError("fixed", {}, _database_unique_violation(constraint)))
+    if expire_on_rollback:
+        from sqlalchemy.orm import Session, make_transient_to_detached
+
+        original_rollback = session.rollback
+        orm_session = Session()
+
+        async def rollback_and_expire():
+            await original_rollback()
+            make_transient_to_detached(source)
+            orm_session.add(source)
+            orm_session.expire(source, ["mode"])
+            # No bind: an accidental post-rollback ORM refresh fails this test.
+
+        monkeypatch.setattr(session, "rollback", rollback_and_expire)
     if known:
         response = await _post_retry(f"/api/generations/{source.id}/retry", session)
         assert response.status_code == 409
