@@ -130,18 +130,183 @@ def scenarios(runtime, identity):
     import smoke_mock_golden_path as golden
     import smoke_mock_retry_flow as retry
     import smoke_mock_i2v_duplicate_guard as duplicate
-    for module in (golden, retry, duplicate):
-        remaining = runtime.deadline - time.monotonic()
-        if remaining <= 0:
-            raise HarnessError("cycle_deadline")
-        args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
-                               keep_job=False, keep_jobs=False)
-        module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
+    from mock_auth_support import E2E_STAGES
+    runtime.e2e_completed={case:dict.fromkeys(E2E_STAGES,False) for case in ("a","b")}
+    def actor_flow(case):
+        client=TrackedActor(runtime,identity,case)
+        modules=(golden,retry,duplicate) if case=="a" else (golden,retry)
+        for module in modules:
+            remaining=runtime.deadline-time.monotonic()
+            if remaining<=0:
+                raise HarnessError("cycle_deadline")
+            args=SimpleNamespace(timeout_sec=min(90,remaining),poll_interval_sec=0.5,
+                                 keep_job=False,keep_jobs=False)
+            module.run_smoke(args,client=client)
+        pipeline_end_to_end(runtime,client)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures=[pool.submit(actor_flow,case) for case in ("a","b")]
+        for future in futures:
+            future.result(timeout=max(0.1,runtime.deadline-time.monotonic()))
+    if not all(all(stages.values()) for stages in runtime.e2e_completed.values()):
+        raise HarnessError("actor_flow_incomplete")
+    runtime.file_ops_completed["E"]=True
     execution_proof(runtime, identity)
     return 3
 
 
 scenarios.requires_access = True
+scenarios.requires_file_ops = True
+
+
+def file_id(case, kind="job"):
+    from uuid import uuid5,NAMESPACE_URL
+    return str(uuid5(NAMESPACE_URL,"ownership-files/"+case+"/"+kind))
+
+
+def file_check(runtime, condition):
+    if not condition:
+        raise HarnessError("file_ops_assertion_failed")
+    runtime.file_ops_checks+=1
+
+
+def private_request(runtime,client,path,code=200,*,method="GET",headers=None):
+    body,raw_headers,status=client.request_bytes(method,path,expected_status=code,headers=headers)
+    result={k.lower():v for k,v in raw_headers.items()}
+    file_check(runtime,status==code and result.get("cache-control")=="private, no-store")
+    if code in (401,403,404):
+        expected={401:"authentication_required",403:"master_required",404:"content_not_found"}[code]
+        file_check(runtime,json.loads(body)=={"detail":expected})
+        file_check(runtime,"content-range" not in result and "accept-ranges" not in result)
+    return body,result
+
+
+def file_ops_before_auth(runtime,identity):
+    from mock_auth_support import FILE_OPS_GROUPS,ScopedClient
+    runtime.file_ops_completed=dict.fromkeys(FILE_OPS_GROUPS,False)
+    runtime.file_ops_checks=0
+    if runtime.access_fixture("prepare_files")!={"prepared":True}:
+        raise HarnessError("file_fixture_failed")
+    clients={c:identity.client(runtime.base_url,c) for c in ("a","b","master")}
+    for case in ("a","b"):
+        path="/files/"+file_id(case)+"/output.bin"
+        for who in ("a","b","master"):
+            permitted=who==case or who=="master"
+            body,headers=private_request(runtime,clients[who],path,200 if permitted else 404)
+            if permitted:
+                file_check(runtime,body==b"0123456789" and headers.get("content-length")=="10")
+            for header,code,expected in (("bytes=2-4",206,b"234"),("bytes=7-",206,b"789"),
+                ("bytes=-2",206,b"89"),("bytes=8-99",206,b"89"),("items=0-1",400,None),
+                ("bytes=0-1,3-4",400,None),("bytes=99-",416,None)):
+                body,headers=private_request(runtime,clients[who],path,code if permitted else 404,headers={"Range":header})
+                if permitted and expected is not None:
+                    file_check(runtime,body==expected and headers.get("content-length")==str(len(expected))
+                        and headers.get("accept-ranges")=="bytes")
+                    start={"bytes=2-4":2,"bytes=7-":7,"bytes=-2":8,"bytes=8-99":8}[header]
+                    file_check(runtime,headers.get("content-range")==f"bytes {start}-{start+len(expected)-1}/10")
+                if permitted and code==416:
+                    file_check(runtime,headers.get("content-range")=="bytes */10")
+        for probe in ("encoded","encoded_slash","double","traversal","dot","duplicate","head"):
+            body,headers,code=clients[case].file_probe(probe,file_id(case),expected_status=405 if probe=="head" else 404)
+            lower={k.lower():v for k,v in headers.items()}
+            file_check(runtime,lower.get("cache-control")=="private, no-store" and "content-range" not in lower)
+            file_check(runtime,body==b"" if probe=="head" else json.loads(body)=={"detail":"content_not_found"})
+    for case in ("orphan","missing","confused","absent"):
+        for client in clients.values():
+            private_request(runtime,client,"/files/"+file_id(case)+"/output.bin",404,headers={"Range":"bad"})
+    runtime.file_ops_completed["F"]=True
+    ops=("/api/ops/health","/api/ops/metrics","/metrics")
+    negative={"anonymous":ScopedClient(runtime.base_url,secret=None),
+              **{c:identity.client(runtime.base_url,c) for c in ("idle","absolute","revoked","suspended","synthetic")}}
+    for path in ops:
+        for case,client in clients.items():
+            body,headers=private_request(runtime,client,path,200 if case=="master" else 403)
+            if case=="master":
+                if path=="/metrics":
+                    file_check(runtime,headers.get("content-type","").startswith("text/plain;")
+                        and b"creativeops_http_requests_total" in body)
+                else:
+                    file_check(runtime,type(json.loads(body)) is dict)
+        for client in negative.values():
+            private_request(runtime,client,path,401)
+    anonymous=negative["anonymous"]
+    for path in ("/api/health","/api/health/live"):
+        _,headers,code=anonymous.request_bytes("GET",path,expected_status=200)
+        file_check(runtime,code==200 and "cache-control" not in {k.lower():v for k,v in headers.items()})
+    runtime.file_ops_completed["O"]=True
+    runtime.file_logout_client=identity.client(runtime.base_url,"logout")
+    path="/files/"+file_id("logout")+"/output.bin"
+    body,_=private_request(runtime,runtime.file_logout_client,path)
+    file_check(runtime,body==b"0123456789")
+    body,_=private_request(runtime,runtime.file_logout_client,path,206,headers={"Range":"bytes=0-2"})
+    file_check(runtime,body==b"012")
+    for client in negative.values():
+        private_request(runtime,client,path,401,headers={"Range":"bad"})
+    print(json.dumps({"file_ops_group":"F_O"}),flush=True)
+
+
+def file_ops_after_auth(runtime,identity):
+    path="/files/"+file_id("logout")+"/output.bin"
+    private_request(runtime,runtime.file_logout_client,path,401)
+    private_request(runtime,runtime.file_logout_client,path,401,headers={"Range":"bytes=0-2"})
+    del runtime.file_logout_client
+    runtime.file_ops_completed["V"]=True
+    if runtime.access_fixture("clear_files")!={"cleared":True}:
+        raise HarnessError("file_cleanup_failed")
+    print(json.dumps({"file_ops_group":"V"}),flush=True)
+
+
+class TrackedActor:
+    """Reuse existing smoke assertions, recording only fixed stage booleans."""
+    def __init__(self,runtime,identity,case):
+        self.runtime=runtime
+        self.client=identity.client(runtime.base_url,case)
+        self.foreign=identity.client(runtime.base_url,"b" if case=="a" else "a")
+        self.stages=runtime.e2e_completed[case]
+
+    def request_json(self,method,path,**kwargs):
+        body=self.client.request_json(method,path,**kwargs)
+        if method=="POST" and path=="/api/prompts/enhance":
+            self.stages["enhance"]=True
+        if method=="POST" and path=="/api/generations":
+            self.stages["generate"]=True
+        if method=="GET" and path.startswith("/api/generations/") and body.get("state")=="completed":
+            self.stages["poll"]=True
+        if method=="GET" and path.startswith("/api/assets/"):
+            self.stages["metadata"]=True
+            private_request(self.runtime,self.foreign,path,404)
+            private_request(self.runtime,self.foreign,body["url"],404,headers={"Range":"bad"})
+            self.stages["foreign"]=True
+        if method=="POST" and path.endswith("/retry"):
+            source=path.split("/")[-2]
+            if body.get("retry_of_job_id")!=source or body.get("id")==source:
+                raise HarnessError("actor_retry_lineage_failed")
+            self.stages["retry"]=True
+        return body
+
+    def request_bytes(self,method,path,**kwargs):
+        result=self.client.request_bytes(method,path,**kwargs)
+        if method=="GET" and path.startswith("/files/"):
+            if result[2]==200: self.stages["file"]=True
+            if result[2]==206: self.stages["range"]=True
+        if method=="DELETE" and result[2]==204:
+            self.stages["delete"]=True
+        return result
+
+
+def pipeline_end_to_end(runtime,client):
+    from smoke_mock_golden_path import poll_generation
+    pipeline=client.request_json("POST","/api/pipelines",expected_status=201,payload={
+        "image_prompt":"fixture","video_prompt":"fixture","image_model":"imagen-4.0-fast-generate-001",
+        "video_model":"veo-3.0-fast-generate-001"})
+    for kind in ("parent","child"):
+        poll_generation(client,job_id=pipeline[kind]["id"],deadline=runtime.deadline,interval_sec=0.5)
+    read=client.request_json("GET","/api/pipelines/"+pipeline["id"],expected_status=200)
+    if any(read[kind]["state"]!="completed" for kind in ("parent","child")):
+        raise HarnessError("actor_pipeline_incomplete")
+    client.stages["pipeline"]=True
+    private_request(runtime,client.foreign,"/api/pipelines/"+pipeline["id"],404)
+    for kind in ("child","parent"):
+        client.request_bytes("DELETE","/api/generations/"+pipeline[kind]["id"],expected_status=204)
 
 
 def access_id(case,kind):

@@ -31,6 +31,9 @@ ACCESS_RESULTS = {"prepare_metadata":"prepared", "inspect_metadata":"inspected",
     "prepare_delete_race":"prepared", "inspect_delete_race":"race_checks", "delete_waiters":"lock_waiters"}
 DELETE_CASES = ("delete_create", "delete_retry")
 ACCESS_GROUPS = ("L", "D", "P", "X", "R", "C", "S", "Q")
+FILE_OPS_GROUPS = ("F", "O", "V", "E")
+E2E_STAGES = ("enhance", "generate", "poll", "metadata", "file", "range", "pipeline", "retry", "delete", "foreign")
+ACCESS_RESULTS.update(prepare_files="prepared", clear_files="cleared")
 
 
 def protocol_line(process, expected, timeout):
@@ -122,7 +125,12 @@ class ScopedClient:
         self._transport = transport or http_transport
 
     def request_bytes(self, method, path, *, expected_status, step_name="request", payload=None, headers=None, query=None):
-        url = safe_url(self.base_url, path)
+        if path == "/metrics":
+            if method != "GET" or payload is not None or query is not None:
+                raise HarnessError("metrics_request_refused")
+            url = loopback_origin(self.base_url) + path
+        else:
+            url = safe_url(self.base_url, path)
         if query is not None:
             allowed = {"scope","mode","asset_kind","model","state","limit","offset"}
             if (method != "GET" or path != "/api/generations" or type(query) is not dict
@@ -149,8 +157,28 @@ class ScopedClient:
         if payload is not None:
             data = json.dumps(payload).encode()
             supplied["Content-Type"] = "application/json"
+        return self._send(Request(url, data=data, headers=supplied, method=method), expected_status)
+
+    def file_probe(self, case, job_id, *, expected_status):
+        # Closed vocabulary: never accept an arbitrary raw URL, header or method.
+        from uuid import UUID
         try:
-            result = self._transport(Request(url, data=data, headers=supplied, method=method))
+            if type(job_id) is not str or str(UUID(job_id)) != job_id:
+                raise ValueError
+        except (ValueError, TypeError, AttributeError):
+            raise HarnessError("file_probe_refused") from None
+        suffixes = {"encoded":"%6futput.bin", "encoded_slash":"%2foutput.bin",
+                    "double":"%252e%252e/output.bin", "traversal":"../output.bin",
+                    "dot":"./output.bin", "duplicate":"/output.bin", "head":"output.bin"}
+        if type(case) is not str or case not in suffixes:
+            raise HarnessError("file_probe_refused")
+        url = loopback_origin(self.base_url) + "/files/" + job_id + "/" + suffixes[case]
+        headers = {"Cookie":"creativeops_session="+self._secret} if self._secret else {}
+        return self._send(Request(url,headers=headers,method="HEAD" if case=="head" else "GET"),expected_status)
+
+    def _send(self, request, expected_status):
+        try:
+            result = self._transport(request)
             body, response_headers, status = result
         except Exception:
             raise HarnessError("http_transport_failed") from None
@@ -516,7 +544,7 @@ def auth_proof(runtime, identity):
                                        headers={"Origin": "http://untrusted.invalid"}))
     if code != 403:
         raise HarnessError("origin_guard_failed")
-    client = identity.client(runtime.base_url, "logout")
+    client = getattr(runtime,"file_logout_client",None) or identity.client(runtime.base_url, "logout")
     client.request_bytes("POST", "/api/auth/logout", expected_status=204)
     client.request_bytes("GET", "/api/auth/me", expected_status=401)
     return 12
@@ -542,8 +570,15 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                 receipt["phase"] = "seed"
                 identity = MemoryIdentity()
                 runtime.seed(identity)
+                file_ops = bool(getattr(scenario,"requires_file_ops",False))
+                if file_ops:
+                    from verify_ownership import file_ops_before_auth
+                    file_ops_before_auth(runtime,identity)
                 receipt["phase"] = "auth"
                 receipt["auth_checks"] = auth_proof(runtime, identity)
+                if file_ops:
+                    from verify_ownership import file_ops_after_auth
+                    file_ops_after_auth(runtime,identity)
                 receipt["phase"] = "scenarios"
                 if scenario is None:
                     raise HarnessError("scenario_adapter_required")
@@ -566,6 +601,9 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
                             or type(checks) is not int or checks<=0 or type(races) is not int or races!=2):
                         raise HarnessError("unsafe_access_receipt")
                     receipt.update(access_groups=8,access_checks=checks,delete_race_checks=races)
+                if file_ops:
+                    validate_file_ops_receipt(runtime)
+                    receipt.update(file_ops_groups=4,file_ops_checks=runtime.file_ops_checks,e2e_actors=2)
                 receipt["passed"] = True
             except (Exception, KeyboardInterrupt):
                 # Persist only the fixed phase, never the exception or raw command output.
@@ -583,3 +621,16 @@ def verify_cycles(env_file, cycles, *, runtime_factory=OwnedRuntime, scenario=No
         if not receipt["passed"]:
             break
     return results
+
+
+def validate_file_ops_receipt(runtime):
+    groups=getattr(runtime,"file_ops_completed",None)
+    stages=getattr(runtime,"e2e_completed",None)
+    count=getattr(runtime,"file_ops_checks",None)
+    if (type(groups) is not dict or set(groups)!=set(FILE_OPS_GROUPS)
+            or any(value is not True for value in groups.values())
+            or type(count) is not int or count<=0 or type(stages) is not dict or set(stages)!={"a","b"}):
+        raise HarnessError("unsafe_file_ops_receipt")
+    for values in stages.values():
+        if type(values) is not dict or set(values)!=set(E2E_STAGES) or any(v is not True for v in values.values()):
+            raise HarnessError("unsafe_file_ops_receipt")

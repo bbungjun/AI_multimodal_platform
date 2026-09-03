@@ -411,6 +411,59 @@ def test_access_receipt_requires_all_groups_and_safe_counts(bad,monkeypatch,caps
 def test_access_canonical_scenario_requires_proof():
     import verify_ownership
     assert verify_ownership.scenarios.requires_access is True
+    assert verify_ownership.scenarios.requires_file_ops is True
+
+
+@pytest.mark.parametrize("bad",[None,"missing_group","false_group","extra_group","bool_count","zero_count",
+    "missing_actor","missing_stage","false_stage","nonbool_stage","secret"])
+def test_file_ops_receipt_requires_exact_groups_and_both_actor_stages(bad):
+    from types import SimpleNamespace
+    runtime=SimpleNamespace(file_ops_completed=dict.fromkeys(support.FILE_OPS_GROUPS,True),
+        file_ops_checks=42,e2e_completed={case:dict.fromkeys(support.E2E_STAGES,True) for case in ("a","b")})
+    if bad=="missing_group": del runtime.file_ops_completed["V"]
+    if bad=="false_group": runtime.file_ops_completed["F"]=False
+    if bad=="extra_group": runtime.file_ops_completed["SECRET_CANARY"]=True
+    if bad=="bool_count": runtime.file_ops_checks=True
+    if bad=="zero_count": runtime.file_ops_checks=0
+    if bad=="missing_actor": del runtime.e2e_completed["b"]
+    if bad=="missing_stage": del runtime.e2e_completed["a"]["range"]
+    if bad=="false_stage": runtime.e2e_completed["b"]["pipeline"]=False
+    if bad=="nonbool_stage": runtime.e2e_completed["a"]["retry"]=1
+    if bad=="secret": runtime.file_ops_checks="SECRET_CANARY"
+    if bad is None:
+        support.validate_file_ops_receipt(runtime)
+    else:
+        with pytest.raises(support.HarnessError) as exc: support.validate_file_ops_receipt(runtime)
+        assert "SECRET_CANARY" not in str(exc.value)
+
+
+@pytest.mark.parametrize("operation",["prepare_files","clear_files"])
+def test_file_ops_fixture_guards_and_exact_namespace(operation):
+    from types import SimpleNamespace
+    helper=access_helper()
+    payload=dict(project="ownership-verify-012345abcdef",access_operation=operation,case="",records=[])
+    url=SimpleNamespace(host="db",database="ownership_verify_012345abcdef")
+    helper.validate_access_payload(payload,url,"mock","local")
+    for update in ({"records":[{"kind":"admitted","id":"00000000-0000-0000-0000-000000000123"}]},
+                   {"case":"a"},{"project":"creativeops-login-preview"},{"sql":"SECRET_CANARY"}):
+        with pytest.raises(ValueError): helper.validate_access_payload(payload|update,url,"mock","local")
+    for provider,env in (("vertex","local"),("mock","production")):
+        with pytest.raises(ValueError): helper.validate_access_payload(payload,url,provider,env)
+    assert str(helper.file_id("a","job"))!=str(helper.access_id("a","job"))
+
+
+def test_file_ops_end_to_end_trace_does_not_mark_missing_pipeline(monkeypatch):
+    from types import SimpleNamespace
+    import verify_ownership as verifier
+    class Client:
+        def request_json(self,*args,**kw): return {"id":"x","state":"pending"}
+        def request_bytes(self,*args,**kw): return b"",{},200
+    runtime=SimpleNamespace(base_url="http://127.0.0.1:1234",e2e_completed={"a":dict.fromkeys(support.E2E_STAGES,False)})
+    identity=SimpleNamespace(client=lambda *a:Client())
+    client=verifier.TrackedActor(runtime,identity,"a")
+    client.request_json("POST","/api/generations",expected_status=201)
+    client.request_json("GET","/api/generations/x",expected_status=200)
+    assert client.stages["generate"] and not client.stages["poll"] and not client.stages["pipeline"]
 
 
 @pytest.mark.parametrize("line", ['{"release":true}\n','{"release":true}\r\n'])
