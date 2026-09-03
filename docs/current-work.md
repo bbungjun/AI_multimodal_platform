@@ -79,8 +79,8 @@ paste credential contents.
 
 ### G4.3B execution preparation — 2026-09-03
 
-- **Implemented / runtime No-Go; verification redesign approved, resume prepared.**
-  Original Todo1–5 committed; Todo6 stopped. New v2 execution has not started.
+- **In Progress — v2 resume Todo1 baseline verified.**
+  Original Todo1–5 and runtime No-Go preserved; user requested frozen-v2 execution.
   [Issue112](https://github.com/bbungjun/AI_multimodal_platform/issues/112), branch
   `codex/issue-112-file-ops-access`. User requested preparation through Goal command.
 - Main synchronized by fast-forward to actual [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111)
@@ -130,7 +130,10 @@ paste credential contents.
   No redesigned runner, new runtime cycle, PR or merge performed during preparation.
 - Fresh preparation checks: F231 PASS/3.97s, H230 PASS/1.00s, Compose example and
   diff hygiene PASS; existing16-path parity, new code0, migration diff0 verified.
-  This changes the frozen single-cycle acceptance contract and is not yet authorized.
+  v2 execution now authorized; both frozen hashes matched, origin/main still cd654e5.
+  First commands F/H/S:231 PASS/3.99s,230 PASS/1.03s,94 PASS/2 existing skips/1.58s.
+  Inputs: existing product ebfd530, v2 selector/aggregate contract, same Issue112/branch.
+  Exact16/migration0/D PASS; local Docker endpoint verified, preview/developer preserved.
   Current frozen file/SHA remains unchanged; see Issue112 portfolio for evidence.
   B completion may close aggregate G4 Mock Verified, not #99/live/proxy/scraper gates.
 
