@@ -1,6 +1,7 @@
 # Issue115 — G5A credit foundation preparation
 
-Status: `Planned`, 2026-09-03. Design/Goal preparation only; no credit implementation.
+Status: `In Progress`, 2026-09-04. Frozen Goal execution authorized; preparation
+history below remains distinct from implementation/runtime evidence.
 [Issue115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
 [parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114),
 [spec](../initiatives/g5-credit-foundation-spec.md).
@@ -82,3 +83,16 @@ Next is explicit hash-bearing G5A Goal execution. B/C must resolve their detaile
 renewal/expiry/allocation/over-reservation cases before their own Goal freeze.
 No live readiness claim: emergency revocation99, actual OAuth/browser/proxy and
 machine-metrics authorization remain separate gates.
+
+## Execution checkpoints
+
+### Todo1 — preflight
+
+Starting checkpoint aeafaba; origin/main unchanged6537025; frozen SHA matched.
+Existing tracked/index clean and .omo preserved. Local Docker desktop-linux uses
+npipe, no remote override; four login-preview containers running and existing
+developer/preview DB/media volumes preserved. No private env read; backend dotenv
+guard passed. B0 command above:384 PASS/2 existing guarded skips/2.96s.
+Scope/diff/status/staged checks passed. A01–A11/A16–A18 map to ORM/migration and
+real S proof; A12–A15 to pure policy P; A19 auth A; A20 ownership O; A21 isolated
+repeatability; A22 full regression/CI/delivery. Next: Todo2 pure policy tests.

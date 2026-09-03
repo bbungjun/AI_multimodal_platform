@@ -77,10 +77,13 @@ paste credential contents.
 
 ## Active Work
 
-### G5A execution preparation — 2026-09-03
+### G5A execution — 2026-09-04
 
-- **Planned / execution prepared only.** User requested G5 split and Goal plan,
-  not implementation. [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
+- **In Progress — Todo1 preflight passed.** User authorized frozen-SHA execution.
+  SHA matches; main remains6537025, starting documentation checkpoint aeafaba.
+  Fresh B0:384 PASS/2 existing guarded skips/2.96s. Local desktop-linux/npipe;
+  preview4 running and developer/preview volumes preserved. No code/runtime proof yet.
+  [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114)
   has A[#115](https://github.com/bbungjun/AI_multimodal_platform/issues/115),
   B[#116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
   C[#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117).
