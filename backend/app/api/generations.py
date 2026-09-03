@@ -149,7 +149,7 @@ async def create_generation(
         await session.rollback()
         if (
             generation_mode == GenerationMode.I2V
-            and i2v_guard.is_active_i2v_unique_violation(exc)
+            and _is_active_i2v_conflict(exc)
         ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -273,7 +273,7 @@ async def retry_generation(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
-        if source.mode == GenerationMode.I2V and i2v_guard.is_active_i2v_unique_violation(exc):
+        if source.mode == GenerationMode.I2V and _is_active_i2v_conflict(exc):
             raise HTTPException(status_code=409, detail=i2v_guard.ACTIVE_I2V_DUPLICATE_MESSAGE) from None
         raise
     except Exception:
@@ -313,6 +313,25 @@ async def delete_generation(
     _detach_deleted_job_references(job, referencing_jobs)
     await session.delete(job)
     await session.commit()
+
+
+def _is_active_i2v_conflict(exc: IntegrityError) -> bool:
+    # SQLAlchemy's asyncpg adapter chains the original PG exception. Read its
+    # structured fields: str(exc) also contains caller-controlled SQL parameters.
+    original = exc.orig
+    cause = getattr(original, "__cause__", None)
+    diagnostic = getattr(original, "diag", None)
+    sqlstate = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
+    constraint = (
+        getattr(diagnostic, "constraint_name", None)
+        or getattr(original, "constraint_name", None)
+        or getattr(cause, "constraint_name", None)
+    )
+    return (
+        sqlstate == "23505"
+        and constraint == i2v_guard.ACTIVE_I2V_UNIQUE_INDEX_NAME
+        and i2v_guard.is_active_i2v_unique_violation(exc)
+    )
 
 
 def _validate_model(model: str, *, prefix: str, detail: str) -> None:

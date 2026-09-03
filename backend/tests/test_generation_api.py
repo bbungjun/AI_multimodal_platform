@@ -34,6 +34,35 @@ from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME, ACTIVE_I2V
 from app.services.vertex import storage as vertex_storage
 
 
+def _database_unique_violation(constraint):
+    original = Exception(constraint)
+    original.sqlstate = "23505"
+    cause = Exception(constraint)
+    cause.constraint_name = constraint
+    original.__cause__ = cause
+    return original
+
+
+@pytest.mark.parametrize("retry", [False,True])
+@pytest.mark.parametrize("sqlstate", ["23505","23503"])
+async def test_admission_untrusted_parameters_cannot_spoof_conflict(retry, sqlstate):
+    parent = _job_with_asset()
+    source = _failed_i2v_job(parent.assets[0].id)
+    original = _database_unique_violation("unrelated_constraint")
+    original.sqlstate = sqlstate
+    error = IntegrityError("fixed", {"prompt":ACTIVE_I2V_UNIQUE_INDEX_NAME}, original)
+    assert generations.i2v_guard.is_active_i2v_unique_violation(error)  # Legacy text-only false positive.
+    session = FakeGenerationSession(jobs=[parent,source], commit_error=error)
+    with pytest.raises(IntegrityError):
+        if retry:
+            await _post_retry(f"/api/generations/{source.id}/retry",session)
+        else:
+            payload = dict(_admission_payload(),mode="i2v",model="veo-3.0-fast-generate-001",
+                           source_asset_id=str(parent.assets[0].id))
+            await _post_generation(payload,session)
+    assert session.events[-1] == "rollback"
+
+
 def _admission_payload():
     return {"mode": "t2i", "model": "imagen-4.0-fast-generate-001", "prompt": "fixture"}
 
@@ -143,7 +172,7 @@ async def test_admission_p06_retry_locks_and_only_maps_known_unique_violation(kn
     source = _failed_i2v_job(parent.assets[0].id)
     constraint = ACTIVE_I2V_UNIQUE_INDEX_NAME if known else "unrelated_constraint"
     session = FakeGenerationSession(jobs=[parent,source],
-        commit_error=IntegrityError("fixed", {}, Exception(constraint)))
+        commit_error=IntegrityError("fixed", {}, _database_unique_violation(constraint)))
     if known:
         response = await _post_retry(f"/api/generations/{source.id}/retry", session)
         assert response.status_code == 409
@@ -761,7 +790,7 @@ async def test_create_i2v_generation_maps_unique_index_error_to_conflict():
     integrity_error = IntegrityError(
         statement="INSERT INTO jobs ...",
         params={},
-        orig=Exception(ACTIVE_I2V_UNIQUE_INDEX_NAME),
+        orig=_database_unique_violation(ACTIVE_I2V_UNIQUE_INDEX_NAME),
     )
     session = FakeGenerationSession(
         jobs=[parent],

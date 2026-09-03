@@ -136,3 +136,16 @@ admission111은 HTTP 결과93개와 persisted row 검사18개를 합한 개수�
 기존 golden/retry/중복 I2V 시나리오를 그대로 실행했다. G4.2B worker 강화의 증거는 아니다.
 민감한 fixture/응답 값은 메모리에서 비교했다. 잘못된 admission metric이 receipt에
 들어가기 전에 검증하도록 하고 canary 검사로 확인했다. H113 + W179 =292 PASS, S68 PASS.
+
+### Todo7 — full regression 중 발견한 오류 분류 보강
+
+첫 Linux full652 PASS/기존 integration skip3, Windows651 PASS/skip3/기존 Bash-path fail1.
+해당 `test_supply_chain_release` 실패는 수정 전 main4dd359a의 독립 archive에서도
+재현했다. 실제 cloud 명령은 실행하지 않고 bash 구문 검사만 수행했다.
+frontend lint/build, Session48, Chromium34 PASS; 기존 UI/CSS는 수정하지 않았다.
+코드 검토에서 legacy I2V classifier가 SQL exception 문자열 전체를 검색하여 요청 parameter에
+index 이름이 있으면 다른 constraint 오류를409로 오인할 수 있음을 재현했다.
+허용된 generations 경로에서 PostgreSQL SQLSTATE23505와 driver의 정확한 constraint metadata를
+먼저 확인하도록 보강했다. 공용 i2v_guard/worker 파일은 변경하지 않았다.
+네 adversarial 회귀를 추가한 W183/H113 PASS. 최종 committed code의 ownership2회와
+Linux/Windows 전체 pytest를 다시 실행한 뒤 최종 수치를 기록한다.
