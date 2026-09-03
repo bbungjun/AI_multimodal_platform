@@ -1,6 +1,6 @@
 # Issue #107 — Worker ownership and pipeline/race proof
 
-- 상태: **In Progress — Todo6**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
+- 상태: **Mock Verified — Todo1–7 / delivery pending**, 2026-09-03. 준비 기록과 아래 실행 기록을 구분한다.
 - [Issue107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`.
 - Base: A [PR106](https://github.com/bbungjun/AI_multimodal_platform/pull/106)의 실제 squash merge
@@ -153,3 +153,20 @@ A Session만 만료시켜 /me401과 기존 Job 완료/소유자 보존을 함께
 로컬 safe receipts: `.omo/evidence/issue-107/cycle1.json`, `cycle2.json`.
 두 project의 container/volume/network는 별도 exact-label 조회에서도 모두0이었다.
 기존 default/preview DB와 volume, preview 서비스는 보존했다. 전체 회귀/CI/merge는 다음 단계다.
+
+### Todo7 — full regression
+
+최종 구현은 `ff808b0`이며 Todo6 이후 code tree가 같음을 확인했다. tracked-only snapshot
+`d376ca1d888eb9b9c87665f31ba3ac0f9a58fe0c`을 credential/.env/workspace mount 없이
+Linux Python3.11 컨테이너에서 검사했다: **782 PASS /기존 SKIP3 /3.68s**, 종료 후 container0.
+Windows 전체: **781 PASS /1 FAIL /기존 SKIP3 /9.03s**. 실패는
+`test_release_script_guards_plan_scope_and_uses_terraform_rollback`의 Bash absolute-path
+해석 문제로, untouched base `d40a8f7`의 새 tracked archive에서도 동일 테스트 실패와
+missing-file 원인을 재현했다(0.39s). 테스트를 skip하거나 release/cloud 코드를 바꾸지 않았다.
+Linux/CI에서는 이 테스트도 통과해야 하며 Windows 예외를 그쪽으로 확대하지 않는다.
+
+고정 registry 재검증: B0 **334**, E **72**, W **98**, H **157**, S **106 PASS**.
+기존 frontend `npm run lint`, `npm run build`, `npm run test:auth` **48 PASS**,
+`npm run test:auth:browser` **34 PASS /19.2s**. frontend 소스 변경0, 개인 Session/live OAuth0.
+Compose config와 diff/status/staged 검사 PASS. 새 skip0이며 선택적 guarded auth3개만
+기존대로 남았다. dependency deprecation warning은 범위 외 후속 유지보수 항목이다.

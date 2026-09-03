@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G4.2B execution — 2026-09-03
 
-- **In Progress — Todo1–6 complete; Todo7 full regression next.**
+- **Mock Verified — Todo1–7 complete; Todo8 documentation/CI/merge next.**
   [Issue #107](https://github.com/bbungjun/AI_multimodal_platform/issues/107),
   branch `codex/issue-107-worker-ownership-invariants`,
   [B spec](initiatives/g4-2-owner-persistence-admission-spec.md#4-g42b-구현-계약),
@@ -109,7 +109,10 @@ paste credential contents.
   First real run failed at lock release: Windows CRLF was refused by LF-only protocol.
   Fixed bounded JSON validation and five-second observer deadline; fresh two cycles PASS:
   274.97s/272.36s, each auth12/admission111/smoke3/execution20/pipeline4/race3/expiry1,
-  cleanup=true and independently checked container/volume/network0. Full regression/CI/merge pending.
+  cleanup=true and independently checked container/volume/network0.
+  Linux tracked snapshot d376ca1:782 PASS/3 existing SKIP; Windows781 PASS/1 baseline Bash-path
+  FAIL/3 existing SKIP (fresh untouched d40a8f7 reproduction). U lint/build/session48/browser34 PASS.
+  B0/E/W/H/S=334/72/98/157/106 PASS. CI/merge pending; implementation still ff808b0.
   Failed/diagnostic owned projects were cleaned; default/preview preserved. Do not start G4.3 or reset
   developer/preview DB; live OAuth/provider/cloud and frontend changes remain excluded.
 
