@@ -43,6 +43,7 @@ def test_override_replaces_ports_and_uses_unique_database():
     assert runtime.project.replace("-", "_") in text
     assert "frontend:" not in text and "vertex.yml" not in text
     assert text.count("creativeops.verifier:") == 9
+    assert "tmpfs:\n      - /data" in text
 
 
 def test_seed_requires_owned_started_runtime():
@@ -142,11 +143,15 @@ def test_runtime_command_failure_output_is_never_exposed(monkeypatch):
     assert "SECRET_CANARY" not in str(error.value)
 
 
-@pytest.mark.parametrize("binding", ["0.0.0.0:8000", "127.0.0.1:1234\n0.0.0.0:8000", "[::]:8000"])
-def test_start_rejects_wildcard_or_extra_bindings(binding, monkeypatch, tmp_path):
+@pytest.mark.parametrize("bindings", [
+    [{"HostIp": "0.0.0.0", "HostPort": "8000"}],
+    [{"HostIp": "127.0.0.1", "HostPort": "1234"}, {"HostIp": "0.0.0.0", "HostPort": "8000"}],
+    [{"HostIp": "::", "HostPort": "8000"}],
+])
+def test_start_rejects_wildcard_or_extra_bindings(bindings, monkeypatch, tmp_path):
     runtime = support.OwnedRuntime(support.ROOT / ".env.example")
     monkeypatch.setattr(runtime, "assert_owned", lambda: [])
-    monkeypatch.setattr(runtime, "docker", lambda *a, **kw: binding if "port" in a else "")
+    monkeypatch.setattr(runtime, "docker", lambda *a, **kw: json.dumps({"8000/tcp": bindings}) if "inspect" in a else "")
     with pytest.raises(support.HarnessError, match="wildcard_or_multiple_bind_refused"):
         runtime.start(tmp_path)
     assert runtime.started  # finally must clean partial startup

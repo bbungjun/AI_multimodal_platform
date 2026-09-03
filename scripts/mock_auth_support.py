@@ -226,6 +226,8 @@ class OwnedRuntime:
                 values = {"POSTGRES_USER": "ownership", "POSTGRES_PASSWORD": "local_mock_only", "POSTGRES_DB": database}
             elif service == "redis":
                 values = {}
+                # Avoid the image's anonymous /data volume; Redis is ephemeral.
+                lines += ["    tmpfs:", "      - /data"]
             else:
                 values = {"DATABASE_URL": url, "AI_PROVIDER": "mock", "APP_ENV": "local",
                           "GOOGLE_APPLICATION_CREDENTIALS": "", "AUTH_GOOGLE_CLIENT_ID": "",
@@ -251,10 +253,16 @@ class OwnedRuntime:
         self.started = True  # partial startup also belongs to this run
         self.docker(*self.compose, "up", "-d", "--build", "db", "redis", "backend", "dispatcher", "worker")
         self.assert_owned()
-        binding = self.docker(*self.compose, "port", "backend", "8000")
-        if not re.fullmatch(r"127\.0\.0\.1:[0-9]+", binding):
+        container = self.docker(*self.compose, "ps", "-q", "backend")
+        ports = json.loads(self.docker("container", "inspect", container,
+                                      "--format", "{{json .NetworkSettings.Ports}}"))
+        bindings = ports.get("8000/tcp") if isinstance(ports, dict) else None
+        if (not isinstance(bindings, list) or len(bindings) != 1
+                or bindings[0].get("HostIp") != "127.0.0.1"
+                or not re.fullmatch(r"[0-9]+", bindings[0].get("HostPort", ""))
+                or any(value for key, value in ports.items() if key != "8000/tcp")):
             raise HarnessError("wildcard_or_multiple_bind_refused")
-        self.base_url = loopback_origin("http://" + binding)
+        self.base_url = loopback_origin("http://127.0.0.1:" + bindings[0]["HostPort"])
         anonymous = ScopedClient(self.base_url, secret=None)
         while time.monotonic() < self.deadline:
             try:

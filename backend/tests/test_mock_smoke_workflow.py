@@ -53,16 +53,17 @@ def test_mock_smoke_workflow_runs_expected_compose_and_smoke_commands() -> None:
 
     assert "docker compose --env-file .env.example config --quiet" in text
     assert (
-        "python scripts/smoke_mock_golden_path.py --compose "
-        "--env-file .env.example --timeout-sec 90"
+        "python scripts/verify_ownership.py --env-file .env.example --cycles 2"
     ) in text
 
 
 def test_mock_smoke_workflow_cleans_up_compose_resources() -> None:
     text = workflow_text()
 
-    assert "if: always()" in text
-    assert "docker compose --env-file .env.example down -v" in text
+    assert "finally cleanup" in text
+    assert "timeout-minutes: 20" in text
+    assert " logs " not in text
+    assert " down " not in text
 
 
 def test_mock_smoke_workflow_does_not_run_other_smoke_scripts() -> None:

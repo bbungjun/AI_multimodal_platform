@@ -9,7 +9,7 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       AI_PROVIDER: mock
       GOOGLE_APPLICATION_CREDENTIALS: ""
@@ -26,13 +26,7 @@ jobs:
       - name: Validate compose config
         run: docker compose --env-file .env.example config --quiet
 
-      - name: Run mock golden path smoke
-        run: python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
-
-      - name: Print compose logs
-        if: failure()
-        run: docker compose --env-file .env.example logs db backend
-
-      - name: Clean up compose resources
-        if: always()
-        run: docker compose --env-file .env.example down -v --remove-orphans
+      # Each cycle has a 360s deadline plus 90s owned cleanup. No raw log dump.
+      # The runner owns finally cleanup; forced cancellation may interrupt it.
+      - name: Run isolated authenticated mock scenarios twice
+        run: python scripts/verify_ownership.py --env-file .env.example --cycles 2
