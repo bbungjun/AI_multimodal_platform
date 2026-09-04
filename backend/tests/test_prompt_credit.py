@@ -14,6 +14,7 @@ from app.models import GenerationMode
 from app.prompt_enhancement import CreativityPreset
 from app.schemas import PromptEnhanceRequest
 from app.services.llm import enhancer
+from app.services.vertex.errors import VertexRateLimitedError
 
 
 def test_prompt_credit_module_interface_exists():
@@ -169,3 +170,51 @@ async def test_prompt_credit_refuses_before_provider(monkeypatch):
         )
     assert exc_info.value.code == "monthly_credit_exhausted"
     provider.assert_not_awaited()
+
+
+async def test_prompt_credit_releases_provider_failure_in_fresh_transaction(monkeypatch):
+    session = _Session([None, "held"])
+    receipt = ReservationReceipt(
+        reservation_id=UUID(int=73),
+        operation_key="pe_r_" + PAYLOAD.request_id.hex,
+        status="held",
+        reserved_microcredits=99,
+        rate_card_version="v1",
+        replayed=False,
+    )
+    released = []
+
+    async def fake_reserve(*_args, **_kwargs):
+        return receipt
+
+    async def failed_provider(*_args, **_kwargs):
+        assert not session.transaction_open
+        raise VertexRateLimitedError(status_code=429)
+
+    async def fake_release(session_arg, **kwargs):
+        assert session_arg.transaction_open
+        released.append(kwargs)
+
+    monkeypatch.setattr(prompt_credit, "reserve", fake_reserve)
+    monkeypatch.setattr(prompt_credit, "release", fake_release)
+    monkeypatch.setattr(prompt_credit.enhancer, "enhance_prompt", failed_provider)
+    monkeypatch.setattr(
+        prompt_credit.enhancer,
+        "plan_prompt_enhancement",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            llm_model="gemini-mock",
+            maximum_input_tokens=100,
+            maximum_output_tokens=200,
+        ),
+    )
+
+    with pytest.raises(VertexRateLimitedError):
+        await prompt_credit.execute_prompt_enhancement(
+            session,
+            actor=ACTOR,
+            payload=PAYLOAD,
+        )
+
+    assert released[0]["reason_code"] == "provider_rate_limited"
+    assert released[0]["usage"].lines == ()
+    assert session.transaction_open is False

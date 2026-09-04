@@ -201,10 +201,12 @@ async def execute_prompt_enhancement(
             llm_model=plan.llm_model,
         )
     except VertexServiceError as error:
-        reason = {
-            "vertex_rate_limited": "provider_rate_limited",
-            "vertex_timeout": "provider_timeout",
-        }.get(error.code, "provider_failed")
+        if error.code == "vertex_rate_limited":
+            reason = "provider_rate_limited"
+        elif error.status_code in {408, 504}:
+            reason = "provider_timeout"
+        else:
+            reason = "provider_failed"
         await _release_hold(
             session,
             actor=actor,
@@ -215,7 +217,18 @@ async def execute_prompt_enhancement(
         )
         raise
 
-    usage = _usage_report(result)
+    try:
+        usage = _usage_report(result)
+    except PromptCreditError:
+        await _release_hold(
+            session,
+            actor=actor,
+            reservation_id=receipt.reservation_id,
+            terminal_key=terminal_key,
+            reason="delivery_failed",
+            clock=clock,
+        )
+        raise
     components = dict(result.components)
     components[PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY] = {
         "creativity_preset": result.creativity_preset.value,

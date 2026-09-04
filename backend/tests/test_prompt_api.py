@@ -232,6 +232,35 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     assert metrics_snapshot.provider_failures.by_status == {"429": 1}
 
 
+@pytest.mark.parametrize(
+    ("code", "http_status"),
+    [
+        ("monthly_credit_exhausted", 402),
+        ("plan_feature_not_allowed", 403),
+        ("credit_idempotency_conflict", 409),
+        ("prompt_enhancement_in_progress", 409),
+        ("prompt_enhancement_terminal", 409),
+        ("credit_busy", 503),
+        ("credit_account_unavailable", 503),
+    ],
+)
+async def test_prompt_credit_errors_use_fixed_http_contract(monkeypatch, code, http_status):
+    async def fail(*_args, **_kwargs):
+        raise prompt_credit.PromptCreditError(code)
+
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", fail)
+    response = await _post_prompt_enhance(
+        {
+            "prompt": "fixture",
+            "target_mode": "t2i",
+            "target_model": "imagen-4.0-fast-generate-001",
+        },
+        FakePromptSession(),
+    )
+    assert response.status_code == http_status
+    assert response.json()["detail"]["code"] == code
+
+
 async def test_enhance_prompt_records_invalid_response_metrics(monkeypatch):
     session = FakePromptSession()
     runtime_metrics.reset()
