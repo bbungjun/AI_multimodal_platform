@@ -162,4 +162,3 @@ Completion requires Todo 1–8, F1–F4 APPROVE, a Ready PR, final-head `verify`
 both backend/frontend Scan/SBOM success, protected squash auto-merge, actual
 `MERGED`, and closure of Issue #127. Evidence states **Mock Verified**, never
 Vertex usage or live GCP billing verified.
-
