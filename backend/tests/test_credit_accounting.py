@@ -9,7 +9,7 @@ from uuid import UUID
 import pytest
 
 import app.credit_accounting as accounting
-from app.credit_lifecycle import grant_bonus
+from app.credit_lifecycle import ensure_cycle, grant_bonus
 from app.credit_models import (
     CreditAccount, CreditCycle, CreditGrant, CreditLedgerEvent, CreditOperation,
     CreditReservation, CreditReservationAllocation, CreditReservationItem,
@@ -229,6 +229,7 @@ def test_reserve_replay_precedes_renewal_and_suspension():
     replayed = reserve(s, estimate(), now=NOW + timedelta(days=90))
     assert replayed.replayed and replayed.reservation_id == first.reservation_id
     assert snapshot(s) == before
+    assert reserve(s, estimate(), now=NOW - timedelta(microseconds=1)).replayed
 
 
 def test_reserve_collision_and_exhaustion_are_atomic():
@@ -317,9 +318,12 @@ def test_terminal_replay_and_changed_payload_collision():
         first.consumed_microcredits, first.released_microcredits,
         first.usage_line_count, first.effective_at, True)
     assert snapshot(s) == before
+    run(ensure_cycle(s, user_id=UID, now=NOW + timedelta(days=30)))
+    assert settle(s, held.reservation_id, line(units=2), now=NOW).replayed
+    after_renewal = snapshot(s)
     with pytest.raises(accounting.CreditAccountingError, match="^credit_idempotency_conflict$"):
         settle(s, held.reservation_id, line(units=3))
-    assert snapshot(s) == before
+    assert snapshot(s) == after_renewal
 
 
 def test_second_terminal_key_and_cross_owner_are_safe():

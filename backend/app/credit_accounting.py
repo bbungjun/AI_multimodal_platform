@@ -272,8 +272,6 @@ async def _reserve(session, request, now):
     user = await session.scalar(_locked(User, User.id == request.user_id))
     if user is None:
         _fail("credit_user_missing")
-    if now < user.signed_up_at:
-        _fail()
 
     existing = await session.scalar(_locked(
         CreditReservation, CreditReservation.user_id == request.user_id,
@@ -286,6 +284,8 @@ async def _reserve(session, request, now):
             _fail("credit_idempotency_conflict")
         return _reservation_receipt(existing, replayed=True)
 
+    if now < user.signed_up_at:
+        _fail()
     if user.status == "suspended":
         _fail("credit_plan_refused")
     try:
@@ -379,7 +379,7 @@ async def _terminal(session, user_id, reservation_id, lines, delivery, reason, k
                                  .order_by(CreditCycle.cycle_index.desc()).limit(1))
     grants = list((await session.scalars(_locked(CreditGrant, CreditGrant.user_id == user_id)
                                         .order_by(CreditGrant.id))).all())
-    if account is None or cycle is None or now < account.updated_at:
+    if account is None or cycle is None:
         _fail("credit_account_inconsistent")
     await _ledger_coherent(session, user_id, grants)
 
@@ -405,6 +405,8 @@ async def _terminal(session, user_id, reservation_id, lines, delivery, reason, k
             _fail("credit_idempotency_conflict")
         return _terminal_receipt(replay, records, replayed=True)
 
+    if now < account.updated_at:
+        _fail("credit_account_inconsistent")
     reservation = await session.scalar(_locked(
         CreditReservation, CreditReservation.id == reservation_id,
         CreditReservation.user_id == user_id))

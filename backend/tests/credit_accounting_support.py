@@ -155,6 +155,7 @@ async def proof(db, factory):
     before = await snapshot()
     replayed = await hold(replay_user, "same", (estimate(units=7),), END+timedelta(days=60))
     check(replayed == replace(original, replayed=True) and await snapshot() == before)
+    check((await hold(replay_user, "same", (estimate(units=7),), T-timedelta(microseconds=1))).replayed)
     await refuse(lambda: hold(replay_user, "same", (estimate(units=8),), END), "credit_idempotency_conflict")
     await db.execute("UPDATE users SET status='suspended',suspended_at=$2 WHERE id=$1", replay_user, T)
     check((await hold(replay_user, "same", (estimate(units=7),), END)).replayed)
@@ -170,6 +171,10 @@ async def proof(db, factory):
     check((terminal.consumed_microcredits, terminal.released_microcredits, terminal.usage_line_count) == (8_000, 18_000, 2))
     check(await db.fetchval("SELECT sum(charged_microcredits) FROM credit_usage_records WHERE reservation_id=$1", sr.reservation_id) == 8_000)
     check(await db.fetchval("SELECT count(*) FROM credit_usage_records WHERE reservation_id=$1 AND source IN ('platform_measured','provider_reported')", sr.reservation_id) == 2)
+    await cycle(settle_user, END)
+    check((await finish(settle_user, sr.reservation_id, "terminal",
+                        (line("gemini_input_token", 4, "platform_measured"),
+                         line("gemini_output_token", 1, "provider_reported")), "partial", T)).replayed)
     over = await hold(settle_user, "over", (estimate(units=5),))
     await refuse(lambda: finish(settle_user, over.reservation_id, "over_t", (line(units=6),)), "credit_usage_exceeds_reservation")
     await refuse(lambda: finish(settle_user, over.reservation_id, "zero", (line(units=0),)), "credit_input_invalid")
