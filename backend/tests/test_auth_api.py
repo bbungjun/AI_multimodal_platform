@@ -114,7 +114,8 @@ def test_oauth_compose_values_are_backend_only():
 
 @pytest.mark.parametrize('code', ['auth_not_configured', 'oauth_provider_unavailable',
                                  'oauth_flow_invalid', 'oauth_denied', 'oauth_identity_rejected',
-                                 'authentication_required', 'origin_not_allowed', 'untrusted-value'])
+                                 'authentication_required', 'origin_not_allowed', 'login_disabled',
+                                 'untrusted-value'])
 def test_opt_in_start_error_redirect_preserves_default_contract(monkeypatch, code):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient

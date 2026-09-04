@@ -21,7 +21,7 @@ class AuthError(Exception):
 
     CODES = {'auth_not_configured', 'oauth_flow_invalid', 'oauth_denied',
              'oauth_provider_unavailable', 'oauth_identity_rejected',
-             'authentication_required', 'origin_not_allowed'}
+             'authentication_required', 'origin_not_allowed', 'login_disabled'}
 
     def __init__(self, code: str):
         self.code = code if code in self.CODES else 'authentication_required'
@@ -107,12 +107,14 @@ class LoginCompletion:
 class AuthService:
     """One transactional interface for OAuth and server-managed Sessions."""
 
-    def __init__(self, session_factory, flow_store, google, *, clock=utc_now, secret_factory=new_secret):
+    def __init__(self, session_factory, flow_store, google, *, clock=utc_now,
+                 secret_factory=new_secret, login_enabled=True):
         self._sessions = session_factory
         self._flows = flow_store
         self._google = google
         self._clock = clock
         self._secret = secret_factory
+        self._login_enabled = bool(login_enabled)
 
     @staticmethod
     def _valid_secret(value):
@@ -125,6 +127,8 @@ class AuthService:
 
     async def begin_google_login(self, return_to: str) -> LoginStart:
         from app.auth.flow_store import OAuthFlow
+        if not self._login_enabled:
+            raise AuthError('login_disabled')
         if self._google is None:
             raise AuthError('auth_not_configured')
         now = self._clock()
@@ -135,6 +139,8 @@ class AuthService:
 
     async def complete_google_login(self, flow_secret: str, state: str, code: str | None,
                                     *, provider_error: str | None = None) -> LoginCompletion:
+        if not self._login_enabled:
+            raise AuthError('login_disabled')
         now = self._clock()
         if not self._valid_secret(flow_secret):
             raise AuthError('oauth_flow_invalid')

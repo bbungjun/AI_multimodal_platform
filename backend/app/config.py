@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     auth_flow_redis_url: str = Field(default='redis://redis:6379/1', repr=False)
     auth_cookie_secure: bool = True
     auth_provider_timeout_sec: float = Field(default=5.0, ge=0.1, le=30.0)
+    auth_login_enabled: bool = True
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

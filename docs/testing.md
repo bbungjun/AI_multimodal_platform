@@ -783,3 +783,24 @@ public response allowlist.
 This is a local mock PostgreSQL correctness proof. It does not prove the G9B
 frontend, exact provider-model attribution, live OAuth, Vertex throughput,
 cloud quota or external billing.
+
+## Emergency Session revocation proof
+
+Run twice at one committed SHA. The verifier accepts only `.env.example`, forces
+`AI_PROVIDER=mock`, `APP_ENV=test` and `AUTH_LOGIN_ENABLED=false`, upgrades a
+new random `emergency-auth-verify-<12hex>` database to head0006, and removes its
+labelled container, volume and network.
+
+```powershell
+python scripts/verify_emergency_sessions.py --env-file .env.example
+python scripts/verify_emergency_sessions.py --env-file .env.example
+```
+
+Each receipt requires eight groups, one observed authentication/revocation lock
+race, at least80 checks and cleanup true. At code `1822679`, both cycles passed
+all eight groups, one race and85 checks. Work/cleanup times were41.391/2.578s
+and14.656/2.672s. The inherited auth PostgreSQL/Redis proof and one ownership
+golden-path cycle passed. Tracked-only Linux passed1589/3 guarded skips; native
+Windows passed1588/3 guarded skips and reproduced only the established Bash
+absolute-path exception. Compose, frontend lint/build, Session48 and Chromium34
+passed. This is mock containment evidence, not a live incident drill.
