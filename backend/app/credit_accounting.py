@@ -371,4 +371,162 @@ async def _reserve(session, request, now):
 
 
 async def _terminal(session, user_id, reservation_id, lines, delivery, reason, key, now, charge):
-    raise CreditAccountingError("credit_account_inconsistent")
+    user = await session.scalar(_locked(User, User.id == user_id))
+    if user is None:
+        _fail("credit_user_missing")
+    account = await session.scalar(_locked(CreditAccount, CreditAccount.user_id == user_id))
+    cycle = await session.scalar(_locked(CreditCycle, CreditCycle.user_id == user_id)
+                                 .order_by(CreditCycle.cycle_index.desc()).limit(1))
+    grants = list((await session.scalars(_locked(CreditGrant, CreditGrant.user_id == user_id)
+                                        .order_by(CreditGrant.id))).all())
+    if account is None or cycle is None or now < account.updated_at:
+        _fail("credit_account_inconsistent")
+    await _ledger_coherent(session, user_id, grants)
+
+    replay = await session.scalar(_locked(
+        CreditReservation, CreditReservation.user_id == user_id,
+        CreditReservation.terminal_operation_key == key))
+    if replay is not None:
+        items = await _reservation_items(session, replay.id)
+        allocations = tuple((await session.scalars(_locked(
+            CreditReservationAllocation,
+            CreditReservationAllocation.reservation_id == replay.id)
+            .order_by(CreditReservationAllocation.ordinal))).all())
+        records = tuple((await session.scalars(_locked(
+            CreditUsageRecord, CreditUsageRecord.reservation_id == replay.id)
+            .order_by(CreditUsageRecord.meter))).all())
+        _reservation_coherent(replay, items, allocations, grants)
+        expected_status = "settled" if charge else "released"
+        supplied = tuple((line.meter, line.actual_units, line.source) for line in lines)
+        stored = tuple((row.meter, row.actual_units, row.source) for row in records)
+        if (replay.id != reservation_id or replay.status != expected_status
+                or replay.delivery != delivery or replay.terminal_reason_code != reason
+                or supplied != stored):
+            _fail("credit_idempotency_conflict")
+        return _terminal_receipt(replay, records, replayed=True)
+
+    reservation = await session.scalar(_locked(
+        CreditReservation, CreditReservation.id == reservation_id,
+        CreditReservation.user_id == user_id))
+    if reservation is None:
+        _fail("credit_reservation_missing")
+    items = await _reservation_items(session, reservation.id)
+    allocations = tuple((await session.scalars(_locked(
+        CreditReservationAllocation,
+        CreditReservationAllocation.reservation_id == reservation.id)
+        .order_by(CreditReservationAllocation.ordinal))).all())
+    _reservation_coherent(reservation, items, allocations, grants)
+    if reservation.status != "held":
+        _fail("credit_reservation_state_conflict")
+    if now < reservation.created_at:
+        _fail()
+
+    by_meter = {item.meter: item for item in items}
+    if any(line.meter not in by_meter for line in lines):
+        _fail("credit_usage_exceeds_reservation")
+    charges = {}
+    try:
+        for line in lines:
+            item = by_meter[line.meter]
+            if line.actual_units > item.maximum_units:
+                _fail("credit_usage_exceeds_reservation")
+            charges[line.meter] = quote_usage(
+                version=reservation.rate_card_version,
+                meter=line.meter,
+                units=line.actual_units,
+            ) if charge else 0
+    except CreditAccountingError:
+        raise
+    except ValueError as error:
+        code = "credit_amount_overflow" if str(error) == "credit_amount_overflow" else "credit_account_inconsistent"
+        _fail(code)
+    consumed = _sum_amounts(charges.values())
+    if charge and consumed <= 0:
+        _fail("credit_input_invalid")
+    if consumed > reservation.reserved_microcredits:
+        _fail("credit_usage_exceeds_reservation")
+
+    grants_by_id = {grant.id: grant for grant in grants}
+    remaining = consumed
+    event_kind = "settle" if charge else "release"
+    for allocation in allocations:
+        grant = grants_by_id[allocation.grant_id]
+        held = allocation.reserved_microcredits
+        spent = min(held, remaining)
+        remaining -= spent
+        unused = held - spent
+        expired = unused if grant.expires_at is not None and grant.expires_at <= now else 0
+        if grant.reserved_microcredits < held:
+            _fail("credit_account_inconsistent")
+        grant.reserved_microcredits -= held
+        grant.consumed_microcredits += spent
+        grant.expired_microcredits += expired
+        if any(value > _MAX for value in (
+                grant.consumed_microcredits, grant.expired_microcredits)):
+            _fail("credit_amount_overflow")
+        session.add(CreditLedgerEvent(
+            id=uuid4(), user_id=user_id, grant_id=grant.id, kind=event_kind,
+            operation_key="terminal_" + reservation.id.hex,
+            rate_card_version=reservation.rate_card_version,
+            granted_delta=0, reserved_delta=-held, consumed_delta=spent,
+            expired_delta=expired, created_at=now, reason_code=reason,
+        ))
+    if remaining:
+        _fail("credit_account_inconsistent")
+
+    for line in lines:
+        session.add(CreditUsageRecord(
+            reservation_id=reservation.id, meter=line.meter, user_id=user_id,
+            terminal_operation_key=key, rate_card_version=reservation.rate_card_version,
+            actual_units=line.actual_units, charged_microcredits=charges[line.meter],
+            recorded_at=now, source=line.source, delivery=delivery,
+        ))
+    reservation.status = "settled" if charge else "released"
+    reservation.terminal_operation_key = key
+    reservation.terminal_at = now
+    reservation.terminal_reason_code = reason
+    reservation.delivery = delivery
+    await session.flush()
+    records = tuple(sorted((row for row in getattr(session, "new", ())
+                            if isinstance(row, CreditUsageRecord)
+                            and row.reservation_id == reservation.id), key=lambda row: row.meter))
+    if not records:
+        # Fakes do not expose AsyncSession.new; the normalized inputs are equivalent.
+        records = tuple(CreditUsageRecord(
+            reservation_id=reservation.id, meter=line.meter, user_id=user_id,
+            terminal_operation_key=key, rate_card_version=reservation.rate_card_version,
+            actual_units=line.actual_units, charged_microcredits=charges[line.meter],
+            recorded_at=now, source=line.source, delivery=delivery,
+        ) for line in lines)
+    return _terminal_receipt(reservation, records, replayed=False)
+
+
+def _reservation_coherent(reservation, items, allocations, grants):
+    try:
+        item_total = _sum_amounts(item.quoted_microcredits for item in items)
+        allocation_total = _sum_amounts(allocation.reserved_microcredits for allocation in allocations)
+        if (not items or not allocations or item_total != reservation.reserved_microcredits
+                or allocation_total != reservation.reserved_microcredits):
+            _fail("credit_account_inconsistent")
+        grant_ids = {grant.id for grant in grants}
+        if any(allocation.user_id != reservation.user_id or allocation.grant_id not in grant_ids
+               for allocation in allocations):
+            _fail("credit_account_inconsistent")
+        for item in items:
+            expected = quote_usage(version=reservation.rate_card_version,
+                                   meter=item.meter, units=item.maximum_units)
+            if item.user_id != reservation.user_id or item.quoted_microcredits != expected:
+                _fail("credit_account_inconsistent")
+    except ValueError:
+        _fail("credit_account_inconsistent")
+
+
+def _terminal_receipt(reservation, records, *, replayed):
+    consumed = _sum_amounts(row.charged_microcredits for row in records)
+    released = reservation.reserved_microcredits - consumed
+    if released < 0 or reservation.terminal_at is None:
+        _fail("credit_account_inconsistent")
+    return TerminalReceipt(
+        reservation.id, reservation.terminal_operation_key, reservation.status,
+        consumed, released, len(records), reservation.terminal_at, replayed,
+    )

@@ -76,6 +76,10 @@ class MemorySession(EmptySession):
             rows.sort(key=lambda row: row.id)
         elif model is CreditReservationItem:
             rows.sort(key=lambda row: row.meter)
+        elif model is CreditReservationAllocation:
+            rows.sort(key=lambda row: row.ordinal)
+        elif model is CreditUsageRecord:
+            rows.sort(key=lambda row: row.meter)
         elif model is CreditLedgerEvent:
             rows.sort(key=lambda row: (row.created_at, row.id))
         return rows
@@ -110,6 +114,18 @@ def line(meter="gemini_input_token", units=1, source="mock_estimate"):
 
 def reserve(s, *estimates, key="reserve_1", now=NOW):
     return run(accounting.reserve(s, request=request(*estimates, key=key), now=now))
+
+
+def settle(s, rid, *lines, key="terminal_1", delivery="delivered", now=NOW):
+    return run(accounting.settle(
+        s, user_id=UID, reservation_id=rid, usage=report(*lines), delivery=delivery,
+        operation_key=key, now=now))
+
+
+def release(s, rid, *lines, key="terminal_1", reason="provider_failed", now=NOW):
+    return run(accounting.release(
+        s, user_id=UID, reservation_id=rid, usage=report(*lines), reason_code=reason,
+        operation_key=key, now=now))
 
 
 def snapshot(s):
@@ -254,3 +270,124 @@ def test_free_plan_refuses_unentitled_meter_and_suspended_new_hold():
     with pytest.raises(accounting.CreditAccountingError, match="^credit_plan_refused$"):
         reserve(suspended, estimate())
     assert set(suspended.rows) == {User}
+
+
+def test_settle_preserves_usage_and_consumes_then_releases_hold():
+    s = MemorySession()
+    held = reserve(s, estimate("gemini_input_token", 10), estimate("gemini_output_token", 4))
+    receipt = settle(s, held.reservation_id,
+                     line("gemini_input_token", 4, "platform_measured"),
+                     line("gemini_output_token", 1, "provider_reported"),
+                     delivery="partial")
+    assert receipt.status == "settled" and receipt.consumed_microcredits == 8_000
+    assert receipt.released_microcredits == 18_000 and receipt.usage_line_count == 2
+    assert [(row.actual_units, row.charged_microcredits, row.source, row.delivery)
+            for row in s.rows[CreditUsageRecord]] == [
+                (4, 4_000, "platform_measured", "partial"),
+                (1, 4_000, "provider_reported", "partial"),
+            ]
+    grant = s.rows[CreditGrant][0]
+    assert grant.reserved_microcredits == 0 and grant.consumed_microcredits == 8_000
+    event = [row for row in s.rows[CreditLedgerEvent] if row.kind == "settle"][0]
+    assert (event.reserved_delta, event.consumed_delta, event.expired_delta) == (-26_000, 8_000, 0)
+
+
+def test_release_records_attempt_without_charge_and_allows_empty_usage():
+    s = MemorySession()
+    first = reserve(s, estimate(units=5), key="r1")
+    result = release(s, first.reservation_id, line(units=3, source="estimated"),
+                     key="t1", reason="provider_timeout")
+    assert result.status == "released" and result.consumed_microcredits == 0
+    assert result.released_microcredits == 5_000 and result.usage_line_count == 1
+    assert s.rows[CreditUsageRecord][0].charged_microcredits == 0
+
+    second = reserve(s, estimate(units=2), key="r2")
+    empty = release(s, second.reservation_id, key="t2", reason="cancelled_before_delivery")
+    assert empty.usage_line_count == 0 and empty.released_microcredits == 2_000
+
+
+def test_terminal_replay_and_changed_payload_collision():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    first = settle(s, held.reservation_id, line(units=2))
+    before = snapshot(s)
+    replayed = settle(s, held.reservation_id, line(units=2))
+    assert replayed.replayed and replayed == accounting.TerminalReceipt(
+        first.reservation_id, first.operation_key, first.status,
+        first.consumed_microcredits, first.released_microcredits,
+        first.usage_line_count, first.effective_at, True)
+    assert snapshot(s) == before
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_idempotency_conflict$"):
+        settle(s, held.reservation_id, line(units=3))
+    assert snapshot(s) == before
+
+
+def test_second_terminal_key_and_cross_owner_are_safe():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    release(s, held.reservation_id)
+    before = snapshot(s)
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_reservation_state_conflict$"):
+        release(s, held.reservation_id, key="terminal_2")
+    assert snapshot(s) == before
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_reservation_missing$"):
+        release(s, UUID(int=999), key="terminal_3")
+
+
+def test_usage_above_hold_and_zero_charge_settle_are_atomic():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    before = snapshot(s)
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_usage_exceeds_reservation$"):
+        settle(s, held.reservation_id, line(units=6))
+    assert snapshot(s) == before
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_input_invalid$"):
+        settle(s, held.reservation_id, line(units=0))
+    assert snapshot(s) == before
+
+
+def test_unused_expired_allocation_moves_to_expired_projection():
+    s = MemorySession()
+    held = reserve(s, estimate(units=10))
+    receipt = settle(s, held.reservation_id, line(units=4), now=NOW + timedelta(days=30))
+    grant = s.rows[CreditGrant][0]
+    assert receipt.consumed_microcredits == 4_000 and receipt.released_microcredits == 6_000
+    assert (grant.reserved_microcredits, grant.consumed_microcredits,
+            grant.expired_microcredits) == (0, 4_000, 6_000)
+    event = [row for row in s.rows[CreditLedgerEvent] if row.kind == "settle"][0]
+    assert event.expired_delta == 6_000
+
+
+def test_corrupt_projection_or_reservation_fails_closed():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    s.rows[CreditGrant][0].reserved_microcredits += 1
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_account_inconsistent$"):
+        settle(s, held.reservation_id, line(units=2))
+    s.rows[CreditGrant][0].reserved_microcredits -= 1
+    s.rows[CreditReservationItem][0].quoted_microcredits += 1
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_account_inconsistent$"):
+        settle(s, held.reservation_id, line(units=2))
+
+
+def test_terminal_outer_rollback_removes_every_money_movement():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    before = snapshot(s)
+    async def scenario():
+        with pytest.raises(RuntimeError, match="rollback"):
+            async with s.begin_nested():
+                await accounting.settle(
+                    s, user_id=UID, reservation_id=held.reservation_id,
+                    usage=report(line(units=2)), delivery="delivered",
+                    operation_key="terminal_1", now=NOW)
+                raise RuntimeError("rollback")
+    run(scenario())
+    assert snapshot(s) == before
+
+
+def test_suspended_user_can_finish_existing_hold():
+    s = MemorySession()
+    held = reserve(s, estimate(units=5))
+    s.rows[User][0].status = "suspended"
+    assert release(s, held.reservation_id).status == "released"
