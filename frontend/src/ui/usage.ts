@@ -124,11 +124,16 @@ function percent(numerator: number, denominator: number): number {
 
 export function formatMicrocredits(value: number): string {
   if (!Number.isSafeInteger(value) || value < 0) invalid();
-  const credits = value / 1_000_000;
-  return new Intl.NumberFormat("ko-KR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: credits < 1 && credits > 0 ? 6 : 3,
-  }).format(credits);
+  if (value === 0) return "0";
+  if (value < 1_000_000) {
+    const fraction = String(value).padStart(6, "0").replace(/0+$/, "");
+    return `0.${fraction}`;
+  }
+  let thousandths = Math.floor(value / 1_000);
+  if (value % 1_000 >= 500) thousandths += 1;
+  const whole = Math.floor(thousandths / 1_000);
+  const fraction = String(thousandths % 1_000).padStart(3, "0").replace(/0+$/, "");
+  return fraction ? `${integer.format(whole)}.${fraction}` : integer.format(whole);
 }
 
 export function buildPersonalUsageView(snapshot: PersonalUsageResponse, now: Date): PersonalUsageView {
