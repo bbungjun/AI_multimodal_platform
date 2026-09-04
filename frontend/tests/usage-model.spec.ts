@@ -43,17 +43,17 @@ test("microcredit formatting is integer based and bounded", () => {
   expect(formatMicrocredits(9_223_000_000)).toBe("9,223");
 });
 
-for (const mutation of [
-  (value: any) => { value.extra = true; },
-  (value: any) => { value.plan = "master"; },
-  (value: any) => { value.cycle.index = -1; },
-  (value: any) => { value.credit.available_microcredits = 0.5; },
-  (value: any) => { value.credit.held_microcredits = Number.MAX_SAFE_INTEGER + 1; },
-  (value: any) => { value.cycle.renews_at = value.cycle.starts_at; },
-  (value: any) => { value.usage.reverse(); },
-  (value: any) => { value.usage[0].unit = "image"; },
-  (value: any) => { value.usage[0].prompt = "discard"; },
-]) test("malformed or expanded payload fails closed", () => {
+for (const [name, mutation] of [
+  ["root extra", (value: any) => { value.extra = true; }],
+  ["plan", (value: any) => { value.plan = "master"; }],
+  ["cycle index", (value: any) => { value.cycle.index = -1; }],
+  ["fraction", (value: any) => { value.credit.available_microcredits = 0.5; }],
+  ["unsafe integer", (value: any) => { value.credit.held_microcredits = Number.MAX_SAFE_INTEGER + 1; }],
+  ["cycle order", (value: any) => { value.cycle.renews_at = value.cycle.starts_at; }],
+  ["meter order", (value: any) => { value.usage.reverse(); }],
+  ["unit", (value: any) => { value.usage[0].unit = "image"; }],
+  ["nested extra", (value: any) => { value.usage[0].prompt = "discard"; }],
+] as Array<[string, (value: any) => void]>) test(`malformed payload fails closed: ${name}`, () => {
   const value = structuredClone(raw) as any;
   mutation(value);
   expect(() => parsePersonalUsage(value)).toThrow("usage_response_invalid");
