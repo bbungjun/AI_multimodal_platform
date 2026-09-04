@@ -110,3 +110,14 @@ async def test_legacy_job_is_unmanaged():
     result = await subject.terminalize_generation(object(), job=job(), succeeded=True,
                                                    reason_code=None, now=utc_now())
     assert result.status == "unmanaged"
+
+
+async def test_legacy_retry_shape_uses_worker_default(monkeypatch):
+    seen = {}
+    async def reserve(_session, *, request, now):
+        seen["estimate"] = request.estimates
+        return ReservationReceipt(uuid4(), request.operation_key, "held", 1, "v1", False)
+    monkeypatch.setattr(subject, "reserve", reserve)
+    item = job(); item.parameters = {}
+    await subject.admit_generation(object(), job=item, now=utc_now())
+    assert seen["estimate"] == (subject.UsageEstimate("imagen_fast_image", 1),)

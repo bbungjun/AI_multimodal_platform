@@ -63,7 +63,9 @@ def _estimate(job: Job) -> UsageEstimate:
         _fail("generation_credit_model_unsupported")
     params = job.parameters or {}
     key = "number_of_images" if job.mode == GenerationMode.T2I else "duration_sec"
-    value = params.get(key)
+    # Pre-G7 failed Jobs may omit parameters; preserve the worker's historical
+    # defaults when admitting their first billed retry.
+    value = params.get(key, 1 if job.mode == GenerationMode.T2I else 4)
     if type(value) is not int or value <= 0:
         _fail()
     units = value if job.mode == GenerationMode.T2I else value * 1000
