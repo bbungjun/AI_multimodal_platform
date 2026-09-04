@@ -1,6 +1,6 @@
 # G5C — Credit reservation and settlement specification
 
-Status: `G5C1 Mock Verified locally / delivery pending; G5C2 Planned`, 2026-09-04. This document is the
+Status: `G5C1 Mock Verified — Merged; G5C2 design frozen / Goal prepared`, 2026-09-04. This document is the
 normative aggregate design for Issues
 [#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117),
 [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), and
@@ -33,8 +33,8 @@ therefore split without changing product policy:
 
 | Slice | Issue | Module / delivery boundary | Migration |
 |---|---|---|---:|
-| G5C1 | [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120) | Four empty accounting tables, constraints, mutation guards and all current-head proof compatibility | exactly one, `0006_credit_accounting_persistence` |
-| G5C2 | [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121) | `reserve`, `settle`, `release`, deterministic allocation, replay and PostgreSQL race/rollback proof | zero |
+| G5C1 | [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120) | Mock Verified and merged by [PR122](https://github.com/bbungjun/AI_multimodal_platform/pull/122): four accounting tables, constraints, mutation guards and head compatibility | exactly one, `0006_credit_accounting_persistence` |
+| G5C2 | [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121) | Frozen execution design: `reserve`, `settle`, `release`, deterministic allocation, replay and PostgreSQL race/rollback proof | zero |
 
 Issue117 is the G5C aggregate, not an executable Goal. G5C2 freezes its own exact
 paths and Goal only after G5C1 actually merges. G5C completion does not mean Jobs
@@ -297,9 +297,46 @@ all<=1800s; Linux600s; Windows120s; frontend600s. A timeout is No-Go: clean only
 the exact owned project, retain the first failure and STOP for redesign. Do not
 inflate a limit or auto-rerun.
 
-### G5C2 acceptance envelope
+### G5C2 frozen acceptance
 
-Before its Goal freezes, map tests to: strict quote/Plan input; deterministic
+| ID | Requirement |
+|---|---|
+| C201 | Start from merged PR122 squash, matching Goal hash, Issue/branch and clean tracked/index state with `AI_PROVIDER=mock` |
+| C202 | Change only the exact six non-document paths in section8; zero migration and no existing schema/model/lifecycle/product path change |
+| C203 | Export only the three operations and immutable request/result value objects from section2; errors are fixed safe codes, not HTTP/SQL/identity text |
+| C204 | Require a caller-owned active AsyncSession transaction; use a nested savepoint; never begin/commit/rollback the outer transaction or create an engine/clock |
+| C205 | Normalize UTC time, safe keys and canonical unique meter tuples; reject bool/float/string, unknown/duplicate/empty/overflow input before mutation |
+| C206 | Quote every estimate with stored V1 integer policy, enforce current Plan meters, positive BIGINT total and no provider pricing/fallback |
+| C207 | Reserve replay is checked under User lock before renewal/expiry; equal normalized payload returns the original receipt, changed payload conflicts atomically |
+| C208 | New reserve composes only with public `ensure_cycle`, then refresh-locks Account/current Cycle/all grants by UUID; no private lifecycle import or lock inversion |
+| C209 | Allocation is expiring-first, then expiry/created_at/UUID, all-or-nothing; insufficient credit returns `monthly_credit_exhausted` with no lifecycle/accounting side effect |
+| C210 | Reserve persists header/items/ordinal allocations, updates grant reserved projections and appends one derived-key reserve ledger event per allocation atomically |
+| C211 | Active normal Users use their Plan; Master has Max policy without bypass; suspended User cannot make a new hold but may replay a committed hold |
+| C212 | Terminal calls lock User→Account→latest Cycle→all grants by UUID→Reservation→items by meter→allocations by ordinal and refresh stale identity-map rows |
+| C213 | `settle` accepts delivered/partial, at least one line and positive total charge; meters are a subset and actual units never exceed held maxima |
+| C214 | `release` fixes no-deliverable, permits empty or attempt Usage, validates one fixed reason and always charges zero |
+| C215 | Settlement uses the reservation's stored rate version; original units/source remain separate from charged microcredits; missing held meters mean zero Usage |
+| C216 | Terminal allocation consumes ordinal holds, releases remainder, and sends unused expired-grant credit to expired rather than available |
+| C217 | Terminal atomically updates reservation once, appends supplied Usage and one settle/release ledger event per allocation, and updates all projections coherently |
+| C218 | Same terminal key/equal normalized reservation+usage+delivery/reason returns the original receipt; changed payload/owner/reservation conflicts with no side effect |
+| C219 | A second terminal key or settle/release after terminal returns state conflict; missing/cross-owner reservation is a safe missing error without existence leak |
+| C220 | Before money movement, every locked grant projection reconstructs from its ledger and reservation item/allocation sums match the held total; corruption fails closed |
+| C221 | Signed-BIGINT sums and projection deltas use widened arithmetic and reject overflow, negative, impossible or under-reserved state without mutation |
+| C222 | A caught validation/contention rejection leaves the caller transaction usable; deliberate outer rollback removes reservation/terminal/Usage/ledger/projections together |
+| C223 | Existing lifecycle renewal/expiry and a late old-cycle terminal serialize without moving or repricing the original allocation |
+| C224 | Race1: two different holds compete for one remaining balance; exactly one succeeds and no overspend occurs |
+| C225 | Race2: same reserve key/equal payload; one reservation/allocation/event set and two equivalent receipts |
+| C226 | Race3: same reserve key/different payload; one winner and one idempotency conflict without mixed rows |
+| C227 | Race4: same terminal key/equal payload; one terminal/Usage/event set and two equivalent receipts |
+| C228 | Race5: same terminal key/different payload or reservation; one winner and one conflict without mixed projections |
+| C229 | Race6: settle versus release on one hold; exactly one terminal outcome and one projection transition |
+| C230 | Race7: renewal/expiry versus reserve; lock overlap is observed and final allocation/refusal is serializable |
+| C231 | Race8: renewal/expiry versus late old-cycle settle; original grant attribution and expired remainder are correct |
+| C232 | Two fresh fixed accounting verifier cycles each report all eight groups, races8, checks>=160, same committed SHA/head0006 and exact resource cleanup0 |
+| C233 | One schema, lifecycle, auth and ownership-all2 compatibility run plus Linux backend, Windows/base exception reproduction, Compose and unchanged frontend all pass |
+| C234 | Problem/cause/decision/failed proof/results/rollback are documented; Ready PR final-head required3 CI succeeds, protected squash actually merges, and Issues121/117/114 close |
+
+The Goal maps tests to strict quote/Plan input; deterministic
 multi-grant allocation; exact exhaustion and all-or-nothing refusal; same/different
 reservation replay; complete/partial/no-deliverable matrix; original source/units
 versus credit; same/different terminal replay; stale identity-map refresh; caller
@@ -316,11 +353,12 @@ PostgreSQL races:
 7. expiry/renewal versus reserve: serialized valid allocation or refusal;
 8. expiry/renewal versus late settle: held grant attribution and remainder correct.
 
-Two independent accounting verifier cycles must report all groups/races/checks,
+Two independent accounting verifier cycles must report eight groups, races8,
+checks>=160,
 exact same-code revision and resource-zero cleanup. G5C2 has zero migration and
 does not change the C1 schema to make a failing implementation pass.
 
-## 8. Exact G5C1 paths and successor envelope
+## 8. Exact paths
 
 G5C1 non-document allowlist, cumulative from base `ffc4b506466662f3e57e0f8dca72e16955273749`:
 
@@ -352,10 +390,24 @@ migration, modification of0001–0005, or accounting writer means STOP/replan.
 Allowed documents are current-work, the canonical initiative, G5 split spec, this
 spec, testing, local-mock runbook, portfolio README and Issue120 record.
 
-G5C2's expected code additions are `app/credit_accounting.py`, unit tests, a
-fixed PostgreSQL proof, its parser/runner and tests. Its exact list, command budgets
-and hash are intentionally not executable until merged0006 is inspected. G5C2
-must not change Job/Prompt/Asset/Outbox/worker/frontend code or add a migration.
+G5C2 has exactly these six non-document paths, cumulative from merged PR122 squash
+`68e3df6254b1aa9acfba5f1d4bc7965e60b06fa4`:
+
+```text
+backend/app/credit_accounting.py
+backend/tests/test_credit_accounting.py
+backend/tests/credit_accounting_support.py
+backend/tests/test_credit_accounting_support.py
+scripts/verify_credit_accounting.py
+backend/tests/test_verify_credit_accounting_script.py
+```
+
+This is both an allowlist and the expected implementation set. A seventh code
+path, any migration, schema/model/lifecycle change, or product caller means
+STOP/replan. Allowed documents are current-work, the canonical initiative, this
+aggregate spec, testing, local-mock runbook, portfolio README and Issue121 record.
+G5C2 must not change Job/Prompt/Asset/Outbox/worker/state-machine/frontend,
+OAuth/provider/cloud, Plan/Master/Audit, dependency, Compose, CI or infrastructure.
 
 ## 9. Delivery, rollback and remaining risk
 
@@ -365,12 +417,13 @@ Docker with `AI_PROVIDER=mock`, preserves development/preview data, records each
 failed approach, and ends only after actual protected squash merge. Issue120 then
 closes; Issues121/117/114 remain open.
 
+G5C1 merged by PR122 as `68e3df6`; its tested final head and squash tree matched.
 Local final-SHA evidence at `b4ce32e` passed two independent schema/accounting
 cycles (42 checks and four populated downgrade cases each), existing credit90/races3,
 G5B lifecycle8/races8, auth PostgreSQL/Redis, ownership/file four-cycle aggregate,
 Linux1347, and unchanged frontend48+34. Every owned project cleaned to zero.
-Delivery remains pending until the Ready PR's final-head verify and both Scan/SBOM
-checks succeed and protected squash actually merges.
+PR122 final-head verify and both Scan/SBOM checks succeeded. Issue120 is closed;
+Issues121/117/114 remain open for the frozen G5C2 delivery.
 
 Rollback is a reviewed code revert plus downgrade only when all four new tables
 are empty. Once any accounting row exists, preserve data and use a forward fix;
