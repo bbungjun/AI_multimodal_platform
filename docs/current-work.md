@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G7 execution — 2026-09-04
 
-- **In Progress.** G6 [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
+- **Mock Verified locally; delivery in progress.** G6 [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
   passed final-head verify and both Scan/SBOM checks and squash-merged as
   `a6d9656`; Issue124 is closed. A later docs-only PR was closed because the
   path-filtered required Scan checks do not attach to documentation-only PRs;
@@ -97,10 +97,21 @@ paste credential contents.
   OAuth/provider/cloud, GCP/Kubernetes/Terraform changes are excluded. Every
   execution and proof uses local Docker with `AI_PROVIDER=mock`; development and
   preview DB/volumes remain untouched.
-- Completion requires the frozen Goal Todo1–8/F1–F4, isolated generation-credit
-  2cycle, inherited accounting/lifecycle/auth/ownership-all2 and full regressions,
-  portfolio evidence, Ready PR, final-head required CI, protected squash merge,
-  and actual Issue127 closure.
+- Implementation revision `7e795c2` uses exactly 19 approved non-document paths
+  and zero migrations. Two final isolated projects each completed all eight
+  generation-credit groups, two terminal races, 120 checks and cleanup zero
+  (work 35.203s and 14.860s). Accounting, lifecycle and auth each passed once;
+  ownership `--suite all --cycles 2` passed all four cycles in 523.235s.
+- Fresh tracked-only Linux backend passed 1487 tests with three guarded skips.
+  Native Windows passed the same 1486 product tests and reproduced the existing
+  Bash/Windows absolute-path exception only. Frontend lint/build, Session48 and
+  Chromium34 passed; Compose with `.env.example` passed. Bare Compose was not
+  asserted on this checkout because the intentionally absent local `.env` leaves
+  required database variables undefined; no secret-bearing file was created.
+- Todo1–8 and local F1–F4 are APPROVE. Remaining delivery gate is a Ready PR,
+  final-head required `verify` and both Scan/SBOM checks, protected squash merge,
+  and actual Issue127 closure. Evidence remains **Mock Verified**, not Vertex or
+  live GCP billing verified.
 
 ### G6 execution — 2026-09-04
 

@@ -637,6 +637,21 @@ python scripts/verify_prompt_credit.py --env-file .env.example
 This proof owns a separate labelled Compose project and never adopts the
 development database.
 
+## Verify generation credit accounting
+
+For the Imagen/Veo and pipeline credit boundary, run two independent projects:
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_generation_credit.py --env-file .env.example
+python scripts/verify_generation_credit.py --env-file .env.example
+```
+
+Accept only summaries with all eight groups, races2, checks at least120 and
+cleanup zero. The verifier owns disposable labelled resources and refuses a
+non-mock provider. It does not validate Vertex quota, provider-reported billing
+or a real GCP account.
+
 ## Stop
 
 ```powershell
