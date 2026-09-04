@@ -303,6 +303,12 @@ refusal, duplicate queue delivery/settlement, late old-cycle completion, rollbac
 of usage+ledger+projections, expiry/reserve/settle races and original usage source.
 Ordinary test transactions prove composition; product Jobs stay unwired until G7.
 
+The post-G5B repository inspection and policy decisions are now frozen in
+[the G5C aggregate specification](g5-credit-accounting-spec.md). The 20-path limit
+requires C1 persistence/head compatibility [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120)
+and C2 accounting behavior [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121).
+This original envelope remains historical input, not an executable Goal.
+
 ## 8. Delivery, evidence and rollback
 
 G5A Goal freezes Todo1–8, F1–F4, commands and budgets. Prepared is not In Progress.

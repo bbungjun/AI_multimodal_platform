@@ -77,9 +77,39 @@ paste credential contents.
 
 ## Active Work
 
+### G5C1 preparation — 2026-09-04
+
+- **Planned / Goal Prepared; implementation not started.** G5B PR119 actually
+  merged at `ffc4b506466662f3e57e0f8dca72e16955273749`; final head7ab6254 required
+  verify and both Scan/SBOM checks succeeded and has the same tree. Main was
+  fast-forwarded to that squash, Issue120 and Issue121 were created under
+  G5C parent117, and branch `codex/issue-120-credit-accounting-persistence` was
+  created from the merged base. Existing untracked `.omo` files were preserved.
+- [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) freezes reserve/
+  settle/release semantics, usage/delivery matrix, idempotency domains, grant
+  ordering, old-expiry behavior and safe errors. A single Goal needs at least22
+  code paths because 15 existing head-aware proof paths must move to0006; it is
+  split into C1 persistence/head compatibility and C2 accounting logic/proof.
+- [Issue120 preparation record](portfolio/issue-120-credit-accounting-persistence.md):
+  C1 has exact20 non-document paths, exactly one additive0006 migration and four
+  empty accounting tables. It adds no writer, API, Job/provider/frontend wiring,
+  Plan/Master/Audit behavior or runtime billing claim. C2 Issue121 is blocked
+  until C1 actually merges and will have zero migration.
+- Frozen local plan `.omo/plans/issue-120-g5c1-credit-accounting-persistence-goal.md`;
+  SHA256 `d55cad9eba3013706dfd6554894c78af40ef927ed8c03352fbca062c3463f8cc`.
+  Transfer exact bytes; never
+  stage `.omo` wholesale. First execution checks SHA, branch/base, clean tracked/
+  index state and B0. Runtime requires schema/accounting2, lifecycle1, auth1,
+  ownership all2, full backend/frontend and final required3 CI/protected squash.
+- Preparation B0 passed **538 tests in 2.79s** on merged G5B code. Plan structure
+  check passed exact20 paths, Todo1–8, F1–F4 and C101–C116 uniqueness. This is a
+  baseline only, not C1 schema or runtime proof.
+- Preparation performs no Docker/database migration/reset and no OAuth/provider/
+  cloud call. Development and preview DBs remain untouched.
+
 ### G5B execution — 2026-09-04
 
-- **Locally Mock Verified — Todo1–7 complete; delivery pending.** User approved spec section3 and
+- **Mock Verified — Merged.** User approved spec section3 and
   matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
   starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
   preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
@@ -89,7 +119,9 @@ paste credential contents.
   cycles passed with independent cleanup0. Linux1321 PASS/3 guarded skips;
   Windows1320 PASS plus sole known native127 Bash-path failure reproduced on
   untouched a003257. Frontend lint/build/Session48/Chromium34 PASS.
-  Final review C102/M23/H413/B0452 PASS; F1–F3 APPROVE, F4 delivery pending.
+  Final review C102/M23/H413/B0452 PASS; F1–F4 APPROVE after PR119 final-head
+  required3 CI success and protected squash `ffc4b50`. Tested final head7ab6254
+  and merged squash have an identical tree; Issue116 is closed.
   [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
   branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
   squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
@@ -106,13 +138,13 @@ paste credential contents.
   Execution request approves spec section3 refinements. Todo1–8/F1–F4 require
   schema2/lifecycle2/auth1/ownership all2, full Linux/backend/frontend and final
   required3 CI/Ready PR/protected squash actual MERGED. Parent114/117 stay open.
-  PR119 is Ready; next: last docs push, final-head CI and protected squash delivery.
+  PR119 merged; parent114 and G5C parent117 remain open.
 - First execution checks: Goal SHA, branch/base, clean tracked/index, B0.
   Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
   command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,
   development/preview migration/reset, actual OAuth/provider/cloud during preparation.
   That preparation used head0004. Current implementation packages0005; actual
-  lifecycle/local regressions are complete; delivery remains pending.
+  lifecycle/local regressions and delivery are complete.
 
 ### G5A execution — 2026-09-04
 
