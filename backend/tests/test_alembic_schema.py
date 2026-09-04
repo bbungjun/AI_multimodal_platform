@@ -13,6 +13,7 @@ IDENTITY_REVISION = VERSIONS_ROOT / "0002_user_session_persistence.py"
 OWNERSHIP_REVISION = VERSIONS_ROOT / "0003_content_ownership.py"
 CREDIT_REVISION = VERSIONS_ROOT / "0004_credit_foundation.py"
 LIFECYCLE_REVISION = VERSIONS_ROOT / "0005_credit_lifecycle_operations.py"
+ACCOUNTING_REVISION = VERSIONS_ROOT / "0006_credit_accounting_persistence.py"
 
 
 def _text(path: Path) -> str:
@@ -30,10 +31,11 @@ def test_alembic_runtime_dependency_and_required_files_exist() -> None:
     assert BASELINE_REVISION.is_file()
 
 
-def test_exactly_five_ordered_revisions_are_packaged() -> None:
+def test_exactly_six_ordered_revisions_are_packaged() -> None:
     revisions = sorted(VERSIONS_ROOT.glob("*.py")) if VERSIONS_ROOT.exists() else []
 
-    assert revisions == [BASELINE_REVISION, IDENTITY_REVISION, OWNERSHIP_REVISION, CREDIT_REVISION, LIFECYCLE_REVISION]
+    assert revisions == [BASELINE_REVISION, IDENTITY_REVISION, OWNERSHIP_REVISION,
+                         CREDIT_REVISION, LIFECYCLE_REVISION, ACCOUNTING_REVISION]
     baseline = _text(BASELINE_REVISION)
     identity = _text(IDENTITY_REVISION)
     assert 'revision = "0001_generation_baseline"' in baseline
@@ -49,6 +51,14 @@ def test_exactly_five_ordered_revisions_are_packaged() -> None:
     lifecycle = _text(LIFECYCLE_REVISION)
     assert 'revision = "0005_credit_lifecycle_operations"' in lifecycle
     assert 'down_revision = "0004_credit_foundation"' in lifecycle
+    accounting = _text(ACCOUNTING_REVISION)
+    assert 'revision = "0006_credit_accounting_persistence"' in accounting
+    assert 'down_revision = "0005_credit_lifecycle_operations"' in accounting
+    for table in ("credit_reservations", "credit_reservation_items",
+                  "credit_reservation_allocations", "credit_usage_records"):
+        assert f'"{table}"' in accounting
+    for forbidden in ("DELETE FROM", "TRUNCATE TABLE", "DROP SCHEMA", "create_all", "stamp("):
+        assert forbidden not in accounting
 
     dockerfile = _text(BACKEND_ROOT / "Dockerfile")
     assert "COPY alembic.ini" in dockerfile

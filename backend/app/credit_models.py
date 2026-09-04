@@ -111,6 +111,100 @@ class CreditOperation(Base):
     outcome: Mapped[str] = mapped_column(String(16), nullable=False)
 
 
+class CreditReservation(Base):
+    """Persistent accounting hold. Writers arrive in G5C2."""
+    __tablename__ = "credit_reservations"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_credit_reservations"),
+        UniqueConstraint("id", "user_id", name="uq_credit_reservations_id_user"),
+        UniqueConstraint("user_id", "reserve_operation_key", name="uq_credit_reservations_user_reserve_key"),
+        CheckConstraint("reserve_operation_key ~ '^[A-Za-z0-9_-]{1,96}$'", name="ck_credit_reservations_reserve_key"),
+        CheckConstraint("rate_card_version ~ '^v[1-9][0-9]{0,8}$'", name="ck_credit_reservations_version"),
+        CheckConstraint("reserved_microcredits > 0", name="ck_credit_reservations_amount"),
+        CheckConstraint("terminal_operation_key IS NULL OR terminal_operation_key ~ '^[A-Za-z0-9_-]{1,96}$'", name="ck_credit_reservations_terminal_key"),
+        CheckConstraint("terminal_reason_code IS NULL OR terminal_reason_code ~ '^[a-z0-9_]{1,64}$'", name="ck_credit_reservations_reason"),
+        CheckConstraint(
+            "(status = 'held' AND terminal_operation_key IS NULL AND terminal_at IS NULL AND terminal_reason_code IS NULL AND delivery IS NULL) OR "
+            "(status = 'settled' AND terminal_operation_key IS NOT NULL AND terminal_at IS NOT NULL AND terminal_at >= created_at AND terminal_reason_code IS NOT NULL AND delivery IN ('delivered','partial')) OR "
+            "(status = 'released' AND terminal_operation_key IS NOT NULL AND terminal_at IS NOT NULL AND terminal_at >= created_at AND terminal_reason_code IS NOT NULL AND delivery = 'no_deliverable')",
+            name="ck_credit_reservations_terminal_shape"),
+        Index("uq_credit_reservations_user_terminal_key", "user_id", "terminal_operation_key", unique=True,
+              postgresql_where=text("terminal_operation_key IS NOT NULL")),
+        Index("ix_credit_reservations_user_status_created", "user_id", "status", "created_at", "id"),
+    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("credit_accounts.user_id", name="fk_credit_reservations_account", ondelete="RESTRICT"), nullable=False)
+    reserve_operation_key: Mapped[str] = mapped_column(String(96), nullable=False)
+    rate_card_version: Mapped[str] = mapped_column(String(10), nullable=False)
+    status: Mapped[str] = mapped_column(String(8), nullable=False)
+    reserved_microcredits: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    terminal_operation_key: Mapped[str | None] = mapped_column(String(96))
+    terminal_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    terminal_reason_code: Mapped[str | None] = mapped_column(String(64))
+    delivery: Mapped[str | None] = mapped_column(String(14))
+
+
+class CreditReservationItem(Base):
+    __tablename__ = "credit_reservation_items"
+    __table_args__ = (
+        PrimaryKeyConstraint("reservation_id", "meter", name="pk_credit_reservation_items"),
+        UniqueConstraint("reservation_id", "user_id", "meter", name="uq_credit_reservation_items_owner_meter"),
+        ForeignKeyConstraint(["reservation_id", "user_id"], ["credit_reservations.id", "credit_reservations.user_id"], name="fk_credit_reservation_items_owner", ondelete="RESTRICT"),
+        CheckConstraint("meter IN ('gemini_input_token','gemini_output_token','imagen_fast_image','imagen_standard_image','imagen_ultra_image','veo_fast_ms','veo_standard_ms')", name="ck_credit_reservation_items_meter"),
+        CheckConstraint("maximum_units > 0 AND quoted_microcredits > 0", name="ck_credit_reservation_items_amounts"),
+        Index("ix_credit_reservation_items_user_reservation", "user_id", "reservation_id"),
+    )
+    reservation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    meter: Mapped[str] = mapped_column(String(32), primary_key=True)
+    maximum_units: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    quoted_microcredits: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class CreditReservationAllocation(Base):
+    __tablename__ = "credit_reservation_allocations"
+    __table_args__ = (
+        PrimaryKeyConstraint("reservation_id", "grant_id", name="pk_credit_reservation_allocations"),
+        UniqueConstraint("reservation_id", "ordinal", name="uq_credit_reservation_allocations_ordinal"),
+        ForeignKeyConstraint(["reservation_id", "user_id"], ["credit_reservations.id", "credit_reservations.user_id"], name="fk_credit_reservation_allocations_owner", ondelete="RESTRICT"),
+        ForeignKeyConstraint(["grant_id", "user_id"], ["credit_grants.id", "credit_grants.user_id"], name="fk_credit_reservation_allocations_grant_owner", ondelete="RESTRICT"),
+        CheckConstraint("ordinal >= 0", name="ck_credit_reservation_allocations_ordinal"),
+        CheckConstraint("reserved_microcredits > 0", name="ck_credit_reservation_allocations_amount"),
+        Index("ix_credit_reservation_allocations_grant_reservation", "grant_id", "reservation_id"),
+    )
+    reservation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    grant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    ordinal: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    reserved_microcredits: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+
+class CreditUsageRecord(Base):
+    __tablename__ = "credit_usage_records"
+    __table_args__ = (
+        PrimaryKeyConstraint("reservation_id", "meter", name="pk_credit_usage_records"),
+        UniqueConstraint("user_id", "terminal_operation_key", "meter", name="uq_credit_usage_records_user_terminal_meter"),
+        ForeignKeyConstraint(["reservation_id", "user_id", "meter"], ["credit_reservation_items.reservation_id", "credit_reservation_items.user_id", "credit_reservation_items.meter"], name="fk_credit_usage_records_item_owner", ondelete="RESTRICT"),
+        CheckConstraint("terminal_operation_key ~ '^[A-Za-z0-9_-]{1,96}$'", name="ck_credit_usage_records_terminal_key"),
+        CheckConstraint("rate_card_version ~ '^v[1-9][0-9]{0,8}$'", name="ck_credit_usage_records_version"),
+        CheckConstraint("actual_units >= 0 AND charged_microcredits >= 0", name="ck_credit_usage_records_amounts"),
+        CheckConstraint("source IN ('provider_reported','platform_measured','mock_estimate','estimated')", name="ck_credit_usage_records_source"),
+        CheckConstraint("(delivery IN ('delivered','partial')) OR (delivery = 'no_deliverable' AND charged_microcredits = 0)", name="ck_credit_usage_records_delivery"),
+        Index("ix_credit_usage_records_user_recorded", "user_id", "recorded_at", "reservation_id"),
+    )
+    reservation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    meter: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    terminal_operation_key: Mapped[str] = mapped_column(String(96), nullable=False)
+    rate_card_version: Mapped[str] = mapped_column(String(10), nullable=False)
+    actual_units: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    charged_microcredits: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source: Mapped[str] = mapped_column(String(20), nullable=False)
+    delivery: Mapped[str] = mapped_column(String(14), nullable=False)
+
+
 class CreditLedgerEvent(Base):
     __tablename__ = "credit_ledger_events"
     __table_args__ = (
