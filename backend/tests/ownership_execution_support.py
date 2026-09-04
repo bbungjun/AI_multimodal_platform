@@ -239,7 +239,7 @@ async def completed_records(session, records):
     checked = 0
     for record in records:
         parent = await session.get(Job,UUID(record["id"]))
-        expected = owner("a") if record["kind"] == "expiry" else owner()
+        expected = owner("a") if record["kind"] == "expiry" else owner("master")
         assert parent and parent.owner_user_id == expected and parent.state == JobState.COMPLETED
         jobs = [parent]
         if record["kind"] == "pipeline":

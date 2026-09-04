@@ -710,3 +710,28 @@ At `87dca6b`, both final cycles passed35 checks and one race. The inherited
 accounting/lifecycle/auth checks and ownership `--suite all --cycles 2` passed;
 tracked-only Linux passed1461/3 guarded skips, Windows passed1460/3 skips plus the
 reproduced native127 Bash exception, and frontend Session48/Chromium34 passed.
+
+## G7 Generation Credit Verification
+
+Run the isolated verifier twice at one committed implementation revision:
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_generation_credit.py --env-file .env.example
+python scripts/verify_generation_credit.py --env-file .env.example
+```
+
+Each invocation owns a unique `generation-credit-verify-*` Compose project,
+upgrades a fresh PostgreSQL volume to head0006 and must report all eight groups,
+two races, at least120 checks and cleanup zero. The groups cover admission,
+Imagen, Veo, no-deliverable release, retry, pipeline combined settlement,
+pipeline partial settlement and replay races. A prior-SHA run, a single cycle or
+an individually successful group is not completion.
+
+At `7e795c2`, final projects completed120 checks/two races each, with work times
+35.203s and14.860s. Accounting, lifecycle and auth each passed once; ownership
+`--suite all --cycles 2` completed four cycles in523.235s. Tracked Linux passed
+1487 tests/three guarded skips, while Windows reproduced only the documented
+native Bash path exception. Frontend lint/build, Session48 and Chromium34 passed.
+These are mock credit-accounting proofs and must not be described as Vertex usage
+or live GCP billing verification.

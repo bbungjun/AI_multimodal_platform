@@ -383,7 +383,9 @@ class OwnedRuntime:
                           "GOOGLE_APPLICATION_CREDENTIALS": "", "AUTH_GOOGLE_CLIENT_ID": "",
                           "AUTH_GOOGLE_CLIENT_SECRET": "", "AUTH_GOOGLE_REDIRECT_URI": "",
                           "AUTH_FRONTEND_ORIGIN": ORIGIN, "AUTH_FLOW_REDIS_URL": "redis://redis:6379/1",
-                          "CELERY_BROKER_URL": "redis://redis:6379/0"}
+                          "CELERY_BROKER_URL": "redis://redis:6379/0",
+                          "RATE_LIMIT_GEMINI_PER_MIN": "600", "RATE_LIMIT_IMAGEN_PER_MIN": "600",
+                          "RATE_LIMIT_VEO_PER_MIN": "600"}
             if values:
                 lines += ["    environment:"] + [f"      {k}: {json.dumps(v)}" for k, v in values.items()]
             if service == "backend":

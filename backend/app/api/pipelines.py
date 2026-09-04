@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.generations import get_session
+from app.api.generations import _admit_generation
 from app.api.auth_dependencies import require_user
 from app.auth.service import AuthenticatedUser
 from app.models import GenerationMode, Job, JobState, utc_now
@@ -80,8 +81,9 @@ async def create_pipeline(
         updated_at=now,
     )
     session.add_all([parent, child])
-    add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
     try:
+        await _admit_generation(session, parent, pipeline_child=child, now=now)
+        add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
         await session.commit()
     except Exception:
         await session.rollback()

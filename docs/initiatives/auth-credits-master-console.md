@@ -249,8 +249,8 @@ document or inherit the full design interview.
 | G5C | Reservation allocations, Usage and atomic settlement/release | Mock Verified — Merged | [Parent117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [frozen aggregate spec](g5-credit-accounting-spec.md), [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123) | C1 persistence and C2 accounting Module merged; G6/G7 wiring stays separate |
 | G5C1 | Reservation/allocation/Usage persistence and head compatibility | Mock Verified — Merged | [Issue120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), [PR122](https://github.com/bbungjun/AI_multimodal_platform/pull/122), [record](../portfolio/issue-120-credit-accounting-persistence.md) | Squash68e3df6; exact20/new0006, schema2 accounting42/downgrade4, lifecycle8/races8, auth1, ownership-file4, Linux1347/frontend48+34, cleanup0; final required3 CI and tree match confirmed. No writer/product wiring |
 | G5C2 | Atomic reserve, settle, release and PostgreSQL proof | Mock Verified — Merged | [Issue121](https://github.com/bbungjun/AI_multimodal_platform/issues/121), [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123), [aggregate spec](g5-credit-accounting-spec.md), [execution record](../portfolio/issue-121-credit-accounting-module.md) | Code41b1bf3 exact6/migration0; accounting2 each8 groups/races8/299 checks, schema/lifecycle/auth/ownership-all2, Linux1429, frontend48+34 PASS and cleanup0. Required3 CI succeeded; squash `5e56ecb`, Issues121/117/114 closed. No generation billing caller |
-| G6 | Gemini prompt-enhancement credit integration | Mock Verified locally — delivery pending | [Issue124](https://github.com/bbungjun/AI_multimodal_platform/issues/124), branch `codex/issue-124-gemini-credit-integration`, [accepted spec](g6-gemini-credit-integration-spec.md) | Final local `87dca6b`; exact14/migration0, prompt-credit2, ownership all4 cycles, Linux1461 and frontend regressions passed. Ready PR/final-head required3/squash merge remain |
-| G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
+| G6 | Gemini prompt-enhancement credit integration | Mock Verified — Merged | [Issue124](https://github.com/bbungjun/AI_multimodal_platform/issues/124), [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125), [accepted spec](g6-gemini-credit-integration-spec.md) | Final code `87dca6b`; exact14/migration0, prompt-credit2, ownership all4 cycles, Linux1461 and frontend regressions passed. Final head `c0d65cb` required verify plus both Scan/SBOM succeeded; squash `a6d9656`; Issue124 closed |
+| G7 | Imagen/Veo and pipeline credit integration | Mock Verified locally — delivery in progress | [Issue127](https://github.com/bbungjun/AI_multimodal_platform/issues/127), branch `codex/issue-127-generation-credit-integration`, [accepted spec](g7-generation-credit-integration-spec.md), [portfolio record](../portfolio/issue-127-generation-credit-integration.md) | Code `7e795c2`; exact19/migration0, generation-credit2 each8 groups/races2/checks120, inherited ownership all4 cycles and full regressions passed. Awaiting final required CI/protected merge; no live provider claim |
 | G8 | Atomic per-User concurrency enforcement | Planned | None | Blocked by G7 |
 | G9 | Personal Plan and Usage UI | Planned | None | Blocked by G6, G7 |
 | G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Planned | None | Blocked by G3, G4, G5, G8 |
@@ -432,6 +432,33 @@ prompt-credit projects each passed35 checks/race1/cleanup0; ownership all2 passe
 four cycles/cleanup0; tracked Linux1461 and frontend48/34 passed. Delivery remains
 pending until final-head required3 CI and actual protected squash merge.
 
+### G7 implementation and local proof — 2026-09-04
+
+Issue127 implements a single deep `generation_credit` Module over the G5C
+accounting Interface. API admission persists Job, Outbox and maximum Reservation
+in one transaction before dispatch. Worker completion derives chargeable units
+only from persisted, correctly typed Assets; standalone failure releases the
+hold, while a pipeline holds once at its parent and settles combined or partial
+delivery at the child boundary. Retry receives a new reservation and queue
+terminal replay converges without duplicate Usage.
+
+Execution required six bounded verification redesigns without changing product
+policy: private metadata was filtered from public parameters; legacy retries got
+explicit safe defaults; Outbox was moved after successful credit admission;
+inherited ownership fixtures released their own holds and used non-product mock
+rate limits; proof actors were aligned with persisted ownership; and terminal
+delivery now rejects mismatched Asset kinds. The final scope is 19 approved
+non-document paths, zero migrations and mock-only local execution.
+
+At code `7e795c2`, two independent generation-credit projects each passed all
+eight groups, two races, 120 checks and cleanup zero. Accounting/lifecycle/auth
+passed once, ownership-all completed four cycles in 523.235s, tracked Linux passed
+1487 tests with three guarded skips, and frontend lint/build plus Session48 and
+Chromium34 passed. Local F1–F4 are APPROVE; delivery remains pending until the
+Ready PR final head passes required `verify` and both Scan/SBOM checks and merges
+through branch protection. This is not live Vertex usage, cloud billing, HTTP
+create-request idempotency or orphan-file reconciliation evidence.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
@@ -450,18 +477,17 @@ mode:
 
 ## Next Goal
 
-G5A/B/C1/C2 are actually merged; PR123 squash `5e56ecb` closes Issues121/117/114.
-**G6 Issue124** is Mock Verified locally on
-`codex/issue-124-gemini-credit-integration`. Its exact14/migration0 implementation
-wires the accounting Interface only to Prompt Enhancement and proves the mock
-token/credit lifecycle. Ready PR CI and protected merge remain; this is not live
-Vertex or charged-generation evidence.
+G5A/B/C1/C2 and G6 are actually merged. **G7 Issue127** is Mock Verified locally
+on `codex/issue-127-generation-credit-integration`; its exact19/migration0
+implementation wires the accounting Interface to Imagen, Veo and their pipeline.
+Ready PR CI and protected merge remain; this is not live Vertex or GCP billing
+evidence. Once merged, G8 atomic per-User concurrency enforcement is next.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
 parent109 is closed. G5 supplies lazy account/cycle creation and the atomic
-accounting Interface but no product caller. G6 adds the Gemini caller; G7 remains
-responsible for Imagen/Veo and pipeline accounting.
+accounting Interface. G6 adds the Gemini caller and G7 adds Imagen/Veo and
+pipeline accounting.
 
 Live operation remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
 real OAuth/browser/proxy verification and a machine-metrics access contract.

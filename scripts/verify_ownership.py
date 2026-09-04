@@ -114,8 +114,9 @@ def admission_proof(runtime, identity):
             raise HarnessError("foreign_admission_wrote_rows")
         # Real DB fault after Job insertion proves transaction rollback for outbox writers.
         runtime.admission_fixture("arm_commit_failure")
-        for path,payload in (routes[0],routes[2],routes[3]):
-            actor_a.request_bytes("POST",path,payload=payload,expected_status=500)
+        fault_actor = identity.client(runtime.base_url,"master")
+        for client,(path,payload) in ((fault_actor,routes[0]),(fault_actor,routes[2]),(actor_a,routes[3])):
+            client.request_bytes("POST",path,payload=payload,expected_status=500)
             checks += 1
         runtime.admission_fixture("disarm_commit_failure")
         if runtime.admission_fixture("counts") != before:
@@ -540,10 +541,14 @@ def execution_proof(runtime, identity):
             actor_a = identity.client(runtime.base_url,"a")
             expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
                 payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
+            print(json.dumps({"proof":"expiry_admitted"}),flush=True)
             if runtime.execution_fixture("expire_session") != {"expired":True}:
                 raise HarnessError("session_expiry_failed")
+            print(json.dumps({"proof":"session_expired"}),flush=True)
             actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
-            pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
+            print(json.dumps({"proof":"expiry_auth_refused"}),flush=True)
+            pipeline_actor = identity.client(runtime.base_url,"master")
+            pipeline = pipeline_actor.request_json("POST","/api/pipelines",expected_status=201,
                 payload={"image_prompt":"fixture","video_prompt":"fixture",
                          "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
     finally:
@@ -551,9 +556,16 @@ def execution_proof(runtime, identity):
         runtime.docker(*runtime.compose,"start","dispatcher","worker")
     print(json.dumps({"proof":"celery_completion"}),flush=True)
     with phase(runtime, "celery_completion"):
-        for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners),
-                       pipeline["parent"]["id"], pipeline["child"]["id"]]:
+        print(json.dumps({"proof":"celery_legacy_pipeline"}),flush=True)
+        for job_id in [execution_id("pipeline_race","child")]:
             poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_race_jobs"}),flush=True)
+        for job_id in [value for _,value in winners]:
+            poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_new_pipeline"}),flush=True)
+        for job_id in [pipeline["parent"]["id"], pipeline["child"]["id"]]:
+            poll_generation(pipeline_actor,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_expiry"}),flush=True)
         poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
         for case,_ in winners:
             if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:

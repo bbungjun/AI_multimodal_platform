@@ -77,9 +77,45 @@ paste credential contents.
 
 ## Active Work
 
+### G7 execution — 2026-09-04
+
+- **Mock Verified locally; delivery in progress.** G6 [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
+  passed final-head verify and both Scan/SBOM checks and squash-merged as
+  `a6d9656`; Issue124 is closed. A later docs-only PR was closed because the
+  path-filtered required Scan checks do not attach to documentation-only PRs;
+  no protection was bypassed. G7 carries the truthful closeout update together
+  with code changes that trigger all required checks.
+- [Issue127](https://github.com/bbungjun/AI_multimodal_platform/issues/127) and
+  branch `codex/issue-127-generation-credit-integration` start from synchronized
+  `main` at `a6d9656`. Existing untracked `.omo/` content is preserved.
+- The [accepted G7 spec](initiatives/g7-generation-credit-integration-spec.md)
+  fixes one deep generation-credit Module: API-side maximum reservation before
+  dispatch, Asset-derived worker settlement, no-deliverable release, pipeline
+  single reservation, delivered-image partial settlement, and queue replay
+  idempotency. No transaction spans provider I/O.
+- New migration, G8 concurrency, frontend billing UX, payment/Audit, actual
+  OAuth/provider/cloud, GCP/Kubernetes/Terraform changes are excluded. Every
+  execution and proof uses local Docker with `AI_PROVIDER=mock`; development and
+  preview DB/volumes remain untouched.
+- Implementation revision `7e795c2` uses exactly 19 approved non-document paths
+  and zero migrations. Two final isolated projects each completed all eight
+  generation-credit groups, two terminal races, 120 checks and cleanup zero
+  (work 35.203s and 14.860s). Accounting, lifecycle and auth each passed once;
+  ownership `--suite all --cycles 2` passed all four cycles in 523.235s.
+- Fresh tracked-only Linux backend passed 1487 tests with three guarded skips.
+  Native Windows passed the same 1486 product tests and reproduced the existing
+  Bash/Windows absolute-path exception only. Frontend lint/build, Session48 and
+  Chromium34 passed; Compose with `.env.example` passed. Bare Compose was not
+  asserted on this checkout because the intentionally absent local `.env` leaves
+  required database variables undefined; no secret-bearing file was created.
+- Todo1–8 and local F1–F4 are APPROVE. Remaining delivery gate is a Ready PR,
+  final-head required `verify` and both Scan/SBOM checks, protected squash merge,
+  and actual Issue127 closure. Evidence remains **Mock Verified**, not Vertex or
+  live GCP billing verified.
+
 ### G6 execution — 2026-09-04
 
-- **Mock Verified locally — delivery pending.** G5C2 actually merged through
+- **Mock Verified — Merged.** G5C2 actually merged through
   [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123) as squash
   `5e56ecb`; required verify and both Scan/SBOM checks succeeded and Issues
   121/117/114 are closed. Local `main` was fast-forwarded to that exact revision
@@ -135,9 +171,9 @@ paste credential contents.
   inherited security-test seam were all retained as failure evidence. Actor-scoped
   UUIDs and a route compatibility import fixed them; every runtime gate restarted
   at the final SHA.
-- F1–F3 are APPROVE. Todo8/F4 still require Ready PR, final-head `verify` and both
-  Scan/SBOM checks, protected squash merge and Issue124 closure. G7 and live GCP
-  remain untouched.
+- F1–F4 are APPROVE. Final head `c0d65cb` passed required `verify` and both
+  Scan/SBOM checks; [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
+  squash-merged as `a6d9656` and Issue124 closed. No live GCP/provider call ran.
 
 ### G5C2 execution — 2026-09-04
 

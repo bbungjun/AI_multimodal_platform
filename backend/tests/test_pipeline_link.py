@@ -160,10 +160,14 @@ async def test_link_completed_parent_unblocks_child_with_image_asset():
     assert session.commit_count == 1
 
 
-async def test_link_completed_parent_fails_child_when_image_asset_missing():
+async def test_link_completed_parent_fails_child_when_image_asset_missing(monkeypatch):
     parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
     child = _blocked_child(parent)
     session = FakePipelineLinkSession([[child], []])
+    terminal = []
+    async def terminalize(*_args, **kwargs):
+        terminal.append(kwargs)
+    monkeypatch.setattr(pipeline_link.generation_credit, "terminalize_generation", terminalize)
 
     result = await pipeline_link.link_completed_parent(session, parent)
 
@@ -176,6 +180,8 @@ async def test_link_completed_parent_fails_child_when_image_asset_missing():
         "error": pipeline_link.PIPELINE_SOURCE_ASSET_MISSING
     }
     assert session.commit_count == 1
+    assert terminal[0]["job"] is child and terminal[0]["succeeded"] is False
+    assert terminal[0]["reason_code"] == "delivery_failed"
 
 
 async def test_link_completed_parent_fails_child_when_asset_is_not_image():

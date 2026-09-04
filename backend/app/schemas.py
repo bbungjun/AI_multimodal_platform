@@ -297,7 +297,7 @@ def _public_job_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
     return {
         key: value
         for key, value in parameters.items()
-        if key != PROVIDER_PROMPT_PARAMETER_KEY
+        if key not in {PROVIDER_PROMPT_PARAMETER_KEY, "_generation_credit_v1"}
     }
 
 
