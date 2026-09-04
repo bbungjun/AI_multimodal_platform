@@ -77,12 +77,14 @@ paste credential contents.
 
 ## Active Work
 
-### G5C2 preparation — 2026-09-04
+### G5C2 execution — 2026-09-04
 
-- **Design frozen / Goal prepared; implementation not started.** Issue121 is
+- **In Progress — Todo1 authority/baseline complete.** Goal SHA matched, Issue121 is
   OPEN and branch `codex/issue-121-credit-accounting-module` starts from actual
   PR122 squash `68e3df6254b1aa9acfba5f1d4bc7965e60b06fa4`. Existing `.omo` remains
-  untracked and preserved. Related baseline passed **219 tests in 1.78s**.
+  untracked and preserved. Fresh execution baseline passed **219 tests in 1.41s**.
+  Docker Desktop `desktop-linux`, empty `DOCKER_HOST`, forced `AI_PROVIDER=mock`,
+  unchanged migration set and preserved preview resources were confirmed read-only.
 - [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) now freezes the
   three-operation deep Module Interface, replay-before-renewal, complete lock
   order, allocation/terminal policy, C201–C234 and eight observed PostgreSQL

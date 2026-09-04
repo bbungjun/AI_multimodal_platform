@@ -1,6 +1,6 @@
-# Issue #121 Atomic credit accounting Module preparation
+# Issue #121 Atomic credit accounting Module
 
-Status: `Planned / Goal Prepared`, 2026-09-04. Parent
+Status: `In Progress / Todo1 complete`, 2026-09-04. Parent
 [#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117); G5 parent
 [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114); predecessor
 [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120) merged by
@@ -33,7 +33,9 @@ G5C1은 reservation/item/allocation/Usage 스키마와 DB guard를 만들었지�
 ## 범위와 검증 계획
 
 - Exact code paths: 6; migration: 0.
-- Baseline: merged PR122 squash `68e3df6`, related tests 219 PASS / 1.78s.
+- Baseline: merged PR122 squash `68e3df6`, fresh related tests 219 PASS / 1.41s.
+- Authority: Goal SHA matched; branch/base/three open Issues, local Docker context,
+  mock-only execution, zero migration diff and preserved preview resources confirmed.
 - Runtime: accounting verifier 2회, schema1, lifecycle1, auth1, ownership/file all2,
   Linux backend, Windows known-exception reproduction, Compose and unchanged frontend.
 - Accounting receipt: groups8, races8, checks>=160, current head0006, same committed SHA,
