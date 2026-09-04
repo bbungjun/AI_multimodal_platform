@@ -81,9 +81,9 @@ async def create_pipeline(
         updated_at=now,
     )
     session.add_all([parent, child])
-    add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
     try:
         await _admit_generation(session, parent, pipeline_child=child, now=now)
+        add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
         await session.commit()
     except Exception:
         await session.rollback()
