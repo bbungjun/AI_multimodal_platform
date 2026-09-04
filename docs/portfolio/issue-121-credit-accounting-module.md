@@ -1,6 +1,6 @@
 # Issue #121 Atomic credit accounting Module
 
-Status: `In Progress / Todo1 complete`, 2026-09-04. Parent
+Status: `Locally Mock Verified / Delivery Pending`, 2026-09-04. Parent
 [#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117); G5 parent
 [#114](https://github.com/bbungjun/AI_multimodal_platform/issues/114); predecessor
 [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120) merged by
@@ -50,8 +50,67 @@ provider/cloud, Plan/Master/Audit, payment and per-user concurrent-request admis
 변경하지 않는다. G5C2 성공은 accounting Module의 Mock Verified이며 generation billing은
 G6/G7 뒤에야 완성된다. abandoned hold reconciliation도 별도 운영 Goal이다.
 
-실행 중 실패한 접근, 실제 counts/time, rollback과 결과는 같은 문서에 추가한다.
-준비 단계는 Docker/DB/provider를 실행하지 않았으며 implementation 증거가 아니다.
+## 구현과 해결
+
+- 하나의 deep Module이 caller-owned transaction 안에서 nested savepoint를 사용한다.
+  caller는 grant/ledger/lock를 알지 않고 세 operation과 immutable receipt만 사용한다.
+- reserve는 User lock 아래 committed replay를 renewal보다 먼저 확인하고, public
+  `ensure_cycle` 조합 뒤 UUID lock 순서와 expiring-first allocation 우선순위를 분리한다.
+  정책 quote, Plan admission, projection-ledger 재구성과 all-or-nothing hold를 한 원자적
+  변경으로 묶었다.
+- terminal 공통 구현은 settle/release를 한 번만 종료하고 stored rate version으로
+  Usage를 계산한다. 실제 units/source는 별도로 저장하며, 만료 grant의 미사용 hold는
+  available로 되돌리지 않고 expired projection으로 이동한다.
+- replay, cross-owner/missing, overage, projection corruption, signed BIGINT overflow와
+  PostgreSQL contention을 고정된 비식별 오류로 닫았다. provider 작업은 lock 안에서
+  실행하지 않는다.
+
+## 관측한 실패와 원인
+
+1. unit RED에서 overage 오류가 `ValueError` 호환 catch에 다시 잡혀 account-inconsistent로
+   축약됐다. accounting 오류를 먼저 재전파해 `credit_usage_exceeds_reservation`을 보존했다.
+2. 수동 F2 검토에서 retry의 `now`가 payload가 아닌데도 renewal 뒤 clock 검사에 막힐 수
+   있음을 발견했다. reserve/terminal committed replay를 temporal new-command 검사보다
+   앞으로 옮기고 unit/실제 DB proof를 추가했다.
+3. 첫 새-SHA C1은 settlement proof에서 실패했다. harness가 END renewal 뒤 새 hold를 과거
+   T로 만들어 정상 clock-regression을 유발한 것이 원인이었다. 새 hold 검증을 renewal
+   전으로 옮기고, renewal 뒤에는 replay만 검증했다. 실패 project도 cleanup0이었다.
+4. 최종 ownership proof는 http-races와 metadata에서 각각 일시적 `harness_failure`가
+   발생했다. 둘 다 timeout 전 종료되고 exact cleanup0임을 확인했다. 설정/시간을 완화하지
+   않고 전체 all/2를 fresh 실행해981.390s에 complete4를 얻었다. 실패도 성공으로 숨기지 않는다.
+5. production 코드가 테스트 fake의 `session.new`를 감지하던 얕은 seam을 F1에서 제거했다.
+   생성한 Usage tuple을 같은 구현 경로로 receipt에 전달해 실제 DB와 fake의 분기를 없앴다.
+
+## 최종 검증과 결과
+
+- Final local code: `41b1bf3`; exact6 code paths, migration0, forbidden product/frontend
+  경로 변경0. M43, P39, H301 PASS.
+- Accounting C1/C2: 각 groups8/races8/checks299, work35.172/14.829s,
+  cleanup2.656/2.687s, exact resources0.
+- Schema: accounting42/downgrade4, credit90/races3, stale/reset guards;
+  work160.922s/cleanup1.875s. Lifecycle groups8/races8/checks320;
+  work15.141s/cleanup2.641s. Auth Postgres/Redis/outage recovery와 auth50 p95
+  6.906ms PASS.
+- Ownership `--suite all --cycles 2`: complete4/981.390s. Ownership cycles each
+  metadata348/delete-race2; file-ops cycles each FOVE310/two actors ten stages.
+  모든 owned project의 container/volume/network가0이다.
+- Linux tracked-only backend1429 PASS/3 guarded skips. Windows1428 PASS/3 skips와
+  기존 Bash path native127 한 건만 발생했고 untouched base68e3df6에서 동일 재현했다.
+  Compose config, frontend lint/build, Session48, Chromium34 PASS.
+
+F1 scope/architecture, F2 data/security, F3 verification/operations는 APPROVE다.
+Ready PR final-head CI와 actual protected squash merge가 F4의 남은 조건이다.
+
+## 영향, rollback과 남은 위험
+
+내부 accounting 사용자는 이제 중복 전달과 동시 경합에서도 잔액 초과 없이 hold를 만들고,
+deliverable만 실제 사용량으로 소비하며 no-deliverable은 전액 release할 수 있다. rollback은
+현재 product caller가 없으므로 reviewed code revert가 우선이다. 이미 accounting data가 있는
+DB는 강제 downgrade/drop하지 않고 forward fix한다.
+
+아직 Job/Outbox/provider와 연결되지 않았고 abandoned hold reconciliation, per-user concurrent
+request admission, 개인 Usage UI, Master/Audit도 없다. 따라서 이 결과는 Module의 local Mock
+Verified이며 실제 생성 과금 완료가 아니다. 생성 연동은 G6/G7 범위다.
 
 Frozen Goal: `.omo/plans/issue-121-g5c2-credit-accounting-module-goal.md`
 SHA-256: `e3937a938d719a55d83a906f2f796171aaeec40ed9caddd8d6f50952487c6579`

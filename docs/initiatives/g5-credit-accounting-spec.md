@@ -1,12 +1,13 @@
 # G5C — Credit reservation and settlement specification
 
-Status: `G5C1 Mock Verified — Merged; G5C2 design frozen / Goal prepared`, 2026-09-04. This document is the
+Status: `G5C1 Mock Verified — Merged; G5C2 locally Mock Verified / delivery pending`, 2026-09-04. This document is the
 normative aggregate design for Issues
 [#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117),
 [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), and
 [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121). It records
 approved policy and executable boundaries. G5C1 implementation evidence is linked
-below; the reserve/settle/release Module remains unimplemented G5C2 scope.
+below; G5C2 code and local proof are complete at `41b1bf3`, while final-head CI and
+protected merge remain delivery evidence.
 
 ## 1. Problem, inputs and split decision
 
@@ -430,3 +431,10 @@ are empty. Once any accounting row exists, preserve data and use a forward fix;
 never force-drop rows or bypass the downgrade guard. Product-level abandoned-hold
 reconciliation, Job linkage, terminal state composition, concurrency admission,
 personal UI, Master/Audit and real provider behavior remain explicit later Goals.
+
+G5C2 local verification at `41b1bf3` passed two independent accounting projects,
+each with eight groups, eight observed races and299 checks. Schema, lifecycle,
+auth and ownership-all2 compatibility, Linux1429 and unchanged frontend48+34 also
+passed with every owned Docker project cleaned to zero. Two earlier ownership
+harness failures were preserved and cleaned before a complete fresh run. These
+results establish the accounting Module only; G6/G7 still own generation callers.

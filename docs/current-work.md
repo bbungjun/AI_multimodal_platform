@@ -79,12 +79,30 @@ paste credential contents.
 
 ### G5C2 execution — 2026-09-04
 
-- **In Progress — Todo1 authority/baseline complete.** Goal SHA matched, Issue121 is
+- **Locally Mock Verified — delivery pending.** Goal SHA matched, Issue121 is
   OPEN and branch `codex/issue-121-credit-accounting-module` starts from actual
   PR122 squash `68e3df6254b1aa9acfba5f1d4bc7965e60b06fa4`. Existing `.omo` remains
   untracked and preserved. Fresh execution baseline passed **219 tests in 1.41s**.
   Docker Desktop `desktop-linux`, empty `DOCKER_HOST`, forced `AI_PROVIDER=mock`,
   unchanged migration set and preserved preview resources were confirmed read-only.
+- Final code `41b1bf3` changes exactly six approved code paths and zero migrations.
+  It adds the deep `credit_accounting` Module with `reserve`, `settle`, `release`,
+  deterministic expiring-first allocation, immutable replay receipts, stored-rate
+  settlement and ledger/projection reconstruction. No product caller is wired.
+- Two final accounting projects each passed all8 groups, races8 and **299 checks**;
+  work/cleanup were 35.172/2.656s and 14.829/2.687s, with exact resources0.
+  Schema passed accounting42/credit90/races3/reset/stale guards; lifecycle passed
+  groups8/races8/checks320; auth Postgres/Redis/outage recovery passed with auth50
+  p95 6.906ms. Ownership `all/2` passed four cycles in981.390s: each ownership
+  access348/delete-race2 and each file-ops FOVE310/two actors, cleanup0.
+- Linux tracked-only backend passed **1429 / 3 guarded skips**. Windows passed
+  **1428 / 3 guarded skips** with only the known Bash path native127, reproduced
+  from untouched base68e3df6. Compose, frontend lint/build, Session48 and Chromium34
+  passed unchanged. Two transient ownership harness failures at http-races/metadata
+  were retained; both cleaned to zero before the final complete all/2 run.
+- F1 scope/architecture, F2 data/security and F3 verification/operations are
+  APPROVE. Todo8/F4 remain: push, Ready PR, final-head required3 CI, protected
+  squash actual merge/tree match and Issues121/117/114 closure.
 - [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) now freezes the
   three-operation deep Module Interface, replay-before-renewal, complete lock
   order, allocation/terminal policy, C201–C234 and eight observed PostgreSQL
