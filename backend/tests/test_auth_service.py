@@ -58,6 +58,30 @@ async def test_login_flow_replay_mismatch_denial_and_missing_configuration():
         await service.authenticate('malformed')
 
 
+async def test_disabled_login_refuses_start_and_callback_before_side_effects():
+    m = auth_module()
+
+    class Flows:
+        async def put(self, *args):
+            raise AssertionError('disabled login must not create a flow')
+
+        async def consume(self, *args):
+            raise AssertionError('disabled login must not consume a flow')
+
+    class Google:
+        def authorization_url(self, *args):
+            raise AssertionError('disabled login must not build provider URLs')
+
+        async def exchange_code(self, *args):
+            raise AssertionError('disabled login must not call the provider')
+
+    service = m.AuthService(None, Flows(), Google(), login_enabled=False)
+    with pytest.raises(m.AuthError, match='^login_disabled$'):
+        await service.begin_google_login('/')
+    with pytest.raises(m.AuthError, match='^login_disabled$'):
+        await service.complete_google_login('x' * 43, 'y' * 43, 'code')
+
+
 async def test_real_postgres_lifecycle():
     """Run only in the guarded auth verifier's fresh PostgreSQL database."""
     import asyncio
