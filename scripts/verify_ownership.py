@@ -114,8 +114,9 @@ def admission_proof(runtime, identity):
             raise HarnessError("foreign_admission_wrote_rows")
         # Real DB fault after Job insertion proves transaction rollback for outbox writers.
         runtime.admission_fixture("arm_commit_failure")
+        fault_actor = identity.client(runtime.base_url,"master")
         for path,payload in (routes[0],routes[2],routes[3]):
-            actor_a.request_bytes("POST",path,payload=payload,expected_status=500)
+            fault_actor.request_bytes("POST",path,payload=payload,expected_status=500)
             checks += 1
         runtime.admission_fixture("disarm_commit_failure")
         if runtime.admission_fixture("counts") != before:
