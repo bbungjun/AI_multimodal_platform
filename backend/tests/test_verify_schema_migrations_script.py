@@ -389,6 +389,20 @@ def test_verifier_targets_g2_head_and_schema_evidence_directory():
     assert module.EXPECTED_REVISION == "0006_credit_accounting_persistence"
     assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
     assert module.ACCOUNTING_TABLES.issubset(module.EXPECTED_TABLES)
+    assert {
+        "fk_credit_reservations_account",
+        "fk_credit_reservation_items_owner",
+        "fk_credit_reservation_allocations_owner",
+        "fk_credit_reservation_allocations_grant_owner",
+        "fk_credit_usage_records_item_owner",
+    }.issubset(module.EXPECTED_FOREIGN_KEYS)
+    assert {
+        "uq_credit_reservations_user_terminal_key",
+        "ix_credit_reservations_user_status_created",
+        "ix_credit_reservation_items_user_reservation",
+        "ix_credit_reservation_allocations_grant_reservation",
+        "ix_credit_usage_records_user_recorded",
+    }.issubset(module.EXPECTED_INDEXES)
     assert module.DEFAULT_EVIDENCE_DIR.parts[-2:] == ("evidence", "schema")
 
 

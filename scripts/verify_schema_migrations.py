@@ -58,6 +58,9 @@ EXPECTED_FOREIGN_KEYS = {
     "fk_credit_accounts_user", "fk_credit_cycles_account", "fk_credit_grants_account",
     "fk_credit_grants_cycle_owner", "fk_credit_ledger_account", "fk_credit_ledger_grant_owner",
     "fk_credit_operations_account", "fk_credit_operations_cycle_owner", "fk_credit_operations_grant_owner",
+    "fk_credit_reservations_account", "fk_credit_reservation_items_owner",
+    "fk_credit_reservation_allocations_owner", "fk_credit_reservation_allocations_grant_owner",
+    "fk_credit_usage_records_item_owner",
 }
 EXPECTED_INDEXES = {
     "ix_jobs_owner_created_at_id",
@@ -77,6 +80,10 @@ EXPECTED_INDEXES = {
     "ix_credit_cycles_user_start", "uq_credit_grants_base_cycle",
     "ix_credit_grants_user_expiry", "ix_credit_ledger_user_created",
     "ix_credit_operations_user_effective",
+    "uq_credit_reservations_user_terminal_key", "ix_credit_reservations_user_status_created",
+    "ix_credit_reservation_items_user_reservation",
+    "ix_credit_reservation_allocations_grant_reservation",
+    "ix_credit_usage_records_user_recorded",
 }
 
 
