@@ -63,6 +63,7 @@ def _mapped_accounting_error(error: CreditAccountingError) -> PromptCreditError:
         code = "plan_feature_not_allowed"
     elif code not in {
         "monthly_credit_exhausted",
+        "user_concurrency_limit",
         "credit_idempotency_conflict",
         "credit_busy",
     }:

@@ -104,7 +104,8 @@ async def admission(payload):
     from app.config import get_settings
     from app.db import AsyncSessionLocal
     from app.identity_models import User
-    from app.models import Job, Asset, PromptEnhancement, OutboxEvent, GenerationMode, JobState, AssetKind
+    from app.models import (Job, Asset, PromptEnhancement, OutboxEvent,
+                            GenerationMode, JobState, AssetKind, utc_now)
     settings = get_settings()
     validate_admission_target(payload, make_url(os.environ.get("DATABASE_URL", "")),
                               settings.ai_provider, settings.app_env)
@@ -119,6 +120,15 @@ async def admission(payload):
         if operation == "prepare":
             if any((await counts()).values()):
                 raise ValueError("admission_nonempty_refused")
+            # This ownership-only stage deliberately keeps five async writers
+            # held per actor until assert_rows. Use the public plan boundary so
+            # the fixture remains within G8's real Max limit instead of bypassing it.
+            from app.credit_lifecycle import change_plan
+            for case in ("a", "b", "master"):
+                owner = uuid5(NAMESPACE_URL, "ownership-fixture/" + case)
+                await change_plan(session, user_id=owner, target_plan="max",
+                                  operation_key="ownership_plan_" + case,
+                                  now=utc_now())
             for case in ("a", "b", "master"):
                 owner = uuid5(NAMESPACE_URL, "ownership-fixture/" + case)
                 enhancement = PromptEnhancement(id=content_id(case,"enhancement"), owner_user_id=owner,

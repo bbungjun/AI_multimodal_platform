@@ -735,3 +735,25 @@ At `7e795c2`, final projects completed120 checks/two races each, with work times
 native Bash path exception. Frontend lint/build, Session48 and Chromium34 passed.
 These are mock credit-accounting proofs and must not be described as Vertex usage
 or live GCP billing verification.
+## G8 atomic per-User concurrency proof
+
+Run the guarded verifier only with the public mock template. It creates a unique
+disposable Compose project, validates schema head `0006_credit_accounting_persistence`
+and removes its container, volume and network:
+
+```powershell
+$env:AI_PROVIDER = "mock"
+python scripts/verify_concurrency.py --env-file .env.example
+python scripts/verify_concurrency.py --env-file .env.example
+```
+
+Each final cycle must report exactly eight completed groups, at least six observed
+PostgreSQL lock races, at least180 checks and cleanup true. Compare the receipt
+commit values: both authoritative cycles must use the same committed SHA. The
+proof covers Free1/Pro3/Max5/Master5, 50-request same-User bursts, separate-User
+independence, full-limit replay, settle/release slot return and zero provider/
+enqueue side effects for rejected Prompt, generation, retry and pipeline calls.
+
+This is a mock admission/correctness proof, not a Vertex throughput or cloud quota
+benchmark. Never substitute one successful cycle or an individual ownership suite
+for the required two concurrency cycles and ownership `--suite all --cycles 2`.

@@ -237,6 +237,7 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     [
         ("monthly_credit_exhausted", 402),
         ("plan_feature_not_allowed", 403),
+        ("user_concurrency_limit", 429),
         ("credit_idempotency_conflict", 409),
         ("prompt_enhancement_in_progress", 409),
         ("prompt_enhancement_terminal", 409),

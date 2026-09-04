@@ -77,9 +77,36 @@ paste credential contents.
 
 ## Active Work
 
+### G8 execution — 2026-09-05
+
+- **Mock Verified locally; Ready PR delivery pending.** [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129)
+  implements the [accepted G8 contract](initiatives/g8-user-concurrency-enforcement-spec.md)
+  on branch `codex/issue-129-user-concurrency-enforcement` from G7 squash
+  `0a88b94`. Code revision `4e8132a` changes 14 approved non-document paths and
+  zero migrations.
+- `credit_accounting.reserve` now treats every held Reservation as one durable
+  top-level slot under the existing User lock. Replay precedes Plan concurrency,
+  which precedes Credit allocation; Free/Pro/Max are1/3/5 and Master is5.
+  Prompt, standalone generation, retry and pipeline share the rule; pipeline
+  keeps one parent slot and terminal settle/release returns it atomically.
+- Two final isolated concurrency cycles at the same SHA each passed 8 groups,
+  6 observed races and259 checks with cleanup zero. Same-User bursts of at least50
+  never exceeded the Plan limit; cross-User independence, full-limit replay,
+  slot return and HTTP429/provider-enqueue-zero behavior passed.
+- Accounting, lifecycle, prompt-credit, generation-credit and auth verifiers each
+  passed. Ownership `--suite all --cycles 2` completed ownership2 + file-ops2
+  cycles. Tracked-only Linux passed1506/3 guarded skips; Windows passed1505/3
+  skips and reproduced only the existing Bash absolute-path exception. Compose,
+  frontend lint/build, Session48 and Chromium34 passed.
+- Detailed problem, failed proof assumptions, design trade-offs, numeric results
+  and residual risks are in the [Issue129 portfolio record](portfolio/issue-129-user-concurrency-enforcement.md).
+  Evidence is Mock Verified, not live Vertex throughput/cloud quota. Remaining
+  delivery gate: Ready PR, final-head required3 CI, protected squash merge,
+  Issue closure and local `main` synchronization.
+
 ### G7 execution — 2026-09-04
 
-- **Mock Verified locally; delivery in progress.** G6 [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
+- **Mock Verified — Merged.** G6 [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
   passed final-head verify and both Scan/SBOM checks and squash-merged as
   `a6d9656`; Issue124 is closed. A later docs-only PR was closed because the
   path-filtered required Scan checks do not attach to documentation-only PRs;
@@ -108,10 +135,10 @@ paste credential contents.
   Chromium34 passed; Compose with `.env.example` passed. Bare Compose was not
   asserted on this checkout because the intentionally absent local `.env` leaves
   required database variables undefined; no secret-bearing file was created.
-- Todo1–8 and local F1–F4 are APPROVE. Remaining delivery gate is a Ready PR,
-  final-head required `verify` and both Scan/SBOM checks, protected squash merge,
-  and actual Issue127 closure. Evidence remains **Mock Verified**, not Vertex or
-  live GCP billing verified.
+- Todo1–8/F1–F4 completed and [PR128](https://github.com/bbungjun/AI_multimodal_platform/pull/128)
+  passed final-head required `verify` plus both Scan/SBOM checks before protected
+  squash merge `0a88b94`; Issue127 closed. Evidence remains **Mock Verified**, not
+  Vertex or live GCP billing verified.
 
 ### G6 execution — 2026-09-04
 

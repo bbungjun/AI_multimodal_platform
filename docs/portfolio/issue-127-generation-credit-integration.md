@@ -2,10 +2,10 @@
 
 ## Evidence status
 
-`Mock Verified locally` at implementation revision `7e795c2`. Delivery remains
-open until the Ready PR's required `verify` and backend/frontend Scan/SBOM checks
-succeed and branch protection completes the squash merge. No Vertex request,
-cloud deployment or real GCP billing verification was performed.
+`Mock Verified — Merged` at implementation revision `7e795c2`. Ready PR128 passed
+required `verify` and backend/frontend Scan/SBOM before protected squash merge
+`0a88b94`; Issue127 closed. No Vertex request, cloud deployment or real GCP
+billing verification was performed.
 
 ## Background and problem
 
