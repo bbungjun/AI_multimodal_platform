@@ -115,8 +115,8 @@ def admission_proof(runtime, identity):
         # Real DB fault after Job insertion proves transaction rollback for outbox writers.
         runtime.admission_fixture("arm_commit_failure")
         fault_actor = identity.client(runtime.base_url,"master")
-        for path,payload in (routes[0],routes[2],routes[3]):
-            fault_actor.request_bytes("POST",path,payload=payload,expected_status=500)
+        for client,(path,payload) in ((fault_actor,routes[0]),(fault_actor,routes[2]),(actor_a,routes[3])):
+            client.request_bytes("POST",path,payload=payload,expected_status=500)
             checks += 1
         runtime.admission_fixture("disarm_commit_failure")
         if runtime.admission_fixture("counts") != before:
