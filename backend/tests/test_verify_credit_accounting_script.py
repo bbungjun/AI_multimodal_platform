@@ -166,5 +166,3 @@ def test_cli_does_not_accept_target_source_or_cleanup_bypass():
     for flag in ("--project-name","--dsn","--source","--keep-volumes","--evidence-dir"):
         with pytest.raises(SystemExit):
             m.main([flag,"fixture"])
-
-
