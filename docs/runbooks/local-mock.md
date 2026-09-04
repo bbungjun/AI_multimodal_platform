@@ -575,11 +575,12 @@ The default command proves ownership only; final G4.3B requires explicit all.
 Unattended `/metrics` now returns401 without a Session; do not add a scrape bypass.
 Ready PR, final-head CI and actual merge remain separately linked from Issue112.
 
-## G5A/G5B credit schema, lifecycle proof and safe rollback
+## G5A/G5B/G5C1 credit schema, lifecycle proof and safe rollback
 
-Current code packages `0005_credit_lifecycle_operations`. G5A creates empty credit
-account/cycle/grant/ledger tables;0005 adds immutable operation receipts. Neither
-migration backfills Users nor connects generation. Start or migrate only an explicitly
+Current code packages `0006_credit_accounting_persistence`. G5A creates empty credit
+account/cycle/grant/ledger tables;0005 adds immutable operation receipts;0006 adds
+four empty reservation/item/allocation/Usage tables and mutation guards. None of
+these migrations backfills Users or connects generation. Start or migrate only an explicitly
 chosen environment after checking its revision; Goal verification never migrates
 the developer or preview database.
 
@@ -592,15 +593,23 @@ Downgrade acquires bounded exclusive locks and proceeds only when all four credi
 tables are empty. If any contains data, `credit_foundation_requires_empty_tables`
 is the expected safe refusal: preserve the records and deploy a reviewed forward
 fix. Never disable the ledger triggers or delete accounting rows to force rollback.
-Never invoke lifecycle writes manually against a user DB. Validate G5B only with:
+For0006, downgrade to0005 is permitted only when all four accounting tables are
+empty; any row causes `credit_accounting_requires_empty_tables`. Preserve populated
+data and use a reviewed forward fix. Never disable triggers or delete rows merely
+to make downgrade pass. Alembic's control column stays widened so the approved
+34-character revision can safely transition back to0005.
+
+Never invoke lifecycle or accounting writes manually against a user DB. Validate
+G5B compatibility only with:
 
 ```powershell
 python scripts/verify_credit_lifecycle.py --env-file .env.example
 ```
 
-Run it twice. Each invocation owns a fresh project and proves lazy renewal,
+For G5C1 run it once after two schema verifier cycles. The invocation owns a fresh project and proves lazy renewal,
 Plan/bonus/replay/expiry, caller rollback and eight observed lock races. Populated
-operations deliberately block downgrade to0004. G5B does not debit generation.
+operations deliberately block downgrade to0004. G5B and G5C1 do not debit generation;
+reserve/settle/release remains G5C2.
 
 ## Stop
 

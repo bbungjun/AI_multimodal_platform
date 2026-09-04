@@ -243,10 +243,12 @@ document or inherit the full design interview.
 | G4.3 | Complete ownership access enforcement | Mock Verified — Merged | [Accepted policy/split](g4-ownership-access-control-spec.md), [parent109 closure](https://github.com/bbungjun/AI_multimodal_platform/issues/109#issuecomment-5525431496) | A PR111 and B PR113 actually merged; aggregate G4 closed. No live/public multi-user deployment claim |
 | G4.3A | Metadata ownership access and safe deletion | Mock Verified — Merged | [Issue110](https://github.com/bbungjun/AI_multimodal_platform/issues/110), [PR111](https://github.com/bbungjun/AI_multimodal_platform/pull/111) squash cd654e5, [record](../portfolio/issue-110-metadata-ownership-access.md) | Exact16/migration0/head0003; implementation acb44a9; two real cycles337.73/338.12s, each access8/checks348/delete-race2 plus prior groups, cleanup0. Linux928/3 existing skips, frontend48+34. Final head5738c0d all3 required CI SUCCESS; B receives read/batch/cache/client Interfaces |
 | G4.3B | File/Range, Master ops and final proof | Mock Verified — Merged | [PR113](https://github.com/bbungjun/AI_multimodal_platform/pull/113) squash6537025, [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/112#issuecomment-5525436934), [record](../portfolio/issue-112-file-ops-access.md) | Original No-Go preserved; v2 c05b815 aggregate4/998.187s, each legacy348/races2 or FOVE310/A-B10, cleanup0. Schema2/auth1/Linux1128/frontend48+34 PASS. Final head8aa6ba8 all3 required CI SUCCESS; Issues112/109 closed |
-| G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned — split A/B/C | [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114), [split spec](g5-credit-foundation-spec.md) | Aggregate requires all three children; not closed by foundation alone |
+| G5 | Credit account, Plan lifecycle, Rate Card, Reservation and Settlement | Planned — split A/B/C1/C2 | [Parent114](https://github.com/bbungjun/AI_multimodal_platform/issues/114), [split spec](g5-credit-foundation-spec.md) | Aggregate requires A, B and both C slices; not closed by persistence alone |
 | G5A | Credit persistence and pure Plan/rate/time policy | Mock Verified — Merged | [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118), [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729), [record](../portfolio/issue-115-credit-foundation.md) | Squash a003257; final b940be2 required3 CI SUCCESS. Exact17/migration1; schema2/credit90/races3, auth1, ownership all4/993.610s, Linux1229/frontend48+34/cleanup0. No automatic credit or product wiring |
-| G5B | Account initialization, 30-day cycles, Plan transitions and grants | Locally Mock Verified — delivery pending | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119), [spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | code65cdbb4; exact20/new0005; schema2 credit90/races3, lifecycle2 groups8/races8/checks320, auth1, ownership-file4, Linux1321, frontend48+34. No billing wiring; final-head CI/merge pending |
-| G5C | Reservation allocations, Usage and atomic settlement/release | Planned — blocked by G5B | [Issue117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [planning envelope](g5-credit-foundation-spec.md#7-successor-planning-envelopes-not-executable-goals) | Consume B's caller-owned transaction Interface; freeze own Goal after merge. G6/G7 product wiring and G8 concurrency remain separate |
+| G5B | Account initialization, 30-day cycles, Plan transitions and grants | Mock Verified — Merged | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119), [spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | Squash ffc4b50; final head7ab6254 required3 CI SUCCESS and exact tree match. Exact20/new0005; schema2, lifecycle2, auth1, ownership-file4, Linux1321/frontend48+34. No billing wiring |
+| G5C | Reservation allocations, Usage and atomic settlement/release | Planned — split C1/C2 | [Parent117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [frozen aggregate spec](g5-credit-accounting-spec.md) | Minimum22 paths exceeded one Goal; C1 owns schema/head compatibility, C2 owns one accounting Module. G6/G7 wiring stays separate |
+| G5C1 | Reservation/allocation/Usage persistence and head compatibility | Mock Verified locally — delivery pending | [Issue120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), [record](../portfolio/issue-120-credit-accounting-persistence.md) | Final tested b4ce32e; exact20/new0006, schema2 accounting42/downgrade4, lifecycle8/races8, auth1, ownership-file4, Linux1347/frontend48+34, cleanup0. No writer/product wiring; Ready PR/required3 CI/merge remain Todo8 |
+| G5C2 | Atomic reserve, settle, release and PostgreSQL proof | Planned — blocked by C1 | [Issue121](https://github.com/bbungjun/AI_multimodal_platform/issues/121), [aggregate spec](g5-credit-accounting-spec.md) | Zero migration; exact paths/Goal freeze only after C1 merge |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
 | G8 | Atomic per-User concurrency enforcement | Planned | None | Blocked by G7 |
@@ -385,6 +387,20 @@ accounting access does not authenticate users or expose public Master mutations.
 The bounded B Module is now implemented and undergoing isolated verification;
 no B/C product wiring or charged-generation behavior is claimed.
 
+### G5C split and policy freeze — 2026-09-04
+
+G5B actually merged through PR119 at ffc4b50. Repository inspection found that
+moving the packaged schema from0005 to0006 affects 15 existing proof/harness paths;
+combining them with a new accounting Module and verifier requires at least22 code
+paths. G5C is therefore split into C1 Issue120 (four empty accounting tables and
+all head compatibility, exact20 paths, one migration) and C2 Issue121 (three-operation
+accounting Module and PostgreSQL races, zero migration). The accepted settlement
+policy records original units separately, charges complete/partial deliverables,
+releases all credit for no deliverable, rejects usage above a bounded reservation,
+and sends expired-grant remainder to expired rather than available. Details and
+failure matrices are frozen in [the aggregate spec](g5-credit-accounting-spec.md).
+This is design/Goal preparation, not implementation or charged-generation evidence.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
@@ -403,18 +419,17 @@ mode:
 
 ## Next Goal
 
-G5A Issue115 is actually merged at a003257. **G5B Issue116** is in progress on
-`codex/issue-116-credit-lifecycle`, with [spec](g5-credit-lifecycle-spec.md),
-exact20 paths, one additive migration, Todo1–8/F1–F4 and a frozen local Goal.
-Read [current-work](../current-work.md) for its SHA and first verification command.
-Execution approval is recorded; completion still requires every frozen runtime
-and delivery gate, not merely the existence of the Module.
+G5A Issue115 and G5B Issue116 are actually merged. **G5C1 Issue120** is Mock
+Verified locally on `codex/issue-120-credit-accounting-persistence` with exact20
+paths, one additive0006 migration, two accounting schema cycles and all inherited
+regressions. Its next action is Ready PR, required3 final-head CI and protected
+squash merge. This persistence result is not reserve/settle/release capability.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
 parent109 is closed. G5A supplies no automatic account/grant/renewal/charge.
-G5B/C execution plans are refined after predecessors merge; G6/G7 connect their
-accounting Interface to generation. Parent114 remains open until A/B/C complete.
+G5C2 freezes only after C1 actually merges; G6/G7 then connect the accounting Interface to
+generation. Parents117/114 remain open until both C slices complete.
 
 Live operation remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
 real OAuth/browser/proxy verification and a machine-metrics access contract.

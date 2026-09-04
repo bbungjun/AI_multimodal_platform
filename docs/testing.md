@@ -258,7 +258,7 @@ python -m pytest `
   tests/test_verify_schema_migrations_script.py -q
 ```
 
-The packaged head must be exactly `0005_credit_lifecycle_operations`. Application
+The packaged head must be exactly `0006_credit_accounting_persistence`. Application
 startup checks are read-only and must return a typed failure for a missing,
 empty, outdated, multiple-head, or unreachable schema.
 
@@ -282,6 +282,14 @@ downgrade-to-G1 preservation, full-chain round trip, three-process stale
 revision refusal/recovery, identity-aware reset, and exact cleanup. The mock
 product golden path passed under `schema-verify-golden02`. These results support
 `Mock Verified` persistence, not OAuth, cloud, or Vertex verification.
+
+At G5C1 final local checkpoint `b4ce32e`, run the same verifier twice with
+`--include-reset`. Each independent receipt must additionally report
+`accounting_checks=42`, `accounting_downgrade_cases=4`, accounting mutation guards,
+stale lifecycle revision recovery, and cleanup pass with exact project resources0.
+The existing G5B lifecycle verifier remains a separate one-run compatibility gate;
+it does not prove reserve/settle/release behavior. G5C1 verifies only persistence
+and current-head compatibility.
 
 ## GitHub Actions CI
 

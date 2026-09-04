@@ -77,9 +77,43 @@ paste credential contents.
 
 ## Active Work
 
+### G5C1 execution — 2026-09-04
+
+- **Mock Verified locally — Todo1–7 and F1–F3 complete; Ready PR/CI/merge pending.**
+  Goal SHA matched and final tested source is `b4ce32eb7f4dff7c15a9d726b4d2ec77d5e4e3ff`.
+  Exactly 20 approved non-document paths changed, exactly one additive migration
+  `0006_credit_accounting_persistence` was added, and migrations0001–0005 are
+  unchanged. Four empty accounting tables, owner FKs, finite shapes, terminal and
+  append-only guards, and populated downgrade refusal are implemented. No reserve,
+  settle or release writer and no generation billing integration exists.
+- Final-SHA schema/accounting projects `schema-verify-060a7279e7e9` and
+  `schema-verify-22cdaa7caec2` passed: accounting42 checks/four downgrade cases,
+  existing credit90/three races, stale0005 refusal/recovery, guarded reset and
+  cleanup0. Work/cleanup were 164.015/1.922s and 168.000/1.922s.
+- Lifecycle passed eight groups/eight races/320 checks; auth passed real local
+  PostgreSQL/Redis/outage recovery with 50 authentication requests and 7.547ms p95.
+  Ownership `--suite all --cycles 2` passed four projects: each ownership cycle
+  retained access348/delete-race2 and each file cycle retained F/O/V/E310/two
+  actors/all ten stages. Aggregate was 1010.828s and exact resources were zero.
+- Linux backend passed **1347 / 3 guarded skips**. Windows passed **1346 / 3
+  guarded skips** with only the known Bash path conversion native127 exception;
+  the same test failed identically on an untouched base archive. Compose config,
+  frontend lint/build, Session48 and Chromium34 all passed.
+- Runtime exposed three proof defects before the final pass: Alembic's default
+  32-character revision column rejected the approved 34-character ID; accounting
+  FK/index names were absent from inventory; and proof fixtures used a non-awaited
+  snapshot plus PK/vocabulary collisions before intended owner FKs. Fixes widen
+  only Alembic's control column, complete inventory, and use awaited counts and
+  valid distinct keys. Every failed isolated project also cleaned to zero.
+- Frozen local plan `.omo/plans/issue-120-g5c1-credit-accounting-persistence-goal.md`;
+  SHA256 `d55cad9eba3013706dfd6554894c78af40ef927ed8c03352fbca062c3463f8cc`.
+  `.omo` remains untracked/unstaged. Next is Todo8: push, Ready PR, exact-final-head
+  verify plus backend/frontend Scan/SBOM, protected squash auto-merge, then confirm
+  only Issue120 closes. Issues121/117/114 remain open.
+
 ### G5B execution — 2026-09-04
 
-- **Locally Mock Verified — Todo1–7 complete; delivery pending.** User approved spec section3 and
+- **Mock Verified — Merged.** User approved spec section3 and
   matching frozen Goal SHA. Baseline446 PASS/2.39s; main unchanged a003257,
   starting checkpoint8e2f3fb. Local Docker desktop-linux/npipe confirmed,
   preview4 and developer/preview DB/assets preserved. Operation0005 and lifecycle
@@ -89,7 +123,9 @@ paste credential contents.
   cycles passed with independent cleanup0. Linux1321 PASS/3 guarded skips;
   Windows1320 PASS plus sole known native127 Bash-path failure reproduced on
   untouched a003257. Frontend lint/build/Session48/Chromium34 PASS.
-  Final review C102/M23/H413/B0452 PASS; F1–F3 APPROVE, F4 delivery pending.
+  Final review C102/M23/H413/B0452 PASS; F1–F4 APPROVE after PR119 final-head
+  required3 CI success and protected squash `ffc4b50`. Tested final head7ab6254
+  and merged squash have an identical tree; Issue116 is closed.
   [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116),
   branch `codex/issue-116-credit-lifecycle`; main synchronized to actual G5A
   squash `a003257c88e09d3e5404a73b44ebdf6deb4650db`. Existing .omo preserved.
@@ -106,13 +142,13 @@ paste credential contents.
   Execution request approves spec section3 refinements. Todo1–8/F1–F4 require
   schema2/lifecycle2/auth1/ownership all2, full Linux/backend/frontend and final
   required3 CI/Ready PR/protected squash actual MERGED. Parent114/117 stay open.
-  PR119 is Ready; next: last docs push, final-head CI and protected squash delivery.
+  PR119 merged; parent114 and G5C parent117 remain open.
 - First execution checks: Goal SHA, branch/base, clean tracked/index, B0.
   Fresh preparation B0 **446 PASS/3.01s**, final1.77s; exact20/24 acceptance IDs/
   command syntax11/link101/SHA/static Compose checks PASS. No G5B proof claim. No Docker runtime,
   development/preview migration/reset, actual OAuth/provider/cloud during preparation.
   That preparation used head0004. Current implementation packages0005; actual
-  lifecycle/local regressions are complete; delivery remains pending.
+  lifecycle/local regressions and delivery are complete.
 
 ### G5A execution — 2026-09-04
 
