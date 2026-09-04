@@ -77,9 +77,32 @@ paste credential contents.
 
 ## Active Work
 
+### G9A execution preparation — 2026-09-05
+
+- **Goal Prepared; implementation not started.** G8 [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)
+  passed final-head `verify` and both Scan/SBOM checks and protected squash-merged
+  as `b050320`; Issue129 is closed and local `main` was synchronized while the
+  existing untracked `.omo/` tree remained untouched.
+- [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131) and
+  branch `codex/issue-131-personal-usage-read-model` start from `b050320`.
+  The [accepted G9A spec](initiatives/g9a-personal-usage-read-model-spec.md)
+  defines one authenticated `GET /api/usage/me` Interface backed by one deep
+  `personal_usage` Module. It returns Plan/cycle/balance/concurrency and fixed
+  seven-meter current-cycle Usage without a User selector or cross-owner scope.
+- Exact execution ceiling is11 non-document paths and zero migrations. G9B
+  frontend, historical pagination, Plan/Master/Audit/payment/seed mutations,
+  real OAuth/provider/cloud and infrastructure are excluded. Current Usage rows
+  do not retain an exact provider model for every record, so the accepted truthful
+  dimension is billing meter; no model is inferred from prompt or Job metadata.
+- Preparation baseline with `AI_PROVIDER=mock`: credit policy/lifecycle/accounting,
+  auth HTTP and ownership integration **273 passed / 1 guarded skip in3.87s**.
+  The frozen Goal must require personal-usage PostgreSQL proof2, inherited
+  lifecycle/accounting/G8/auth/ownership and full regressions, documentation,
+  Ready PR, final CI and protected squash merge.
+
 ### G8 execution — 2026-09-05
 
-- **Mock Verified locally; Ready PR delivery pending.** [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129)
+- **Mock Verified — Merged.** [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129)
   implements the [accepted G8 contract](initiatives/g8-user-concurrency-enforcement-spec.md)
   on branch `codex/issue-129-user-concurrency-enforcement` from G7 squash
   `0a88b94`. Code revision `4e8132a` changes 14 approved non-document paths and
@@ -101,8 +124,9 @@ paste credential contents.
 - Detailed problem, failed proof assumptions, design trade-offs, numeric results
   and residual risks are in the [Issue129 portfolio record](portfolio/issue-129-user-concurrency-enforcement.md).
   Evidence is Mock Verified, not live Vertex throughput/cloud quota. Remaining
-  delivery gate: Ready PR, final-head required3 CI, protected squash merge,
-  Issue closure and local `main` synchronization.
+  delivery completed through [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130):
+  final-head required3 CI succeeded and protected auto-merge produced squash
+  `b050320`; Issue129 closed and local `main` matched `origin/main`.
 
 ### G7 execution — 2026-09-04
 

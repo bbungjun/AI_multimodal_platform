@@ -98,6 +98,9 @@ p95/p99와 실제 provider throughput은 mock PostgreSQL admission proof로 의�
 - 공개 오류는 안전한 429 코드로 고정되고, 거절 시 provider 호출과 새 영속 row가 0이다.
 - Evidence level: **Mock Verified**. 실제 Vertex 처리량, cloud quota 또는 GCP 과금
   검증이 아니다.
+- Delivery: [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)의
+  최종 head에서 `verify`와 양쪽 Scan/SBOM이 성공한 뒤 보호된 squash auto-merge
+  `b050320`으로 완료됐고 Issue129가 닫혔다.
 
 ## Evidence Artifacts
 

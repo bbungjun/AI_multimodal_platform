@@ -185,6 +185,7 @@ zero. The inherited accounting, lifecycle, prompt-credit, generation-credit,
 auth and ownership-all2 gates plus full Linux/Windows/Compose/frontend regressions
 passed as recorded in `docs/portfolio/issue-129-user-concurrency-enforcement.md`.
 
-Status is **Mock Verified locally**. Ready PR final-head CI and protected merge
-remain delivery gates at the time of this record; live Vertex throughput, cloud
-quota and held-reservation recovery remain unverified.
+Status is **Mock Verified — Merged**. [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)
+passed final-head `verify` and both Scan/SBOM checks before protected squash
+auto-merge `b050320`; Issue129 closed. Live Vertex throughput, cloud quota and
+held-reservation recovery remain unverified.
