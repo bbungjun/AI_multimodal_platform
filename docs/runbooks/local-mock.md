@@ -680,3 +680,22 @@ recovery incident.
 
 The verifier refuses private env files and forces `AI_PROVIDER=mock`; it must not
 be used as evidence of live Vertex capacity, GCP quota or provider billing.
+
+## Verify personal Plan and usage reads
+
+Keep development and preview databases unchanged. The G9A verifier creates and
+destroys a separate labelled PostgreSQL project and accepts no target/DSN/source
+or keep-volume override:
+
+```powershell
+$env:AI_PROVIDER = "mock"
+python scripts/verify_personal_usage.py --env-file .env.example
+```
+
+A pass requires schema head0006, all eight fixed groups, at least three observed
+lock races, at least160 checks and container/volume/network cleanup zero. Run it
+twice at the same committed code SHA for release evidence. `GET /api/usage/me`
+uses the authenticated actor only; `usage_busy` is retryable contention and
+`usage_unavailable` is a fail-closed accounting response. Do not repair grant or
+Reservation rows to make a read succeed. This verifier is not evidence for the
+G9B UI, live OAuth, exact provider model usage, cloud quota or provider billing.

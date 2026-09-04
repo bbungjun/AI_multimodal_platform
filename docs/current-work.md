@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G9A execution — 2026-09-05
 
-- **In Progress.** The frozen Goal integrity gate passed at SHA-256
+- **Mock Verified locally; protected delivery pending.** The frozen Goal integrity gate passed at SHA-256
   `c7fc9f7…733cc`; branch/head, `origin/main`, Docker `desktop-linux`, empty
   staged paths and the preserved untracked `.omo/` tree were confirmed before
   implementation. The first focused verification is the Todo1 personal-usage
@@ -104,6 +104,28 @@ paste credential contents.
   The frozen Goal must require personal-usage PostgreSQL proof2, inherited
   lifecycle/accounting/G8/auth/ownership and full regressions, documentation,
   Ready PR, final CI and protected squash merge.
+- Code revision `d103a44` adds one transaction-composable `personal_usage`
+  Module and one authenticated `GET /api/usage/me` Interface. The route has no
+  selector/body/scope and returns only current Plan/pending Plan, exact 30-day
+  cycle, available/held Credit, active/limit and seven fixed billing meters.
+  Every `/api/usage` response is `private, no-store`; inconsistent projections,
+  unknown dimensions and integer overflow fail closed.
+- Two independent personal-usage PostgreSQL cycles at the same code SHA each
+  passed 8 groups, 3 observed User-lock races and 451 checks with cleanup zero.
+  Work/cleanup were 38.500/2.750s and 15.984/2.859s. Lifecycle320/8 races,
+  accounting299/8, concurrency259/6, prompt-credit35/1, generation-credit120/2
+  and auth Postgres/Redis all passed. Ownership all2 completed four aggregate
+  cycles in 592.078s with cleanup zero.
+- Tracked-only Linux passed 1558 tests with 3 guarded skips in 5.34s. Native
+  Windows passed 1557 with 3 guarded skips and reproduced only the existing
+  Bash absolute-path exception. Compose, frontend lint/build, Session48 and
+  Chromium34 passed. An initial Compose invocation used the frontend working
+  directory and could not find the root template; the corrected root invocation
+  passed and no product change was needed.
+- Detailed reasoning, failed/rejected approaches, commands and residual risks
+  are in [the Issue131 portfolio record](portfolio/issue-131-personal-usage-read-model.md).
+  Evidence is Mock Verified only. G9B UI, exact provider-model attribution,
+  live OAuth/Vertex/cloud throughput and external billing remain unverified.
 
 ### G8 execution — 2026-09-05
 

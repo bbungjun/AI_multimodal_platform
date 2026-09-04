@@ -253,7 +253,7 @@ document or inherit the full design interview.
 | G7 | Imagen/Veo and pipeline credit integration | Mock Verified — Merged | [Issue127](https://github.com/bbungjun/AI_multimodal_platform/issues/127), [PR128](https://github.com/bbungjun/AI_multimodal_platform/pull/128), [accepted spec](g7-generation-credit-integration-spec.md), [portfolio record](../portfolio/issue-127-generation-credit-integration.md) | Code `7e795c2`; exact19/migration0, generation-credit2 each8 groups/races2/checks120, inherited ownership all4 cycles and full regressions passed. Final required3 CI succeeded; squash `0a88b94`; no live provider claim |
 | G8 | Atomic per-User concurrency enforcement | Mock Verified — Merged | [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129), [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130), [accepted spec](g8-user-concurrency-enforcement-spec.md), [portfolio record](../portfolio/issue-129-user-concurrency-enforcement.md) | Code `4e8132a`; concurrency2 each8 groups/races6/checks259 and full regressions passed. Final head `b8292ad` required3 CI succeeded; protected squash `b050320`; Issue129 closed |
 | G9 | Personal Plan and Usage experience | Split — A prepared, B planned | [G9A Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [G9A spec](g9a-personal-usage-read-model-spec.md) | G9A backend read Interface first; G9B existing-style frontend after A merge |
-| G9A | Personal Plan and Usage read model | In Progress | [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), branch `codex/issue-131-personal-usage-read-model`, [accepted spec](g9a-personal-usage-read-model-spec.md) | Starts at G8 squash `b050320`; exact11/migration0, local mock-only; first gate is the personal-usage Module/API RED contract suite |
+| G9A | Personal Plan and Usage read model | Mock Verified — delivery pending | [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [accepted spec](g9a-personal-usage-read-model-spec.md), [record](../portfolio/issue-131-personal-usage-read-model.md); code `d103a44` | One Module/one GET Interface; 10 changed of exact11 allowlisted paths, migration0; personal usage2 each8 groups/races3/checks451, inherited ownership4/Linux1558/frontend48+34; no G9B/live provider claim |
 | G9B | Personal Plan and Usage frontend | Planned | Consumes only the G9A Interface | Existing UI/CSS, responsive states and browser proof; no backend accounting joins |
 | G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Planned | None | Blocked by G3, G4, G5, G8 |
 | G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned | None | Blocked by G1-G10, including G3.1 |
@@ -495,11 +495,11 @@ mode:
 
 ## Next Goal
 
-G5–G8 are merged. **G9A Issue131** is execution-prepared on
-`codex/issue-131-personal-usage-read-model` from G8 squash `b050320`. Its
-exact11/migration0 Goal adds the authenticated personal Plan, cycle, balance,
-concurrency and fixed-meter Usage read Interface. G9B frontend and G10 Master/
-Audit remain separate downstream slices.
+G5–G8 are merged. **G9A Issue131** is locally Mock Verified at code `d103a44`.
+Its exact11-allowlist/migration0 Goal adds the authenticated personal Plan,
+cycle, balance, concurrency and fixed-meter Usage read Interface. Protected
+delivery is still required before G9B begins. G9B frontend and G10 Master/Audit
+remain separate downstream slices.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
