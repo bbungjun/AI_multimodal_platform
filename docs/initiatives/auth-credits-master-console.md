@@ -3,7 +3,7 @@
 ## Document Contract
 
 - Status: `Accepted / Planned`
-- Last updated: `2026-09-04`
+- Last updated: `2026-09-05`
 - This document is the single source of truth for the initiative-wide product
   decisions, invariants, Goal order, and current progress.
 - Implementation details that apply to only one Goal belong in that Goal's
@@ -251,8 +251,10 @@ document or inherit the full design interview.
 | G5C2 | Atomic reserve, settle, release and PostgreSQL proof | Mock Verified — Merged | [Issue121](https://github.com/bbungjun/AI_multimodal_platform/issues/121), [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123), [aggregate spec](g5-credit-accounting-spec.md), [execution record](../portfolio/issue-121-credit-accounting-module.md) | Code41b1bf3 exact6/migration0; accounting2 each8 groups/races8/299 checks, schema/lifecycle/auth/ownership-all2, Linux1429, frontend48+34 PASS and cleanup0. Required3 CI succeeded; squash `5e56ecb`, Issues121/117/114 closed. No generation billing caller |
 | G6 | Gemini prompt-enhancement credit integration | Mock Verified — Merged | [Issue124](https://github.com/bbungjun/AI_multimodal_platform/issues/124), [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125), [accepted spec](g6-gemini-credit-integration-spec.md) | Final code `87dca6b`; exact14/migration0, prompt-credit2, ownership all4 cycles, Linux1461 and frontend regressions passed. Final head `c0d65cb` required verify plus both Scan/SBOM succeeded; squash `a6d9656`; Issue124 closed |
 | G7 | Imagen/Veo and pipeline credit integration | Mock Verified — Merged | [Issue127](https://github.com/bbungjun/AI_multimodal_platform/issues/127), [PR128](https://github.com/bbungjun/AI_multimodal_platform/pull/128), [accepted spec](g7-generation-credit-integration-spec.md), [portfolio record](../portfolio/issue-127-generation-credit-integration.md) | Code `7e795c2`; exact19/migration0, generation-credit2 each8 groups/races2/checks120, inherited ownership all4 cycles and full regressions passed. Final required3 CI succeeded; squash `0a88b94`; no live provider claim |
-| G8 | Atomic per-User concurrency enforcement | Mock Verified locally — delivery pending | [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129), [accepted spec](g8-user-concurrency-enforcement-spec.md), [portfolio record](../portfolio/issue-129-user-concurrency-enforcement.md) | Code `4e8132a`; 14 approved paths/migration0, concurrency2 each8 groups/races6/checks259, inherited ownership all4 cycles and full regressions passed; Ready PR/final CI/merge remain |
-| G9 | Personal Plan and Usage UI | Planned | None | Blocked by G6, G7 |
+| G8 | Atomic per-User concurrency enforcement | Mock Verified — Merged | [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129), [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130), [accepted spec](g8-user-concurrency-enforcement-spec.md), [portfolio record](../portfolio/issue-129-user-concurrency-enforcement.md) | Code `4e8132a`; concurrency2 each8 groups/races6/checks259 and full regressions passed. Final head `b8292ad` required3 CI succeeded; protected squash `b050320`; Issue129 closed |
+| G9 | Personal Plan and Usage experience | Split — A prepared, B planned | [G9A Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [G9A spec](g9a-personal-usage-read-model-spec.md) | G9A backend read Interface first; G9B existing-style frontend after A merge |
+| G9A | Personal Plan and Usage read model | Mock Verified — [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132) | [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [accepted spec](g9a-personal-usage-read-model-spec.md), [record](../portfolio/issue-131-personal-usage-read-model.md); code `d103a44` | One Module/one GET Interface; 10 changed of exact11 allowlisted paths, migration0; personal usage2 each8 groups/races3/checks451, inherited ownership4/Linux1558/frontend48+34; no G9B/live provider claim |
+| G9B | Personal Plan and Usage frontend | Planned | Consumes only the G9A Interface | Existing UI/CSS, responsive states and browser proof; no backend accounting joins |
 | G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Planned | None | Blocked by G3, G4, G5, G8 |
 | G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned | None | Blocked by G1-G10, including G3.1 |
 
@@ -328,6 +330,7 @@ At the end of a Goal:
 | 2026-09-03 | Proposed, not accepted: split G4.2 into A persistence/admission and B worker/reference proof; keep product policy and one total migration. | Post-G4.1 inspection found missing harness-head, identity-column and handler/runtime paths in the old20-path estimate. Detailed spec records exact candidates and approval gate; no implementation started. |
 | 2026-09-03 | User accepted G4.2A/B split and authorized A execution preparation only. Issue #105 and branch created from synchronized main4dd359a; A frozen Goal fixes20 paths, one migration, Todo1–8/F1–F4. | Preserve prior design, bound one delivery slice for sol/medium, retain real schema2/auth1/admission2 gates. Future execution ends Ready PR, final-head CI and actual squash merge; no implementation or DB operations during preparation. |
 | 2026-09-03 | After A actually merged, user requested proceeding to B. Prepared Issue107/branch/frozen Goal with exact11 paths (original10 plus guarded execution helper), migration0 and explicit worker/pipeline/observed-lock proof. | Same ownership policy; separate test helper keeps proof and identity fixtures local and readable. Preparation only, no B implementation or Docker/DB operation. Execution requires the frozen SHA request. |
+| 2026-09-05 | Recorded G8 protected merge and split G9 into A backend personal-usage read model and B frontend. Prepared G9A Issue131 with one `GET /api/usage/me` Interface, exact11 paths and migration0. | Existing Usage rows truthfully support fixed billing-meter aggregation, not inferred exact provider models. Separating the read Module from UI keeps both Goals bounded and prevents frontend accounting joins. |
 
 2026-09-03 proposal update (not an accepted Decision Change): following B actual merge
 at `c84394a`, Issue109 records G4.3A/B split candidates because the existing transport
@@ -459,6 +462,21 @@ Ready PR final head passes required `verify` and both Scan/SBOM checks and merge
 through branch protection. This is not live Vertex usage, cloud billing, HTTP
 create-request idempotency or orphan-file reconciliation evidence.
 
+### G8 delivery and G9 split — 2026-09-05
+
+G8 [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)
+passed its final-head required three checks and protected squash-merged as
+`b050320`; Issue129 closed. The G8 proof remains Mock Verified, not a live
+provider or cloud-capacity result.
+
+G9 is split into G9A backend read model and G9B frontend. G9A Issue131 defines
+one deep `personal_usage` Module and authenticated `GET /api/usage/me` Interface
+over existing schema head0006. The response uses a fixed billing-meter dimension
+because persistence does not truthfully retain an exact provider model for every
+Usage row. Exact11 non-document paths, migration0, local mock-only verification
+and no User selector keep the backend slice bounded. G9B begins only after G9A
+merges and consumes that Interface without direct accounting-table knowledge.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have
@@ -477,11 +495,12 @@ mode:
 
 ## Next Goal
 
-G5A/B/C1/C2 and G6 are actually merged. **G7 Issue127** is Mock Verified locally
-on `codex/issue-127-generation-credit-integration`; its exact19/migration0
-implementation wires the accounting Interface to Imagen, Veo and their pipeline.
-Ready PR CI and protected merge remain; this is not live Vertex or GCP billing
-evidence. Once merged, G8 atomic per-User concurrency enforcement is next.
+G5–G8 are merged. **G9A Issue131** is locally Mock Verified at code `d103a44`.
+Its exact11-allowlist/migration0 Goal adds the authenticated personal Plan,
+cycle, balance, concurrency and fixed-meter Usage read Interface. Protected
+delivery is tracked by Ready PR132 and remains required before G9B begins. G9B
+frontend and G10 Master/Audit
+remain separate downstream slices.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;

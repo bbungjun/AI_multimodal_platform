@@ -757,3 +757,29 @@ enqueue side effects for rejected Prompt, generation, retry and pipeline calls.
 This is a mock admission/correctness proof, not a Vertex throughput or cloud quota
 benchmark. Never substitute one successful cycle or an individual ownership suite
 for the required two concurrency cycles and ownership `--suite all --cycles 2`.
+
+## G9A personal usage read-model proof
+
+Run the guarded verifier twice at one committed code revision. It accepts only
+the public mock template, owns a unique `personal-usage-verify-<12hex>` project,
+upgrades a new PostgreSQL volume to head0006 and removes only its labelled
+container, volume and network:
+
+```powershell
+$env:AI_PROVIDER = "mock"
+python scripts/verify_personal_usage.py --env-file .env.example
+python scripts/verify_personal_usage.py --env-file .env.example
+```
+
+Each receipt must contain exactly the eight fixed groups, at least three
+observed User-lock races, at least160 checks, the same code SHA and cleanup zero.
+At code `d103a44`, the two final cycles each passed 8 groups, 3 races and451
+checks; work/cleanup were38.500/2.750s and15.984/2.859s. The proof covers lazy
+new-User state, Free/Pro/Max/Master, pending downgrade, bonus/hold projections,
+all seven billing meters, no-deliverable observed units, exact renewal, slot
+return, read/write races, rollback, corruption refusal, owner isolation and the
+public response allowlist.
+
+This is a local mock PostgreSQL correctness proof. It does not prove the G9B
+frontend, exact provider-model attribution, live OAuth, Vertex throughput,
+cloud quota or external billing.

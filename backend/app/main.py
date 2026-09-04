@@ -17,6 +17,7 @@ from app.api.metrics import router as metrics_router
 from app.api.ops import router as ops_router
 from app.api.pipelines import router as pipelines_router
 from app.api.prompts import router as prompts_router
+from app.api.usage import router as usage_router
 from app.config import get_settings
 from app.db import close_db_connection
 from app.schema_control import require_current_schema
@@ -53,7 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 class PrivateContentResponses:
     """Only intercept response-start; keep streaming and exception propagation intact."""
 
-    prefixes = ("/api/generations", "/api/pipelines", "/api/assets", "/api/prompts", "/files", "/api/ops")
+    prefixes = ("/api/generations", "/api/pipelines", "/api/assets", "/api/prompts", "/api/usage", "/files", "/api/ops")
 
     def __init__(self, application):
         self.application = application
@@ -115,5 +116,6 @@ app.include_router(ops_router)
 app.include_router(generations_router)
 app.include_router(pipelines_router)
 app.include_router(prompts_router)
+app.include_router(usage_router)
 app.include_router(assets_router)
 app.include_router(files_router)
