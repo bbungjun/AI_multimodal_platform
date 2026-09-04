@@ -148,9 +148,6 @@ async def admission(payload):
             if operation == "clear":
                 for model in (OutboxEvent, Asset, Job, PromptEnhancement):
                     await session.execute(delete(model))
-                # This disposable proof reuses actors across independent stages.
-                # Remove test-only holds so admission does not consume smoke quota.
-                await session.execute(text("TRUNCATE credit_accounts CASCADE"))
             await session.commit()
             return {"completed": True}
         checked = 0
@@ -181,6 +178,19 @@ async def admission(payload):
                             OutboxEvent.aggregate_id == children[0].id)):
                         raise ValueError("admission_child_outbox_mismatch")
             checked += 1
+        # The disposable proof reuses actors after this admission-only stage.
+        # Close verified holds through the public append-only accounting Interface.
+        from app.credit_accounting import UsageReport, release
+        from app.credit_models import CreditReservation
+        from app.models import utc_now
+        held = list((await session.scalars(select(CreditReservation).where(
+            CreditReservation.status == "held"))).all())
+        for reservation in held:
+            await release(session, user_id=reservation.user_id,
+                reservation_id=reservation.id, usage=UsageReport(()),
+                reason_code="cancelled_before_delivery",
+                operation_key="proof_clear_" + reservation.id.hex, now=utc_now())
+        await session.commit()
         return {"rows_checked": checked, "owners": True, "outbox": True, "lineage": True}
 
 
