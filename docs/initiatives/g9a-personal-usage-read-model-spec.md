@@ -90,7 +90,8 @@ Calculations use integers only:
   sum of held Reservation amounts;
 - `active_requests`: number of held Reservations;
 - `cycle_charged_microcredits`: sum of Usage charges whose `recorded_at` is in
-  `[cycle.starts_at, cycle.ends_at)`;
+  `[cycle.starts_at, now]`; at the exact renewal boundary `ensure_cycle` first
+  advances the cycle, so boundary records belong to the new cycle;
 - meter totals use those same current-cycle Usage rows. `observed_units` includes
   retained no-deliverable attempt Usage, while `charged_microcredits` remains
   zero for that released work.
