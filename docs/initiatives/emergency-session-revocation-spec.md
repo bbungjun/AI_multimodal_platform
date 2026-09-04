@@ -100,9 +100,13 @@ to schema head0006 and proves:
 Run two independent cycles at one committed code SHA. Existing auth verifier,
 full backend, Compose and frontend Session/Chromium regressions remain required.
 
-## Exact implementation boundary
+## Exact implementation boundary (v2 redesign)
 
-At most these 12 non-document paths may change:
+The initial 12-path design omitted the Compose environment adapter. Updating
+only `.env.example` would leave the backend container at the default enabled
+policy, so the documented containment sequence could not work. That approach
+was stopped before Todo3. The v2 boundary adds only the existing Compose adapter
+and fixes exactly these 13 non-document paths:
 
 1. `.env.example`
 2. `backend/app/config.py`
@@ -116,10 +120,11 @@ At most these 12 non-document paths may change:
 10. `backend/tests/test_emergency_sessions_support.py`
 11. `backend/tests/test_verify_emergency_sessions_script.py`
 12. `scripts/verify_emergency_sessions.py`
+13. `docker-compose.yml`
 
 No migration is permitted. User suspension, Master/Audit, public mutation API,
 frontend changes, real OAuth/provider/cloud, development/preview DB mutation and
-credential access are excluded. A 13th non-document path, schema change or need
+credential access are excluded. A 14th non-document path, schema change or need
 to mutate cloud configuration is STOP-and-redesign.
 
 ## Completion

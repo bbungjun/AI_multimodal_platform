@@ -89,12 +89,17 @@ paste credential contents.
   fail before flow/provider/database admission. Preview is immutable, and apply
   requires an exact PostgreSQL database name and confirmation before all active
   Sessions are revoked transactionally.
-- Exact implementation ceiling is 12 non-document paths and zero migrations.
+- The initial 12-path boundary omitted the Compose environment adapter; leaving
+  it out would make the login-disable setting ineffective inside the backend
+  container. Execution stopped before Todo3 and v2 adds only `docker-compose.yml`,
+  fixing the ceiling at 13 non-document paths and zero migrations.
   Verification uses only disposable local PostgreSQL, `AI_PROVIDER=mock`, two
   independent cycles, inherited auth/full regressions and cleanup zero. This is
   not a live incident drill, Master suspension, Audit or cloud configuration.
-- Frozen Goal SHA-256 is
+- Original Goal SHA-256 is
   `8b9cc5e071688f98bd9bcb630bc0934feb7a903f778e25d0d528b10e71d0e5cf`.
+- v2 overlay SHA-256 is
+  `695ed417bfbc7af4573c0b0275a6568b8be83397eac0727d3054ee1b4a3f2f19`.
   After protected merge, local `main` is synchronized before G9B Issue/branch/
   Goal preparation and execution begins.
 
