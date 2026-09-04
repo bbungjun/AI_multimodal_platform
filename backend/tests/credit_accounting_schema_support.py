@@ -178,7 +178,7 @@ async def prove_constraints(connection):
 
         for change in (dict(meter="unknown"), dict(maximum_units=0), dict(quoted_microcredits=0)):
             await reject_insert("credit_reservation_items", item(**change), "23514")
-        await reject_insert("credit_reservation_items", item(user=2, meter="veo_video_second"),
+        await reject_insert("credit_reservation_items", item(user=2, meter="imagen_standard_image"),
                             "23503", "fk_credit_reservation_items_owner")
 
         for change in (dict(ordinal=-1), dict(reserved_microcredits=0)):
@@ -193,7 +193,7 @@ async def prove_constraints(connection):
             dict(delivery="unknown"), dict(delivery="no_deliverable", charged_microcredits=1),
         ):
             await reject_insert("credit_usage_records", usage(**change), "23514")
-        await reject_insert("credit_usage_records", usage(user=2, meter="veo_video_second"),
+        await reject_insert("credit_usage_records", usage(user=2, meter="imagen_standard_image"),
                             "23503", "fk_credit_usage_records_item_owner")
 
         await insert(connection, "credit_usage_records", usage())

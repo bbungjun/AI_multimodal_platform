@@ -81,9 +81,9 @@ def test_proof_covers_owner_shapes_mutation_and_real_downgrade_guards():
         "credit_reservation_immutable", "credit_accounting_append_only",
         "TRUNCATE credit_reservations CASCADE", "credit_accounting_requires_empty_tables",
         'await migrate("0005_credit_lifecycle_operations", "lock timeout")',
-        'item(user=2, meter="veo_video_second")',
+        'item(user=2, meter="imagen_standard_image")',
         'allocation(user=2, grant_id=uid(22), ordinal=1)',
-        'usage(user=2, meter="veo_video_second")',
+        'usage(user=2, meter="imagen_standard_image")',
     ):
         assert token in source
     assert "await outer.rollback()" in source
