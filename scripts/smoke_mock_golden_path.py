@@ -96,7 +96,11 @@ def run_smoke(args: argparse.Namespace, *, client: HttpClient) -> None:
         "/api/prompts/enhance",
         expected_status=201,
         payload={
-            "request_id": str(uuid5(NAMESPACE_URL, "ownership-content/golden/prompt")),
+            "request_id": getattr(
+                args,
+                "prompt_request_id",
+                str(uuid5(NAMESPACE_URL, "ownership-content/golden/prompt")),
+            ),
             "prompt": "a quiet desk lamp on a walnut desk",
             "target_mode": "t2i",
             "target_model": "imagen-4.0-fast-generate-001",

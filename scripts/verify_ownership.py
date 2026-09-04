@@ -140,7 +140,8 @@ def scenarios(runtime, identity):
             if remaining <= 0:
                 raise HarnessError("cycle_deadline")
             args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
-                                   keep_job=False, keep_jobs=False)
+                                   keep_job=False, keep_jobs=False,
+                                   prompt_request_id=content_id("a", "golden"))
             module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
     execution_proof(runtime, identity)
     return 3
@@ -167,7 +168,8 @@ def file_ops_scenarios(runtime, identity):
             if remaining<=0:
                 raise HarnessError("cycle_deadline")
             args=SimpleNamespace(timeout_sec=min(90,remaining),poll_interval_sec=0.5,
-                                 keep_job=False,keep_jobs=False)
+                                 keep_job=False,keep_jobs=False,
+                                 prompt_request_id=content_id(case,"golden"))
             module.run_smoke(args,client=client)
         pipeline_end_to_end(runtime,client)
     # Sequential bounded clients avoid executor shutdown waits on a failed actor.
