@@ -209,3 +209,41 @@ export type PipelineResponse = {
 export type ApiErrorBody = {
   detail?: unknown;
 };
+
+export type PersonalPlan = "free" | "pro" | "max";
+export type PersonalUsageMeter =
+  | "gemini_input_token"
+  | "gemini_output_token"
+  | "imagen_fast_image"
+  | "imagen_standard_image"
+  | "imagen_ultra_image"
+  | "veo_fast_ms"
+  | "veo_standard_ms";
+export type PersonalUsageUnit = "token" | "image" | "millisecond";
+
+export type PersonalUsageResponse = {
+  plan: PersonalPlan;
+  pending_plan: "free" | "pro" | null;
+  rate_card_version: "v1";
+  cycle: {
+    index: number;
+    starts_at: ISODateTime;
+    renews_at: ISODateTime;
+    allowance_microcredits: number;
+    charged_microcredits: number;
+  };
+  credit: {
+    available_microcredits: number;
+    held_microcredits: number;
+  };
+  concurrency: {
+    active_requests: number;
+    limit: number;
+  };
+  usage: Array<{
+    meter: PersonalUsageMeter;
+    unit: PersonalUsageUnit;
+    observed_units: number;
+    charged_microcredits: number;
+  }>;
+};

@@ -17,11 +17,13 @@ export const APP_COPY = {
   nav: {
     generate: "생성",
     history: "기록",
+    usage: "사용량",
     ops: "운영",
   },
   routes: {
     generate: { title: "생성", eyebrow: "작업공간 / 생성" },
     history: { title: "기록", eyebrow: "작업공간 / 기록" },
+    usage: { title: "사용량", eyebrow: "작업공간 / 사용량" },
     ops: { title: "운영", eyebrow: "작업공간 / 운영" },
     jobDetail: { title: "작업 상세", eyebrow: "작업공간 / 작업" },
     pipeline: { title: "Pipeline", eyebrow: "작업공간 / Pipeline" },
@@ -32,6 +34,17 @@ export const APP_COPY = {
     connected: "API 연결됨",
     degraded: "API 저하됨",
   },
+};
+
+export const USAGE_COPY = {
+  title: "플랜 및 사용량",
+  description: "현재 30일 주기의 크레딧, 동시 처리 한도와 과금 meter를 확인합니다.",
+  loading: "사용량을 불러오는 중입니다.",
+  busy: "사용량 정산이 진행 중입니다. 잠시 후 다시 시도해 주세요.",
+  unavailable: "현재 사용량을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+  invalid: "사용량 응답을 안전하게 표시할 수 없습니다.",
+  retry: "다시 시도",
+  refresh: "사용량 새로고침",
 };
 
 export const MODE_COPY: Record<

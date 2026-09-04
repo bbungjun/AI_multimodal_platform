@@ -77,9 +77,36 @@ paste credential contents.
 
 ## Active Work
 
+### G9B personal Usage UI execution — 2026-09-05
+
+- **UI Mock Verified locally; delivery pending.** [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134)
+  and branch `codex/issue-134-personal-usage-ui` start from synchronized
+  `main` squash `d249e97` after emergency revocation delivery.
+- The [accepted G9B spec](initiatives/g9b-personal-usage-ui-spec.md) freezes one
+  deep frontend parser/presentation Module, one `GET /api/usage/me` Adapter and
+  one authenticated `/usage` workspace. It reuses the current shell/CSS and
+  distinguishes usable Credit, base-cycle consumption, held reservations,
+  observed units and internal charges without inferring exact provider models.
+- Exact ceiling is 11 frontend paths, backend0 and migration0. Focused Module/
+  browser proof covers loading/errors/retry/refresh/Session epoch, accessibility
+  and 1440/920/390/320 responsive bounds before full regressions and protected
+  delivery. Goal SHA-256 is
+  `ace23bfe24af3dec989a310f1a868adbfca4c7b9e9476d1b1c7a8f5626aff83a`.
+- Code revisions `4dafa81`/`837315e`/`a7fd179` add the fail-closed
+  parser/presentation Module, the existing-style `/usage` workspace and
+  responsive CSS. Session Module tests are60 PASS and Chromium browser tests
+  are47 PASS, including13 new Usage flows and four viewport checks. Visual QA
+  reviewed privacy-masked 1440 and320 captures; they are local evidence only.
+- Frontend lint/build and Compose passed. Focused G9A/auth backend tests passed
+  67/2 guarded skips. Full Windows backend passed1588/3 guarded skips and
+  reproduced only the established Bash absolute-path exception; unchanged
+  tracked-only Linux baseline from Issue99 is1589/3 guarded skips. Detailed
+  problem, decisions and limitations are in
+  [the Issue134 record](portfolio/issue-134-personal-usage-ui.md).
+
 ### Emergency Session revocation execution — 2026-09-05
 
-- **Mock Verified locally; delivery pending.** [Issue99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
+- **Mock Verified — Merged.** [Issue99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
   is the pre-live authentication containment blocker. Branch
   `codex/issue-99-emergency-session-revocation` starts from the synchronized
   G9A squash baseline `2565a7a`.
@@ -111,6 +138,9 @@ paste credential contents.
   Compose, frontend lint/build, Session48 and Chromium34 passed. Evidence and
   the rejected `.env.example`-only approach are recorded in
   [the Issue99 portfolio record](portfolio/issue-99-emergency-session-revocation.md).
+- [PR133](https://github.com/bbungjun/AI_multimodal_platform/pull/133)
+  passed final-head `verify` and both Scan/SBOM checks, then protected
+  squash-merged as `d249e97`; Issue99 is closed and local `main` was synchronized.
 
 ### G9A execution — 2026-09-05
 

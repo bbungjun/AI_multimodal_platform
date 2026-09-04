@@ -9,6 +9,7 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { JobDetailPage } from "./pages/JobDetailPage";
 import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
+import { UsagePage } from "./pages/UsagePage";
 import { APP_COPY } from "./ui/copy";
 import { AccountControl, SessionScreen, WorkspaceGate } from "./auth/AuthViews";
 import "./index.css";
@@ -16,6 +17,7 @@ import "./index.css";
 const navItems = [
   { to: "/generate", label: APP_COPY.nav.generate, icon: SparkleIcon },
   { to: "/history", label: APP_COPY.nav.history, icon: HistoryIcon },
+  { to: "/usage", label: APP_COPY.nav.usage, icon: PipelineIcon },
   { to: "/ops", label: APP_COPY.nav.ops, icon: CpuIcon },
 ];
 
@@ -24,6 +26,7 @@ const routeTitles = [
   { prefix: "/pipelines/", ...APP_COPY.routes.pipeline },
   { prefix: "/ops", ...APP_COPY.routes.ops },
   { prefix: "/history", ...APP_COPY.routes.history },
+  { prefix: "/usage", ...APP_COPY.routes.usage },
   { prefix: "/generate", ...APP_COPY.routes.generate },
 ];
 
@@ -36,6 +39,7 @@ export default function App() {
         <Route index element={<Navigate to="/generate" replace />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="history" element={<HistoryPage />} />
+        <Route path="usage" element={<UsagePage />} />
         <Route path="ops" element={<OpsPage />} />
         <Route path="jobs/:jobId" element={<JobDetailPage />} />
         <Route path="pipelines/:pipelineId" element={<PipelinePage />} />

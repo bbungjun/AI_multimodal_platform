@@ -3758,6 +3758,200 @@ a.brand-lockup:focus-visible {
 .creative-auth-note, .creative-auth-notice { color: #a49ab8; font-size: .74rem; line-height: 1.6; }
 .creative-auth-notice { margin: 0 0 8px; }
 .creative-auth-pending { color: #c4b5fd; }
+.creative-page--usage {
+  --usage-accent: #a78bfa;
+  --usage-line: rgba(167, 139, 250, 0.18);
+}
+
+.usage-hero {
+  position: relative;
+  align-items: center;
+  background:
+    radial-gradient(520px 220px at 12% 20%, rgba(139, 92, 246, 0.24), transparent 72%),
+    radial-gradient(420px 200px at 82% 90%, rgba(79, 70, 229, 0.13), transparent 74%),
+    linear-gradient(135deg, rgba(20, 17, 31, 0.97), rgba(5, 5, 10, 0.98));
+}
+
+.usage-pending-plan { margin-top: 12px; }
+.usage-refresh { flex: 0 0 auto; border-color: var(--usage-line); }
+
+.usage-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.usage-overview-grid > .panel { min-width: 0; }
+.usage-overview-grid > .panel .panel__body {
+  display: flex;
+  min-height: 258px;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.usage-credit-primary span,
+.usage-definition-grid dt,
+.usage-progress-block span,
+.usage-updated {
+  color: #817593;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.usage-credit-primary strong {
+  display: block;
+  margin-top: 5px;
+  color: #fff;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1;
+}
+
+.usage-credit-primary small {
+  display: block;
+  margin-top: 9px;
+  color: #9589a8;
+  font-size: 0.72rem;
+}
+
+.usage-definition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.usage-definition-grid--stacked { grid-template-columns: 1fr; }
+.usage-definition-grid div {
+  min-width: 0;
+  border: 1px solid rgba(148, 136, 180, 0.13);
+  border-radius: 8px;
+  background: rgba(6, 5, 11, 0.38);
+  padding: 10px;
+}
+
+.usage-definition-grid dd {
+  overflow: hidden;
+  margin: 6px 0 0;
+  color: #ece7f8;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-progress-block { margin-top: auto; }
+.usage-progress-block > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.usage-progress-block strong { color: #dcd4eb; font-size: 0.72rem; }
+.usage-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(128, 113, 151, 0.17);
+}
+
+.usage-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+}
+
+.usage-concurrency-value {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: #817593;
+}
+
+.usage-concurrency-value strong { color: #fff; font-size: 2.65rem; line-height: 1; }
+.usage-concurrency-panel p,
+.usage-meter-intro p,
+.usage-state p { color: #9589a8; font-size: 0.78rem; line-height: 1.55; }
+.usage-updated { margin-top: auto; }
+
+.usage-meter-panel .panel__body { padding: 0; }
+.usage-meter-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(148, 136, 180, 0.12);
+}
+
+.usage-meter-intro p { margin: 0; }
+.usage-meter-table-wrap { overflow-x: auto; }
+.usage-meter-table { width: 100%; border-collapse: collapse; }
+.usage-meter-table th,
+.usage-meter-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(148, 136, 180, 0.1);
+  color: #cfc7dc;
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.usage-meter-table thead th {
+  color: #756a88;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.63rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.usage-meter-table th:first-child { text-align: left; }
+.usage-meter-table tbody tr:last-child > * { border-bottom: 0; }
+.usage-meter-table tbody tr:hover { background: rgba(139, 92, 246, 0.045); }
+.usage-meter-table tbody th strong { display: block; color: #f2eef9; }
+.usage-meter-table tbody th small {
+  display: block;
+  margin-top: 3px;
+  color: #6f627f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.usage-state-panel { max-width: 680px; }
+.usage-state { display: flex; align-items: flex-start; flex-direction: column; gap: 14px; }
+
+@media (max-width: 1180px) {
+  .usage-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usage-credit-panel { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .usage-overview-grid { grid-template-columns: 1fr; }
+  .usage-credit-panel { grid-column: auto; }
+  .usage-overview-grid > .panel .panel__body { min-height: 0; }
+  .usage-definition-grid { grid-template-columns: 1fr; }
+  .usage-meter-intro { align-items: flex-start; flex-direction: column; padding: 12px; }
+  .usage-meter-table-wrap { overflow: visible; }
+  .usage-meter-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .usage-meter-table,
+  .usage-meter-table tbody,
+  .usage-meter-table tr,
+  .usage-meter-table th,
+  .usage-meter-table td { display: block; width: 100%; }
+  .usage-meter-table tr { padding: 11px 12px; border-bottom: 1px solid rgba(148, 136, 180, 0.12); }
+  .usage-meter-table th,
+  .usage-meter-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding: 4px 0; text-align: right; }
+  .usage-meter-table th::before,
+  .usage-meter-table td::before { content: attr(data-label); color: #756a88; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; }
+  .usage-meter-table tbody th strong,
+  .usage-meter-table tbody th small { text-align: right; }
+  .usage-refresh { width: 100%; }
+}
+
 .creative-account { position: relative; min-width: 0; }
 .creative-account-trigger { width: 100%; border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 6px; color: #fff; text-align: left; cursor: pointer; }
 .creative-account-trigger:hover { background: rgba(139,92,246,.16); }

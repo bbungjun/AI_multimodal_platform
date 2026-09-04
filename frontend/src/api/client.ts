@@ -6,12 +6,14 @@ import type {
   GenerationResponse,
   HealthResponse,
   OpsHealthResponse,
+  PersonalUsageResponse,
   PipelineCreateRequest,
   PipelineResponse,
   PromptEnhanceRequest,
   PromptEnhancementResponse,
   UUID,
 } from "./types";
+import { parsePersonalUsage } from "../ui/usage";
 
 export type {
   AssetResponse,
@@ -26,6 +28,7 @@ export type {
   JobResponse,
   JobState,
   OpsHealthResponse,
+  PersonalUsageResponse,
   PipelineCreateRequest,
   PipelineResponse,
   PromptEnhanceRequest,
@@ -92,6 +95,10 @@ export async function getHealth(): Promise<HealthResponse> {
 
 export async function getOpsHealth(): Promise<OpsHealthResponse> {
   return apiRequest<OpsHealthResponse>("/api/ops/health");
+}
+
+export async function getPersonalUsage(): Promise<PersonalUsageResponse> {
+  return parsePersonalUsage(await apiRequest<unknown>("/api/usage/me"));
 }
 
 export async function createGeneration(
