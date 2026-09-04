@@ -1,11 +1,12 @@
 # G5C — Credit reservation and settlement specification
 
-Status: `Design frozen / G5C1 Goal prepared`, 2026-09-04. This document is the
+Status: `G5C1 Mock Verified locally / delivery pending; G5C2 Planned`, 2026-09-04. This document is the
 normative aggregate design for Issues
 [#117](https://github.com/bbungjun/AI_multimodal_platform/issues/117),
 [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), and
 [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121). It records
-approved policy and executable boundaries; it is not implementation evidence.
+approved policy and executable boundaries. G5C1 implementation evidence is linked
+below; the reserve/settle/release Module remains unimplemented G5C2 scope.
 
 ## 1. Problem, inputs and split decision
 
@@ -363,6 +364,13 @@ Docker mutation, database reset or billing operation. G5C1 execution uses local
 Docker with `AI_PROVIDER=mock`, preserves development/preview data, records each
 failed approach, and ends only after actual protected squash merge. Issue120 then
 closes; Issues121/117/114 remain open.
+
+Local final-SHA evidence at `b4ce32e` passed two independent schema/accounting
+cycles (42 checks and four populated downgrade cases each), existing credit90/races3,
+G5B lifecycle8/races8, auth PostgreSQL/Redis, ownership/file four-cycle aggregate,
+Linux1347, and unchanged frontend48+34. Every owned project cleaned to zero.
+Delivery remains pending until the Ready PR's final-head verify and both Scan/SBOM
+checks succeed and protected squash actually merges.
 
 Rollback is a reviewed code revert plus downgrade only when all four new tables
 are empty. Once any accounting row exists, preserve data and use a forward fix;

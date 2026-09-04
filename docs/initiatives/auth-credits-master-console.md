@@ -247,7 +247,7 @@ document or inherit the full design interview.
 | G5A | Credit persistence and pure Plan/rate/time policy | Mock Verified — Merged | [PR118](https://github.com/bbungjun/AI_multimodal_platform/pull/118), [final evidence](https://github.com/bbungjun/AI_multimodal_platform/issues/115#issuecomment-5528702729), [record](../portfolio/issue-115-credit-foundation.md) | Squash a003257; final b940be2 required3 CI SUCCESS. Exact17/migration1; schema2/credit90/races3, auth1, ownership all4/993.610s, Linux1229/frontend48+34/cleanup0. No automatic credit or product wiring |
 | G5B | Account initialization, 30-day cycles, Plan transitions and grants | Mock Verified — Merged | [Issue116](https://github.com/bbungjun/AI_multimodal_platform/issues/116), [PR119](https://github.com/bbungjun/AI_multimodal_platform/pull/119), [spec](g5-credit-lifecycle-spec.md), [record](../portfolio/issue-116-credit-lifecycle.md) | Squash ffc4b50; final head7ab6254 required3 CI SUCCESS and exact tree match. Exact20/new0005; schema2, lifecycle2, auth1, ownership-file4, Linux1321/frontend48+34. No billing wiring |
 | G5C | Reservation allocations, Usage and atomic settlement/release | Planned — split C1/C2 | [Parent117](https://github.com/bbungjun/AI_multimodal_platform/issues/117), [frozen aggregate spec](g5-credit-accounting-spec.md) | Minimum22 paths exceeded one Goal; C1 owns schema/head compatibility, C2 owns one accounting Module. G6/G7 wiring stays separate |
-| G5C1 | Reservation/allocation/Usage persistence and head compatibility | In Progress | [Issue120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), [record](../portfolio/issue-120-credit-accounting-persistence.md) | Frozen SHA d55cad9…f8cc matched; branch/base/Issues/local Docker approved. Execution B0 538 PASS/2.19s; exact20 and one0006 remain binding; no writer/product wiring |
+| G5C1 | Reservation/allocation/Usage persistence and head compatibility | Mock Verified locally — delivery pending | [Issue120](https://github.com/bbungjun/AI_multimodal_platform/issues/120), [record](../portfolio/issue-120-credit-accounting-persistence.md) | Final tested b4ce32e; exact20/new0006, schema2 accounting42/downgrade4, lifecycle8/races8, auth1, ownership-file4, Linux1347/frontend48+34, cleanup0. No writer/product wiring; Ready PR/required3 CI/merge remain Todo8 |
 | G5C2 | Atomic reserve, settle, release and PostgreSQL proof | Planned — blocked by C1 | [Issue121](https://github.com/bbungjun/AI_multimodal_platform/issues/121), [aggregate spec](g5-credit-accounting-spec.md) | Zero migration; exact paths/Goal freeze only after C1 merge |
 | G6 | Gemini prompt-enhancement credit integration | Planned | None | Blocked by G5 |
 | G7 | Imagen/Veo and pipeline credit integration | Planned | None | Blocked by G4, G5 |
@@ -419,17 +419,16 @@ mode:
 
 ## Next Goal
 
-G5A Issue115 and G5B Issue116 are actually merged. **G5C1 Issue120** is prepared
-on `codex/issue-120-credit-accounting-persistence` with
-[the aggregate spec](g5-credit-accounting-spec.md), exact20 paths, exactly one
-additive migration and a frozen local Goal. Read [current-work](../current-work.md)
-for its full SHA and first verification command. Preparation does not authorize
-implementation without a matching hash-bearing execution request.
+G5A Issue115 and G5B Issue116 are actually merged. **G5C1 Issue120** is Mock
+Verified locally on `codex/issue-120-credit-accounting-persistence` with exact20
+paths, one additive0006 migration, two accounting schema cycles and all inherited
+regressions. Its next action is Ready PR, required3 final-head CI and protected
+squash merge. This persistence result is not reserve/settle/release capability.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
 parent109 is closed. G5A supplies no automatic account/grant/renewal/charge.
-G5C2 freezes after C1 merge; G6/G7 then connect the accounting Interface to
+G5C2 freezes only after C1 actually merges; G6/G7 then connect the accounting Interface to
 generation. Parents117/114 remain open until both C slices complete.
 
 Live operation remains gated by emergency revocation [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),

@@ -308,6 +308,9 @@ The post-G5B repository inspection and policy decisions are now frozen in
 requires C1 persistence/head compatibility [#120](https://github.com/bbungjun/AI_multimodal_platform/issues/120)
 and C2 accounting behavior [#121](https://github.com/bbungjun/AI_multimodal_platform/issues/121).
 This original envelope remains historical input, not an executable Goal.
+G5C1 persistence is now Mock Verified locally at `b4ce32e`; G5C2 writers and
+generation charging remain Planned until Issue120 is actually merged and the
+successor Goal is frozen.
 
 ## 8. Delivery, evidence and rollback
 

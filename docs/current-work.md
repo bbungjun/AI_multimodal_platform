@@ -79,38 +79,37 @@ paste credential contents.
 
 ### G5C1 execution — 2026-09-04
 
-- **In Progress — Todo1 authority/baseline complete; implementation not started.**
-  Frozen Goal SHA matched. Branch/base, open Issues114/117/120/121, merged PR119,
-  local desktop-linux Docker and mock-only preconditions were confirmed. Fresh
-  execution B0 passed **538 tests in 2.19s** (3.34s wall); tracked/index state was
-  clean apart from the committed preparation docs and preserved `.omo`.
-  G5B PR119 actually
-  merged at `ffc4b506466662f3e57e0f8dca72e16955273749`; final head7ab6254 required
-  verify and both Scan/SBOM checks succeeded and has the same tree. Main was
-  fast-forwarded to that squash, Issue120 and Issue121 were created under
-  G5C parent117, and branch `codex/issue-120-credit-accounting-persistence` was
-  created from the merged base. Existing untracked `.omo` files were preserved.
-- [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) freezes reserve/
-  settle/release semantics, usage/delivery matrix, idempotency domains, grant
-  ordering, old-expiry behavior and safe errors. A single Goal needs at least22
-  code paths because 15 existing head-aware proof paths must move to0006; it is
-  split into C1 persistence/head compatibility and C2 accounting logic/proof.
-- [Issue120 preparation record](portfolio/issue-120-credit-accounting-persistence.md):
-  C1 has exact20 non-document paths, exactly one additive0006 migration and four
-  empty accounting tables. It adds no writer, API, Job/provider/frontend wiring,
-  Plan/Master/Audit behavior or runtime billing claim. C2 Issue121 is blocked
-  until C1 actually merges and will have zero migration.
+- **Mock Verified locally — Todo1–7 and F1–F3 complete; Ready PR/CI/merge pending.**
+  Goal SHA matched and final tested source is `b4ce32eb7f4dff7c15a9d726b4d2ec77d5e4e3ff`.
+  Exactly 20 approved non-document paths changed, exactly one additive migration
+  `0006_credit_accounting_persistence` was added, and migrations0001–0005 are
+  unchanged. Four empty accounting tables, owner FKs, finite shapes, terminal and
+  append-only guards, and populated downgrade refusal are implemented. No reserve,
+  settle or release writer and no generation billing integration exists.
+- Final-SHA schema/accounting projects `schema-verify-060a7279e7e9` and
+  `schema-verify-22cdaa7caec2` passed: accounting42 checks/four downgrade cases,
+  existing credit90/three races, stale0005 refusal/recovery, guarded reset and
+  cleanup0. Work/cleanup were 164.015/1.922s and 168.000/1.922s.
+- Lifecycle passed eight groups/eight races/320 checks; auth passed real local
+  PostgreSQL/Redis/outage recovery with 50 authentication requests and 7.547ms p95.
+  Ownership `--suite all --cycles 2` passed four projects: each ownership cycle
+  retained access348/delete-race2 and each file cycle retained F/O/V/E310/two
+  actors/all ten stages. Aggregate was 1010.828s and exact resources were zero.
+- Linux backend passed **1347 / 3 guarded skips**. Windows passed **1346 / 3
+  guarded skips** with only the known Bash path conversion native127 exception;
+  the same test failed identically on an untouched base archive. Compose config,
+  frontend lint/build, Session48 and Chromium34 all passed.
+- Runtime exposed three proof defects before the final pass: Alembic's default
+  32-character revision column rejected the approved 34-character ID; accounting
+  FK/index names were absent from inventory; and proof fixtures used a non-awaited
+  snapshot plus PK/vocabulary collisions before intended owner FKs. Fixes widen
+  only Alembic's control column, complete inventory, and use awaited counts and
+  valid distinct keys. Every failed isolated project also cleaned to zero.
 - Frozen local plan `.omo/plans/issue-120-g5c1-credit-accounting-persistence-goal.md`;
   SHA256 `d55cad9eba3013706dfd6554894c78af40ef927ed8c03352fbca062c3463f8cc`.
-  Transfer exact bytes; never
-  stage `.omo` wholesale. First execution checks SHA, branch/base, clean tracked/
-  index state and B0. Runtime requires schema/accounting2, lifecycle1, auth1,
-  ownership all2, full backend/frontend and final required3 CI/protected squash.
-- Preparation B0 passed **538 tests in 2.79s** on merged G5B code. Plan structure
-  check passed exact20 paths, Todo1–8, F1–F4 and C101–C116 uniqueness. This is a
-  baseline only, not C1 schema or runtime proof.
-- Preparation performs no Docker/database migration/reset and no OAuth/provider/
-  cloud call. Development and preview DBs remain untouched.
+  `.omo` remains untracked/unstaged. Next is Todo8: push, Ready PR, exact-final-head
+  verify plus backend/frontend Scan/SBOM, protected squash auto-merge, then confirm
+  only Issue120 closes. Issues121/117/114 remain open.
 
 ### G5B execution — 2026-09-04
 
