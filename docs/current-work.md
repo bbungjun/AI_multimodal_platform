@@ -77,10 +77,42 @@ paste credential contents.
 
 ## Active Work
 
+### G6 execution preparation — 2026-09-04
+
+- **Accepted design — implementation not started.** G5C2 actually merged through
+  [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123) as squash
+  `5e56ecb`; required verify and both Scan/SBOM checks succeeded and Issues
+  121/117/114 are closed. Local `main` was fast-forwarded to that exact revision
+  while the existing untracked `.omo` tree was preserved.
+- User requested completing G6 before G7. Created
+  [Issue124](https://github.com/bbungjun/AI_multimodal_platform/issues/124) and
+  branch `codex/issue-124-gemini-credit-integration` from `5e56ecb`. The
+  [accepted G6 spec](initiatives/g6-gemini-credit-integration-spec.md) fixes one
+  `prompt_credit` Module, required UUID request identity, retry-aware token
+  envelope, pre-provider reserve commit, atomic result+settle, and no-deliverable
+  release. No transaction remains open across provider I/O.
+- Exact execution scope is14 non-document paths and zero migrations. G5 modules,
+  Job/Asset/Outbox/worker/state machine/pipeline, G7, Usage UI, Plan/Master/Audit,
+  live OAuth/provider/cloud and infrastructure remain excluded. A fifteenth code
+  path, schema change, or time-limit relaxation requires STOP/replan.
+- Fresh main baseline with `AI_PROVIDER=mock`: prompt route/enhancer, accounting
+  Module/support and mock-provider suite **90 passed in 2.78s**. No Docker or
+  provider call was made during preparation; development/preview resources were
+  untouched.
+- The execution Goal must complete Todo1–8 and F1–F4, two fresh isolated
+  prompt-credit PostgreSQL cycles, accounting/lifecycle/auth/ownership-all2,
+  Linux/Windows/Compose/frontend regressions, portfolio documentation, Ready PR,
+  final-head required CI, both Scan/SBOM checks and actual protected squash merge.
+- Frozen local Goal
+  `.omo/plans/issue-124-g6-gemini-credit-integration-goal.md`; SHA256
+  `4a661c72679fd2a7212aa870ba3ae59faf2b656d942b9bebe170a017385cd40f`.
+  Never stage `.omo` wholesale or record prompt/identity/provider raw data in
+  evidence.
+
 ### G5C2 execution — 2026-09-04
 
-- **Locally Mock Verified — delivery pending.** Goal SHA matched, Issue121 is
-  OPEN and branch `codex/issue-121-credit-accounting-module` starts from actual
+- **Mock Verified — Merged.** Goal SHA matched, Issue121 and parents117/114 are
+  closed. Branch `codex/issue-121-credit-accounting-module` started from actual
   PR122 squash `68e3df6254b1aa9acfba5f1d4bc7965e60b06fa4`. Existing `.omo` remains
   untracked and preserved. Fresh execution baseline passed **219 tests in 1.41s**.
   Docker Desktop `desktop-linux`, empty `DOCKER_HOST`, forced `AI_PROVIDER=mock`,
@@ -100,9 +132,10 @@ paste credential contents.
   from untouched base68e3df6. Compose, frontend lint/build, Session48 and Chromium34
   passed unchanged. Two transient ownership harness failures at http-races/metadata
   were retained; both cleaned to zero before the final complete all/2 run.
-- F1 scope/architecture, F2 data/security and F3 verification/operations are
-  APPROVE. Todo8/F4 remain: push, Ready PR, final-head required3 CI, protected
-  squash actual merge/tree match and Issues121/117/114 closure.
+- F1 scope/architecture, F2 data/security, F3 verification/operations and F4
+  delivery are APPROVE. Ready PR123 passed final-head required3 CI and protected
+  squash merged as `5e56ecb`; its tree matched the tested delivery and the three
+  planned Issues closed.
 - [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) now freezes the
   three-operation deep Module Interface, replay-before-renewal, complete lock
   order, allocation/terminal policy, C201–C234 and eight observed PostgreSQL
