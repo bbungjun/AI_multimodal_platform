@@ -99,7 +99,7 @@ A16 구현/B16 후보, actual2cycle/전체 회귀 완료; 최종 delivery는 실
 | [#103](https://github.com/bbungjun/AI_multimodal_platform/issues/103) | [Authenticated mock verification harness](issue-103-authenticated-mock-harness.md) | Mock Verified at `471b76e`; two auth12/scenarios3/cleanup cycles, Linux542 PASS; ownership enforcement remains G4.2/G4.3 |
 | [#105](https://github.com/bbungjun/AI_multimodal_platform/issues/105) | [Owner persistence and admission](issue-105-owner-persistence-admission.md) | Mock Verified: schema2/auth1/final admission2, Linux658 PASS; exact20 paths/one migration, delivery linked in record |
 | [#107](https://github.com/bbungjun/AI_multimodal_platform/issues/107) | [Worker ownership and pipeline/race proof](issue-107-worker-ownership-invariants.md) | Planned / Goal Prepared: exact11 paths, migration0, baseline282 PASS; no B implementation/runtime proof yet |
-| [#124](https://github.com/bbungjun/AI_multimodal_platform/issues/124) | [Gemini prompt credit integration](issue-124-gemini-credit-integration.md) | Mock Verified locally at `87dca6b`; exact14/migration0, isolated2 + ownership4 cycles + Linux/frontend passed; PR delivery pending |
+| [#124](https://github.com/bbungjun/AI_multimodal_platform/issues/124) | [Gemini prompt credit integration](issue-124-gemini-credit-integration.md) | Mock Verified; exact14/migration0 and full proof passed; [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125) required3 CI, squash `a6d9656` |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

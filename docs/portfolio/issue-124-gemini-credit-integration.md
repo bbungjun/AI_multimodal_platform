@@ -38,6 +38,8 @@ route의 비동작 compatibility import로 기존 보안 test seam을 보존했�
 - tracked-only Linux1461 passed/3 guarded skips. Windows1460 passed/3 skips와
   기존 Bash native127 한 건; untouched base에서도 동일 재현.
 - Compose 두 구성, frontend lint/build, Session48, Chromium34 통과.
+- Ready PR125의 `verify`, backend Scan/SBOM, frontend Scan/SBOM이 최종 head에서
+  성공했고 보호된 squash auto-merge `a6d9656`가 테스트 tree와 일치한다. Issue124 폐쇄.
 
 월간 크레딧이 부족하면 provider 호출 전에402를 받고, 성공한 Prompt Enhancement만
 실제 mock/provider usage 단위로 차감된다. 재전송과 동시 요청은 같은 request ID에서

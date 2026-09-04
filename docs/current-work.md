@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G6 execution — 2026-09-04
 
-- **Mock Verified locally — delivery pending.** G5C2 actually merged through
+- **Mock Verified — Merged.** G5C2 actually merged through
   [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123) as squash
   `5e56ecb`; required verify and both Scan/SBOM checks succeeded and Issues
   121/117/114 are closed. Local `main` was fast-forwarded to that exact revision
@@ -135,9 +135,10 @@ paste credential contents.
   inherited security-test seam were all retained as failure evidence. Actor-scoped
   UUIDs and a route compatibility import fixed them; every runtime gate restarted
   at the final SHA.
-- F1–F3 are APPROVE. Todo8/F4 still require Ready PR, final-head `verify` and both
-  Scan/SBOM checks, protected squash merge and Issue124 closure. G7 and live GCP
-  remain untouched.
+- F1–F4 are APPROVE. Ready [PR125](https://github.com/bbungjun/AI_multimodal_platform/pull/125)
+  passed final-head `verify` and both Scan/SBOM checks, then protected squash
+  auto-merged as `a6d9656`; tested PR and merge trees match. Issue124 is closed.
+  G7 and live GCP remain untouched.
 
 ### G5C2 execution — 2026-09-04
 

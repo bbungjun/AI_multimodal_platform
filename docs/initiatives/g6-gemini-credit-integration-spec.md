@@ -1,6 +1,6 @@
 # G6 Gemini Prompt Enhancement Credit Integration
 
-Status: **Mock Verified locally at `87dca6b`; Ready PR delivery pending**
+Status: **Mock Verified — PR125 protected-squash merged as `a6d9656`**
 
 Issue: [#124](https://github.com/bbungjun/AI_multimodal_platform/issues/124)
 
