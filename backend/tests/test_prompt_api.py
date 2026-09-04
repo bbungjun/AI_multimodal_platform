@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.api import prompts
+from app import prompt_credit
 from app.auth.service import AuthenticatedUser
 from app.main import app
 from app.models import GenerationMode, PromptEnhancement, utc_now
@@ -38,7 +39,7 @@ def test_prompt_enhance_requires_durable_request_id():
 async def test_admission_p03_prompt_rejects_spoofed_owner(monkeypatch, field):
     from unittest.mock import AsyncMock
     provider = AsyncMock(side_effect=AssertionError("unexpected_provider"))
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", provider)
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", provider)
     session = FakePromptSession()
     response = await _post_prompt_enhance({"prompt":"fixture","target_mode":"t2i",
         "target_model":"imagen-4.0-fast-generate-001",field:"forged"}, session)
@@ -98,32 +99,48 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch, 
     session = FakePromptSession()
     actor = AuthenticatedUser(id=UUID(int=actor_id), role=role, status="active", email="fixture@invalid.test")
 
-    async def enhance_prompt(
-        prompt: str,
-        *,
-        target_mode: GenerationMode,
-        target_model: str,
-        creativity_preset: CreativityPreset,
-    ) -> enhancer.PromptEnhancementResult:
-        assert prompt == "a quiet desk lamp"
-        assert target_mode == GenerationMode.T2I
-        assert target_model == "imagen-4.0-fast-generate-001"
-        assert creativity_preset == CreativityPreset.IMAGINATIVE
-        return enhancer.PromptEnhancementResult(
-            original=prompt,
+    async def execute_prompt_enhancement(session_arg, *, actor, payload):
+        assert session_arg is session
+        assert actor.id == UUID(int=actor_id)
+        assert payload.prompt == "a quiet desk lamp"
+        assert payload.target_mode == GenerationMode.T2I
+        assert payload.target_model == "imagen-4.0-fast-generate-001"
+        assert payload.creativity_preset == CreativityPreset.IMAGINATIVE
+        row = PromptEnhancement(
+            id=payload.request_id,
+            owner_user_id=actor.id,
+            original=payload.prompt,
             enhanced="A quiet desk lamp on walnut wood with soft side light.",
-            components={"subject": "desk lamp", "lighting": "soft side light"},
-            target_mode=target_mode,
-            target_model=target_model,
+            components={
+                "subject": "desk lamp",
+                "lighting": "soft side light",
+                PROMPT_ENHANCEMENT_METADATA_COMPONENT_KEY: {
+                    "creativity_preset": "imaginative",
+                    "temperature": 0.8,
+                    "template_version": PROMPT_ENHANCEMENT_TEMPLATE_VERSION,
+                },
+            },
+            target_mode=payload.target_mode,
+            target_model=payload.target_model,
             llm_model="gemini-2.5-flash",
             latency_ms=42,
             tokens_in=21,
             tokens_out=13,
-            creativity_preset=creativity_preset,
-            temperature=temperature_for_preset(creativity_preset),
+        )
+        row.created_at = utc_now()
+        session.add(row)
+        return prompt_credit.PromptCreditOutcome(
+            enhancement=row,
+            creativity_preset=payload.creativity_preset,
+            temperature=temperature_for_preset(payload.creativity_preset),
+            replayed=False,
         )
 
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+    monkeypatch.setattr(
+        prompts.prompt_credit,
+        "execute_prompt_enhancement",
+        execute_prompt_enhancement,
+    )
 
     response = await _post_prompt_enhance(
         {
@@ -173,8 +190,8 @@ async def test_enhance_prompt_persists_result_and_returns_response(monkeypatch, 
     assert row.latency_ms == 42
     assert row.tokens_in == 21
     assert row.tokens_out == 13
-    assert session.commit_count == 1
-    assert session.refresh_count == 1
+    assert session.commit_count == 0
+    assert session.refresh_count == 0
 
 
 async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
@@ -184,7 +201,7 @@ async def test_enhance_prompt_maps_vertex_error_without_persisting(monkeypatch):
     async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
         raise VertexRateLimitedError(status_code=429)
 
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", enhance_prompt)
 
     try:
         response = await _post_prompt_enhance(
@@ -226,7 +243,7 @@ async def test_enhance_prompt_records_invalid_response_metrics(monkeypatch):
             source="parsed",
         )
 
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", enhance_prompt)
 
     try:
         response = await _post_prompt_enhance(
@@ -273,7 +290,7 @@ async def test_enhance_prompt_records_language_mismatch_metrics(monkeypatch):
             source="response",
         )
 
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", enhance_prompt)
 
     try:
         response = await _post_prompt_enhance(
@@ -357,7 +374,7 @@ async def test_enhance_prompt_rejects_invalid_request_without_calling_enhancer(
     async def enhance_prompt(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("invalid prompt enhancement requests must not call Gemini")
 
-    monkeypatch.setattr(prompts.enhancer, "enhance_prompt", enhance_prompt)
+    monkeypatch.setattr(prompts.prompt_credit, "execute_prompt_enhancement", enhance_prompt)
 
     response = await _post_prompt_enhance(payload, session)
 
