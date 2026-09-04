@@ -541,9 +541,12 @@ def execution_proof(runtime, identity):
             actor_a = identity.client(runtime.base_url,"a")
             expiry = actor_a.request_json("POST","/api/generations",expected_status=201,
                 payload={"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"})
+            print(json.dumps({"proof":"expiry_admitted"}),flush=True)
             if runtime.execution_fixture("expire_session") != {"expired":True}:
                 raise HarnessError("session_expiry_failed")
+            print(json.dumps({"proof":"session_expired"}),flush=True)
             actor_a.request_bytes("GET","/api/auth/me",expected_status=401)
+            print(json.dumps({"proof":"expiry_auth_refused"}),flush=True)
             pipeline = actor_b.request_json("POST","/api/pipelines",expected_status=201,
                 payload={"image_prompt":"fixture","video_prompt":"fixture",
                          "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"})
