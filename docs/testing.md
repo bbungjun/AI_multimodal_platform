@@ -784,6 +784,31 @@ This is a local mock PostgreSQL correctness proof. It does not prove the G9B
 frontend, exact provider-model attribution, live OAuth, Vertex throughput,
 cloud quota or external billing.
 
+## G9B personal Usage UI proof
+
+G9B extends the fixed frontend projects rather than creating an unbounded visual
+suite:
+
+```powershell
+Set-Location frontend
+npm run lint
+npm run build
+npm run test:auth
+npm run test:auth:browser
+```
+
+At implementation revisions `4dafa81`/`837315e`/`a7fd179`, the Session project
+passed60 tests and Chromium passed47. The13 new browser cases cover the complete
+G9A snapshot, private loading, busy/unavailable/network/invalid failures,
+explicit retry, single-flight background refresh, 401 Session transition,
+old-account epoch rejection and 1440/920/390/320 overflow/progress semantics.
+The12 added Module cases cover exact allowlists, seven-meter order, safe integer/
+date validation, microcredit/unit formatting and clamped ratios. Frontend
+lint/build and Compose passed; backend focused67 and the unchanged full suite
+1588 passed on Windows with only the known Bash path exception. CI supplies the
+final Linux proof. This is UI Mock Verified, not a provider bill or live OAuth/
+Vertex verification.
+
 ## Emergency Session revocation proof
 
 Run twice at one committed SHA. The verifier accepts only `.env.example`, forces
