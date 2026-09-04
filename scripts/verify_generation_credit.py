@@ -26,7 +26,10 @@ class Runtime(base.Runtime):
     def __init__(self,env_file,*,run=base.command):
         if Path(env_file).resolve() != (ROOT/".env.example").resolve():
             raise Failure("env_file_refused")
-        super().__init__(env_file,run=run); self.project=validate_project("generation-credit-verify-"+uuid4().hex[:12]); self.nonce=uuid4().hex
+        self.env=base.safe_env(); self.run=run
+        self.project=validate_project("generation-credit-verify-"+uuid4().hex[:12]); self.nonce=uuid4().hex
+        self.context=None; self.started=base.time.monotonic(); self.deadline=self.started+360
+        self.compose=None; self.owned=False
     def configure(self,directory):
         super().configure(directory)
         path=Path(directory)/"compose.json"; config=json.loads(path.read_text(encoding="utf-8"))
