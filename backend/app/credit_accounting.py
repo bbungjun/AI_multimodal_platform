@@ -308,6 +308,12 @@ async def _reserve(session, request, now):
         _fail("credit_plan_refused")
 
     await session.flush()
+    held = list((await session.scalars(select(CreditReservation).where(
+        CreditReservation.user_id == request.user_id,
+        CreditReservation.status == "held",
+    ).order_by(CreditReservation.created_at, CreditReservation.id))).all())
+    if len(held) >= policy.max_concurrent_requests:
+        _fail("user_concurrency_limit")
     await _ledger_coherent(session, request.user_id, grants)
     quoted = []
     try:

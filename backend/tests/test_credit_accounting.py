@@ -273,6 +273,14 @@ def test_plan_permission_precedes_concurrency_and_terminal_returns_slot():
     assert second.status == "held" and second.reservation_id != first.reservation_id
 
 
+def test_master_uses_max_plan_five_slot_limit_without_bypass():
+    s = MemorySession(role="master")
+    held = [reserve(s, estimate(), key=f"master_slot_{index}") for index in range(5)]
+    assert len({item.reservation_id for item in held}) == 5
+    with pytest.raises(accounting.CreditAccountingError, match="^user_concurrency_limit$"):
+        reserve(s, estimate(), key="master_slot_6")
+
+
 def test_reserve_uses_expiring_first_allocation_not_lock_order():
     s = MemorySession(role="master")
     async def scenario():
