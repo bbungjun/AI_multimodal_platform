@@ -160,12 +160,12 @@ backend/app/schemas.py
 backend/app/services/llm/enhancer.py
 backend/tests/test_prompt_credit.py
 backend/tests/prompt_credit_support.py
-backend/tests/test_prompt_credit_support.py
 backend/tests/test_prompt_api.py
 backend/tests/test_prompt_enhancer.py
-backend/tests/test_mock_provider.py
 backend/tests/test_verify_prompt_credit_script.py
 scripts/verify_prompt_credit.py
+scripts/verify_ownership.py
+scripts/smoke_mock_golden_path.py
 frontend/src/api/types.ts
 frontend/src/pages/GeneratePage.tsx
 ```
@@ -177,6 +177,25 @@ Job, Asset, Outbox, worker, state machine or pipeline means STOP and redesign.
 Allowed documents are this spec, the canonical initiative, current-work,
 testing, local-mock runbook, portfolio index and Issue #124 portfolio record.
 `.omo` remains local and must never be staged wholesale.
+
+### Approved v2 path correction
+
+Todo1 RED exposed that requiring `request_id` would break two real inherited
+callers outside the v1 allowlist: the ownership verifier's direct Prompt request
+and the golden-path Prompt request it invokes. Continuing v1 would therefore make
+its own mandatory compatibility gate impossible. The approved v2 keeps the exact
+14-path total and all product policy unchanged:
+
+- replace `backend/tests/test_mock_provider.py`; its mock token assertions move
+  into `backend/tests/test_prompt_enhancer.py`;
+- replace `backend/tests/test_prompt_credit_support.py`; support/parser safety is
+  exercised through `backend/tests/test_verify_prompt_credit_script.py` and both
+  real verifier cycles;
+- add `scripts/verify_ownership.py` and `scripts/smoke_mock_golden_path.py` so
+  their authenticated Prompt payloads carry deterministic UUID request identities.
+
+The original Goal and failing RED record remain preserved. Execution resumes only
+under the v2 Goal overlay and its distinct SHA-256.
 
 ## 8. Verification contract
 

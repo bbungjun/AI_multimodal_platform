@@ -414,6 +414,15 @@ instead of billing only the final response. Exact scope is14 non-document paths,
 zero migrations, mock-only local proof; G7, live GCP, Usage UI and held-reservation
 reconciliation remain separate. Preparation does not claim implementation.
 
+2026-09-04 approved G6 verification redesign: Todo1 correctly stopped when the
+required request UUID exposed two omitted inherited callers. The user approved
+replacing the standalone mock-provider and support-test paths with
+`scripts/verify_ownership.py` and `scripts/smoke_mock_golden_path.py`, preserving
+exact14 paths, migration0 and all product policy. Mock token assertions and proof
+support safety consolidate into the remaining approved tests. The v1 Goal and RED
+failure remain evidence; v2 SHA governs resumed execution. This does not authorize
+G7 or live provider/cloud work.
+
 ## Initiative Completion Gate
 
 The initiative is complete only when G1-G11, including G3.1, have

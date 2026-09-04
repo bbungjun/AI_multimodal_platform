@@ -108,6 +108,16 @@ paste credential contents.
   `4a661c72679fd2a7212aa870ba3ae59faf2b656d942b9bebe170a017385cd40f`.
   Never stage `.omo` wholesale or record prompt/identity/provider raw data in
   evidence.
+- Todo1 produced three expected assertion REDs, then stopped before
+  implementation: required `request_id` would break the ownership verifier and
+  its golden-path caller, both omitted from v1 scope. User approved a same-size
+  v2 correction: replace `test_mock_provider.py` and the standalone support test
+  with `scripts/verify_ownership.py` and `scripts/smoke_mock_golden_path.py`;
+  consolidate their test responsibilities in the remaining approved tests.
+  Original v1 remains unchanged. Resume overlay:
+  `.omo/plans/issue-124-g6-gemini-credit-integration-v2-goal.md`; SHA256
+  `be41d364cf26321ebd73211bb43983b940d75394e84b94264e3d6b922d3ef25d`.
+  Exact14/migration0 and every runtime/delivery gate remain unchanged.
 
 ### G5C2 execution — 2026-09-04
 
