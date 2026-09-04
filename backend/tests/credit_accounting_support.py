@@ -300,9 +300,9 @@ async def proof(db, factory):
 
     compete = await seed()
     async def compete_ok(uid, one, two):
-        check(one.status == "held" and two == "monthly_credit_exhausted")
+        check(one.status == "held" and two == "user_concurrency_limit")
         check(await db.fetchval("SELECT count(*) FROM credit_reservations WHERE user_id=$1", uid) == 1)
-    await race(compete, reserve_op("one", 600_000), reserve_op("two", 600_000), compete_ok, "monthly_credit_exhausted")
+    await race(compete, reserve_op("one", 600_000), reserve_op("two", 600_000), compete_ok, "user_concurrency_limit")
 
     same = await seed()
     async def same_ok(uid, one, two):
@@ -323,7 +323,7 @@ async def proof(db, factory):
     await race(terminal_user, settle_op(terminal_hold.reservation_id, "same_t", 2),
                settle_op(terminal_hold.reservation_id, "same_t", 2), terminal_ok)
 
-    collision_user = await seed(); h1 = await hold(collision_user, "h1", (estimate(units=5),)); h2 = await hold(collision_user, "h2", (estimate(units=5),))
+    collision_user = await seed(True); h1 = await hold(collision_user, "h1", (estimate(units=5),)); h2 = await hold(collision_user, "h2", (estimate(units=5),))
     async def terminal_collision(uid, one, two):
         check(two == "credit_idempotency_conflict")
         check(await db.fetchval("SELECT count(*) FROM credit_reservations WHERE user_id=$1 AND status='settled'", uid) == 1)
