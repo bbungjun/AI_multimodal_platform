@@ -32,7 +32,10 @@ async def proof(db, factory):
     async def seed(plan="free"):
         uid = uuid4()
         role = "master" if plan == "master" else "user"
-        await db.execute("INSERT INTO users(id,email_verified,role,status,data_origin,signed_up_at,updated_at) VALUES($1,false,$2,'active','synthetic',$3,$3)", uid, role, T)
+        if plan == "master":
+            await db.execute("INSERT INTO users(id,google_sub,email,email_verified,role,status,data_origin,signed_up_at,updated_at) VALUES($1,$2,$3,true,'master','active','oauth',$4,$4)", uid, uid.hex, uid.hex+"@example.invalid", T)
+        else:
+            await db.execute("INSERT INTO users(id,email_verified,role,status,data_origin,signed_up_at,updated_at) VALUES($1,false,$2,'active','synthetic',$3,$3)", uid, role, T)
         return uid
 
     def make(uid, mode, model, units, *, parent=None, blocked=False):
