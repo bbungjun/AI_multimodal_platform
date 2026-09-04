@@ -1,6 +1,6 @@
 # G9A — Personal Plan and usage read-model specification
 
-Status: **Execution Prepared**, 2026-09-05. Issue
+Status: **In Progress**, 2026-09-05. Issue
 [#131](https://github.com/bbungjun/AI_multimodal_platform/issues/131) is the
 backend read slice of G9. G9B will consume this Interface in the existing
 frontend; it is not part of this Goal.

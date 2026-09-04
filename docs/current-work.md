@@ -77,9 +77,14 @@ paste credential contents.
 
 ## Active Work
 
-### G9A execution preparation — 2026-09-05
+### G9A execution — 2026-09-05
 
-- **Goal Prepared; implementation not started.** G8 [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)
+- **In Progress.** The frozen Goal integrity gate passed at SHA-256
+  `c7fc9f7…733cc`; branch/head, `origin/main`, Docker `desktop-linux`, empty
+  staged paths and the preserved untracked `.omo/` tree were confirmed before
+  implementation. The first focused verification is the Todo1 personal-usage
+  Module/API RED contract suite with process-local `AI_PROVIDER=mock`.
+- G8 [PR130](https://github.com/bbungjun/AI_multimodal_platform/pull/130)
   passed final-head `verify` and both Scan/SBOM checks and protected squash-merged
   as `b050320`; Issue129 is closed and local `main` was synchronized while the
   existing untracked `.omo/` tree remained untouched.
