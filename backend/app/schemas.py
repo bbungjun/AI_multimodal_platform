@@ -34,6 +34,7 @@ class GenerationRequestBase(BaseModel):
 
 class PromptEnhanceRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    request_id: UUID
     prompt: str = Field(min_length=1, max_length=4000)
     target_mode: GenerationMode
     target_model: str = Field(min_length=1, max_length=128)

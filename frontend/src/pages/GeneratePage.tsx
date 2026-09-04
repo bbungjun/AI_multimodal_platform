@@ -297,6 +297,7 @@ export function GeneratePage() {
     }
 
     enhanceMutation.mutate({
+      request_id: crypto.randomUUID(),
       prompt,
       target_mode: mode,
       target_model: model,

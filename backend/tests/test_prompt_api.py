@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from app.api import prompts
 from app.auth.service import AuthenticatedUser
@@ -19,6 +20,18 @@ from app.prompt_enhancement import (
 from app.services.llm import enhancer
 from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexRateLimitedError
+from app.schemas import PromptEnhanceRequest
+
+
+def test_prompt_enhance_requires_durable_request_id():
+    with pytest.raises(ValidationError):
+        PromptEnhanceRequest.model_validate(
+            {
+                "prompt": "fixture",
+                "target_mode": "t2i",
+                "target_model": "imagen-4.0-fast-generate-001",
+            }
+        )
 
 
 @pytest.mark.parametrize("field", ["owner_user_id", "user_id", "role"])
@@ -58,6 +71,9 @@ ACTOR = AuthenticatedUser(id=UUID(int=101), role="user", status="active", email=
 
 
 async def _post_prompt_enhance(payload: dict, session: FakePromptSession, *, actor=ACTOR):
+    payload = dict(payload)
+    payload.setdefault("request_id", str(uuid4()))
+
     async def override_session() -> AsyncIterator[FakePromptSession]:
         yield session
 
