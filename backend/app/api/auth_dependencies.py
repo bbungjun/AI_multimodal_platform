@@ -18,7 +18,12 @@ async def get_auth_service():
             settings.auth_google_client_secret.get_secret_value(), settings.auth_google_redirect_uri,
             timeout=settings.auth_provider_timeout_sec)
     try:
-        yield AuthService(AsyncSessionLocal, RedisFlowStore(redis), google)
+        yield AuthService(
+            AsyncSessionLocal,
+            RedisFlowStore(redis),
+            google,
+            login_enabled=settings.auth_login_enabled,
+        )
     finally:
         await redis.aclose()
 
