@@ -175,3 +175,16 @@ Completion requires Todo1–8, F1–F4 APPROVE, the full local proof, portfolio 
 handoff documentation, Ready PR, final-head required CI, protected squash
 auto-merge, actual `MERGED`, and Issue closure. The evidence level is **Mock
 Verified**, never live provider capacity or cloud quota verification.
+
+## 9. Implementation evidence — 2026-09-05
+
+Revision `4e8132a` implements the accepted seam using 14 allowlisted
+non-document paths and zero migrations. Two final isolated cycles at that same
+SHA each completed all eight groups, six observed races, 259 checks and cleanup
+zero. The inherited accounting, lifecycle, prompt-credit, generation-credit,
+auth and ownership-all2 gates plus full Linux/Windows/Compose/frontend regressions
+passed as recorded in `docs/portfolio/issue-129-user-concurrency-enforcement.md`.
+
+Status is **Mock Verified locally**. Ready PR final-head CI and protected merge
+remain delivery gates at the time of this record; live Vertex throughput, cloud
+quota and held-reservation recovery remain unverified.

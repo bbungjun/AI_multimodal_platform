@@ -77,27 +77,32 @@ paste credential contents.
 
 ## Active Work
 
-### G8 execution preparation — 2026-09-05
+### G8 execution — 2026-09-05
 
-- **Goal Prepared; implementation not started.** G7 [PR128](https://github.com/bbungjun/AI_multimodal_platform/pull/128)
-  passed required `verify` and both Scan/SBOM checks and squash-merged as
-  `0a88b94`; Issue127 is closed. Local `main` was synchronized to that revision
-  while the existing untracked `.omo/` tree remained untouched.
-- [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129) and
-  branch `codex/issue-129-user-concurrency-enforcement` start from `0a88b94`.
-  The [accepted G8 spec](initiatives/g8-user-concurrency-enforcement-spec.md)
-  deepens `credit_accounting`: one held Reservation is one top-level slot,
-  serialized by the existing User lock; Free/Pro/Max limits are1/3/5 and Master
-  follows Max. Pipeline occupies one slot and terminal settle/release returns it.
-- Exact execution ceiling is18 non-document paths and zero migrations. Redis
-  semaphores, worker-global limits, G9/G10, payment/Audit/sweeper, frontend,
-  OAuth/provider/cloud and infrastructure are excluded. A nineteenth path or any
-  schema change requires STOP-and-redesign.
-- Preparation baseline with `AI_PROVIDER=mock`: focused accounting, prompt,
-  generation and pipeline tests **215 passed in3.95s**. Implementation and Docker
-  proof have not started. The frozen Goal must require two isolated concurrency
-  cycles, inherited G5/G6/G7/auth/ownership and full regressions, documentation,
-  Ready PR, final CI and protected squash merge.
+- **Mock Verified locally; Ready PR delivery pending.** [Issue129](https://github.com/bbungjun/AI_multimodal_platform/issues/129)
+  implements the [accepted G8 contract](initiatives/g8-user-concurrency-enforcement-spec.md)
+  on branch `codex/issue-129-user-concurrency-enforcement` from G7 squash
+  `0a88b94`. Code revision `4e8132a` changes 14 approved non-document paths and
+  zero migrations.
+- `credit_accounting.reserve` now treats every held Reservation as one durable
+  top-level slot under the existing User lock. Replay precedes Plan concurrency,
+  which precedes Credit allocation; Free/Pro/Max are1/3/5 and Master is5.
+  Prompt, standalone generation, retry and pipeline share the rule; pipeline
+  keeps one parent slot and terminal settle/release returns it atomically.
+- Two final isolated concurrency cycles at the same SHA each passed 8 groups,
+  6 observed races and259 checks with cleanup zero. Same-User bursts of at least50
+  never exceeded the Plan limit; cross-User independence, full-limit replay,
+  slot return and HTTP429/provider-enqueue-zero behavior passed.
+- Accounting, lifecycle, prompt-credit, generation-credit and auth verifiers each
+  passed. Ownership `--suite all --cycles 2` completed ownership2 + file-ops2
+  cycles. Tracked-only Linux passed1506/3 guarded skips; Windows passed1505/3
+  skips and reproduced only the existing Bash absolute-path exception. Compose,
+  frontend lint/build, Session48 and Chromium34 passed.
+- Detailed problem, failed proof assumptions, design trade-offs, numeric results
+  and residual risks are in the [Issue129 portfolio record](portfolio/issue-129-user-concurrency-enforcement.md).
+  Evidence is Mock Verified, not live Vertex throughput/cloud quota. Remaining
+  delivery gate: Ready PR, final-head required3 CI, protected squash merge,
+  Issue closure and local `main` synchronization.
 
 ### G7 execution — 2026-09-04
 

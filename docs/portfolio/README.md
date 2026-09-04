@@ -102,6 +102,7 @@ A16 구현/B16 후보, actual2cycle/전체 회귀 완료; 최종 delivery는 실
 | [#107](https://github.com/bbungjun/AI_multimodal_platform/issues/107) | [Worker ownership and pipeline/race proof](issue-107-worker-ownership-invariants.md) | Planned / Goal Prepared: exact11 paths, migration0, baseline282 PASS; no B implementation/runtime proof yet |
 | [#124](https://github.com/bbungjun/AI_multimodal_platform/issues/124) | [Gemini prompt credit integration](issue-124-gemini-credit-integration.md) | Mock Verified locally at `87dca6b`; exact14/migration0, isolated2 + ownership4 cycles + Linux/frontend passed; PR delivery pending |
 | [#127](https://github.com/bbungjun/AI_multimodal_platform/issues/127) | [Imagen/Veo and pipeline credit integration](issue-127-generation-credit-integration.md) | Mock Verified at `7e795c2`; required3 CI passed and PR128 squash-merged as `0a88b94` |
+| [#129](https://github.com/bbungjun/AI_multimodal_platform/issues/129) | [Atomic per-User concurrency enforcement](issue-129-user-concurrency-enforcement.md) | Mock Verified locally at `4e8132a`; concurrency2 each8 groups/6 races/259 checks and cleanup0; Ready PR delivery pending |
 | [#89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | GPU operations and CI/CD evidence | Planned |
 | [#90](https://github.com/bbungjun/AI_multimodal_platform/issues/90) | Capacity, recovery, dependency failure, and cost | Planned |
 

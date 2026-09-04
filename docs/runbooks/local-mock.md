@@ -659,3 +659,24 @@ docker compose down
 ```
 
 Use `down -v` only when intentionally removing local database and asset volumes.
+## Verify per-User concurrency enforcement
+
+From the repository root, keep the normal development/preview Compose project
+running or stopped as-is; the verifier owns a different random project and never
+adopts its volumes.
+
+```powershell
+$env:AI_PROVIDER = "mock"
+python scripts/verify_concurrency.py --env-file .env.example
+```
+
+A pass reports eight groups, races/check counts, schema/code revisions and
+cleanup. Run it twice at the same committed SHA for release evidence. A 429
+`user_concurrency_limit` is the expected public response when held top-level
+Reservations reach Free1, Pro3 or Max/Master5. Do not clear held Reservations in
+the development DB to make this pass: terminalize the owning operation through
+the existing settle/release path, or diagnose an abandoned hold as a separate
+recovery incident.
+
+The verifier refuses private env files and forces `AI_PROVIDER=mock`; it must not
+be used as evidence of live Vertex capacity, GCP quota or provider billing.
