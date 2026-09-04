@@ -77,9 +77,54 @@ paste credential contents.
 
 ## Active Work
 
+### G5C2 execution — 2026-09-04
+
+- **Locally Mock Verified — delivery pending.** Goal SHA matched, Issue121 is
+  OPEN and branch `codex/issue-121-credit-accounting-module` starts from actual
+  PR122 squash `68e3df6254b1aa9acfba5f1d4bc7965e60b06fa4`. Existing `.omo` remains
+  untracked and preserved. Fresh execution baseline passed **219 tests in 1.41s**.
+  Docker Desktop `desktop-linux`, empty `DOCKER_HOST`, forced `AI_PROVIDER=mock`,
+  unchanged migration set and preserved preview resources were confirmed read-only.
+- Final code `41b1bf3` changes exactly six approved code paths and zero migrations.
+  It adds the deep `credit_accounting` Module with `reserve`, `settle`, `release`,
+  deterministic expiring-first allocation, immutable replay receipts, stored-rate
+  settlement and ledger/projection reconstruction. No product caller is wired.
+- Two final accounting projects each passed all8 groups, races8 and **299 checks**;
+  work/cleanup were 35.172/2.656s and 14.829/2.687s, with exact resources0.
+  Schema passed accounting42/credit90/races3/reset/stale guards; lifecycle passed
+  groups8/races8/checks320; auth Postgres/Redis/outage recovery passed with auth50
+  p95 6.906ms. Ownership `all/2` passed four cycles in981.390s: each ownership
+  access348/delete-race2 and each file-ops FOVE310/two actors, cleanup0.
+- Linux tracked-only backend passed **1429 / 3 guarded skips**. Windows passed
+  **1428 / 3 guarded skips** with only the known Bash path native127, reproduced
+  from untouched base68e3df6. Compose, frontend lint/build, Session48 and Chromium34
+  passed unchanged. Two transient ownership harness failures at http-races/metadata
+  were retained; both cleaned to zero before the final complete all/2 run.
+- F1 scope/architecture, F2 data/security and F3 verification/operations are
+  APPROVE. Todo8/F4 remain: push, Ready PR, final-head required3 CI, protected
+  squash actual merge/tree match and Issues121/117/114 closure.
+- [G5C aggregate spec](initiatives/g5-credit-accounting-spec.md) now freezes the
+  three-operation deep Module Interface, replay-before-renewal, complete lock
+  order, allocation/terminal policy, C201–C234 and eight observed PostgreSQL
+  races. Caller/product code sees only reserve/settle/release receipts; grant IDs,
+  locks, projection reconstruction and ledger shapes stay in the Implementation.
+- Exact code scope is six paths: new accounting Module and unit test, fixed proof
+  and safety test, verifier and parser/guard test. Migration count is zero.
+  Existing schema/models/lifecycle, Job/Prompt/Asset/Outbox/worker/state machine,
+  frontend, OAuth/provider/cloud, Plan/Master/Audit and CI/Compose are excluded.
+- Execution must pass two accounting cycles (eight groups, races8, checks>=160),
+  schema1, lifecycle1, auth1, ownership/file all2, Linux/Windows/Compose/frontend,
+  documentation review and final required3 CI/protected squash. It then closes
+  Issues121/117/114. Persistence alone is not generation billing; G6/G7 remain.
+- Frozen local Goal `.omo/plans/issue-121-g5c2-credit-accounting-module-goal.md`;
+  SHA256 `e3937a938d719a55d83a906f2f796171aaeec40ed9caddd8d6f50952487c6579`.
+  Transfer exact plan bytes and never stage `.omo` wholesale.
+
 ### G5C1 execution — 2026-09-04
 
-- **Mock Verified locally — Todo1–7 and F1–F3 complete; Ready PR/CI/merge pending.**
+- **Mock Verified — Merged.** Ready [PR122](https://github.com/bbungjun/AI_multimodal_platform/pull/122)
+  passed verify and both Scan/SBOM checks, then protected-squash merged as
+  `68e3df6`. Tested final head and squash tree matched; Issue120 is closed.
   Goal SHA matched and final tested source is `b4ce32eb7f4dff7c15a9d726b4d2ec77d5e4e3ff`.
   Exactly 20 approved non-document paths changed, exactly one additive migration
   `0006_credit_accounting_persistence` was added, and migrations0001–0005 are
@@ -107,9 +152,7 @@ paste credential contents.
   valid distinct keys. Every failed isolated project also cleaned to zero.
 - Frozen local plan `.omo/plans/issue-120-g5c1-credit-accounting-persistence-goal.md`;
   SHA256 `d55cad9eba3013706dfd6554894c78af40ef927ed8c03352fbca062c3463f8cc`.
-  `.omo` remains untracked/unstaged. Next is Todo8: push, Ready PR, exact-final-head
-  verify plus backend/frontend Scan/SBOM, protected squash auto-merge, then confirm
-  only Issue120 closes. Issues121/117/114 remain open.
+  `.omo` remains untracked/unstaged. Issues121/117/114 remain open for G5C2.
 
 ### G5B execution — 2026-09-04
 

@@ -663,6 +663,28 @@ Linux1321 PASS/3 guarded skips and frontend Session48/Chromium34. Windows report
 only the existing Bash-path native127, reproduced on untouched a003257. This does
 not prove debit/settlement or generation admission; those remain later Goals.
 
+## G5C2 atomic credit accounting verification
+
+The accounting Module is tested through its three-operation Interface and a fixed
+local PostgreSQL proof. Run the proof twice at one clean tracked SHA:
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_credit_accounting.py --env-file .env.example
+python scripts/verify_credit_accounting.py --env-file .env.example
+```
+
+Each invocation owns a fresh `accounting-verify-*` project and accepts no target,
+DSN, source, keep-volume or evidence override. Completion requires the eight fixed
+groups, eight observed lock races, at least160 checks, head0006, matching code SHA
+and exact container/volume/network cleanup0. At code41b1bf3 both final cycles
+passed299 checks; work/cleanup were35.172/2.656s and14.829/2.687s.
+
+This proof covers deterministic holds, equal/different replay, complete/partial/
+no-deliverable terminals, expired remainder, outer rollback, corruption refusal
+and renewal races. It does not prove Job/provider integration or charged generation;
+those remain G6/G7.
+
 ## Secret Hygiene
 
 Verification should include checks that `.env`, credential files, generated

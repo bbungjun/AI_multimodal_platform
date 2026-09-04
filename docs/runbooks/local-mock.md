@@ -575,7 +575,7 @@ The default command proves ownership only; final G4.3B requires explicit all.
 Unattended `/metrics` now returns401 without a Session; do not add a scrape bypass.
 Ready PR, final-head CI and actual merge remain separately linked from Issue112.
 
-## G5A/G5B/G5C1 credit schema, lifecycle proof and safe rollback
+## G5A/G5B/G5C credit schema, lifecycle/accounting proof and safe rollback
 
 Current code packages `0006_credit_accounting_persistence`. G5A creates empty credit
 account/cycle/grant/ledger tables;0005 adds immutable operation receipts;0006 adds
@@ -609,7 +609,18 @@ python scripts/verify_credit_lifecycle.py --env-file .env.example
 For G5C1 run it once after two schema verifier cycles. The invocation owns a fresh project and proves lazy renewal,
 Plan/bonus/replay/expiry, caller rollback and eight observed lock races. Populated
 operations deliberately block downgrade to0004. G5B and G5C1 do not debit generation;
-reserve/settle/release remains G5C2.
+For G5C2, run the fixed accounting verifier twice at one clean commit:
+
+```powershell
+python scripts/verify_credit_accounting.py --env-file .env.example
+python scripts/verify_credit_accounting.py --env-file .env.example
+```
+
+Require all eight groups, races8, checks>=160 and resource cleanup0 from each
+independent `accounting-verify-*` project. A partial group, prior-SHA result or
+single cycle is not completion. Never point the verifier at a developer/preview
+database. G5C2 proves reserve/settle/release as an internal Module only; generation
+billing remains G6/G7.
 
 ## Stop
 
