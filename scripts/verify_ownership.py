@@ -556,10 +556,16 @@ def execution_proof(runtime, identity):
         runtime.docker(*runtime.compose,"start","dispatcher","worker")
     print(json.dumps({"proof":"celery_completion"}),flush=True)
     with phase(runtime, "celery_completion"):
-        for job_id in [execution_id("pipeline_race","child"), *(value for _,value in winners)]:
+        print(json.dumps({"proof":"celery_legacy_pipeline"}),flush=True)
+        for job_id in [execution_id("pipeline_race","child")]:
             poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_race_jobs"}),flush=True)
+        for job_id in [value for _,value in winners]:
+            poll_generation(actor_b,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_new_pipeline"}),flush=True)
         for job_id in [pipeline["parent"]["id"], pipeline["child"]["id"]]:
             poll_generation(pipeline_actor,job_id=job_id,deadline=runtime.deadline,interval_sec=0.5)
+        print(json.dumps({"proof":"celery_expiry"}),flush=True)
         poll_generation(identity.client(runtime.base_url,"master"),job_id=expiry["id"],deadline=runtime.deadline,interval_sec=0.5)
         for case,_ in winners:
             if runtime.execution_fixture("race_completed",case) != {"race_completed":1}:
