@@ -735,7 +735,7 @@ async def test_generation_concurrency_refusal_is_http_429_and_rolls_back(monkeyp
 
     assert exc_info.value.status_code == 429
     assert exc_info.value.detail == "user_concurrency_limit"
-    assert session.rollback_count == 1
+    assert session.events == ["rollback"]
 
 
 async def test_create_generation_does_not_depend_on_broker_availability(monkeypatch):

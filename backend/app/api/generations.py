@@ -298,6 +298,7 @@ async def _admit_generation(session: AsyncSession, job: Job, *, now,
         status_code = {
             "monthly_credit_exhausted": status.HTTP_402_PAYMENT_REQUIRED,
             "credit_plan_refused": status.HTTP_403_FORBIDDEN,
+            "user_concurrency_limit": status.HTTP_429_TOO_MANY_REQUESTS,
             "credit_busy": status.HTTP_503_SERVICE_UNAVAILABLE,
             "credit_account_inconsistent": status.HTTP_503_SERVICE_UNAVAILABLE,
         }.get(error.code, status.HTTP_409_CONFLICT)

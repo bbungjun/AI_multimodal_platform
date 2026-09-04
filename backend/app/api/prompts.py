@@ -98,6 +98,7 @@ def _status_code_for_prompt_credit_error(exc: prompt_credit.PromptCreditError) -
     return {
         "monthly_credit_exhausted": status.HTTP_402_PAYMENT_REQUIRED,
         "plan_feature_not_allowed": status.HTTP_403_FORBIDDEN,
+        "user_concurrency_limit": status.HTTP_429_TOO_MANY_REQUESTS,
         "credit_idempotency_conflict": status.HTTP_409_CONFLICT,
         "prompt_enhancement_in_progress": status.HTTP_409_CONFLICT,
         "prompt_enhancement_terminal": status.HTTP_409_CONFLICT,
@@ -110,6 +111,7 @@ def _message_for_prompt_credit_error(exc: prompt_credit.PromptCreditError) -> st
     return {
         "monthly_credit_exhausted": "Monthly credits are exhausted.",
         "plan_feature_not_allowed": "The current plan does not allow this operation.",
+        "user_concurrency_limit": "The current plan's active request limit is reached.",
         "credit_idempotency_conflict": "The request identity conflicts with prior input.",
         "prompt_enhancement_in_progress": "Prompt enhancement is already in progress.",
         "prompt_enhancement_terminal": "Prompt enhancement already ended without a result.",
