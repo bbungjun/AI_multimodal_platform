@@ -77,9 +77,32 @@ paste credential contents.
 
 ## Active Work
 
+### Emergency Session revocation execution — 2026-09-05
+
+- **In progress.** [Issue99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
+  is the pre-live authentication containment blocker. Branch
+  `codex/issue-99-emergency-session-revocation` starts from the synchronized
+  G9A squash baseline `2565a7a`.
+- The [accepted specification](initiatives/emergency-session-revocation-spec.md)
+  freezes a migration-free deep Module plus guarded operator CLI. Every instance
+  must first run with `AUTH_LOGIN_ENABLED=false`; OAuth start and callback then
+  fail before flow/provider/database admission. Preview is immutable, and apply
+  requires an exact PostgreSQL database name and confirmation before all active
+  Sessions are revoked transactionally.
+- Exact implementation ceiling is 12 non-document paths and zero migrations.
+  Verification uses only disposable local PostgreSQL, `AI_PROVIDER=mock`, two
+  independent cycles, inherited auth/full regressions and cleanup zero. This is
+  not a live incident drill, Master suspension, Audit or cloud configuration.
+- Frozen Goal SHA-256 is
+  `8b9cc5e071688f98bd9bcb630bc0934feb7a903f778e25d0d528b10e71d0e5cf`.
+  After protected merge, local `main` is synchronized before G9B Issue/branch/
+  Goal preparation and execution begins.
+
 ### G9A execution — 2026-09-05
 
-- **Mock Verified locally; delivery tracked by [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132).** The frozen Goal integrity gate passed at SHA-256
+- **Mock Verified — Merged.** [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132)
+  passed required final-head CI and protected squash-merged as `2565a7a`;
+  Issue131 is closed and local `main` was synchronized. The frozen Goal integrity gate passed at SHA-256
   `c7fc9f7…733cc`; branch/head, `origin/main`, Docker `desktop-linux`, empty
   staged paths and the preserved untracked `.omo/` tree were confirmed before
   implementation. The first focused verification is the Todo1 personal-usage
