@@ -110,7 +110,9 @@ async def proof(db, factory):
     uid=await seed(); first,_=await admit(uid,GenerationMode.T2I,"imagen-4.0-fast-generate-001",1); await finish(first,None,ok=False)
     second,_=await admit(uid,GenerationMode.T2I,"imagen-4.0-fast-generate-001",1)
     keys=await db.fetch("SELECT reserve_operation_key,status FROM credit_reservations WHERE user_id=$1 ORDER BY created_at,id",uid)
-    for value in (first!=second,len(keys)==2,keys[0]["status"]=="released",keys[1]["status"]=="held",keys[0]["reserve_operation_key"]!=keys[1]["reserve_operation_key"]): check(value)
+    for value in (first!=second,len(keys)==2,{row["status"] for row in keys}=={"released","held"},
+                  len({row["reserve_operation_key"] for row in keys})==2,
+                  all(row["reserve_operation_key"].startswith("g7r_") for row in keys)): check(value)
     groups[phase]=True
 
     async def pipeline():
