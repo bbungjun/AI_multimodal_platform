@@ -86,24 +86,24 @@ async def proof(db, factory):
 
     phase = "imagen"
     uid=await seed(); jid,_=await admit(uid,GenerationMode.T2I,"imagen-4.0-fast-generate-001",2)
-    result=await finish(jid,AssetKind.IMAGE); row=await db.fetchrow("SELECT status,consumed_microcredits,released_microcredits FROM credit_reservations WHERE user_id=$1",uid)
-    for value in (result.status=="settled",row["status"]=="settled",row["consumed_microcredits"]==50_000_000,
-                  row["released_microcredits"]==50_000_000,await db.fetchval("SELECT actual_units FROM credit_usage_records WHERE user_id=$1",uid)==1): check(value)
+    result=await finish(jid,AssetKind.IMAGE); status=await db.fetchval("SELECT status FROM credit_reservations WHERE user_id=$1",uid)
+    for value in (result.status=="settled",status=="settled",result.consumed_microcredits==50_000_000,
+                  result.released_microcredits==50_000_000,await db.fetchval("SELECT actual_units FROM credit_usage_records WHERE user_id=$1",uid)==1): check(value)
     groups[phase]=True
 
     phase="veo"
     uid=await seed(); jid,_=await admit(uid,GenerationMode.T2V,"veo-3.0-fast-generate-001",4)
-    result=await finish(jid,AssetKind.VIDEO,duration=3.5); row=await db.fetchrow("SELECT status,consumed_microcredits,released_microcredits FROM credit_reservations WHERE user_id=$1",uid)
-    for value in (result.status=="settled",row["status"]=="settled",row["consumed_microcredits"]==210_000_000,
-                  row["released_microcredits"]==30_000_000,await db.fetchval("SELECT actual_units FROM credit_usage_records WHERE user_id=$1",uid)==3500): check(value)
+    result=await finish(jid,AssetKind.VIDEO,duration=3.5); status=await db.fetchval("SELECT status FROM credit_reservations WHERE user_id=$1",uid)
+    for value in (result.status=="settled",status=="settled",result.consumed_microcredits==210_000_000,
+                  result.released_microcredits==30_000_000,await db.fetchval("SELECT actual_units FROM credit_usage_records WHERE user_id=$1",uid)==3500): check(value)
     groups[phase]=True
 
     phase="failure"
     for reason in ("provider_failed","provider_timeout","provider_rate_limited","cancelled_before_delivery","delivery_failed"):
         uid=await seed(); jid,_=await admit(uid,GenerationMode.T2I,"imagen-4.0-fast-generate-001",1)
-        result=await finish(jid,None,ok=False,reason=reason); row=await db.fetchrow("SELECT status,terminal_reason_code,consumed_microcredits,released_microcredits FROM credit_reservations WHERE user_id=$1",uid)
+        result=await finish(jid,None,ok=False,reason=reason); row=await db.fetchrow("SELECT status,terminal_reason_code FROM credit_reservations WHERE user_id=$1",uid)
         for value in (result.status=="released",row["status"]=="released",row["terminal_reason_code"]==reason,
-                      row["consumed_microcredits"]==0,row["released_microcredits"]==50_000_000): check(value)
+                      result.consumed_microcredits==0,result.released_microcredits==50_000_000): check(value)
     groups[phase]=True
 
     phase="retry"
@@ -133,8 +133,8 @@ async def proof(db, factory):
     uid,pid,cid=await pipeline()
     async with factory() as session,session.begin():
         p=await session.get(Job,pid); session.add(Asset(job_id=pid,kind=AssetKind.IMAGE,local_path=pid.hex+"/i",mime="image/png",size_bytes=1,created_at=T)); await gc.terminalize_generation(session,job=p,succeeded=True,reason_code=None,now=T)
-    result=await finish(cid,None,ok=False); row=await db.fetchrow("SELECT status,delivery,consumed_microcredits,released_microcredits FROM credit_reservations WHERE user_id=$1",uid)
-    for value in (result.status=="settled",row["status"]=="settled",row["delivery"]=="partial",row["consumed_microcredits"]==50_000_000,row["released_microcredits"]==240_000_000): check(value)
+    result=await finish(cid,None,ok=False); row=await db.fetchrow("SELECT status,delivery FROM credit_reservations WHERE user_id=$1",uid)
+    for value in (result.status=="settled",row["status"]=="settled",row["delivery"]=="partial",result.consumed_microcredits==50_000_000,result.released_microcredits==240_000_000): check(value)
     groups[phase]=True
 
     phase="replay_race"
