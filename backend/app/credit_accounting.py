@@ -3,9 +3,19 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
+
+from app.credit_lifecycle import CreditLifecycleError, ensure_cycle
+from app.credit_models import (
+    CreditAccount, CreditCycle, CreditGrant, CreditLedgerEvent,
+    CreditReservation, CreditReservationAllocation, CreditReservationItem,
+    CreditUsageRecord,
+)
+from app.credit_policy import RATE_CARD_VERSION, plan_policy, quote_usage
+from app.identity_models import User
 
 
 __all__ = [
@@ -113,6 +123,23 @@ def _units(value, *, positive: bool) -> int:
     return value
 
 
+def _amount(value) -> int:
+    if type(value) is not int or not 0 <= value <= _MAX:
+        _fail("credit_account_inconsistent")
+    return value
+
+
+def _sum_amounts(values, *, positive=False) -> int:
+    total = 0
+    for value in values:
+        total += _amount(value)
+        if total > _MAX:
+            _fail("credit_amount_overflow")
+    if positive and total <= 0:
+        _fail("credit_input_invalid")
+    return total
+
+
 def _estimates(value) -> tuple[UsageEstimate, ...]:
     if type(value) is not tuple or not 1 <= len(value) <= len(_METERS):
         _fail()
@@ -160,6 +187,58 @@ async def _transaction(session):
         raise CreditAccountingError(code) from None
 
 
+def _locked(model, *criteria):
+    return select(model).where(*criteria).with_for_update().execution_options(populate_existing=True)
+
+
+def _lifecycle_error(error: CreditLifecycleError):
+    code = error.code
+    if code == "credit_clock_regressed":
+        code = "credit_account_inconsistent"
+    if code not in {
+        "credit_transaction_required", "credit_user_missing", "credit_input_invalid",
+        "credit_plan_refused", "credit_account_inconsistent", "credit_amount_overflow",
+        "credit_busy",
+    }:
+        code = "credit_account_inconsistent"
+    raise CreditAccountingError(code) from None
+
+
+async def _ledger_coherent(session, user_id, grants):
+    events = list((await session.scalars(select(CreditLedgerEvent).where(
+        CreditLedgerEvent.user_id == user_id).order_by(CreditLedgerEvent.created_at, CreditLedgerEvent.id))).all())
+    totals = {grant.id: [0, 0, 0, 0] for grant in grants}
+    for event in events:
+        if event.grant_id not in totals:
+            _fail("credit_account_inconsistent")
+        for index, name in enumerate(("granted_delta", "reserved_delta", "consumed_delta", "expired_delta")):
+            value = getattr(event, name)
+            if type(value) is not int:
+                _fail("credit_account_inconsistent")
+            totals[event.grant_id][index] += value
+            if not -_MAX <= totals[event.grant_id][index] <= _MAX:
+                _fail("credit_amount_overflow")
+    for grant in grants:
+        actual = tuple(_amount(getattr(grant, name)) for name in (
+            "granted_microcredits", "reserved_microcredits",
+            "consumed_microcredits", "expired_microcredits"))
+        if tuple(totals[grant.id]) != actual or sum(actual[1:]) > actual[0]:
+            _fail("credit_account_inconsistent")
+
+
+async def _reservation_items(session, reservation_id):
+    return tuple((await session.scalars(_locked(
+        CreditReservationItem, CreditReservationItem.reservation_id == reservation_id)
+        .order_by(CreditReservationItem.meter))).all())
+
+
+def _reservation_receipt(reservation, *, replayed):
+    return ReservationReceipt(
+        reservation.id, reservation.reserve_operation_key, "held",
+        reservation.reserved_microcredits, reservation.rate_card_version, replayed,
+    )
+
+
 async def reserve(session, *, request, now) -> ReservationReceipt:
     if not isinstance(request, ReservationRequest):
         _fail()
@@ -190,7 +269,105 @@ async def release(session, *, user_id, reservation_id, usage, reason_code,
 
 
 async def _reserve(session, request, now):
-    raise CreditAccountingError("credit_account_inconsistent")
+    user = await session.scalar(_locked(User, User.id == request.user_id))
+    if user is None:
+        _fail("credit_user_missing")
+    if now < user.signed_up_at:
+        _fail()
+
+    existing = await session.scalar(_locked(
+        CreditReservation, CreditReservation.user_id == request.user_id,
+        CreditReservation.reserve_operation_key == request.operation_key))
+    if existing is not None:
+        items = await _reservation_items(session, existing.id)
+        stored = tuple((item.meter, item.maximum_units) for item in items)
+        supplied = tuple((item.meter, item.maximum_units) for item in request.estimates)
+        if stored != supplied:
+            _fail("credit_idempotency_conflict")
+        return _reservation_receipt(existing, replayed=True)
+
+    if user.status == "suspended":
+        _fail("credit_plan_refused")
+    try:
+        view = await ensure_cycle(session, user_id=request.user_id, now=now)
+    except CreditLifecycleError as error:
+        _lifecycle_error(error)
+
+    account = await session.scalar(_locked(CreditAccount, CreditAccount.user_id == request.user_id))
+    cycle = await session.scalar(_locked(CreditCycle, CreditCycle.id == view.cycle_id,
+                                         CreditCycle.user_id == request.user_id))
+    grants = list((await session.scalars(_locked(CreditGrant, CreditGrant.user_id == request.user_id)
+                                        .order_by(CreditGrant.id))).all())
+    if account is None or cycle is None or account.plan != view.plan:
+        _fail("credit_account_inconsistent")
+    try:
+        policy = plan_policy(account.plan)
+    except ValueError:
+        _fail("credit_account_inconsistent")
+    if any(item.meter not in policy.permitted_meters for item in request.estimates):
+        _fail("credit_plan_refused")
+
+    await session.flush()
+    await _ledger_coherent(session, request.user_id, grants)
+    quoted = []
+    try:
+        for item in request.estimates:
+            quoted.append((item, quote_usage(
+                version=RATE_CARD_VERSION, meter=item.meter, units=item.maximum_units)))
+    except ValueError as error:
+        code = "credit_amount_overflow" if str(error) == "credit_amount_overflow" else "credit_input_invalid"
+        _fail(code)
+    total = _sum_amounts((amount for _, amount in quoted), positive=True)
+
+    priority = sorted(grants, key=lambda grant: (
+        grant.expires_at is None,
+        grant.expires_at or datetime.max.replace(tzinfo=timezone.utc),
+        grant.created_at,
+        grant.id,
+    ))
+    remaining = total
+    allocations = []
+    for grant in priority:
+        available = _amount(grant.granted_microcredits) - _amount(grant.reserved_microcredits) \
+            - _amount(grant.consumed_microcredits) - _amount(grant.expired_microcredits)
+        if available < 0:
+            _fail("credit_account_inconsistent")
+        taken = min(available, remaining)
+        if taken:
+            allocations.append((grant, taken))
+            remaining -= taken
+        if remaining == 0:
+            break
+    if remaining:
+        _fail("monthly_credit_exhausted")
+
+    reservation = CreditReservation(
+        id=uuid4(), user_id=request.user_id, reserve_operation_key=request.operation_key,
+        rate_card_version=RATE_CARD_VERSION, status="held", reserved_microcredits=total,
+        created_at=now, terminal_operation_key=None, terminal_at=None,
+        terminal_reason_code=None, delivery=None,
+    )
+    session.add(reservation)
+    for item, amount in quoted:
+        session.add(CreditReservationItem(
+            reservation_id=reservation.id, user_id=request.user_id, meter=item.meter,
+            maximum_units=item.maximum_units, quoted_microcredits=amount,
+        ))
+    for ordinal, (grant, amount) in enumerate(allocations):
+        session.add(CreditReservationAllocation(
+            reservation_id=reservation.id, grant_id=grant.id, user_id=request.user_id,
+            ordinal=ordinal, reserved_microcredits=amount,
+        ))
+        grant.reserved_microcredits += amount
+        session.add(CreditLedgerEvent(
+            id=uuid4(), user_id=request.user_id, grant_id=grant.id, kind="reserve",
+            operation_key="reserve_" + reservation.id.hex,
+            rate_card_version=RATE_CARD_VERSION, granted_delta=0,
+            reserved_delta=amount, consumed_delta=0, expired_delta=0,
+            created_at=now, reason_code="credit_reserved",
+        ))
+    await session.flush()
+    return _reservation_receipt(reservation, replayed=False)
 
 
 async def _terminal(session, user_id, reservation_id, lines, delivery, reason, key, now, charge):
