@@ -37,6 +37,9 @@ def test_prompt_credit_maps_only_bounded_accounting_errors():
         CreditAccountingError("monthly_credit_exhausted")
     ).code == "monthly_credit_exhausted"
     assert prompt_credit._mapped_accounting_error(
+        CreditAccountingError("user_concurrency_limit")
+    ).code == "user_concurrency_limit"
+    assert prompt_credit._mapped_accounting_error(
         CreditAccountingError("credit_account_inconsistent")
     ).code == "credit_account_unavailable"
 

@@ -246,6 +246,33 @@ def test_reserve_collision_and_exhaustion_are_atomic():
     assert set(empty.rows) == {User}
 
 
+def test_free_concurrency_limit_is_atomic_and_replay_precedes_capacity():
+    s = MemorySession()
+    first = reserve(s, estimate(), key="slot_1")
+    before = snapshot(s)
+
+    replayed = reserve(s, estimate(), key="slot_1")
+    assert replayed.replayed and replayed.reservation_id == first.reservation_id
+    assert snapshot(s) == before
+
+    with pytest.raises(accounting.CreditAccountingError, match="^user_concurrency_limit$"):
+        reserve(s, estimate(), key="slot_2")
+    assert snapshot(s) == before
+
+
+def test_plan_permission_precedes_concurrency_and_terminal_returns_slot():
+    s = MemorySession()
+    first = reserve(s, estimate(), key="slot_1")
+    before = snapshot(s)
+    with pytest.raises(accounting.CreditAccountingError, match="^credit_plan_refused$"):
+        reserve(s, estimate("imagen_ultra_image"), key="not_allowed")
+    assert snapshot(s) == before
+
+    release(s, first.reservation_id, key="return_slot")
+    second = reserve(s, estimate(), key="slot_2")
+    assert second.status == "held" and second.reservation_id != first.reservation_id
+
+
 def test_reserve_uses_expiring_first_allocation_not_lock_order():
     s = MemorySession(role="master")
     async def scenario():

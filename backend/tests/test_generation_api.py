@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
@@ -718,6 +719,23 @@ async def test_create_generation_records_dispatch_outbox_event_before_commit(mon
     job = _added_jobs(session)[0]
     _assert_job_dispatch_event(session, job=job, reason="generation_created")
     assert session.events == ["add_job", "add_outbox", "commit"]
+
+
+async def test_generation_concurrency_refusal_is_http_429_and_rolls_back(monkeypatch):
+    session = FakeGenerationSession()
+
+    async def refuse(*_args, **_kwargs):
+        raise generations.generation_credit.GenerationCreditError(
+            "user_concurrency_limit"
+        )
+
+    monkeypatch.setattr(generations.generation_credit, "admit_generation", refuse)
+    with pytest.raises(HTTPException) as exc_info:
+        await generations._admit_generation(session, _failed_mock_provider_job(), now=utc_now())
+
+    assert exc_info.value.status_code == 429
+    assert exc_info.value.detail == "user_concurrency_limit"
+    assert session.rollback_count == 1
 
 
 async def test_create_generation_does_not_depend_on_broker_availability(monkeypatch):
