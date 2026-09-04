@@ -1,7 +1,8 @@
 # Issue #134 — Personal Plan and Usage workspace UI
 
-Evidence level: **UI Mock Verified locally**. Final delivery is complete only
-after the linked Ready PR passes final-head CI and protected squash merge. This
+Evidence level: **UI Mock Verified — Merged**. [PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135)
+passed final-head `verify` and both Scan/SBOM checks and protected squash-merged
+as `1e6e523`; Issue134 closed. This
 record does not claim live OAuth, Vertex usage, an external invoice or provider
 model attribution.
 
@@ -68,5 +69,5 @@ cache and late responses cannot render into the next account.
 - The page is not a provider invoice and does not attribute exact models.
 - Plan changes, payment, bonus administration and Master/Audit remain G10 or a
   later commercial slice.
-- Final-head `verify` and both Scan/SBOM checks, protected merge, Issue closure
-  and synchronized main must be linked before marking G9 complete.
+- G9A+B is complete at Mock Verified level. G10 Master/Audit is the next bounded
+  design slice; live OAuth/Vertex and provider-billing evidence remain separate.

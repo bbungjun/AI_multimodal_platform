@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G9B personal Usage UI execution — 2026-09-05
 
-- **UI Mock Verified locally; delivery pending.** [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134)
+- **UI Mock Verified — Merged.** [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134)
   and branch `codex/issue-134-personal-usage-ui` start from synchronized
   `main` squash `d249e97` after emergency revocation delivery.
 - The [accepted G9B spec](initiatives/g9b-personal-usage-ui-spec.md) freezes one
@@ -103,6 +103,10 @@ paste credential contents.
   tracked-only Linux baseline from Issue99 is1589/3 guarded skips. Detailed
   problem, decisions and limitations are in
   [the Issue134 record](portfolio/issue-134-personal-usage-ui.md).
+- [PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135)
+  passed final-head `verify` and both Scan/SBOM checks and protected
+  squash-merged as `1e6e523`; Issue134 is closed. G9A+B is complete at the Mock
+  Verified evidence level; G10 Master/Audit is the next bounded design slice.
 
 ### Emergency Session revocation execution — 2026-09-05
 

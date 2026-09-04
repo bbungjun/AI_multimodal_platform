@@ -78,5 +78,6 @@ actual configuration delivery path rather than only the application setting.
 - Execute cannot restore Sessions. The rollback is restoring login only after
   incident review and requiring fresh authentication.
 - Master suspension and Audit are intentionally deferred to G10.
-- Delivery evidence is completed only after final-head CI, protected squash
-  merge and Issue closure are linked here.
+- [PR133](https://github.com/bbungjun/AI_multimodal_platform/pull/133)
+  passed final-head `verify` and both Scan/SBOM checks and protected
+  squash-merged as `d249e97`; Issue99 closed. Live drill risk remains unchanged.
