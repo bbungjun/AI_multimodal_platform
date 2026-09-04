@@ -178,11 +178,13 @@ async def prove_constraints(connection):
 
         for change in (dict(meter="unknown"), dict(maximum_units=0), dict(quoted_microcredits=0)):
             await reject_insert("credit_reservation_items", item(**change), "23514")
-        await reject_insert("credit_reservation_items", item(user=2), "23503", "fk_credit_reservation_items_owner")
+        await reject_insert("credit_reservation_items", item(user=2, meter="veo_video_second"),
+                            "23503", "fk_credit_reservation_items_owner")
 
         for change in (dict(ordinal=-1), dict(reserved_microcredits=0)):
             await reject_insert("credit_reservation_allocations", allocation(grant_id=uid(22), **change), "23514")
-        await reject_insert("credit_reservation_allocations", allocation(user=2, ordinal=1), "23503", "fk_credit_reservation_allocations_owner")
+        await reject_insert("credit_reservation_allocations", allocation(user=2, grant_id=uid(22), ordinal=1),
+                            "23503", "fk_credit_reservation_allocations_owner")
         await reject_insert("credit_reservation_allocations", allocation(grant_id=uid(22), ordinal=1), "23503", "fk_credit_reservation_allocations_grant_owner")
 
         for change in (
@@ -191,7 +193,8 @@ async def prove_constraints(connection):
             dict(delivery="unknown"), dict(delivery="no_deliverable", charged_microcredits=1),
         ):
             await reject_insert("credit_usage_records", usage(**change), "23514")
-        await reject_insert("credit_usage_records", usage(user=2), "23503", "fk_credit_usage_records_item_owner")
+        await reject_insert("credit_usage_records", usage(user=2, meter="veo_video_second"),
+                            "23503", "fk_credit_usage_records_item_owner")
 
         await insert(connection, "credit_usage_records", usage())
         await connection.execute(
