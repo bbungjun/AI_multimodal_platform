@@ -103,6 +103,7 @@ export type AssetResponse = {
 };
 
 export type PromptEnhanceRequest = {
+  request_id: UUID;
   prompt: string;
   target_mode: GenerationMode;
   target_model: string;

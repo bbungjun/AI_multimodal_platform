@@ -10,6 +10,42 @@ from app.services.llm import enhancer
 from app.services.vertex.errors import VertexRateLimitedError
 
 
+def test_prompt_credit_preflight_interface_exists():
+    assert callable(getattr(enhancer, "plan_prompt_enhancement", None))
+
+
+def test_prompt_credit_preflight_is_deterministic_and_covers_three_responses():
+    first = enhancer.plan_prompt_enhancement(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+    )
+    second = enhancer.plan_prompt_enhancement(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+    )
+    assert first == second
+    assert first.maximum_input_tokens > 0
+    assert first.maximum_output_tokens == 3 * enhancer.PROMPT_ENHANCEMENT_MAX_OUTPUT_TOKENS
+
+
+async def test_mock_prompt_enhancement_reports_deterministic_usage(monkeypatch):
+    monkeypatch.setattr(
+        enhancer,
+        "get_settings",
+        lambda: SimpleNamespace(ai_provider="mock", enhance_model="gemini-mock"),
+    )
+    result = await enhancer.enhance_prompt(
+        "desk lamp",
+        target_mode=GenerationMode.T2I,
+        target_model="imagen-4.0-fast-generate-001",
+    )
+    assert result.tokens_in == len("desk lamp".encode("utf-8"))
+    assert result.tokens_out > 0
+    assert result.usage_source == "mock_estimate"
+
+
 class FakeGenerateContentModels:
     def __init__(
         self,
@@ -376,6 +412,39 @@ async def test_enhance_prompt_retries_malformed_json_text_once():
     assert len(models.calls) == 2
     assert "STRICT JSON RETRY" not in models.calls[0]["contents"][0]
     assert "STRICT JSON RETRY" in models.calls[1]["contents"][0]
+
+
+async def test_enhance_prompt_aggregates_usage_for_response_bearing_retries():
+    models = FakeGenerateContentModels(
+        responses=[
+            SimpleNamespace(
+                text="not json",
+                usage_metadata=SimpleNamespace(
+                    prompt_token_count=11,
+                    candidates_token_count=3,
+                ),
+            ),
+            SimpleNamespace(
+                text=(
+                    '{"enhanced":"A paper boat drifting slowly.",'
+                    '"components":{"motion":"slow drift"}}'
+                ),
+                usage_metadata=SimpleNamespace(
+                    prompt_token_count=13,
+                    candidates_token_count=7,
+                ),
+            ),
+        ]
+    )
+    result = await enhancer.enhance_prompt(
+        "paper boat",
+        target_mode=GenerationMode.T2V,
+        target_model="veo-3.0-fast-generate-001",
+        client=FakeGenerateContentClient(models),
+    )
+    assert result.tokens_in == 24
+    assert result.tokens_out == 10
+    assert result.usage_source == "provider_reported"
 
 
 async def test_enhance_prompt_repairs_schema_invalid_response_once():

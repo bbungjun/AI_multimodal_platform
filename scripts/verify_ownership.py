@@ -32,7 +32,8 @@ def admission_proof(runtime, identity):
         checks += 1
         return result
     generation = {"mode":"t2i","model":"imagen-4.0-fast-generate-001","prompt":"fixture"}
-    prompt = {"prompt":"fixture","target_mode":"t2i","target_model":"imagen-4.0-fast-generate-001"}
+    prompt = {"request_id":content_id("admission","prompt"),"prompt":"fixture",
+              "target_mode":"t2i","target_model":"imagen-4.0-fast-generate-001"}
     pipeline = {"image_prompt":"fixture","video_prompt":"fixture",
                 "image_model":"imagen-4.0-fast-generate-001","video_model":"veo-3.0-fast-generate-001"}
     routes = [("/api/generations",generation), ("/api/prompts/enhance",prompt),
@@ -74,7 +75,8 @@ def admission_proof(runtime, identity):
                     payload["source_asset_id"] = content_id(case,"asset")
                 result = expect(client,"/api/generations",payload,201)
                 records.append(dict(case=case,kind="job",id=result["id"],retry=False))
-            result = expect(client,"/api/prompts/enhance",prompt,201)
+            owned_prompt = dict(prompt, request_id=content_id(case,"prompt"))
+            result = expect(client,"/api/prompts/enhance",owned_prompt,201)
             records.append(dict(case=case,kind="prompt",id=result["id"],retry=False))
             result = expect(client,"/api/pipelines",pipeline,201)
             records.append(dict(case=case,kind="pipeline",id=result["id"],retry=False))
@@ -138,7 +140,8 @@ def scenarios(runtime, identity):
             if remaining <= 0:
                 raise HarnessError("cycle_deadline")
             args = SimpleNamespace(timeout_sec=min(90, remaining), poll_interval_sec=0.5,
-                                   keep_job=False, keep_jobs=False)
+                                   keep_job=False, keep_jobs=False,
+                                   prompt_request_id=content_id("a", "golden"))
             module.run_smoke(args, client=identity.client(runtime.base_url, "a"))
     execution_proof(runtime, identity)
     return 3
@@ -165,7 +168,8 @@ def file_ops_scenarios(runtime, identity):
             if remaining<=0:
                 raise HarnessError("cycle_deadline")
             args=SimpleNamespace(timeout_sec=min(90,remaining),poll_interval_sec=0.5,
-                                 keep_job=False,keep_jobs=False)
+                                 keep_job=False,keep_jobs=False,
+                                 prompt_request_id=content_id(case,"golden"))
             module.run_smoke(args,client=client)
         pipeline_end_to_end(runtime,client)
     # Sequential bounded clients avoid executor shutdown waits on a failed actor.

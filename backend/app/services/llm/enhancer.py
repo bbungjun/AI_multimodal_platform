@@ -28,6 +28,8 @@ from app.services.vertex.retry import RetryPolicy, build_retry_policy, with_retr
 
 DEFAULT_LLM_MODEL = "gemini-2.5-flash"
 PROMPT_ENHANCEMENT_MAX_OUTPUT_TOKENS = 1600
+PROMPT_ENHANCEMENT_MAX_RESPONSE_GROUPS = 3
+_MAX_BIGINT = 2**63 - 1
 logger = logging.getLogger(__name__)
 JSON_FENCE_RE = re.compile(
     r"```[ \t]*(?:json)?[ \t]*(?:\r?\n)?(?P<body>.*?)```",
@@ -210,8 +212,16 @@ class PromptEnhancementResult:
     latency_ms: int
     tokens_in: int | None
     tokens_out: int | None
+    usage_source: str = "provider_reported"
     creativity_preset: CreativityPreset = DEFAULT_CREATIVITY_PRESET
     temperature: float = temperature_for_preset(DEFAULT_CREATIVITY_PRESET)
+
+
+@dataclass(frozen=True)
+class PromptEnhancementPlan:
+    llm_model: str
+    maximum_input_tokens: int
+    maximum_output_tokens: int
 
 
 @dataclass(frozen=True)
@@ -219,6 +229,117 @@ class _PayloadValidationFailure:
     field: str | None
     validation_type: str
     payload_type: str
+
+
+def _local_token_units(text: str) -> int:
+    if not isinstance(text, str):
+        raise ValueError("prompt_enhancement_usage_invalid")
+    return max(1, len(text.encode("utf-8")))
+
+
+def _checked_token_sum(values: Any) -> int:
+    total = 0
+    for value in values:
+        if type(value) is not int or value < 0 or value > _MAX_BIGINT:
+            raise ValueError("prompt_enhancement_usage_invalid")
+        total += value
+        if total > _MAX_BIGINT:
+            raise ValueError("prompt_enhancement_usage_overflow")
+    return total
+
+
+def _sum_token_units(*texts: str) -> int:
+    return _checked_token_sum(_local_token_units(value) for value in texts)
+
+
+def _usage_for_response(response: Any, request_prompt: str) -> tuple[int, int, str]:
+    metadata = getattr(response, "usage_metadata", None)
+    tokens_in = _metadata_int(metadata, "prompt_token_count", "input_token_count")
+    tokens_out = _metadata_int(
+        metadata,
+        "candidates_token_count",
+        "output_token_count",
+    )
+    if tokens_in is not None and tokens_out is not None:
+        return tokens_in, tokens_out, "provider_reported"
+
+    response_text = getattr(response, "text", None)
+    if not isinstance(response_text, str):
+        parsed = getattr(response, "parsed", None)
+        try:
+            response_text = json.dumps(parsed, ensure_ascii=False, sort_keys=True)
+        except (TypeError, ValueError):
+            response_text = ""
+    return (
+        tokens_in if tokens_in is not None else _local_token_units(request_prompt),
+        tokens_out if tokens_out is not None else _local_token_units(response_text),
+        "platform_measured",
+    )
+
+
+def plan_prompt_enhancement(
+    prompt: str,
+    *,
+    target_mode: GenerationMode | str,
+    target_model: str,
+    creativity_preset: CreativityPreset | str | None = DEFAULT_CREATIVITY_PRESET,
+    llm_model: str | None = None,
+) -> PromptEnhancementPlan:
+    settings = get_settings()
+    selected_llm_model = llm_model or settings.enhance_model
+    mode = (
+        target_mode
+        if isinstance(target_mode, GenerationMode)
+        else GenerationMode(target_mode)
+    )
+    preset = normalize_creativity_preset(creativity_preset)
+    prompt_language = _detect_prompt_language(prompt)
+
+    base = _build_prompt(
+        prompt,
+        target_mode=mode,
+        target_model=target_model,
+        creativity_preset=preset,
+        prompt_language=prompt_language,
+    )
+    strict = _build_prompt(
+        prompt,
+        target_mode=mode,
+        target_model=target_model,
+        creativity_preset=preset,
+        prompt_language=prompt_language,
+        strict_json_retry=True,
+    )
+    contract = _build_prompt(
+        prompt,
+        target_mode=mode,
+        target_model=target_model,
+        creativity_preset=preset,
+        prompt_language=prompt_language,
+        strict_json_retry=True,
+        contract_repair_retry=True,
+    )
+    language = _build_prompt(
+        prompt,
+        target_mode=mode,
+        target_model=target_model,
+        creativity_preset=preset,
+        prompt_language=prompt_language,
+        language_retry=True,
+    )
+    maximum_input_tokens = max(
+        _sum_token_units(base, strict, contract),
+        _sum_token_units(base, language),
+    )
+    maximum_output_tokens = _checked_token_sum(
+        PROMPT_ENHANCEMENT_MAX_OUTPUT_TOKENS
+        for _ in range(PROMPT_ENHANCEMENT_MAX_RESPONSE_GROUPS)
+    )
+    return PromptEnhancementPlan(
+        llm_model=selected_llm_model,
+        maximum_input_tokens=maximum_input_tokens,
+        maximum_output_tokens=maximum_output_tokens,
+    )
 
 
 async def enhance_prompt(
@@ -254,6 +375,26 @@ async def enhance_prompt(
     vertex_client = client or get_vertex_client()
     retry_policy = build_retry_policy(settings)
     started = time.perf_counter()
+    usage_groups: list[tuple[int, int, str]] = []
+
+    def record_usage(
+        response_value: Any,
+        *,
+        strict_json_retry: bool = False,
+        contract_repair_retry: bool = False,
+        language_retry: bool = False,
+    ) -> None:
+        request_prompt = _build_prompt(
+            prompt,
+            target_mode=mode,
+            target_model=target_model,
+            creativity_preset=preset,
+            prompt_language=prompt_language,
+            strict_json_retry=strict_json_retry,
+            contract_repair_retry=contract_repair_retry,
+            language_retry=language_retry,
+        )
+        usage_groups.append(_usage_for_response(response_value, request_prompt))
 
     response = await _generate_prompt_enhancement_with_retry(
         vertex_client,
@@ -269,6 +410,7 @@ async def enhance_prompt(
         language_retry=False,
         retry_policy=retry_policy,
     )
+    record_usage(response)
     validation_call_groups = 1
 
     try:
@@ -301,6 +443,7 @@ async def enhance_prompt(
             language_retry=False,
             retry_policy=retry_policy,
         )
+        record_usage(retry_response, strict_json_retry=True)
         validation_call_groups += 1
         try:
             payload = _parse_response_payload(retry_response)
@@ -331,6 +474,11 @@ async def enhance_prompt(
                 contract_repair_retry=True,
                 language_retry=False,
                 retry_policy=retry_policy,
+            )
+            record_usage(
+                retry_response,
+                strict_json_retry=True,
+                contract_repair_retry=True,
             )
             validation_call_groups += 1
             payload = _parse_response_payload(retry_response)
@@ -369,6 +517,7 @@ async def enhance_prompt(
             language_retry=True,
             retry_policy=retry_policy,
         )
+        record_usage(retry_response, language_retry=True)
         validation_call_groups += 1
         payload = _parse_response_payload(retry_response)
         response = retry_response
@@ -383,7 +532,13 @@ async def enhance_prompt(
             )
 
     latency_ms = max(0, round((time.perf_counter() - started) * 1000))
-    usage = getattr(response, "usage_metadata", None)
+    tokens_in = _checked_token_sum(group[0] for group in usage_groups)
+    tokens_out = _checked_token_sum(group[1] for group in usage_groups)
+    usage_source = (
+        "provider_reported"
+        if all(group[2] == "provider_reported" for group in usage_groups)
+        else "platform_measured"
+    )
     return PromptEnhancementResult(
         original=prompt,
         enhanced=payload.enhanced,
@@ -394,16 +549,9 @@ async def enhance_prompt(
         creativity_preset=preset,
         temperature=temperature,
         latency_ms=latency_ms,
-        tokens_in=_metadata_int(
-            usage,
-            "prompt_token_count",
-            "input_token_count",
-        ),
-        tokens_out=_metadata_int(
-            usage,
-            "candidates_token_count",
-            "output_token_count",
-        ),
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        usage_source=usage_source,
     )
 
 
@@ -444,8 +592,9 @@ def _mock_prompt_enhancement(
         target_model=target_model,
         llm_model=llm_model,
         latency_ms=0,
-        tokens_in=None,
-        tokens_out=None,
+        tokens_in=_local_token_units(normalized_prompt),
+        tokens_out=_local_token_units(enhanced),
+        usage_source="mock_estimate",
         creativity_preset=creativity_preset,
         temperature=temperature,
     )
