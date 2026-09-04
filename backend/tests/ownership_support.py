@@ -148,6 +148,9 @@ async def admission(payload):
             if operation == "clear":
                 for model in (OutboxEvent, Asset, Job, PromptEnhancement):
                     await session.execute(delete(model))
+                # This disposable proof reuses actors across independent stages.
+                # Remove test-only holds so admission does not consume smoke quota.
+                await session.execute(text("TRUNCATE credit_accounts CASCADE"))
             await session.commit()
             return {"completed": True}
         checked = 0
