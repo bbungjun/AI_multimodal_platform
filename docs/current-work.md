@@ -79,7 +79,7 @@ paste credential contents.
 
 ### G9A execution — 2026-09-05
 
-- **Mock Verified locally; protected delivery pending.** The frozen Goal integrity gate passed at SHA-256
+- **Mock Verified locally; delivery tracked by [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132).** The frozen Goal integrity gate passed at SHA-256
   `c7fc9f7…733cc`; branch/head, `origin/main`, Docker `desktop-linux`, empty
   staged paths and the preserved untracked `.omo/` tree were confirmed before
   implementation. The first focused verification is the Todo1 personal-usage

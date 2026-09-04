@@ -111,5 +111,6 @@ Rollback은 migration 없이 구현 커밋을 되돌리면 된다. accounting ro
   검증하지 않았다.
 - abandoned held Reservation 복구/sweeper는 별도 운영 범위다. read가 임의로 hold를
   해제하지 않는다.
-- protected Ready PR의 최종 verify 및 backend/frontend Scan/SBOM과 실제 squash merge가
-  delivery 종료 조건으로 남아 있다.
+- [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132)의 최종
+  verify 및 backend/frontend Scan/SBOM과 실제 squash merge가 delivery 종료 조건으로
+  남아 있다.

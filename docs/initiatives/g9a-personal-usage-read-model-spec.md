@@ -1,6 +1,7 @@
 # G9A — Personal Plan and usage read-model specification
 
-Status: **Mock Verified locally — protected delivery pending**, 2026-09-05. Issue
+Status: **Mock Verified locally — delivery tracked by [Ready PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132)**,
+2026-09-05. Issue
 [#131](https://github.com/bbungjun/AI_multimodal_platform/issues/131) is the
 backend read slice of G9. G9B will consume this Interface in the existing
 frontend; it is not part of this Goal.
@@ -221,4 +222,5 @@ lint/build, Session48 and Chromium34 passed.
 
 This result is Mock Verified. It does not add the G9B frontend, infer exact
 provider models, validate a live Google session or Vertex/cloud throughput, or
-represent provider billing. Protected PR delivery remains the terminal gate.
+represent provider billing. Ready PR132 final-head CI and protected merge remain
+the terminal delivery gate.
