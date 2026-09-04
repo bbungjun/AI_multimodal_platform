@@ -156,6 +156,15 @@ def _fail_vertex_client() -> None:
     raise AssertionError("mock provider failure sentinel must not create Vertex client")
 
 
+def test_credit_failure_reason_is_bounded():
+    job = _t2i_job()
+    assert handlers._credit_failure_reason(RuntimeError("private"), job) == "cancelled_before_delivery"
+    job.attempts = 1
+    assert handlers._credit_failure_reason(RuntimeError("private"), job) == "provider_failed"
+    job.vertex_charged = True
+    assert handlers._credit_failure_reason(RuntimeError("private"), job) == "delivery_failed"
+
+
 async def test_handle_t2i_generates_images_stores_assets_and_links_pipeline(
     monkeypatch,
 ):

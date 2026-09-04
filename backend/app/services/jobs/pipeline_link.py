@@ -8,6 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app import generation_credit
+from app.models import utc_now
 from app.ownership import assert_same_owner
 from app.services.jobs.outbox import add_job_dispatch_event
 from app.state_machine import TERMINAL_STATES, transition
@@ -200,5 +202,8 @@ async def _fail_child(
         "message": message,
         "retryable": False,
     }
+    await generation_credit.terminalize_generation(
+        session, job=child, succeeded=False,
+        reason_code="delivery_failed", now=utc_now())
     transition(child, JobState.FAILED, detail={"error": code})
     await session.commit()

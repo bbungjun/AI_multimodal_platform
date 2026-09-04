@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import AsyncSessionLocal
+from app import generation_credit
 from app.api.auth_dependencies import require_user
 from app.auth.service import AuthenticatedUser
 from app.ownership import OwnershipAccess
@@ -144,6 +145,7 @@ async def create_generation(
     session.add(job)
     add_job_dispatch_event(session, job.id, reason="generation_created")
     try:
+        await _admit_generation(session, job, now=now)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -263,7 +265,7 @@ async def retry_generation(
         blocked=False,
         vertex_operation_name=None,
         attempts=0,
-        parameters=dict(source.parameters or {}),
+        parameters=generation_credit.strip_credit_metadata(source.parameters),
         state_history=[],
         error=None,
         vertex_charged=False,
@@ -273,6 +275,7 @@ async def retry_generation(
     session.add(retry)
     add_job_dispatch_event(session, retry.id, reason="generation_retry_created")
     try:
+        await _admit_generation(session, retry, now=now)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -283,6 +286,23 @@ async def retry_generation(
         await session.rollback()
         raise
     return job_response_from_job(retry, assets=[])
+
+
+async def _admit_generation(session: AsyncSession, job: Job, *, now,
+                            pipeline_child: Job | None = None) -> None:
+    try:
+        await generation_credit.admit_generation(
+            session, job=job, pipeline_child=pipeline_child, now=now)
+    except generation_credit.GenerationCreditError as error:
+        await session.rollback()
+        status_code = {
+            "monthly_credit_exhausted": status.HTTP_402_PAYMENT_REQUIRED,
+            "credit_plan_refused": status.HTTP_403_FORBIDDEN,
+            "credit_busy": status.HTTP_503_SERVICE_UNAVAILABLE,
+            "credit_account_inconsistent": status.HTTP_503_SERVICE_UNAVAILABLE,
+        }.get(error.code, status.HTTP_409_CONFLICT)
+        detail = error.code
+        raise HTTPException(status_code=status_code, detail=detail) from None
 
 
 @router.delete(

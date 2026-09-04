@@ -32,6 +32,21 @@ from app.prompt_enhancement import (
 from app.services.jobs import outbox
 from app.services.jobs.i2v_guard import ACTIVE_I2V_UNIQUE_INDEX_NAME, ACTIVE_I2V_STATES
 from app.services.vertex import storage as vertex_storage
+from app.generation_credit import CREDIT_PARAMETER_KEY
+
+
+@pytest.fixture(autouse=True)
+def _stub_generation_credit(monkeypatch):
+    async def admit(*_args, **_kwargs):
+        return None
+    monkeypatch.setattr(generations.generation_credit, "admit_generation", admit)
+
+
+def test_credit_metadata_is_removed_from_job_response():
+    item = _failed_mock_provider_job()
+    item.parameters = {"duration_sec": 4, CREDIT_PARAMETER_KEY: {"reservation_id": "internal"}}
+    body = generations.job_response_from_job(item, assets=[])
+    assert body.parameters == {"duration_sec": 4}
 
 
 def _database_unique_violation(constraint):

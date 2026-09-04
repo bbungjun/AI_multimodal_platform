@@ -20,6 +20,20 @@ from app.models import (
     utc_now,
 )
 from app.services.jobs import outbox
+from app.generation_credit import CREDIT_PARAMETER_KEY
+
+
+@pytest.fixture(autouse=True)
+def _stub_generation_credit(monkeypatch):
+    async def admit(*_args, **_kwargs):
+        return None
+    monkeypatch.setattr("app.generation_credit.admit_generation", admit)
+
+
+def test_pipeline_responses_hide_credit_metadata():
+    parent = _job(mode=GenerationMode.T2I, model="imagen-4.0-fast-generate-001", prompt="x")
+    parent.parameters = {"number_of_images": 1, CREDIT_PARAMETER_KEY: {"reservation_id": "internal"}}
+    assert pipelines.job_response_from_job(parent, assets=[]).parameters == {"number_of_images": 1}
 
 
 @pytest.mark.parametrize("field", ["owner_user_id", "user_id", "role"])
