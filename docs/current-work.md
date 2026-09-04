@@ -79,7 +79,7 @@ paste credential contents.
 
 ### Emergency Session revocation execution — 2026-09-05
 
-- **In progress.** [Issue99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
+- **Mock Verified locally; delivery pending.** [Issue99](https://github.com/bbungjun/AI_multimodal_platform/issues/99)
   is the pre-live authentication containment blocker. Branch
   `codex/issue-99-emergency-session-revocation` starts from the synchronized
   G9A squash baseline `2565a7a`.
@@ -102,6 +102,15 @@ paste credential contents.
   `695ed417bfbc7af4573c0b0275a6568b8be83397eac0727d3054ee1b4a3f2f19`.
   After protected merge, local `main` is synchronized before G9B Issue/branch/
   Goal preparation and execution begins.
+- Code revision `1822679` passed two isolated cycles, each with all8 groups,
+  one observed authentication/revocation lock race,85 checks and cleanup zero.
+  Work/cleanup were41.391/2.578s and14.656/2.672s. The inherited auth
+  PostgreSQL/Redis verifier and one ownership/golden-path cycle passed.
+- Tracked-only Linux passed1589/3 guarded skips. Native Windows passed1588/3
+  guarded skips and reproduced only the known Bash absolute-path exception.
+  Compose, frontend lint/build, Session48 and Chromium34 passed. Evidence and
+  the rejected `.env.example`-only approach are recorded in
+  [the Issue99 portfolio record](portfolio/issue-99-emergency-session-revocation.md).
 
 ### G9A execution — 2026-09-05
 

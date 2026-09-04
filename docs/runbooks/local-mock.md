@@ -659,6 +659,40 @@ docker compose down
 ```
 
 Use `down -v` only when intentionally removing local database and asset volumes.
+
+## Emergency Session containment drill
+
+Use only a disposable mock database for a drill. The order is a safety contract:
+disable admission on every backend instance, verify the disabled response through
+the same route users reach, preview, and only then execute. Never use a development
+or preview database merely to produce evidence.
+
+```powershell
+$env:AI_PROVIDER = "mock"
+$env:AUTH_LOGIN_ENABLED = "false"
+docker compose --env-file .env.example up -d --build backend
+
+# The normal JSON start route must return HTTP 503 with detail=login_disabled.
+# Use a non-system target name that exactly matches the configured PostgreSQL URL.
+docker compose exec backend python -m app.auth.emergency `
+  --expected-database <database> --reason operator_drill
+docker compose exec backend python -m app.auth.emergency `
+  --expected-database <database> --reason operator_drill `
+  --execute --confirm REVOKE_ALL:<database>
+```
+
+Accept only count-only `PASS: emergency_session_revocation ...` output. A `FAIL`
+code is a stop condition; do not bypass the target, login or confirmation guard.
+After execute commits, existing Sessions cannot be restored. Recovery means
+finishing incident review, explicitly restoring `AUTH_LOGIN_ENABLED=true`,
+redeploying every instance and requiring users to sign in again. The automated
+proof below owns and removes a random isolated database and does not constitute
+a live drill:
+
+```powershell
+python scripts/verify_emergency_sessions.py --env-file .env.example
+python scripts/verify_emergency_sessions.py --env-file .env.example
+```
 ## Verify per-User concurrency enforcement
 
 From the repository root, keep the normal development/preview Compose project
