@@ -12,6 +12,8 @@ from app.auth.service import AuthenticatedUser
 from app import prompt_credit
 from app.prompt_enhancement import PROMPT_ENHANCEMENT_TEMPLATE_VERSION
 from app.schemas import PromptEnhanceRequest, PromptEnhancementResponse
+# Retain this public monkeypatch seam for inherited pre-auth side-effect tests.
+from app.services.llm import enhancer
 from app.services.ops.runtime import runtime_metrics
 from app.services.vertex.errors import VertexServiceError
 
