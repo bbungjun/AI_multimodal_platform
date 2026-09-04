@@ -476,31 +476,23 @@ async def _terminal(session, user_id, reservation_id, lines, delivery, reason, k
     if remaining:
         _fail("credit_account_inconsistent")
 
+    records = []
     for line in lines:
-        session.add(CreditUsageRecord(
+        record = CreditUsageRecord(
             reservation_id=reservation.id, meter=line.meter, user_id=user_id,
             terminal_operation_key=key, rate_card_version=reservation.rate_card_version,
             actual_units=line.actual_units, charged_microcredits=charges[line.meter],
             recorded_at=now, source=line.source, delivery=delivery,
-        ))
+        )
+        session.add(record)
+        records.append(record)
     reservation.status = "settled" if charge else "released"
     reservation.terminal_operation_key = key
     reservation.terminal_at = now
     reservation.terminal_reason_code = reason
     reservation.delivery = delivery
     await session.flush()
-    records = tuple(sorted((row for row in getattr(session, "new", ())
-                            if isinstance(row, CreditUsageRecord)
-                            and row.reservation_id == reservation.id), key=lambda row: row.meter))
-    if not records:
-        # Fakes do not expose AsyncSession.new; the normalized inputs are equivalent.
-        records = tuple(CreditUsageRecord(
-            reservation_id=reservation.id, meter=line.meter, user_id=user_id,
-            terminal_operation_key=key, rate_card_version=reservation.rate_card_version,
-            actual_units=line.actual_units, charged_microcredits=charges[line.meter],
-            recorded_at=now, source=line.source, delivery=delivery,
-        ) for line in lines)
-    return _terminal_receipt(reservation, records, replayed=False)
+    return _terminal_receipt(reservation, tuple(records), replayed=False)
 
 
 def _reservation_coherent(reservation, items, allocations, grants):
