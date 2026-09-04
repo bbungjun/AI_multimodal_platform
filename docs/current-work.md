@@ -77,9 +77,9 @@ paste credential contents.
 
 ## Active Work
 
-### G6 execution preparation — 2026-09-04
+### G6 execution — 2026-09-04
 
-- **Accepted design — implementation not started.** G5C2 actually merged through
+- **Mock Verified locally — delivery pending.** G5C2 actually merged through
   [PR123](https://github.com/bbungjun/AI_multimodal_platform/pull/123) as squash
   `5e56ecb`; required verify and both Scan/SBOM checks succeeded and Issues
   121/117/114 are closed. Local `main` was fast-forwarded to that exact revision
@@ -118,6 +118,26 @@ paste credential contents.
   `.omo/plans/issue-124-g6-gemini-credit-integration-v2-goal.md`; SHA256
   `be41d364cf26321ebd73211bb43983b940d75394e84b94264e3d6b922d3ef25d`.
   Exact14/migration0 and every runtime/delivery gate remain unchanged.
+- Final local code SHA `87dca6b` changes exactly14 approved non-document paths and
+  zero migrations. The route delegates to one deep Module; reserve commits before
+  provider I/O, result+settle is atomic, and no-deliverable failures release in a
+  fresh transaction. Same-request replay is durable and owner-safe.
+- Final isolated projects `prompt-credit-verify-a90bd3ff7093` and
+  `prompt-credit-verify-61efbfd72313` each passed all4 groups, race1, checks35,
+  head0006 and cleanup0. Accounting/lifecycle/auth passed; auth50 p95 was8.432ms.
+  Ownership `all/2` passed four cycles in1006.641s: access348/delete races2 twice
+  and file FOVE310/two actors10 stages twice, all cleanup0.
+- Tracked-only Linux passed **1461 / 3 guarded skips**. Windows passed **1460 /
+  3 guarded skips** with only the known Bash native127 failure, reproduced from
+  untouched base `5e56ecb`. Both Compose configs, frontend lint/build, Session48
+  and Chromium34 passed.
+- The v1 omission, a shared synthetic UUID across file-ops actors, and a removed
+  inherited security-test seam were all retained as failure evidence. Actor-scoped
+  UUIDs and a route compatibility import fixed them; every runtime gate restarted
+  at the final SHA.
+- F1–F3 are APPROVE. Todo8/F4 still require Ready PR, final-head `verify` and both
+  Scan/SBOM checks, protected squash merge and Issue124 closure. G7 and live GCP
+  remain untouched.
 
 ### G5C2 execution — 2026-09-04
 

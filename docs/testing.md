@@ -697,3 +697,16 @@ git status --short --branch
 git diff --cached --name-only
 git ls-files --others --exclude-standard
 ```
+
+## G6 Prompt Credit Verification
+
+Run `python scripts/verify_prompt_credit.py --env-file .env.example` twice from a
+clean committed code SHA. Each run owns a unique `prompt-credit-verify-*` local
+Compose project, forces mock, upgrades an empty PostgreSQL volume to head0006,
+and requires `preflight`, `admission`, `terminal`, `replay_race`, checks>=30 and
+races>=1. A complete run cleans its containers, volume and network to zero.
+
+At `87dca6b`, both final cycles passed35 checks and one race. The inherited
+accounting/lifecycle/auth checks and ownership `--suite all --cycles 2` passed;
+tracked-only Linux passed1461/3 guarded skips, Windows passed1460/3 skips plus the
+reproduced native127 Bash exception, and frontend Session48/Chromium34 passed.

@@ -622,6 +622,21 @@ single cycle is not completion. Never point the verifier at a developer/preview
 database. G5C2 proves reserve/settle/release as an internal Module only; generation
 billing remains G6/G7.
 
+Prompt enhancement now requires a client-generated UUID `request_id`. Reusing
+the same UUID and identical payload returns the stored result; changing payload,
+using another owner's ID, observing an active hold, or replaying a released
+attempt returns a fixed409 code. Monthly exhaustion returns402 before provider
+execution. Do not delete held rows manually: G6 fails them closed as
+`prompt_enhancement_in_progress`; reconciliation is a later operations Goal.
+
+```powershell
+$env:AI_PROVIDER = 'mock'
+python scripts/verify_prompt_credit.py --env-file .env.example
+```
+
+This proof owns a separate labelled Compose project and never adopts the
+development database.
+
 ## Stop
 
 ```powershell
