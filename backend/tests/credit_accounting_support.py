@@ -171,13 +171,13 @@ async def proof(db, factory):
     check((terminal.consumed_microcredits, terminal.released_microcredits, terminal.usage_line_count) == (8_000, 18_000, 2))
     check(await db.fetchval("SELECT sum(charged_microcredits) FROM credit_usage_records WHERE reservation_id=$1", sr.reservation_id) == 8_000)
     check(await db.fetchval("SELECT count(*) FROM credit_usage_records WHERE reservation_id=$1 AND source IN ('platform_measured','provider_reported')", sr.reservation_id) == 2)
+    over = await hold(settle_user, "over", (estimate(units=5),))
+    await refuse(lambda: finish(settle_user, over.reservation_id, "over_t", (line(units=6),)), "credit_usage_exceeds_reservation")
+    await refuse(lambda: finish(settle_user, over.reservation_id, "zero", (line(units=0),)), "credit_input_invalid")
     await cycle(settle_user, END)
     check((await finish(settle_user, sr.reservation_id, "terminal",
                         (line("gemini_input_token", 4, "platform_measured"),
                          line("gemini_output_token", 1, "provider_reported")), "partial", T)).replayed)
-    over = await hold(settle_user, "over", (estimate(units=5),))
-    await refuse(lambda: finish(settle_user, over.reservation_id, "over_t", (line(units=6),)), "credit_usage_exceeds_reservation")
-    await refuse(lambda: finish(settle_user, over.reservation_id, "zero", (line(units=0),)), "credit_input_invalid")
     exp = await hold(await seed(), "exp", (estimate(units=10),))
     exp_user = await db.fetchval("SELECT user_id FROM credit_reservations WHERE id=$1", exp.reservation_id)
     exp_done = await finish(exp_user, exp.reservation_id, "exp_t", (line(units=4),), now=END)
