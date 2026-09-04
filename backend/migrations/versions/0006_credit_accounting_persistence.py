@@ -17,6 +17,10 @@ TABLES = (
 
 
 def upgrade() -> None:
+    # Alembic creates version_num as VARCHAR(32), while this approved revision
+    # identifier is longer. Keep the widened control column on downgrade so the
+    # transition away from the current 34-character value can complete safely.
+    op.alter_column("alembic_version", "version_num", type_=sa.String(64))
     op.create_table("credit_reservations",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),

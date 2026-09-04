@@ -54,6 +54,8 @@ def test_exactly_six_ordered_revisions_are_packaged() -> None:
     accounting = _text(ACCOUNTING_REVISION)
     assert 'revision = "0006_credit_accounting_persistence"' in accounting
     assert 'down_revision = "0005_credit_lifecycle_operations"' in accounting
+    assert 'alter_column("alembic_version", "version_num", type_=sa.String(64))' in accounting
+    assert 'alter_column("alembic_version", "version_num", type_=sa.String(32))' not in accounting
     for table in ("credit_reservations", "credit_reservation_items",
                   "credit_reservation_allocations", "credit_usage_records"):
         assert f'"{table}"' in accounting
