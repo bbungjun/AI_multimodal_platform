@@ -106,6 +106,15 @@ async def test_failure_releases_without_deliverable(monkeypatch):
     assert seen["usage"].lines == () and result.status == "released"
 
 
+async def test_asset_kind_must_match_reserved_model(monkeypatch):
+    item = managed(job())
+    asset = Asset(id=uuid4(), job_id=item.id, kind=AssetKind.VIDEO,
+                  local_path="x", mime="video/mp4", duration_sec=1)
+    with pytest.raises(subject.GenerationCreditError, match="delivery_invalid"):
+        await subject.terminalize_generation(Session([asset], [item]), job=item,
+            succeeded=True, reason_code=None, now=utc_now())
+
+
 async def test_legacy_job_is_unmanaged():
     result = await subject.terminalize_generation(object(), job=job(), succeeded=True,
                                                    reason_code=None, now=utc_now())

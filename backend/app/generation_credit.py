@@ -160,11 +160,17 @@ async def _usage(session, job_ids: tuple[UUID, ...]) -> tuple[UsageLine, ...]:
         if meter is None:
             _fail()
         if asset.kind == AssetKind.IMAGE:
+            if not meter.startswith("imagen_"):
+                _fail("generation_credit_delivery_invalid")
             images[meter] = images.get(meter, 0) + 1
         elif asset.kind == AssetKind.VIDEO:
+            if not meter.startswith("veo_"):
+                _fail("generation_credit_delivery_invalid")
             if asset.duration_sec is None or asset.duration_sec <= 0:
                 _fail()
             videos[meter] = videos.get(meter, 0) + round(asset.duration_sec * 1000)
+        else:
+            _fail("generation_credit_delivery_invalid")
     return tuple(UsageLine(meter, units, "platform_measured")
                  for meter, units in sorted({**images, **videos}.items()) if units > 0)
 
