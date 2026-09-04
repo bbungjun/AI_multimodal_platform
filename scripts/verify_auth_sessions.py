@@ -68,7 +68,7 @@ def verify(env_file: Path):
     env.update(AI_PROVIDER='mock', APP_ENV='test', AUTH_GOOGLE_CLIENT_ID='', AUTH_GOOGLE_CLIENT_SECRET='',
                AUTH_GOOGLE_REDIRECT_URI='', GOOGLE_APPLICATION_CREDENTIALS='', AUTH_COOKIE_SECURE='true')
     receipt = dict(project=project, provider='mock', commit=run(['git', 'rev-parse', 'HEAD']),
-                   revision='0005_credit_lifecycle_operations', postgres='pending', redis='pending',
+                   revision='0006_credit_accounting_persistence', postgres='pending', redis='pending',
                    redis_outage_recovery='pending', metrics={}, cleanup='pending')
     with tempfile.TemporaryDirectory(prefix='auth-verifier-') as directory:
         folder = Path(directory)
@@ -91,7 +91,7 @@ def verify(env_file: Path):
             env['AUTH_TEST_FLOW_METRICS_PATH'] = str(folder / 'flow-metrics.json')
             run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], env=env, cwd=ROOT / 'backend')
             current = run([sys.executable, '-m', 'alembic', 'current'], env=env, cwd=ROOT / 'backend')
-            if '0005_credit_lifecycle_operations (head)' not in current:
+            if '0006_credit_accounting_persistence (head)' not in current:
                 raise VerificationError('unexpected_schema_revision')
             print('phase=postgres_and_redis', flush=True)
             run([sys.executable, '-m', 'pytest', 'tests/test_auth_service.py',

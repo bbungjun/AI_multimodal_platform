@@ -21,18 +21,22 @@ DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
 PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
 G1_REVISION = "0001_generation_baseline"
-EXPECTED_REVISION = "0005_credit_lifecycle_operations"
+EXPECTED_REVISION = "0006_credit_accounting_persistence"
+LIFECYCLE_REVISION = "0005_credit_lifecycle_operations"
 CREDIT_REVISION = "0004_credit_foundation"
 OWNERSHIP_REVISION = "0003_content_ownership"
 IDENTITY_REVISION = "0002_user_session_persistence"
 G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhancements"}
 CREDIT_TABLES = {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
-EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions", "credit_operations"} | CREDIT_TABLES
+ACCOUNTING_TABLES = {"credit_reservations", "credit_reservation_items",
+                     "credit_reservation_allocations", "credit_usage_records"}
+EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions", "credit_operations"} | CREDIT_TABLES | ACCOUNTING_TABLES
 WORK_SECONDS = 300
 CLEANUP_SECONDS = 90
 _COMMAND_TIMEOUT = ContextVar("schema_command_timeout", default=120.0)
 _COMMAND_INPUT = ContextVar("schema_command_input", default=None)
 CREDIT_PROOF_PATH = REPO_ROOT / "backend" / "tests" / "credit_foundation_support.py"
+ACCOUNTING_PROOF_PATH = REPO_ROOT / "backend" / "tests" / "credit_accounting_schema_support.py"
 EXPECTED_ENUMS = {
     "asset_kind:image,video",
     "generation_mode:t2i,t2v,i2v",
@@ -201,6 +205,10 @@ def _run(runner: Runner, arguments: Sequence[str], *, action: str) -> CommandRes
     if result.returncode != 0:
         if action.startswith("credit "):
             phase = re.search(r"^credit_proof_failed:(guard|additive|metadata|constraints|ledger|races|downgrade|done)$", result.stdout, re.M)
+            if phase:
+                raise VerificationError(f"{action} failed with exit code {result.returncode}; phase={phase[1]}.")
+        if action == "accounting schema proof":
+            phase = re.search(r"^accounting_schema_proof_failed:(guard|metadata|constraints|downgrade|done)$", result.stdout, re.M)
             if phase:
                 raise VerificationError(f"{action} failed with exit code {result.returncode}; phase={phase[1]}.")
         raise VerificationError(f"{action} failed with exit code {result.returncode}.")
@@ -630,7 +638,7 @@ def verify_revision_refusal(
     stale_revision: str = "0000_stale_revision",
 ) -> None:
     expected_revision = EXPECTED_REVISION
-    if stale_revision not in ("0000_stale_revision", OWNERSHIP_REVISION, CREDIT_REVISION):
+    if stale_revision not in ("0000_stale_revision", OWNERSHIP_REVISION, CREDIT_REVISION, LIFECYCLE_REVISION):
         raise VerificationError("invalid_stale_revision")
     update_revision = (
         "UPDATE alembic_version SET version_num="
@@ -1047,19 +1055,48 @@ def verify_credit_foundation(runner, project_name, env_file, values, mode):
     return payload["checks"]
 
 
+def verify_credit_accounting_schema(runner, project_name, env_file, values):
+    source = ACCOUNTING_PROOF_PATH.read_text(encoding="utf-8")
+    token = _COMMAND_INPUT.set(source)
+    try:
+        result = _run(runner, compose_command(
+            project_name, env_file, "run", "--rm", "--no-deps", "-T",
+            "-e", "AI_PROVIDER=mock", "-e", "APP_ENV=test",
+            "-e", f"ACCOUNTING_SCHEMA_PROJECT={project_name}",
+            "-e", f"ACCOUNTING_SCHEMA_DATABASE={values['POSTGRES_DB']}",
+            "migrate", "python", "-"), action="accounting schema proof")
+    finally:
+        _COMMAND_INPUT.reset(token)
+    try:
+        payload = json.loads(result.stdout.strip())
+    except (ValueError, TypeError):
+        raise VerificationError("invalid_accounting_schema_receipt") from None
+    if (not isinstance(payload, dict)
+            or set(payload) != {"groups", "checks", "downgrade_cases"}
+            or payload["groups"] != 4 or type(payload["checks"]) is not int
+            or payload["checks"] < 40 or payload["downgrade_cases"] != 4):
+        raise VerificationError("invalid_accounting_schema_receipt")
+    return payload["checks"], payload["downgrade_cases"]
+
+
 def write_receipt(project_name: str, *, cleanup: bool, completed: bool, commit: str,
-                  include_reset=False, credit_checks=0, work_seconds=0.0, cleanup_seconds=0.0,
+                  include_reset=False, credit_checks=0, accounting_checks=0,
+                  accounting_downgrade_cases=0, work_seconds=0.0, cleanup_seconds=0.0,
                   failure_code="none", cleanup_failure_code="none") -> Path:
     validate_project_name(project_name)
     if (type(cleanup) is not bool or type(completed) is not bool or type(include_reset) is not bool
             or not re.fullmatch(r"[0-9a-f]{40}", commit)
             or type(credit_checks) is not int or credit_checks < 0
+            or type(accounting_checks) is not int or accounting_checks < 0
+            or type(accounting_downgrade_cases) is not int or accounting_downgrade_cases < 0
             or failure_code not in ("none", "timeout", "verification_failed")
             or cleanup_failure_code not in ("none", "cleanup_failed")
             or any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
                    for value in (work_seconds, cleanup_seconds))
             or (completed and (not cleanup or failure_code != "none" or cleanup_failure_code != "none"
-                               or credit_checks < 90 or work_seconds > WORK_SECONDS or cleanup_seconds > CLEANUP_SECONDS))):
+                               or credit_checks < 90 or accounting_checks < 40
+                               or accounting_downgrade_cases != 4
+                               or work_seconds > WORK_SECONDS or cleanup_seconds > CLEANUP_SECONDS))):
         raise VerificationError("invalid_schema_receipt")
     DEFAULT_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     path = DEFAULT_EVIDENCE_DIR / f"migration-{project_name}.json"
@@ -1089,6 +1126,11 @@ def write_receipt(project_name: str, *, cleanup: bool, completed: bool, commit: 
         "operation_additive_round_trip": status,
         "operation_populated_lock_refusal": status,
         "stale_credit_revision": status,
+        "accounting_constraints": status,
+        "accounting_checks": accounting_checks,
+        "accounting_downgrade_cases": accounting_downgrade_cases,
+        "accounting_mutation_guards": status,
+        "stale_lifecycle_revision": status,
         "reset": status if include_reset else "not_requested",
         "work_seconds": round(work_seconds, 3),
         "cleanup_seconds": round(cleanup_seconds, 3),
@@ -1118,6 +1160,8 @@ def verify(
     failure = None
     cleanup_failure = None
     credit_checks = 0
+    accounting_checks = 0
+    accounting_downgrade_cases = 0
     print(f"phase=start project={project_name}", flush=True)
     try:
         _run(runner, compose_command(project_name, env_file, "build", "migrate", "backend", "worker", "dispatcher"),
@@ -1174,10 +1218,15 @@ def verify(
         print("phase=credit_constraints", flush=True)
         credit_checks = verify_credit_foundation(runner, project_name, env_file, values, "credit")
         assert_inventory(runner, project_name, env_file, values)
+        print("phase=accounting_schema", flush=True)
+        accounting_checks, accounting_downgrade_cases = verify_credit_accounting_schema(
+            runner, project_name, env_file, values)
+        assert_inventory(runner, project_name, env_file, values)
         print("phase=revision_refusal", flush=True)
         verify_revision_refusal(runner, project_name, env_file, values)
         verify_revision_refusal(runner, project_name, env_file, values, OWNERSHIP_REVISION)
         verify_revision_refusal(runner, project_name, env_file, values, CREDIT_REVISION)
+        verify_revision_refusal(runner, project_name, env_file, values, LIFECYCLE_REVISION)
         if include_reset:
             verify_reset(runner, project_name, env_file, values)
         if code_revision(runner) != commit:
@@ -1205,7 +1254,9 @@ def verify(
     if work_seconds > WORK_SECONDS and failure is None:
         failure = VerificationError("schema_deadline_exceeded")
     path = write_receipt(project_name, cleanup=cleanup_succeeded, completed=failure is None and cleanup_failure is None,
-        commit=commit, include_reset=include_reset, credit_checks=credit_checks, work_seconds=work_seconds,
+        commit=commit, include_reset=include_reset, credit_checks=credit_checks,
+        accounting_checks=accounting_checks, accounting_downgrade_cases=accounting_downgrade_cases,
+        work_seconds=work_seconds,
         cleanup_seconds=cleanup_seconds, failure_code=("none" if failure is None else
         "timeout" if any(token in str(failure) for token in ("timeout", "deadline")) else "verification_failed"),
         cleanup_failure_code=cleanup_failure or "none")

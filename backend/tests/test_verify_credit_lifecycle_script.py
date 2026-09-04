@@ -30,6 +30,7 @@ def test_incomplete_or_extended_receipt_refused(change):
 
 def test_complete_fixed_receipt():
     m = load()
+    assert m.HEAD == "0006_credit_accounting_persistence"
     assert m.parse_proof(json.dumps(payload(m))) == payload(m)
 
 

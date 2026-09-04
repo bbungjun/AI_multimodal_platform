@@ -12,7 +12,7 @@ import time
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
-HEAD = "0005_credit_lifecycle_operations"
+HEAD = "0006_credit_accounting_persistence"
 GROUPS = ("init", "renewal", "plan", "bonus", "expiry", "idempotency", "transaction", "concurrency")
 WORK_SECONDS, CLEANUP_SECONDS = 300, 90
 PROOF = ROOT / "backend/tests/credit_lifecycle_support.py"

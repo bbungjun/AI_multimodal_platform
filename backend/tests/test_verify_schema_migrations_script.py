@@ -145,25 +145,31 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
 
     evidence_dir = tmp_path / "evidence"
     monkeypatch.setattr(module, "DEFAULT_EVIDENCE_DIR", evidence_dir)
-    receipt = module.write_receipt("schema-verify-12345678", cleanup=True, completed=True, commit="f"*40, credit_checks=90)
+    receipt = module.write_receipt(
+        "schema-verify-12345678", cleanup=True, completed=True, commit="f"*40,
+        credit_checks=90, accounting_checks=40, accounting_downgrade_cases=4)
     content = receipt.read_text(encoding="utf-8")
     assert secret not in content
     assert "postgresql" not in content
     assert str(tmp_path) not in content
     payload = json.loads(content)
-    assert payload["revision"] == "0005_credit_lifecycle_operations"
+    assert payload["revision"] == "0006_credit_accounting_persistence"
     assert payload["g1_downgrade"] == "pass"
     assert payload["identity_constraints"] == "pass"
+    assert payload["accounting_constraints"] == "pass"
+    assert payload["accounting_downgrade_cases"] == 4
     assert payload["reset"] == "not_requested"
 
 
 @pytest.mark.parametrize("change", [dict(cleanup=False), dict(credit_checks=True), dict(credit_checks=0),
+    dict(accounting_checks=True), dict(accounting_checks=39), dict(accounting_downgrade_cases=3),
     dict(work_seconds=301), dict(cleanup_seconds=91), dict(commit="unsafe"), dict(failure_code="raw error"),
     dict(work_seconds=float("nan")), dict(cleanup_failure_code="cleanup_failed")])
 def test_receipt_refuses_contradictory_success_or_unsafe_fields(tmp_path, monkeypatch, change):
     module = _load_module()
     monkeypatch.setattr(module, "DEFAULT_EVIDENCE_DIR", tmp_path)
-    args = dict(cleanup=True, completed=True, commit="f"*40, credit_checks=90)
+    args = dict(cleanup=True, completed=True, commit="f"*40, credit_checks=90,
+                accounting_checks=40, accounting_downgrade_cases=4)
     args.update(change)
     with pytest.raises(module.VerificationError, match="invalid_schema_receipt"):
         module.write_receipt("schema-verify-12345678", **args)
@@ -223,7 +229,30 @@ def test_credit_proof_uses_fixed_source_on_stdin_and_validates_receipt():
             module.verify_credit_foundation(lambda _: module.CommandResult(0, output), "schema-verify-12345678", REPO_ROOT / ".env.example", {"POSTGRES_DB":"fixture"}, "credit")
 
 
-@pytest.mark.parametrize("stale", ["0003_content_ownership", "0004_credit_foundation"])
+def test_accounting_proof_uses_fixed_source_on_stdin_and_validates_receipt():
+    module = _load_module()
+    def runner(args):
+        assert args[-3:] == ["migrate", "python", "-"]
+        assert "AI_PROVIDER=mock" in args and "APP_ENV=test" in args
+        assert "ACCOUNTING_SCHEMA_PROJECT=schema-verify-12345678" in args
+        assert module._COMMAND_INPUT.get() == module.ACCOUNTING_PROOF_PATH.read_text()
+        return module.CommandResult(0, '{"groups":4,"checks":40,"downgrade_cases":4}')
+    assert module.verify_credit_accounting_schema(
+        runner, "schema-verify-12345678", REPO_ROOT / ".env.example",
+        {"POSTGRES_DB":"fixture"}) == (40, 4)
+    assert module._COMMAND_INPUT.get() is None
+    for output in ('{"groups":true,"checks":40,"downgrade_cases":4}',
+                   '{"groups":4,"checks":39,"downgrade_cases":4}',
+                   '{"groups":4,"checks":40,"downgrade_cases":3}',
+                   '{"groups":4,"checks":40,"downgrade_cases":4,"raw":"secret"}', 'raw'):
+        with pytest.raises(module.VerificationError, match="invalid_accounting_schema_receipt"):
+            module.verify_credit_accounting_schema(
+                lambda _: module.CommandResult(0, output), "schema-verify-12345678",
+                REPO_ROOT / ".env.example", {"POSTGRES_DB":"fixture"})
+
+
+@pytest.mark.parametrize("stale", ["0003_content_ownership", "0004_credit_foundation",
+                                    "0005_credit_lifecycle_operations"])
 def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path, stale):
     module = _load_module()
     calls = []
@@ -236,13 +265,14 @@ def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path, stale):
                                    {"POSTGRES_DB":"fixture", "POSTGRES_USER":"fixture"}, stale)
     assert stale in calls[0][-1]
     assert [args[-1] for args in calls if args[-1] in ("backend", "worker", "dispatcher")] == ["backend", "worker", "dispatcher"]
-    assert sum("0005_credit_lifecycle_operations" in args[-1] for args in calls) == 1
+    assert sum("0006_credit_accounting_persistence" in args[-1] for args in calls) == 1
 
 
 @pytest.mark.parametrize("mutate_preview", [False, True])
 def test_reset_includes_credit_rows_and_refuses_preview_mutation(monkeypatch, mutate_preview):
     module = _load_module()
-    counts = {table: (3 if table in module.CREDIT_TABLES or table in ("users", "credit_operations") else 0)
+    counts = {table: (3 if table in module.CREDIT_TABLES | module.ACCOUNTING_TABLES
+                      or table in ("users", "credit_operations") else 0)
               for table in module.EXPECTED_TABLES - {"alembic_version"}}
     snapshot_tag = [0]
     commands = []
@@ -350,14 +380,15 @@ def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     ]
     sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
     assert "0000_stale_revision" in sql_calls[0][-1]
-    assert "0005_credit_lifecycle_operations" in sql_calls[-1][-1]
+    assert "0006_credit_accounting_persistence" in sql_calls[-1][-1]
 
 
 def test_verifier_targets_g2_head_and_schema_evidence_directory():
     module = _load_module()
 
-    assert module.EXPECTED_REVISION == "0005_credit_lifecycle_operations"
+    assert module.EXPECTED_REVISION == "0006_credit_accounting_persistence"
     assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
+    assert module.ACCOUNTING_TABLES.issubset(module.EXPECTED_TABLES)
     assert module.DEFAULT_EVIDENCE_DIR.parts[-2:] == ("evidence", "schema")
 
 
