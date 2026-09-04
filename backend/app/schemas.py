@@ -69,6 +69,59 @@ class HealthResponse(BaseModel):
     vertex: VertexReadinessResponse
 
 
+class PersonalUsageMeterResponse(BaseModel):
+    meter: Literal[
+        "gemini_input_token",
+        "gemini_output_token",
+        "imagen_fast_image",
+        "imagen_standard_image",
+        "imagen_ultra_image",
+        "veo_fast_ms",
+        "veo_standard_ms",
+    ]
+    unit: Literal["token", "image", "millisecond"]
+    observed_units: int = Field(ge=0)
+    charged_microcredits: int = Field(ge=0)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class PersonalUsageCycleResponse(BaseModel):
+    index: int = Field(ge=0)
+    starts_at: datetime
+    renews_at: datetime
+    allowance_microcredits: int = Field(ge=0)
+    charged_microcredits: int = Field(ge=0)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class PersonalUsageCreditResponse(BaseModel):
+    available_microcredits: int = Field(ge=0)
+    held_microcredits: int = Field(ge=0)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class PersonalUsageConcurrencyResponse(BaseModel):
+    active_requests: int = Field(ge=0)
+    limit: int = Field(ge=1)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class PersonalUsageResponse(BaseModel):
+    plan: Literal["free", "pro", "max"]
+    pending_plan: Literal["free", "pro"] | None
+    rate_card_version: Literal["v1"]
+    cycle: PersonalUsageCycleResponse
+    credit: PersonalUsageCreditResponse
+    concurrency: PersonalUsageConcurrencyResponse
+    usage: list[PersonalUsageMeterResponse] = Field(min_length=7, max_length=7)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
 class OpsDispatchResponse(BaseModel):
     mode: str
     queue: str | None = None
