@@ -48,7 +48,10 @@ async def migrate(target, expected=None):
 
 
 async def snapshot(connection):
-    return tuple(await connection.fetchval(f"SELECT count(*) FROM {table}") for table in ACCOUNTING)
+    return tuple([
+        await connection.fetchval(f"SELECT count(*) FROM {table}")
+        for table in ACCOUNTING
+    ])
 
 
 async def seed_prerequisites(connection):

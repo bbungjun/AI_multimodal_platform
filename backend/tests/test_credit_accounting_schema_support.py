@@ -1,5 +1,6 @@
 """G5C1 fixed proof safety; actual enforcement is verified in isolated Postgres."""
 import ast
+import asyncio
 import importlib.util
 from pathlib import Path
 
@@ -56,6 +57,20 @@ def test_fixed_fixtures_match_the_four_table_contract():
     assert p.item()["quoted_microcredits"] == 50_000_000
     assert p.allocation()["ordinal"] == 0
     assert p.usage()["source"] == "mock_estimate"
+
+
+def test_snapshot_awaits_each_table_count_and_returns_a_tuple():
+    class Connection:
+        def __init__(self):
+            self.queries = []
+
+        async def fetchval(self, query):
+            self.queries.append(query)
+            return len(self.queries)
+
+    connection = Connection()
+    assert asyncio.run(proof().snapshot(connection)) == (1, 2, 3, 4)
+    assert len(connection.queries) == 4
 
 
 def test_proof_covers_owner_shapes_mutation_and_real_downgrade_guards():
