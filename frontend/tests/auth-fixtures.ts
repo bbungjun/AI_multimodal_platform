@@ -57,9 +57,9 @@ export async function installHttp(context: BrowserContext) {
   });
   return counts;
 }
-export async function maskedScreenshot(page: Page, name: string) {
-  await mkdir("../.omo/evidence/issue-101/screens", { recursive: true });
-  await page.screenshot({ path: `../.omo/evidence/issue-101/screens/${name}.png`, fullPage: true,
+export async function maskedScreenshot(page: Page, name: string, issue = "issue-101") {
+  await mkdir(`../.omo/evidence/${issue}/screens`, { recursive: true });
+  await page.screenshot({ path: `../.omo/evidence/${issue}/screens/${name}.png`, fullPage: true,
     mask: [page.locator(".creative-user-card, .creative-account, .creative-account-details strong, .creative-account-details p, .creative-stage__copy, textarea, input")] });
 }
 export const test = base.extend<{ http: Awaited<ReturnType<typeof installHttp>> }>({

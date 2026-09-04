@@ -1,4 +1,4 @@
-import { test, expect, usage, user, viewports } from "./auth-fixtures";
+import { test, expect, maskedScreenshot, usage, user, viewports } from "./auth-fixtures";
 
 test("personal usage renders the G9A snapshot without model inference", async ({ page, http }) => {
   await page.goto("/usage");
@@ -91,5 +91,6 @@ for (const viewport of viewports) {
     const progress = page.getByRole("progressbar");
     await expect(progress).toHaveCount(3);
     await expect(page.getByRole("button", { name: "사용량 새로고침" })).toBeVisible();
+    await maskedScreenshot(page, `usage-${viewport.width}`, "issue-134");
   });
 }
