@@ -77,9 +77,14 @@ paste credential contents.
 
 ## Active Work
 
-### G5C1 preparation — 2026-09-04
+### G5C1 execution — 2026-09-04
 
-- **Planned / Goal Prepared; implementation not started.** G5B PR119 actually
+- **In Progress — Todo1 authority/baseline complete; implementation not started.**
+  Frozen Goal SHA matched. Branch/base, open Issues114/117/120/121, merged PR119,
+  local desktop-linux Docker and mock-only preconditions were confirmed. Fresh
+  execution B0 passed **538 tests in 2.19s** (3.34s wall); tracked/index state was
+  clean apart from the committed preparation docs and preserved `.omo`.
+  G5B PR119 actually
   merged at `ffc4b506466662f3e57e0f8dca72e16955273749`; final head7ab6254 required
   verify and both Scan/SBOM checks succeeded and has the same tree. Main was
   fast-forwarded to that squash, Issue120 and Issue121 were created under
