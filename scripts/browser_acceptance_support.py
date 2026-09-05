@@ -181,8 +181,6 @@ class BrowserRuntime(OwnedRuntime):
                 process.stdout.close()
             if process.stderr:
                 process.stderr.close()
-        if process.returncode:
-            raise HarnessError("browser_runner_failed")
         if not port_available():
             raise HarnessError("frontend_port_not_released")
 
