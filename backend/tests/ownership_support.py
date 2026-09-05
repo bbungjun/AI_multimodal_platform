@@ -8,7 +8,7 @@ import sys
 from uuid import NAMESPACE_URL, uuid5
 
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
-EXPECTED_REVISION = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as EXPECTED_REVISION
 
 
 def validate_target(payload, url, provider, app_env):

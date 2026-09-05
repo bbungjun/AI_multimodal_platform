@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.schema_revision import CODE_REVISION, resolve_revision
+from app.schema_revision import CODE_REVISION, load_code_revision, resolve_revision
 
 
 def graph(tmp_path, pairs):
@@ -15,7 +15,11 @@ def graph(tmp_path, pairs):
 
 
 def test_current_head_and_read_only_literal_graph(tmp_path):
-    assert CODE_REVISION == "0006_credit_accounting_persistence"
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "migrations"))
+    assert ScriptDirectory.from_config(config).get_current_head() == CODE_REVISION
     assert resolve_revision(graph(tmp_path, [("a", None), ("b", "a")])) == "b"
 
 
@@ -36,3 +40,27 @@ def test_nonliteral_missing_duplicate_metadata_rejected(tmp_path, source):
     (tmp_path / "bad.py").write_text(source, encoding="utf-8")
     with pytest.raises(ValueError, match="schema_lineage_invalid"):
         resolve_revision(tmp_path)
+
+
+def test_packaged_workdir_and_missing_layout(tmp_path):
+    module_file = tmp_path / "site-packages" / "app" / "schema_revision.py"
+    workdir = tmp_path / "runtime"
+    with pytest.raises(ValueError, match="schema_lineage_invalid"):
+        load_code_revision(module_file, workdir)
+    versions = workdir / "migrations" / "versions"
+    versions.mkdir(parents=True)
+    graph(versions, [("a", None), ("b", "a")])
+    assert load_code_revision(module_file, workdir) == "b"
+
+
+def test_invalid_source_does_not_silently_fallback(tmp_path):
+    module_file = tmp_path / "source" / "app" / "schema_revision.py"
+    source = tmp_path / "source" / "migrations" / "versions"
+    source.mkdir(parents=True)
+    graph(source, [("a", "missing")])
+    workdir = tmp_path / "runtime"
+    versions = workdir / "migrations" / "versions"
+    versions.mkdir(parents=True)
+    graph(versions, [("b", None)])
+    with pytest.raises(ValueError, match="schema_lineage_invalid"):
+        load_code_revision(module_file, workdir)

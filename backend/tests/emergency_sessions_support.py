@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 
-HEAD = '0006_credit_accounting_persistence'
+from app.schema_revision import CODE_REVISION as HEAD
 GROUPS = (
     'login_gating', 'preview', 'operator_guards', 'revocation',
     'idempotency', 'admission', 'auth_race', 'rollback_cleanup',

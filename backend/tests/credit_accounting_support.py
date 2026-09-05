@@ -9,7 +9,7 @@ import sys
 import time
 from uuid import uuid4
 
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 GROUPS = ("input_quote", "allocation", "reserve_replay", "settlement", "release",
           "transaction", "integrity", "concurrency")
 TABLES = ("credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events",

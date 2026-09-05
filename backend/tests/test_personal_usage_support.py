@@ -59,7 +59,8 @@ def test_personal_usage_target_refuses_unsafe_values(project, url, provider, app
 
 def test_personal_usage_proof_contract_is_fixed_and_safe():
     module = load()
-    assert module.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert module.HEAD == CODE_REVISION
     assert module.GROUPS == (
         "new_user", "plans", "balance", "meters", "renewal", "active_requests",
         "snapshot_races", "failure_privacy",

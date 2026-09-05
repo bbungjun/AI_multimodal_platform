@@ -55,7 +55,8 @@ def test_default_fixtures_match_named_persistence_contract():
     assert p.cycle()["ends_at"] - p.cycle()["starts_at"] == p.timedelta(seconds=2_592_000)
     assert p.grant()["granted_microcredits"] == 0
     assert p.event()["rate_card_version"] == "v1"
-    assert p.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert p.HEAD == CODE_REVISION
     assert set(p.CREDIT) == {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
 
 

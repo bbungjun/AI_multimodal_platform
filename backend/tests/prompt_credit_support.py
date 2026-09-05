@@ -7,7 +7,7 @@ import re
 import sys
 from uuid import uuid4
 
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 GROUPS = ("preflight", "admission", "terminal", "replay_race")
 T = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 phase = "guard"

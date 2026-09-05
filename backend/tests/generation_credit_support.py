@@ -3,7 +3,7 @@ import asyncio, json, os, re, sys
 from datetime import datetime, timezone
 from uuid import uuid4
 
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 GROUPS = ("mapping_admission", "imagen", "veo", "failure", "retry", "pipeline_success", "pipeline_partial", "replay_race")
 T = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
 phase = "guard"

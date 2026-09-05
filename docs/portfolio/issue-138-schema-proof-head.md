@@ -49,6 +49,10 @@ F1 scope APPROVE (19 paths, migration0); F2 Interface/security APPROVE;
 F3 local reproducibility APPROVE with Linux CI required before merge;
 F4 documentation APPROVE with protected delivery pending. No whole-G10 closure.
 
+Delivery complete: PR139 final head `c4558f0` passed verify and both Scan/SBOM;
+protected squash merge `d3bfea2`, Issue138 closed and main synchronized. F1–F4
+all APPROVE. Follow-up Issue140 is container proof compatibility, not Audit.
+
 ## Outcome and risks
 
 No product behavior, migration, data or provider call changed. Host current-head

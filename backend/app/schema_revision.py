@@ -49,4 +49,15 @@ def resolve_revision(directory: Path) -> str:
         raise ValueError("schema_lineage_invalid") from None
 
 
-CODE_REVISION = resolve_revision(Path(__file__).resolve().parents[1] / "migrations" / "versions")
+def load_code_revision(module_file: Path, workdir: Path) -> str:
+    """Match source checkout and the packaged image's migration layout."""
+    candidates = (module_file.resolve().parents[1] / "migrations" / "versions",
+                  workdir / "migrations" / "versions")
+    for directory in candidates:
+        if directory.is_dir():
+            # An invalid existing source is an error, not a reason to fall back.
+            return resolve_revision(directory)
+    raise ValueError("schema_lineage_invalid")
+
+
+CODE_REVISION = load_code_revision(Path(__file__), Path.cwd())
