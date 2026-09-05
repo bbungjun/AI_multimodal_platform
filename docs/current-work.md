@@ -77,6 +77,20 @@ paste credential contents.
 
 ## Active Work
 
+### G11B mock browser/proxy acceptance — design ready
+
+- User requests mock-first; gpt-6-astra design verified, gpt-5.6-sol/medium
+  implementation requested in next turn of the same task, no subagents.
+- G11A PR154 MERGED1214dfd/Issue153 CLOSED; main synchronized before Issue155.
+- Issue155/branch `codex/issue-155-mock-browser-acceptance`:
+  [spec](initiatives/g11b-mock-browser-acceptance-spec.md), eight new test/harness
+  paths, migration0/product0. Goal plan under `.omo/plans/issue-155-...-goal.md`.
+- Real frontend/browser + local HTTP proxy + mock backend, User/Master actions,
+  emergency CLI and fresh test-session recovery. No actual Google/TLS/cloud;
+  parent152 stays open. Existing development DBs and browser profiles untouched.
+- First implementation checks: focused new Python and Node tests, then two
+  independent owned browser cycles. Design only so far; no new proof executed.
+
 ### G11A integrated mock acceptance — 2026-09-05
 
 - G10 PR151 MERGED b309dba; parent137 CLOSED; local main synchronized.

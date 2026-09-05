@@ -307,6 +307,12 @@ At the end of a Goal:
 
 ## Decision Change Log
 
+2026-09-05 G11B mock-first scope approved by user: Astra design, Sol/medium
+implementation. Issue155 adds test-only real browser/loopback HTTP proxy and
+emergency CLI acceptance; injected ephemeral Sessions do not prove Google login.
+HTTP-only insecure cookies are confined to the owned local verifier; deployed
+TLS/Secure cookies remain unverified. Parent152 stays open. See G11B spec.
+
 2026-09-05 G11A: user approved resuming the bounded auth-cache redesign. Exact2
 test paths expanded to4 by adding main.py/test_auth_api.py only. All /api/auth
 response statuses receive no-store through the existing outer wrapper; no login,
@@ -509,6 +515,11 @@ See [G11A evidence](../portfolio/issue-153-integrated-mock-acceptance.md).
 Parent152 remains open for the separately scoped real Master/User Google browser
 smoke, proxy and emergency revocation live gates. Do not infer authorization for
 actual OAuth/provider/cloud execution from mock completion.
+
+Before those live gates, user requested mock-first **G11B Issue155**:
+[browser/proxy/emergency spec](g11b-mock-browser-acceptance-spec.md).
+Astra design ready; Sol/medium implementation pending model handoff. First
+Interface is verify_browser_acceptance.py with only owned loopback test resources.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
