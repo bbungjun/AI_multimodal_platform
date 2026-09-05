@@ -83,7 +83,7 @@ paste credential contents.
   seed2 each8groups/1race/286checks, inherited read112/admin85, cleanup0;
   Windows1753 plus known Bash127 exception, frontend70/61, lint/build/Compose PASS.
   [Closeout and protected delivery record](portfolio/issue-137-g10-closeout.md),
-  [runbook](runbooks/master-operations.md). Final Issue150 PR/parent137 closeout
+  [runbook](runbooks/master-operations.md). Final [PR151](https://github.com/bbungjun/AI_multimodal_platform/pull/151)/parent137 closeout
   records CI and actual merge. Next: bounded G11 design, not live execution.
   Actual account promotion and developer/preview seed injection were not performed.
 

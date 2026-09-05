@@ -12,7 +12,7 @@ linked PRs; local tests alone never imply a merged or live deployment.
 | B suspension and work cancellation | PR145,f99fa26 | [Record](issue-144-suspension-work-cancellation.md),proof2 each8groups/4races/112checks |
 | C read-only operational snapshot | PR147,82bec89 | [Record](issue-146-master-operational-read.md),proof2 each8groups/3interleavings/112checks |
 | D existing-style console | PR149,514d540 | [Record](issue-148-master-console.md),Session70/Chromium61 twice,masked desktop/mobile review |
-| E deterministic synthetic fixture | Issue150 linked Ready PR | [Record](issue-150-synthetic-operations-fixture.md),proof2 each8groups/1race/286checks |
+| E deterministic synthetic fixture | [PR151](https://github.com/bbungjun/AI_multimodal_platform/pull/151),core243da11 | [Record](issue-150-synthetic-operations-fixture.md),proof2 each8groups/1race/286checks |
 
 Each slice has a frozen Goal,at most20 non-document paths,small commits and the
 verify/backend+frontend Scan/SBOM delivery gate. One additive migration0007 was
