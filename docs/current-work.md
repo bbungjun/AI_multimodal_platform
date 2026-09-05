@@ -77,6 +77,17 @@ paste credential contents.
 
 ## Active Work
 
+### G11A integrated mock acceptance — 2026-09-05
+
+- G10 PR151 MERGED b309dba; parent137 CLOSED; local main synchronized.
+- Parent152 tracks all G11 gates. Issue153/branch
+  `codex/issue-153-integrated-mock-acceptance` is In Progress for local mock only.
+- [Frozen scope](initiatives/g11-integrated-acceptance-spec.md): existing owned
+  runtime and real HTTP integration; two test-only paths, migration0. First check:
+  `python -m pytest tests/test_verify_integrated_acceptance.py -q` after creation.
+- Actual Google/browser/proxy/emergency live gates remain separately authorized;
+  never mark the whole initiative complete from mock evidence.
+
 ### G10 design and preparation — 2026-09-05
 
 - **G10 implementation/local mock verification complete.** Final core243da11:
