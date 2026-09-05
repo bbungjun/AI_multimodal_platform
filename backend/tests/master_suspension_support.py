@@ -125,6 +125,19 @@ async def proof(db, factory):
     check(await status(master) == "active")
     check(await db.fetchval("SELECT count(*) FROM master_audit") == 0)
     check(await db.fetchval("SELECT count(*) FROM users WHERE role='master' AND status='active'") == 1)
+    oversized = await seed()
+    await db.executemany("INSERT INTO jobs(id,owner_user_id,mode,model,state,prompt,blocked,attempts,parameters,"
+        "state_history,vertex_charged,created_at,updated_at) VALUES($1,$2,'t2i','imagen-4.0-fast-generate-001',"
+        "'pending','synthetic',false,0,'{}','[]',false,$3,$3)", [(uuid4(), oversized, NOW) for _ in range(501)])
+    try:
+        await act(command(oversized))
+    except MasterError as error:
+        check(error.code == "master_busy")
+    else:
+        raise AssertionError("scan_limit_missing")
+    check(await status(oversized) == "active")
+    check(await db.fetchval("SELECT count(*) FROM jobs WHERE owner_user_id=$1 AND state='pending'", oversized) == 501)
+    check(await db.fetchval("SELECT count(*) FROM master_audit WHERE target_id=$1", oversized) == 0)
     groups[phase] = True
 
     phase = "sessions"
@@ -184,6 +197,22 @@ async def proof(db, factory):
     check(execution.executed)
     check(await db.fetchval("SELECT status FROM credit_reservations WHERE id=$1", reservation) == "settled")
     check(await status(owner) == "suspended")
+    owner = await seed()
+    jid, _, event, reservation = await admit(owner)
+    started, resume = asyncio.Event(), asyncio.Event()
+    async def claimed_handler(job_id):
+        started.set()
+        await asyncio.wait_for(resume.wait(), 10)
+        await finish(job_id)
+    worker = asyncio.create_task(process_job_async(str(jid), session_factory=factory, handler=claimed_handler))
+    await asyncio.wait_for(started.wait(), 5)
+    try:
+        check((await act(command(owner))).after["cancelled_jobs"] == 0)
+        check(await db.fetchval("SELECT state FROM jobs WHERE id=$1", jid) == "queued")
+    finally:
+        resume.set()
+    check((await worker).executed)
+    check(await db.fetchval("SELECT status FROM credit_reservations WHERE id=$1", reservation) == "settled")
     groups[phase] = True
 
     phase = "pipeline"
@@ -192,6 +221,16 @@ async def proof(db, factory):
     check((await act(command(owner))).after["cancelled_jobs"] == 2)
     check(await db.fetchval("SELECT count(*) FROM jobs WHERE id=ANY($1) AND state='cancelled'", [parent, child]) == 2)
     check(await db.fetchval("SELECT status FROM credit_reservations WHERE id=$1", reservation) == "released")
+    owner = await seed()
+    parent, child, event, reservation = await admit(owner, pipeline=True)
+    await finish(parent)
+    async with factory() as session:
+        linked = await pipeline_link.link_completed_parent(session, await session.get(Job, parent))
+        check(linked.linked)
+    check((await act(command(owner))).after["cancelled_jobs"] == 1)
+    check(await db.fetchval("SELECT state FROM jobs WHERE id=$1", child) == "cancelled")
+    check(await db.fetchval("SELECT status FROM credit_reservations WHERE id=$1", reservation) == "settled")
+    check(await db.fetchval("SELECT sum(consumed_microcredits) FROM credit_grants WHERE user_id=$1", owner) == 50_000_000)
     for failed in (False, True):
         owner = await seed()
         parent, child, event, reservation = await admit(owner, pipeline=True)
