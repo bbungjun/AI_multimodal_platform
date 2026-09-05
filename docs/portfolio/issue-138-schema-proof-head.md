@@ -34,12 +34,20 @@ was skipped or relaxed.
 - Compose public-template config PASS from repository root. An initial command
   from backend failed because the relative public template was absent; corrected
   working directory without reading local environment files.
-- Isolated schema and final-head Linux/CI results: pending.
+- Stable `45eabec` isolated schema verifier PASS: public-template mock PostgreSQL,
+  round-trip, constraints, stale-revision refusal,90 credit checks and42 accounting
+  checks/four downgrade cases. Disposable container/volume/network cleanup PASS.
+  Receipt: `.omo/evidence/schema/migration-schema-verify-8b1c06cca1b2.json`.
+  Final-head Linux/CI results pending at PR submission.
 
 The first schema run started before the v2 parity-test correction commit. Its
-end-of-run revision guard must reject that changing checkout; it cannot serve
-as final evidence. Preserve that run and perform the final proof only against
-a stable committed revision, without concurrent repository edits/commits.
+end-of-run revision guard correctly rejected `code_changed_during_proof`;
+cleanup passed and the unsuccessful receipt is preserved. The final run above
+used a stable committed revision without concurrent repository edits/commits.
+
+F1 scope APPROVE (19 paths, migration0); F2 Interface/security APPROVE;
+F3 local reproducibility APPROVE with Linux CI required before merge;
+F4 documentation APPROVE with protected delivery pending. No whole-G10 closure.
 
 ## Outcome and risks
 

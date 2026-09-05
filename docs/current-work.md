@@ -94,6 +94,9 @@ paste credential contents.
   existing Bash failure, frontend60/47 and lint/build/Compose PASS. Schema proof
   must finish on an unchanged commit before CI delivery. v2 SHA-256 is
   `c8b3332b0831fb98ec69f62ac4c2b84c162fde4c5d2d1365977104ef3d5c9739`.
+- Stable `45eabec` schema proof passed with90 credit/42 accounting checks and
+  cleanup0. The earlier moving-checkout refusal remains recorded, not counted
+  as success. Ready PR/required CI delivery follows; G10P2 remains next.
 
 ### G9B personal Usage UI execution — 2026-09-05
 
