@@ -68,3 +68,6 @@ promotion route exists. Rollback removes console navigation/route and retains
 backend Audit. G10E supplies deterministic guarded synthetic data; G11 is separate
 integrated/live-browser acceptance. F1/F2 APPROVE,F3 local APPROVE pending Linux
 CI,F4 records complete/protected delivery pending.
+
+Delivery: PR149 finalhead d0c5bc3 passed verify and both Scan/SBOM, protected
+squash merged514d540; Issue148 closed/main synchronized. F1–F4 APPROVE.

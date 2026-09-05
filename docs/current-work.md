@@ -79,6 +79,10 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10D PR149 merged514d540, all3 CI SUCCESS/Issue148 closed/F1–F4 APPROVE.
+  Final G10E Issue150 starts `codex/issue-150-synthetic-operations-fixture`,8paths/
+  migration0. Goal SHA `ae49954603e8222cb1f35fbdafa40bee64437027a229e33ccf8222ea2f8da6ca`.
+  First focused verification existing accounting/Master. Only isolated seed targets.
 - G10D core0ad57b3 locally Mock Verified: Session70/Chromium61 twice, focused10/14,
   desktop/mobile masked visual inspection, inherited read112checks/cleanup0 PASS.
   Windows1724 plus known Bash exception, lint/build/Compose PASS. Ready PR pending.
