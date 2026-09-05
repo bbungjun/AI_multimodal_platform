@@ -43,7 +43,9 @@ before applying this product fix. No Ready PR/merge until all gates pass.
 
 ## Verification status
 
-Needs redesign approval. Focused19 PASS; integration failed with cleanup0.
+User approved resumption with total4 paths. Original plan SHA confirmed unchanged.
+Auth response-start cache protection implemented; focused auth/integration51 PASS,
+one guarded PostgreSQL/Redis skip to be covered by isolated auth proof.
 No complete/mock-verified claim until fresh independent cycles and
 the frozen regression matrix pass. No actual Google, browser/backend live,
 provider/cloud, real account mutation or developer DB modification authorized.

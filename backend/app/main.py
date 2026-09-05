@@ -65,12 +65,14 @@ class PrivateContentResponses:
         protected = scope["type"] == "http" and (path in ("/metrics", "/metrics/") or any(
             path == prefix or path.startswith(prefix + "/") for prefix in self.prefixes
         ))
+        auth = scope["type"] == "http" and (path == "/api/auth" or path.startswith("/api/auth/"))
 
         async def send_private(message):
-            if protected and message["type"] == "http.response.start":
+            if (protected or auth) and message["type"] == "http.response.start":
                 headers = [(key, value) for key, value in message.get("headers", [])
                            if key.lower() != b"cache-control"]
-                message = {**message, "headers": [*headers, (b"cache-control", b"private, no-store")]}
+                value = b"no-store" if auth else b"private, no-store"
+                message = {**message, "headers": [*headers, (b"cache-control", value)]}
             await send(message)
 
         await self.application(scope, receive, send_private)

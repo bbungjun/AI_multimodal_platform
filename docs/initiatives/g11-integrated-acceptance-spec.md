@@ -34,9 +34,12 @@ keep that distinct from the HTTP/worker proof. Missing live gates stay Planned.
 
 ## Frozen limits and acceptance
 
-Exactly two allowed non-document paths: scripts/verify_integrated_acceptance.py
-and backend/tests/test_verify_integrated_acceptance.py. No product, migration,
-frontend or infrastructure changes. Scope overrun requires redesign, not a hidden
+Approved v2: exactly four allowed non-document paths: scripts/verify_integrated_acceptance.py,
+backend/tests/test_verify_integrated_acceptance.py, backend/app/main.py and
+backend/tests/test_auth_api.py. The only product delta is all-status no-store on
+/api/auth at the existing outer response-start wrapper. Preserve cookies, streaming,
+Origin and content private/no-store. No migration, frontend or infrastructure changes.
+Scope overrun requires redesign, not a hidden
 fix. Reuse existing cycle limits: 360s work,90s cleanup,900s aggregate; no retry or
 time-limit relaxation after overrun. Two cycles, all eight groups, at least
 40 assertions per cycle, cleanup zero. Stable committed code during proofs.
