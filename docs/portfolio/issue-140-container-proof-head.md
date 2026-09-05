@@ -41,3 +41,6 @@ F4 records ready, protected merge pending.
 20 paths including shared resolver, no migration. No Master/Audit implementation
 or live claims. Historical migration assertions remain explicit; G10A adds the
 Audit schema and audited administration once this compatibility slice merges.
+
+PR141 final head `d88a2f0` passed verify and both Scan/SBOM; protected squash
+merged `ea0a434`, Issue140 closed/main synchronized. F1–F4 APPROVE.
