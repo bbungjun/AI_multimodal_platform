@@ -89,6 +89,11 @@ paste credential contents.
   `0b44e1246d6ad3f7965b00daacba4622a3496f26f8a282012797f08dfb64a2cf`.
   First test is `python -m pytest tests/test_schema_revision.py -q` from backend.
   No G10 feature or live verification is claimed; developer/preview DBs preserved.
+- G10P1 v2 adds the ownership parity test, for19 paths/migration0. Original
+  source-literal regression is preserved; corrected Windows1602 PASS plus the
+  existing Bash failure, frontend60/47 and lint/build/Compose PASS. Schema proof
+  must finish on an unchanged commit before CI delivery. v2 SHA-256 is
+  `c8b3332b0831fb98ec69f62ac4c2b84c162fde4c5d2d1365977104ef3d5c9739`.
 
 ### G9B personal Usage UI execution — 2026-09-05
 
