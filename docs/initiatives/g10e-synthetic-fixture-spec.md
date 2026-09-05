@@ -14,6 +14,12 @@ users. Dormancy is an activity pattern, not an invented User status. All synthet
 Users have null Google subject/email, unverified email, user role, zero Sessions.
 No fake login API. No real Master created by seed.
 
+Fixture correction after failed dry-run: the compressed44-day dormant Free history
+can exceed a real monthly allowance. The nine dormant Free fixtures therefore
+receive an explicit1000-Credit nonexpiring synthetic bonus through grant_bonus
+before history construction. Do not bypass quota or write balances directly.
+The denial probe uses a non-bonus active Free fixture and remains unchanged.
+
 Jobs are explicit content-free synthetic history, no assets/provider/Outbox/queue.
 Use existing state_machine for transitions while constructing history. Completed,
 provider-failed and cancelled outcomes; five persisted supported generation model

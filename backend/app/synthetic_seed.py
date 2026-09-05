@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 
 from app.credit_accounting import (CreditAccountingError, ReservationRequest, UsageEstimate,
     UsageLine, UsageReport, reserve, settle, release)
-from app.credit_lifecycle import change_plan, ensure_cycle
+from app.credit_lifecycle import change_plan, ensure_cycle, grant_bonus
 from app.identity_models import User
 from app.models import Job, JobState
 from app.state_machine import transition
@@ -151,6 +151,10 @@ async def seed_fixture(session, *, as_of):
             if user.plan != "free":
                 await change_plan(session, user_id=user.id, target_plan=user.plan,
                     operation_key="seed_plan_v1", now=entries[0].created_at)
+            if user.plan == "free" and user.cohort == "dormant":
+                await grant_bonus(session, user_id=user.id, amount_microcredits=1_000_000_000,
+                    expires_at=None, reason_code="synthetic_fixture", operation_key="seed_bonus_v1",
+                    now=entries[0].created_at)
             for entry in entries:
                 key = f"seed_v1_{entry.index}"
                 usage = (UsageEstimate("gemini_input_token", 10), UsageEstimate("gemini_output_token", 5),

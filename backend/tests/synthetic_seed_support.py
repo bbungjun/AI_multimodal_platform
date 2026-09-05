@@ -81,6 +81,7 @@ async def proof(db, factory, database):
     check(await db.fetchval("SELECT count(*) FROM users u WHERE data_origin='synthetic' AND NOT EXISTS "
         "(SELECT 1 FROM jobs j WHERE j.owner_user_id=u.id AND j.created_at>$1)", ASOF-timedelta(days=30)) == 12)
     check(await db.fetchval("SELECT count(DISTINCT model) FROM jobs") == 5)
+    check(await db.fetchval("SELECT count(*) FROM credit_grants WHERE kind='bonus' AND reason_code='synthetic_fixture'") == 9)
     check(await db.fetchval("SELECT min(created_at)>=$1 AND max(created_at)<$2 FROM jobs", ASOF-timedelta(days=90), ASOF))
     states = {r["state"]: r["n"] for r in await db.fetch("SELECT state::text,count(*) n FROM jobs GROUP BY state")}
     check(states == dict(completed=2400, failed=360, cancelled=240))
