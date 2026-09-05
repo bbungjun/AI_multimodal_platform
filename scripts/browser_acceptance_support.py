@@ -21,6 +21,7 @@ GROUPS = (
     "anonymous_proxy", "user_usage", "generation_ownership", "master_commands",
     "suspension", "logout", "emergency", "mock_recovery",
 )
+DIAGNOSTIC_PHASES = ("user_contexts", "user_navigation", "user_profiles", "user_usage_ui")
 RECEIPT = re.compile(
     r"PASS: emergency_session_revocation mode=(preview|execute) reason=operator_drill "
     r"active_before=([0-9]+) revoked=([0-9]+) active_after=([0-9]+)"
@@ -55,9 +56,12 @@ def parse_node_message(value: str, expected_type: str) -> dict:
         message = json.loads(value)
     except (TypeError, ValueError):
         raise HarnessError("browser_protocol_invalid") from None
-    if (isinstance(message, dict) and set(message) == {"type", "phase"} and message.get("type") == "failed"
-            and message.get("phase") in {"startup", "vite", *GROUPS, "browser_step"}):
-        raise HarnessError("browser_failed_" + message["phase"])
+    if (isinstance(message, dict) and set(message) == {"type", "phase", "code"}
+            and message.get("type") == "failed"
+            and message.get("phase") in {"startup", "vite", *GROUPS, *DIAGNOSTIC_PHASES, "browser_step"}
+            and isinstance(message.get("code"), str)
+            and re.fullmatch(r"[a-z0-9_]{1,64}", message["code"])):
+        raise HarnessError("browser_failed_" + message["phase"] + "_" + message["code"])
     allowed = {
         "emergency_ready": {"type", "groups", "checks", "external_requests"},
         "recovery_ready": {"type", "groups", "checks", "external_requests"},

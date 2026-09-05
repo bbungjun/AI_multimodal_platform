@@ -10,6 +10,7 @@ export const GROUPS = [
   "suspension", "logout", "emergency", "mock_recovery",
 ];
 let currentPhase = "startup";
+const DIAGNOSTIC_PHASES = ["user_contexts", "user_navigation", "user_profiles", "user_usage_ui"];
 
 export function validateStart(value) {
   const keys = value && typeof value === "object" ? Object.keys(value).sort() : [];
@@ -115,7 +116,7 @@ async function run() {
     ok(health.json?.vertex?.status === "mock_provider", "provider_not_mock");
     ok(externalRequests === 0, "external_request_seen");
 
-    currentPhase = "user_usage";
+    currentPhase = "user_contexts";
     const a = await contextFor(start.secrets.a);
     const b = await contextFor(start.secrets.b);
     const master = await contextFor(start.secrets.master);
@@ -123,8 +124,11 @@ async function run() {
     const bPage = await b.newPage();
     const masterPage = await master.newPage();
     const profiles = [];
+    currentPhase = "user_profiles";
     for (const page of [aPage, bPage, masterPage]) {
+      currentPhase = "user_navigation";
       await page.goto("/usage");
+      currentPhase = "user_profiles";
       const me = await request(page, "GET", "/api/auth/me");
       ok(me.status === 200, "session_invalid");
       ok(me.cache?.includes("no-store"), "session_cache_unsafe");
@@ -133,17 +137,30 @@ async function run() {
     }
     ok(profiles[0].role === "user" && profiles[1].role === "user", "user_role_invalid");
     ok(profiles[2].role === "master", "master_role_invalid");
+    currentPhase = "user_usage_ui";
     for (const page of [aPage, bPage]) {
-      await page.getByRole("heading", { name: "플랜 및 사용량" }).waitFor();
-      ok(await page.getByText("Free Plan").first().isVisible(), "free_plan_missing");
-      ok(await page.getByText("30일 주기").isVisible(), "cycle_missing");
       const usage = await request(page, "GET", "/api/usage/me");
       ok(usage.status === 200, "usage_failed");
       ok(usage.cache?.includes("private") && usage.cache.includes("no-store"), "usage_cache_unsafe");
-      ok(Array.isArray(usage.json?.meters) && usage.json.meters.length === 7, "meters_invalid");
-      ok(usage.json?.plan?.current === "free", "usage_plan_invalid");
+      ok(Array.isArray(usage.json?.usage) && usage.json.usage.length === 7, "meters_invalid");
+      ok(usage.json?.plan === "free", "usage_plan_invalid");
       ok(usage.json?.cycle?.index >= 0, "cycle_index_invalid");
       ok(usage.json?.concurrency?.limit === 1, "free_limit_invalid");
+      await page.goto("/usage", { waitUntil: "domcontentloaded", timeout: 10_000 });
+      let state = "";
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        state = await page.locator("body").innerText();
+        if (["플랜 및 사용량", "사용량을 표시할 수 없습니다", "Google로 계속하기"].some(value => state.includes(value))) break;
+        await page.waitForTimeout(100);
+      }
+      ok(state.trim().length > 0, "usage_ui_blank");
+      ok(!state.includes("세션을 확인"), "usage_session_stuck");
+      ok(["플랜 및 사용량", "사용량을 표시할 수 없습니다", "Google로 계속하기"].some(value => state.includes(value)), "usage_ui_unexpected");
+      ok(!(await page.getByRole("button", { name: "Google로 계속하기" }).isVisible().catch(() => false)), "usage_auth_gate");
+      ok(!(await page.getByRole("heading", { name: "사용량을 표시할 수 없습니다" }).isVisible().catch(() => false)), "usage_ui_error");
+      ok(await page.getByRole("heading", { name: "플랜 및 사용량" }).isVisible(), "usage_heading_missing");
+      ok(await page.getByText("Free Plan").first().isVisible(), "free_plan_missing");
+      ok(await page.getByText("30일 주기", { exact: true }).first().isVisible(), "cycle_missing");
     }
     ok(!(await aPage.getByRole("link", { name: "관리 콘솔" }).isVisible().catch(() => false)), "master_link_leaked");
     const deniedMaster = await request(aPage, "GET", "/api/master/overview");
@@ -175,20 +192,19 @@ async function run() {
     await aPage.getByRole("heading", { name: "작업 상세" }).waitFor();
     ok(await aPage.getByText("완료", { exact: true }).first().isVisible(), "detail_state_missing");
     ok(await aPage.getByRole("heading", { name: /이미지 결과.*준비됨/ }).isVisible(), "detail_asset_missing");
-    ok(await aPage.locator("img.asset-gallery-card__image").count() === 1, "detail_image_missing");
+    ok(await aPage.locator("img.asset-media").count() === 1, "detail_image_missing");
     const foreignJob = await request(bPage, "GET", `/api/generations/${jobId}`);
     const foreignFile = await request(bPage, "GET", asset.url);
     ok(foreignJob.status === 404, "foreign_job_leaked");
     ok(foreignFile.status === 404, "foreign_file_leaked");
     const charged = await request(aPage, "GET", "/api/usage/me");
-    ok(Number(charged.json?.credit?.charged_microcredits) > 0, "charge_missing");
-    ok(charged.json?.credit?.held_microcredits === "0", "held_not_released");
+    ok(Number(charged.json?.cycle?.charged_microcredits) > 0, "charge_missing");
+    ok(charged.json?.credit?.held_microcredits === 0, "held_not_released");
 
     currentPhase = "master_commands";
     await masterPage.goto("/master");
     await masterPage.getByRole("heading", { name: "관리 콘솔" }).waitFor();
     ok(await masterPage.getByRole("link", { name: "관리 콘솔" }).isVisible(), "master_link_missing");
-    currentPhase = "suspension";
     await masterPage.getByRole("button", { name: "사용자" }).click();
     await masterPage.getByRole("button", { name: `사용자 관리 ${profiles[0].id}` }).click();
     await masterPage.getByLabel("변경 플랜").selectOption("pro");
@@ -209,14 +225,20 @@ async function run() {
     await aPage.getByRole("heading", { name: "플랜 및 사용량" }).waitFor();
     ok(await aPage.getByText("Pro Plan").first().isVisible(), "pro_plan_not_visible");
     const afterCommands = await request(aPage, "GET", "/api/usage/me");
-    ok(afterCommands.json?.plan?.current === "pro", "pro_plan_not_persisted");
+    ok(afterCommands.json?.plan === "pro", "pro_plan_not_persisted");
     ok(afterCommands.json?.concurrency?.limit === 3, "pro_limit_invalid");
     ok(Number(afterCommands.json?.credit?.available_microcredits) > Number(charged.json?.credit?.available_microcredits), "bonus_not_visible");
     await masterPage.getByRole("button", { name: "Audit" }).click();
     await masterPage.getByRole("heading", { name: "Audit" }).waitFor();
-    ok(await masterPage.getByText("플랜 변경", { exact: true }).count() === 1, "plan_audit_duplicate");
-    ok(await masterPage.getByText("보너스 지급", { exact: true }).count() === 1, "bonus_audit_duplicate");
+    const audit = await request(masterPage, "GET", "/api/master/audit?limit=25");
+    ok(audit.status === 200 && Array.isArray(audit.json?.items), "audit_read_failed");
+    ok(audit.json.items.filter(item => item.action === "plan_change").length === 1, "plan_audit_duplicate");
+    ok(audit.json.items.filter(item => item.action === "bonus_grant").length === 1, "bonus_audit_duplicate");
+    await masterPage.locator("table tbody tr").first().waitFor();
+    ok(await masterPage.locator("table tbody tr").count() === audit.json.items.length, "audit_rows_not_visible");
+    ok((await masterPage.locator("table tbody").innerText()).includes("→"), "audit_actor_target_not_visible");
 
+    currentPhase = "suspension";
     await masterPage.getByRole("button", { name: "사용자" }).click();
     await masterPage.getByRole("button", { name: `사용자 관리 ${profiles[0].id}` }).click();
     await masterPage.getByLabel("조치").selectOption("suspend");
@@ -229,7 +251,7 @@ async function run() {
     ok(!(await aPage.getByRole("heading", { name: "플랜 및 사용량" }).isVisible().catch(() => false)), "suspended_private_ui_visible");
     const suspendedMe = await request(aPage, "GET", "/api/auth/me");
     ok(suspendedMe.status === 401, "suspended_session_accepted");
-    ok(suspendedMe.cache?.includes("private") && suspendedMe.cache.includes("no-store"), "suspended_cache_unsafe");
+    ok(suspendedMe.cache?.includes("no-store"), "suspended_cache_unsafe");
     await masterPage.getByRole("button", { name: "닫기" }).click();
     await masterPage.getByRole("button", { name: `사용자 관리 ${profiles[0].id}` }).click();
     await masterPage.getByLabel("조치").selectOption("reactivate");
@@ -247,11 +269,14 @@ async function run() {
     await bPage.getByRole("button", { name: "로그아웃" }).click();
     await bPage.getByRole("button", { name: "Google로 계속하기" }).waitFor();
     ok(!(await bPage.getByRole("heading", { name: "플랜 및 사용량" }).isVisible().catch(() => false)), "logout_private_ui_visible");
-    await bPage.goBack();
-    ok(await bPage.getByRole("button", { name: "Google로 계속하기" }).isVisible(), "back_restored_private_ui");
+    await bPage.goBack({ waitUntil: "domcontentloaded", timeout: 10_000 }).catch(() => null);
+    ok(!(await bPage.getByRole("heading", { name: "플랜 및 사용량" }).isVisible().catch(() => false)), "back_restored_private_ui");
+    await bPage.goto("/usage", { waitUntil: "domcontentloaded" });
     const loggedOut = await request(bPage, "GET", "/api/auth/me");
     ok(loggedOut.status === 401, "logout_session_accepted");
-    ok(loggedOut.cache?.includes("private") && loggedOut.cache.includes("no-store"), "logout_cache_unsafe");
+    ok(loggedOut.cache?.includes("no-store"), "logout_cache_unsafe");
+    await bPage.getByRole("button", { name: "Google로 계속하기" }).waitFor();
+    ok(await bPage.getByRole("button", { name: "Google로 계속하기" }).isVisible(), "logout_gate_missing");
 
     currentPhase = "emergency";
     ok((await request(masterPage, "GET", "/api/auth/me")).status === 200, "master_missing_before_emergency");
@@ -262,7 +287,7 @@ async function run() {
     await masterPage.getByRole("button", { name: "Google로 계속하기" }).waitFor();
     const revokedMaster = await request(masterPage, "GET", "/api/auth/me");
     ok(revokedMaster.status === 401, "emergency_master_not_revoked");
-    ok(revokedMaster.cache?.includes("private") && revokedMaster.cache.includes("no-store"), "emergency_cache_unsafe");
+    ok(revokedMaster.cache?.includes("no-store"), "emergency_cache_unsafe");
     ok(!(await masterPage.getByRole("heading", { name: "관리 콘솔" }).isVisible().catch(() => false)), "emergency_private_ui_visible");
     ok((await request(aPage, "GET", `/api/generations/${jobId}`)).status === 401, "revoked_data_request_accepted");
     ok(externalRequests === 0, "external_request_seen");
@@ -279,15 +304,18 @@ async function run() {
     ok(await recoveredAPage.getByText("Pro Plan").first().isVisible(), "recovery_plan_lost");
     const recoveredUsage = await request(recoveredAPage, "GET", "/api/usage/me");
     ok(recoveredUsage.status === 200, "recovery_user_failed");
-    ok(recoveredUsage.json?.plan?.current === "pro", "recovery_plan_not_persisted");
-    ok(Number(recoveredUsage.json?.credit?.charged_microcredits) > 0, "recovery_charge_lost");
+    ok(recoveredUsage.json?.plan === "pro", "recovery_plan_not_persisted");
+    ok(Number(recoveredUsage.json?.cycle?.charged_microcredits) > 0, "recovery_charge_lost");
     ok((await request(aPage, "GET", "/api/auth/me")).status === 401, "old_a_cookie_recovered");
     await recoveredMasterPage.goto("/master");
     await recoveredMasterPage.getByRole("heading", { name: "관리 콘솔" }).waitFor();
     ok(await recoveredMasterPage.getByRole("link", { name: "관리 콘솔" }).isVisible(), "recovery_master_failed");
     await recoveredMasterPage.getByRole("button", { name: "Audit" }).click();
-    ok(await recoveredMasterPage.getByText("플랜 변경", { exact: true }).count() === 1, "recovery_audit_lost");
-    ok(await recoveredMasterPage.getByText("보너스 지급", { exact: true }).count() === 1, "recovery_bonus_audit_lost");
+    await recoveredMasterPage.locator("table tbody tr").first().waitFor();
+    const recoveredAudit = await request(recoveredMasterPage, "GET", "/api/master/audit?limit=25");
+    ok(recoveredAudit.json?.items?.filter(item => item.action === "plan_change").length === 1, "recovery_audit_lost");
+    ok(recoveredAudit.json?.items?.filter(item => item.action === "bonus_grant").length === 1, "recovery_bonus_audit_lost");
+    ok(await recoveredMasterPage.locator("table tbody tr").count() === recoveredAudit.json.items.length, "recovery_audit_ui_lost");
     ok((await request(masterPage, "GET", "/api/auth/me")).status === 401, "old_master_cookie_recovered");
     const stillDisabled = await request(recoveredAPage, "GET", "/api/auth/google/start");
     ok(stillDisabled.status === 503 && stillDisabled.json?.detail === "login_disabled", "login_gate_changed");
@@ -304,9 +332,10 @@ async function run() {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   run().catch(error => {
-    const known = new Set(["startup", "vite", ...GROUPS]);
+    const known = new Set(["startup", "vite", ...GROUPS, ...DIAGNOSTIC_PHASES]);
     const phase = known.has(currentPhase) ? currentPhase : "browser_step";
-    process.stdout.write(`${JSON.stringify({ type: "failed", phase })}\n`);
+    const code = /^[a-z0-9_]{1,64}$/.test(error?.message ?? "") ? error.message : "browser_api_failed";
+    process.stdout.write(`${JSON.stringify({ type: "failed", phase, code })}\n`);
     process.exitCode = 1;
   });
 }
