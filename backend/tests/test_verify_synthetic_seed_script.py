@@ -18,6 +18,18 @@ def test_receipt_and_budget():
     assert (module["admin"].base.WORK_SECONDS, module["admin"].base.CLEANUP_SECONDS) == (600, 60)
 
 
+def test_only_proof_stdin_consumes_remaining_goal_budget(monkeypatch):
+    module = load()
+    runtime = module["Runtime"].__new__(module["Runtime"])
+    runtime.deadline, runtime.env = 600, {}
+    observed = []
+    runtime.run = lambda args, **kwargs: observed.append(kwargs["timeout"]) or "ok"
+    monkeypatch.setattr(module["admin"].base.time, "monotonic", lambda: 10)
+    runtime.call(["docker", "compose", "run", "migrate", "python", "-"], input="fixed proof")
+    runtime.call(["docker", "compose", "build", "migrate"])
+    assert observed == [590, 180]
+
+
 @pytest.mark.parametrize("change", [dict(checks=99), dict(races=0), dict(groups={}), dict(complete=False)])
 def test_partial_proof_rejected(change):
     module = load()

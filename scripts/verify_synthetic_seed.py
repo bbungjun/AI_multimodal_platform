@@ -64,7 +64,8 @@ class Runtime(admin.Runtime):
             raise Failure("timeout")
         # Full-size fixture process uses this Goal's frozen600s total budget.
         # Other Docker/git commands retain the inherited180s command ceiling.
-        limit = remaining if "exec" in args else min(180, remaining)
+        is_proof = input is not None and args[-2:] == ["python", "-"]
+        limit = remaining if is_proof else min(180, remaining)
         result = self.run(args, env=self.env, timeout=limit, input=input)
         if admin.base.time.monotonic() > self.deadline:
             raise Failure("timeout")
