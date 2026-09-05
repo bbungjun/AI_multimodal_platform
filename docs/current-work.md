@@ -77,6 +77,28 @@ paste credential contents.
 
 ## Active Work
 
+### G11A integrated mock acceptance — 2026-09-05
+
+- G10 PR151 MERGED b309dba; parent137 CLOSED; local main synchronized.
+- Parent152 tracks all G11 gates. Issue153/branch
+  `codex/issue-153-integrated-mock-acceptance` is locally Mock Verified, approved v2.
+- [Frozen scope](initiatives/g11-integrated-acceptance-spec.md): existing owned
+  runtime and real HTTP integration; four approved paths, migration0. First check:
+  `python -m pytest tests/test_verify_integrated_acceptance.py -q` after creation.
+- Actual Google/browser/proxy/emergency live gates remain separately authorized;
+  never mark the whole initiative complete from mock evidence.
+- Core92fee38 integration reached97 assertions then exposed auth401 missing
+  no-store after suspend/reactivate; cleanup0, focused19 PASS. Product fix exceeds
+  exact2 test-only paths. Proposed total4 paths adds main.py/test_auth_api.py;
+  see [failure and proposed fix](portfolio/issue-153-integrated-mock-acceptance.md).
+  v2 core ebbfc76 adds all-status auth no-store: HTTP2x108, schema2, complete
+  inherited matrix and ownership all/cycles2 PASS;18 project cleanup0.
+  Windows1788 plus existing Bash127 exception/3 guarded skips; focused51,
+  frontend Session70/Chromium61, lint/build/Compose PASS.
+  Final Linux CI and protected delivery are recorded on
+  [PR154](https://github.com/bbungjun/AI_multimodal_platform/pull/154)/Issue153;
+  keep parent152 open for separately authorized live acceptance.
+
 ### G10 design and preparation — 2026-09-05
 
 - **G10 implementation/local mock verification complete.** Final core243da11:

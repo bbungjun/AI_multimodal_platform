@@ -18,6 +18,69 @@ def test_routes_and_cookie_contract():
     assert m.FLOW_COOKIE == 'creativeops_oauth_flow'
 
 
+@pytest.mark.parametrize('code,status', [('authentication_required', 401), ('oauth_provider_unavailable', 503)])
+def test_auth_dependency_error_cache_protection(code, status):
+    from fastapi.testclient import TestClient
+    from app.main import ContentApplication
+    from app.api.auth_dependencies import get_auth_service
+    from app.auth.service import AuthError
+    class Service:
+        async def authenticate(self, secret):
+            raise AuthError(code)
+    app = ContentApplication()
+    app.include_router(api_module().router)
+    app.dependency_overrides[get_auth_service] = lambda: Service()
+    with TestClient(app) as client:
+        response = client.get('/api/auth/me')
+        assert response.status_code == status
+        assert response.headers['cache-control'] == 'no-store'
+
+
+@pytest.mark.parametrize('status', [200, 204, 303, 307, 401, 403, 422, 503])
+async def test_auth_response_wrapper_preserves_body_cookies_and_status(status):
+    from app.main import PrivateContentResponses
+    body = {'type': 'http.response.body', 'body': b'', 'more_body': False}
+    headers = [(b'cache-control', b'public'), (b'set-cookie', b'a=; HttpOnly'),
+               (b'set-cookie', b'b=; Secure'), (b'location', b'/login')]
+    async def application(scope, receive, send):
+        await send({'type': 'http.response.start', 'status': status, 'headers': headers})
+        await send(body)
+    sent = []
+    async def send(message):
+        sent.append(message)
+    await PrivateContentResponses(application)({'type': 'http', 'path': '/api/auth/google/callback'}, None, send)
+    assert sent[0]['status'] == status
+    assert sent[0]['headers'] == headers[1:] + [(b'cache-control', b'no-store')]
+    assert sent[1] is body
+
+
+def test_auth_unhandled_error_is_not_cached():
+    from fastapi.testclient import TestClient
+    from app.main import ContentApplication
+    app = ContentApplication()
+    @app.get('/api/auth/failure')
+    async def failure():
+        raise RuntimeError('test failure')
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get('/api/auth/failure')
+        assert response.status_code == 500
+        assert response.headers['cache-control'] == 'no-store'
+
+
+@pytest.mark.parametrize('path,expected', [('/api/auth', 'no-store'),
+    ('/api/auth/me', 'no-store'), ('/api/authentic', 'public'),
+    ('/api/usage/me', 'private, no-store'), ('/api/master/users', 'private, no-store')])
+async def test_auth_cache_prefix_is_segment_scoped(path, expected):
+    from app.main import PrivateContentResponses
+    async def application(scope, receive, send):
+        await send({'type': 'http.response.start', 'status': 200, 'headers': [(b'cache-control', b'public')]})
+    sent = []
+    async def send(message):
+        sent.append(message)
+    await PrivateContentResponses(application)({'type': 'http', 'path': path}, None, send)
+    assert dict(sent[0]['headers'])[b'cache-control'].decode() == expected
+
+
 def test_callback_access_log_is_sanitized():
     assert (Path(__file__).parents[1] / 'app/auth/google.py').is_file(), 'G3 access-log sanitizer missing'
     m = importlib.import_module('app.auth.google')
