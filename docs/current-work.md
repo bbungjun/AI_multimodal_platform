@@ -95,7 +95,8 @@ paste credential contents.
   inherited matrix and ownership all/cycles2 PASS;18 project cleanup0.
   Windows1788 plus existing Bash127 exception/3 guarded skips; focused51,
   frontend Session70/Chromium61, lint/build/Compose PASS.
-  Final Linux CI and protected delivery are recorded on Issue153/linked PR;
+  Final Linux CI and protected delivery are recorded on
+  [PR154](https://github.com/bbungjun/AI_multimodal_platform/pull/154)/Issue153;
   keep parent152 open for separately authorized live acceptance.
 
 ### G10 design and preparation — 2026-09-05

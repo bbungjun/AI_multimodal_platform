@@ -503,7 +503,8 @@ mode:
 ## Next Goal
 
 G10 is merged through PR151/parent137 closed. G11A mock integration is locally
-verified on ebbfc76; protected delivery is tracked by Issue153 and its linked PR.
+verified on ebbfc76; protected delivery is tracked by Issue153 and
+[PR154](https://github.com/bbungjun/AI_multimodal_platform/pull/154).
 See [G11A evidence](../portfolio/issue-153-integrated-mock-acceptance.md).
 Parent152 remains open for the separately scoped real Master/User Google browser
 smoke, proxy and emergency revocation live gates. Do not infer authorization for

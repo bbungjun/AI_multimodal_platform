@@ -109,8 +109,9 @@ records without replay duplicates. All frozen local limits were retained.
 
 F1 scope4/migration0 and F2 behavior APPROVE. Local F3 checks pass with the
 documented Windows exception; final Linux CI and F4 protected delivery are
-recorded on [Issue153](https://github.com/bbungjun/AI_multimodal_platform/issues/153)
-and its linked PR. Parent152 remains open. No actual Google, browser/backend live,
+recorded on [PR154](https://github.com/bbungjun/AI_multimodal_platform/pull/154)
+and [Issue153](https://github.com/bbungjun/AI_multimodal_platform/issues/153).
+Parent152 remains open. No actual Google, browser/backend live,
 provider/cloud, real account mutation or developer DB modification performed.
 
 ## Rollback and remaining risks

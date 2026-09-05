@@ -850,3 +850,13 @@ responsive screenshots. These do not execute actual Google login or Vertex.
 See [G10 evidence](portfolio/issue-137-g10-closeout.md) for failed attempts, counts,
 budget definitions and protected CI/merge gates. Never equate fixture durations
 or model-labelled Jobs with measured provider throughput or real media delivery.
+# G11A integrated acceptance
+
+Run `python scripts/verify_integrated_acceptance.py` from the repository root.
+It owns two fresh local mock PG/Redis/API/worker projects, seeds hash-only test
+Sessions and checks usage/generation/Master/suspension/Audit over real HTTP.
+It accepts no target DB or credential options. Both cycles and cleanup must pass;
+360s work/90s cleanup per cycle and900s aggregate are unchanged G4 limits.
+The broader required regression matrix and fresh results are recorded in
+[G11A evidence](portfolio/issue-153-integrated-mock-acceptance.md).
+This does not run real Google login or claim full Initiative completion.
