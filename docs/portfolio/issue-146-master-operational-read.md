@@ -70,3 +70,7 @@ query-plan/index tuning needs measured follow-up. Pagination is per-request
 snapshot, not a frozen multi-page export. Snapshot-time authorization cannot
 recall bytes already in flight after a concurrent suspension. Rollback removes
 read routes only and leaves business data/Audit untouched.
+
+Delivery: finalhead7a40cb7 verify/backend+frontend Scan/SBOM SUCCESS;
+PR147 protected squash merged82bec89, Issue146 closed/main synchronized.
+F1–F4 APPROVE; G10D/E remain under parent137.
