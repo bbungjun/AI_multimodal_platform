@@ -19,8 +19,8 @@ export default defineConfig({
   projects: [
     // Usage extends the existing Session and authenticated-browser release gates;
     // it does not create a separate project with different safety defaults.
-    { name: "session", testMatch: ["auth-session.spec.ts", "usage-model.spec.ts"] },
-    { name: "chromium", testMatch: ["auth-ux.spec.ts", "usage-ux.spec.ts"], use: { browserName: "chromium" } },
+    { name: "session", testMatch: ["auth-session.spec.ts", "usage-model.spec.ts", "master-model.spec.ts"] },
+    { name: "chromium", testMatch: ["auth-ux.spec.ts", "usage-ux.spec.ts", "master-ux.spec.ts"], use: { browserName: "chromium" } },
   ],
   webServer: browserRun ? {
     command: "npm run dev -- --host 127.0.0.1 --port 18101 --strictPort --mode auth-test",

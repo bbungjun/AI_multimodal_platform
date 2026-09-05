@@ -10,6 +10,8 @@ import { JobDetailPage } from "./pages/JobDetailPage";
 import { OpsPage } from "./pages/OpsPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { UsagePage } from "./pages/UsagePage";
+import { MasterPage } from "./pages/MasterPage";
+import { useSession } from "./auth/AuthProvider";
 import { APP_COPY } from "./ui/copy";
 import { AccountControl, SessionScreen, WorkspaceGate } from "./auth/AuthViews";
 import "./index.css";
@@ -40,6 +42,7 @@ export default function App() {
         <Route path="generate" element={<GeneratePage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="usage" element={<UsagePage />} />
+        <Route path="master" element={<MasterPage />} />
         <Route path="ops" element={<OpsPage />} />
         <Route path="jobs/:jobId" element={<JobDetailPage />} />
         <Route path="pipelines/:pipelineId" element={<PipelinePage />} />
@@ -52,6 +55,9 @@ export default function App() {
 
 function AppShell() {
   const location = useLocation();
+  const { view } = useSession();
+  const visibleNav = view.kind === "authenticated" && view.user.role === "master" ? [...navItems,
+    { to: "/master", label: "관리 콘솔", icon: CpuIcon }] : navItems;
   const route = routeTitles.find((item) => location.pathname.startsWith(item.prefix));
 
   return (
@@ -73,7 +79,7 @@ function AppShell() {
 
         <nav className="creative-nav sidebar-nav">
           <div className="section-label">작업공간</div>
-          {navItems.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -123,7 +129,7 @@ function AppShell() {
           <div className="creative-breadcrumb">
             <span>CREATIVEOPS</span>
             <span aria-hidden="true">/</span>
-            <strong>{route?.title ?? "생성"}</strong>
+            <strong>{location.pathname.startsWith("/master") ? "관리 콘솔" : route?.title ?? "생성"}</strong>
           </div>
           <div className="creative-search" aria-hidden="true">
             <SparkleIcon size={13} />
