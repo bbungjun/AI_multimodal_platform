@@ -17,6 +17,11 @@ Prometheus, digest release와 자동 rollback을 실제 운영 문제와 연결�
 
 ## 운영 아키텍처
 
+로그인 사용자에게는 개인 사용량 `/usage`, Master에게는 관리 콘솔 `/master`를 제공합니다.
+Master는 플랜·보너스·사용자 정지와 Audit을 확인할 수 있으며, 검증은 로컬 mock 기준입니다.
+[관리 운영 절차](docs/runbooks/master-operations.md)와
+[G10 구현·검증 근거](docs/portfolio/issue-137-g10-closeout.md)를 참고하세요.
+
 ```text
 React/Vite Studio
   -> FastAPI API

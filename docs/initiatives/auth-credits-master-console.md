@@ -256,8 +256,8 @@ document or inherit the full design interview.
 | G9 | Personal Plan and Usage experience | Mock Verified — Merged | [G9A PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132), [G9B PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135) | Backend owner-only snapshot and existing-style frontend both delivered; no live provider billing claim |
 | G9A | Personal Plan and Usage read model | Mock Verified — Merged | [PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132) squash `2565a7a`, [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [accepted spec](g9a-personal-usage-read-model-spec.md), [record](../portfolio/issue-131-personal-usage-read-model.md); code `d103a44` | One Module/one GET Interface; 10 changed of exact11 allowlisted paths, migration0; personal usage2 each8 groups/races3/checks451, inherited ownership4/Linux1558/frontend48+34; no G9B/live provider claim |
 | G9B | Personal Plan and Usage frontend | UI Mock Verified — Merged | [PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135) squash `1e6e523`, [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134), [accepted spec](g9b-personal-usage-ui-spec.md), [record](../portfolio/issue-134-personal-usage-ui.md) | Exact11 frontend paths/backend0/migration0; Module60/Chromium47, four viewports and final required3 CI PASS |
-| G10 | Master promotion/suspension, console, audit controls, and deterministic seed | In Progress — G10A/B/C merged; G10D locally Mock Verified | [Parent137](https://github.com/bbungjun/AI_multimodal_platform/issues/137), [bounded design](g10-master-operations-spec.md) | P1/P2/A/B/C merged PR139/141/143/145/147; G10D Issue148 Session70/Chromium61 twice, read112checks, CI pending. Guarded synthetic seed remains |
-| G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned | None | Blocked by G1-G10, including G3.1 |
+| G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Mock Verified — protected delivery tracked in closeout | [Parent137](https://github.com/bbungjun/AI_multimodal_platform/issues/137), [closeout](../portfolio/issue-137-g10-closeout.md) | P1/P2/A/B/C/D merged PR139/141/143/145/147/149; E Issue150 seed2 each286checks/1race, read112/admin85, cleanup0. Final CI/merge evidence on linked PR; no live claims |
+| G11 | Integrated E2E, race, migration, security, and portfolio evidence | Planned — next design | None | Start after G10 protected delivery; actual OAuth/browser/cloud execution requires separate scoped authorization |
 
 Per-Goal soft limits:
 
@@ -496,11 +496,11 @@ mode:
 
 ## Next Goal
 
-G5–G9 and emergency Session revocation are merged. **G10 Master promotion,
-suspension, console and Audit** is the next bounded design slice. It must consume
-the delivered User/owner/Credit/concurrency Interfaces without turning G9 into
-an administration surface. No exact provider-model or live billing claim is
-permitted.
+G10 implementation and local mock verification are complete across bounded
+P1/P2/A/B/C/D/E slices; protected delivery is recorded in the
+[closeout](../portfolio/issue-137-g10-closeout.md) and parent137. **G11 integrated
+acceptance** is next for bounded design after final G10 merge. Do not infer
+authorization for actual OAuth/provider/cloud execution from mock completion.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;
@@ -511,4 +511,4 @@ pipeline accounting.
 Live operation remains gated by a real drill of the merged emergency revocation
 mechanism [#99](https://github.com/bbungjun/AI_multimodal_platform/issues/99),
 real OAuth/browser/proxy verification and a machine-metrics access contract.
-Master mutations and Audit remain G10, not a shortcut inside G5.
+Master mutations and Audit are supplied by G10, separate from G5 accounting.

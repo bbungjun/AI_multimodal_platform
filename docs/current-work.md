@@ -79,6 +79,17 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- **G10 implementation/local mock verification complete.** Final core243da11:
+  seed2 each8groups/1race/286checks, inherited read112/admin85, cleanup0;
+  Windows1753 plus known Bash127 exception, frontend70/61, lint/build/Compose PASS.
+  [Closeout and protected delivery record](portfolio/issue-137-g10-closeout.md),
+  [runbook](runbooks/master-operations.md). Final Issue150 PR/parent137 closeout
+  records CI and actual merge. Next: bounded G11 design, not live execution.
+  Actual account promotion and developer/preview seed injection were not performed.
+
+The following entries are chronological implementation checkpoints, not newer
+delivery status than the closeout record above.
+
 - G10D PR149 merged514d540, all3 CI SUCCESS/Issue148 closed/F1–F4 APPROVE.
   Final G10E Issue150 starts `codex/issue-150-synthetic-operations-fixture`,8paths/
   migration0. Goal SHA `ae49954603e8222cb1f35fbdafa40bee64437027a229e33ccf8222ea2f8da6ca`.
