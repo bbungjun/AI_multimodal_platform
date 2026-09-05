@@ -100,7 +100,7 @@ def test_schema_harness_and_verifier_head_parity():
                            ("scripts/verify_auth_sessions.py", "HEAD"),
                            ("scripts/mock_auth_support.py", "REVISION")):
         assert run_path(str(ROOT / relative))[name] == CODE_REVISION
-    assert CODE_REVISION in (ROOT / "backend/tests/ownership_support.py").read_text()
+    assert run_path(str(ROOT / "backend/tests/ownership_support.py"))["EXPECTED_REVISION"] == CODE_REVISION
 
 
 @pytest.mark.asyncio

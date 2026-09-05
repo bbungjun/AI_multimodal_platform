@@ -79,6 +79,13 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10P1 PR139 merged `d3bfea2` after final-head verify and both Scan/SBOM PASS;
+  Issue138 closed. F1–F4 APPROVE. Local main synchronized before G10P2 Issue140
+  branch `codex/issue-140-container-proof-head`. Its frozen Goal SHA-256 is
+  `5d802bcc10bb4a002614b3dd548b3d7eb209f0f5e8a0826074ac3cb0c0e4ae85`.
+  G10P2 adopts the same revision Interface in container proofs only (19 paths,
+  migration0). First verification is the focused proof-contract pytest group.
+
 - User authorized design followed by sequential implementation. Parent137 tracks
   the [G10 slices](initiatives/g10-master-operations-spec.md). G10P1 Issue138
   starts on `codex/issue-138-schema-proof-head` from synchronized `a0a773e`.

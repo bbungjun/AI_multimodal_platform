@@ -11,7 +11,7 @@ from uuid import UUID
 LEGACY = ("users", "user_sessions", "jobs", "assets", "prompt_enhancements", "outbox_events")
 CREDIT = ("credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events")
 NOW = datetime(2024, 3, 1, 13, tzinfo=timezone.utc)
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 PHASES = ("guard", "additive", "metadata", "constraints", "ledger", "races", "downgrade", "done")
 phase = "guard"
 

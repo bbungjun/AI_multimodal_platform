@@ -13,7 +13,7 @@ ACCOUNTING = (
     "credit_reservation_allocations",
     "credit_usage_records",
 )
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 NOW = datetime(2024, 4, 1, 9, tzinfo=timezone.utc)
 phase = "guard"
 

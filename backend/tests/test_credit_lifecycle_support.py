@@ -32,7 +32,8 @@ def test_guard_rejects_other_targets_before_connection(change):
 def test_fixed_target_and_eight_groups():
     p = load()
     p.validate_target("credit-verify-123456abcdef",make_url("postgresql://credit@db:5432/credit_verify_123456abcdef"),"mock","test")
-    assert p.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert p.HEAD == CODE_REVISION
     assert p.GROUPS == ("init","renewal","plan","bonus","expiry","idempotency","transaction","concurrency")
     assert p.END-p.T == p.timedelta(seconds=2592000)
 

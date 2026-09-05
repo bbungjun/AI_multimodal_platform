@@ -15,7 +15,11 @@ def graph(tmp_path, pairs):
 
 
 def test_current_head_and_read_only_literal_graph(tmp_path):
-    assert CODE_REVISION == "0006_credit_accounting_persistence"
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "migrations"))
+    assert ScriptDirectory.from_config(config).get_current_head() == CODE_REVISION
     assert resolve_revision(graph(tmp_path, [("a", None), ("b", "a")])) == "b"
 
 

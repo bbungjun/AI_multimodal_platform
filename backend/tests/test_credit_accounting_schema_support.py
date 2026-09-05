@@ -50,7 +50,8 @@ def test_target_guard_refuses_before_database_connect(change):
 
 def test_fixed_fixtures_match_the_four_table_contract():
     p = proof()
-    assert p.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert p.HEAD == CODE_REVISION
     assert p.ACCOUNTING == ("credit_reservations", "credit_reservation_items",
                             "credit_reservation_allocations", "credit_usage_records")
     assert p.reservation()["status"] == "held"

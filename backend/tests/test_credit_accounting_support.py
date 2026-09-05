@@ -37,7 +37,8 @@ def test_fixed_target_head_and_eight_groups():
     proof.validate_target("accounting-verify-123456abcdef",
                           make_url("postgresql://credit@db:5432/accounting_verify_123456abcdef"),
                           "mock", "test")
-    assert proof.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert proof.HEAD == CODE_REVISION
     assert proof.GROUPS == ("input_quote", "allocation", "reserve_replay", "settlement",
                             "release", "transaction", "integrity", "concurrency")
 

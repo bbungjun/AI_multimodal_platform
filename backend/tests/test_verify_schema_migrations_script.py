@@ -153,7 +153,8 @@ def test_env_validation_and_receipt_never_copy_sensitive_values(tmp_path, monkey
     assert "postgresql" not in content
     assert str(tmp_path) not in content
     payload = json.loads(content)
-    assert payload["revision"] == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert payload["revision"] == CODE_REVISION
     assert payload["g1_downgrade"] == "pass"
     assert payload["identity_constraints"] == "pass"
     assert payload["accounting_constraints"] == "pass"
@@ -265,7 +266,7 @@ def test_stale_previous_head_is_refused_by_all_three_processes(tmp_path, stale):
                                    {"POSTGRES_DB":"fixture", "POSTGRES_USER":"fixture"}, stale)
     assert stale in calls[0][-1]
     assert [args[-1] for args in calls if args[-1] in ("backend", "worker", "dispatcher")] == ["backend", "worker", "dispatcher"]
-    assert sum("0006_credit_accounting_persistence" in args[-1] for args in calls) == 1
+    assert sum(module.EXPECTED_REVISION in args[-1] for args in calls) == 1
 
 
 @pytest.mark.parametrize("mutate_preview", [False, True])
@@ -380,13 +381,14 @@ def test_revision_refusal_checks_each_runtime_and_restores_head(tmp_path):
     ]
     sql_calls = [command for command in calls if "UPDATE alembic_version" in command[-1]]
     assert "0000_stale_revision" in sql_calls[0][-1]
-    assert "0006_credit_accounting_persistence" in sql_calls[-1][-1]
+    assert module.EXPECTED_REVISION in sql_calls[-1][-1]
 
 
 def test_verifier_targets_g2_head_and_schema_evidence_directory():
     module = _load_module()
 
-    assert module.EXPECTED_REVISION == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert module.EXPECTED_REVISION == CODE_REVISION
     assert {"users", "user_sessions"}.issubset(module.EXPECTED_TABLES)
     assert module.ACCOUNTING_TABLES.issubset(module.EXPECTED_TABLES)
     assert {

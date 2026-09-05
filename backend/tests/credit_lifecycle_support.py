@@ -9,7 +9,7 @@ import sys
 import time
 from uuid import uuid4
 
-HEAD = "0006_credit_accounting_persistence"
+from app.schema_revision import CODE_REVISION as HEAD
 GROUPS = ("init", "renewal", "plan", "bonus", "expiry", "idempotency", "transaction", "concurrency")
 TABLES = ("credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events", "credit_operations")
 T = datetime(2024, 2, 29, 23, 59, 59, 123456, tzinfo=timezone.utc)
