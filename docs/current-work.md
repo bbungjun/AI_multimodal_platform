@@ -85,6 +85,10 @@ paste credential contents.
   `5d802bcc10bb4a002614b3dd548b3d7eb209f0f5e8a0826074ac3cb0c0e4ae85`.
   G10P2 adopts the same revision Interface in container proofs only (19 paths,
   migration0). First verification is the focused proof-contract pytest group.
+- G10P2 v2 corrects packaged migration lookup after the real schema proof caught
+  the source-only assumption.20 paths/migration0; focused145 PASS. v2 SHA-256:
+  `1184127469d7ce67ee7b8428656fbeda5fe8734f68249719fe8dacb54100754a`.
+  Failed run cleanup passed; new committed proof required before delivery.
 
 - User authorized design followed by sequential implementation. Parent137 tracks
   the [G10 slices](initiatives/g10-master-operations-spec.md). G10P1 Issue138
