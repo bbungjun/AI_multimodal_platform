@@ -3970,3 +3970,29 @@ a.brand-lockup:focus-visible {
   .creative-account--mobile .creative-account-details { left: 0; right: auto; }
   .creative-auth-actions .button { width: 100%; justify-content: center; }
 }
+/* Master console extends the studio's panels, controls and responsive tables. */
+.master-page { display: grid; gap: 20px; min-width: 0; }
+.master-toolbar, .master-tabs, .master-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.master-toolbar { justify-content: space-between; }
+.master-toolbar label, .master-command label { display: grid; gap: 6px; font-size: 12px; }
+.master-page select, .master-page input:not([type="checkbox"]) { min-width: 0; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; background: var(--bg-input); color: var(--text-primary); font: inherit; }
+.master-tabs [aria-pressed="true"] { background: rgba(167,139,250,.18); border-color: #a78bfa; color: var(--text-primary); }
+.master-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.master-summary > .panel .panel__body { min-height: 0; }
+.master-big { font-size: clamp(24px,3vw,36px); }
+.master-table { width: 100%; table-layout: fixed; }
+.master-table td, .master-table th { overflow-wrap: anywhere; }
+.master-identity { font-family: monospace; font-size: 10px; overflow-wrap: anywhere; }
+.master-pagination { margin-top: 16px; }
+.master-command fieldset { border: 0; padding: 0; margin: 16px 0; display: grid; gap: 14px; }
+.master-command .master-confirm { display: flex; align-items: center; gap: 8px; }
+.master-command { border-color: #a78bfa; }
+.master-page small { display: block; }
+@media (max-width: 640px) {
+  .master-summary { grid-template-columns: 1fr; }
+  .master-toolbar { align-items: stretch; }
+  .master-toolbar > label { flex: 1; }
+  .master-tabs { width: 100%; }
+  .master-tabs .button { flex: 1; min-width: 0; }
+  .master-table { table-layout: auto; }
+}

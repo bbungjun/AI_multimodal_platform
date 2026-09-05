@@ -79,6 +79,14 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10D core0ad57b3 locally Mock Verified: Session70/Chromium61 twice, focused10/14,
+  desktop/mobile masked visual inspection, inherited read112checks/cleanup0 PASS.
+  Windows1724 plus known Bash exception, lint/build/Compose PASS. Ready PR pending.
+  [Console evidence](portfolio/issue-148-master-console.md); G10E fixture remains.
+- G10C PR147 merged82bec89, all3 CI SUCCESS/Issue146 closed/F1–F4 APPROVE.
+  G10D Issue148 begins `codex/issue-148-master-console`,9 frontend paths/migration0.
+  Frozen SHA `0df3042ae80ae19e3fbff23af2abe3a70929663e8a3217d47bade5b9e539abcd`;
+  first verification existing Session/Chromium. G10E seed remains after console.
 - G10C core7a389cf locally Mock Verified: proof2 each8 groups/3 MVCC interleavings/
   112 checks, inherited Master85checks, cleanup0. Windows1724 plus known Bash
   exception; Session60/Chromium47 PASS. [Evidence](portfolio/issue-146-master-operational-read.md).

@@ -97,6 +97,15 @@ export async function getOpsHealth(): Promise<OpsHealthResponse> {
   return apiRequest<OpsHealthResponse>("/api/ops/health");
 }
 
+export async function getMasterView(view: "overview" | "users" | "audit", query: Record<string, string | number> = {}): Promise<unknown> {
+  return apiRequest<unknown>(`/api/master/${view}`, { query });
+}
+
+export async function sendMasterCommand(target: string, body: import("../ui/master").MasterCommand): Promise<unknown> {
+  if (!/^[0-9a-f-]{36}$/i.test(target)) throw new Error("master_target_invalid");
+  return apiRequest<unknown>(`/api/master/users/${target}/commands`, { method: "POST", body });
+}
+
 export async function getPersonalUsage(): Promise<PersonalUsageResponse> {
   return parsePersonalUsage(await apiRequest<unknown>("/api/usage/me"));
 }
