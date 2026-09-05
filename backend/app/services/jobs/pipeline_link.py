@@ -34,6 +34,7 @@ class PipelineFailureResult:
     failed_count: int = 0
     skipped_count: int = 0
     reason: str | None = None
+    cancelled_count: int = 0
 
 
 def _owned_child(parent: Job, child: Job) -> bool:
@@ -147,6 +148,7 @@ async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) 
     children = await _pipeline_children(session, parent.id)
     failed = 0
     skipped = 0
+    cancelled = 0
     for child in children:
         if not _owned_child(parent, child):
             skipped += 1
@@ -156,7 +158,7 @@ async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) 
         if owner_status == "suspended":
             # Parent failure already returned the single shared reservation.
             mark_cancelled(child, utc_now())
-            failed += 1
+            cancelled += 1
             continue
         child.error = {
             "code": PIPELINE_PARENT_FAILED,
@@ -171,9 +173,9 @@ async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) 
         )
         failed += 1
 
-    if failed:
+    if failed or cancelled:
         await session.commit()
-    return PipelineFailureResult(failed, skipped, "ownership_reference_mismatch" if skipped else None)
+    return PipelineFailureResult(failed, skipped, "ownership_reference_mismatch" if skipped else None, cancelled)
 
 
 async def _first_pipeline_child(session: AsyncSession, parent_id: UUID) -> Job | None:
