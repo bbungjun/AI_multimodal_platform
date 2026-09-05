@@ -32,7 +32,7 @@ G1_TABLES = {"alembic_version", "assets", "jobs", "outbox_events", "prompt_enhan
 CREDIT_TABLES = {"credit_accounts", "credit_cycles", "credit_grants", "credit_ledger_events"}
 ACCOUNTING_TABLES = {"credit_reservations", "credit_reservation_items",
                      "credit_reservation_allocations", "credit_usage_records"}
-EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions", "credit_operations"} | CREDIT_TABLES | ACCOUNTING_TABLES
+EXPECTED_TABLES = G1_TABLES | {"users", "user_sessions", "credit_operations", "master_audit"} | CREDIT_TABLES | ACCOUNTING_TABLES
 WORK_SECONDS = 300
 CLEANUP_SECONDS = 90
 _COMMAND_TIMEOUT = ContextVar("schema_command_timeout", default=120.0)
@@ -49,6 +49,7 @@ EXPECTED_ENUMS = {
     "user_status:active,suspended",
 }
 EXPECTED_FOREIGN_KEYS = {
+    "fk_master_audit_actor", "fk_master_audit_target",
     "fk_jobs_owner_user_id_users",
     "fk_prompt_enhancements_owner_user_id_users",
     "assets_job_id_fkey",
@@ -65,6 +66,7 @@ EXPECTED_FOREIGN_KEYS = {
     "fk_credit_usage_records_item_owner",
 }
 EXPECTED_INDEXES = {
+    "ix_master_audit_target_created", "ix_master_audit_created",
     "ix_jobs_owner_created_at_id",
     "ix_prompt_enhancements_owner_created_at_id",
     "ix_assets_job_id",

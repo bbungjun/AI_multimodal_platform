@@ -79,6 +79,13 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10P2 PR141 merged `ea0a434`, final-head verify and both Scan/SBOM SUCCESS,
+  Issue140 closed/F1–F4 APPROVE. G10A Issue142 begins on
+  `codex/issue-142-audited-master-administration`; frozen17 code paths and one
+  additive Audit migration. Goal SHA-256:
+  `20ac4a944606a958d4af32ea6410f7b8eb9c69833c456cf9cf4f4eceb93949b1`.
+  First test: backend `python -m pytest tests/test_master_models.py -q`.
+
 - G10P1 PR139 merged `d3bfea2` after final-head verify and both Scan/SBOM PASS;
   Issue138 closed. F1–F4 APPROVE. Local main synchronized before G10P2 Issue140
   branch `codex/issue-140-container-proof-head`. Its frozen Goal SHA-256 is

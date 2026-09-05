@@ -23,6 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 from app import identity_models as _identity_models  # Register owner FK targets.
+from app import master_models as _master_models  # Register Audit for metadata parity.
 
 
 class GenerationMode(StrEnum):
