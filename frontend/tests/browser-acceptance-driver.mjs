@@ -9,6 +9,7 @@ export const GROUPS = [
   "anonymous_proxy", "user_usage", "generation_ownership", "master_commands",
   "suspension", "logout", "emergency", "mock_recovery",
 ];
+let currentPhase = "startup";
 
 export function validateStart(value) {
   const keys = value && typeof value === "object" ? Object.keys(value).sort() : [];
@@ -88,6 +89,7 @@ async function run() {
     return context;
   };
   try {
+    currentPhase = "vite";
     vite = await createServer({
       root, configFile: false, envFile: false, logLevel: "silent", plugins: [react()],
       server: { host: "127.0.0.1", port: 18155, strictPort: true,
@@ -97,6 +99,7 @@ async function run() {
     await vite.listen();
     browser = await chromium.launch({ headless: true });
 
+    currentPhase = "anonymous_proxy";
     const anon = await contextFor(null);
     const anonPage = await anon.newPage();
     await anonPage.goto("/login");
@@ -112,6 +115,7 @@ async function run() {
     ok(health.json?.vertex?.status === "mock_provider", "provider_not_mock");
     ok(externalRequests === 0, "external_request_seen");
 
+    currentPhase = "user_usage";
     const a = await contextFor(start.secrets.a);
     const b = await contextFor(start.secrets.b);
     const master = await contextFor(start.secrets.master);
@@ -146,6 +150,7 @@ async function run() {
     ok(deniedMaster.status === 403, "master_not_denied");
     ok(deniedMaster.cache?.includes("private") && deniedMaster.cache.includes("no-store"), "master_denial_cache_unsafe");
 
+    currentPhase = "generation_ownership";
     const generation = await request(aPage, "POST", "/api/generations", {
       mode: "t2i", model: "imagen-4.0-fast-generate-001", prompt: "mock acceptance image",
       aspect_ratio: "1:1", number_of_images: 1, auto_enhance: false,
@@ -179,9 +184,11 @@ async function run() {
     ok(Number(charged.json?.credit?.charged_microcredits) > 0, "charge_missing");
     ok(charged.json?.credit?.held_microcredits === "0", "held_not_released");
 
+    currentPhase = "master_commands";
     await masterPage.goto("/master");
     await masterPage.getByRole("heading", { name: "관리 콘솔" }).waitFor();
     ok(await masterPage.getByRole("link", { name: "관리 콘솔" }).isVisible(), "master_link_missing");
+    currentPhase = "suspension";
     await masterPage.getByRole("button", { name: "사용자" }).click();
     await masterPage.getByRole("button", { name: `사용자 관리 ${profiles[0].id}` }).click();
     await masterPage.getByLabel("변경 플랜").selectOption("pro");
@@ -233,6 +240,7 @@ async function run() {
     const oldAAfterReactivate = await request(aPage, "GET", "/api/auth/me");
     ok(oldAAfterReactivate.status === 401, "old_session_resurrected");
 
+    currentPhase = "logout";
     await bPage.goto("/usage");
     await bPage.getByRole("heading", { name: "플랜 및 사용량" }).waitFor();
     await bPage.getByRole("button", { name: "계정 정보" }).first().click();
@@ -245,6 +253,7 @@ async function run() {
     ok(loggedOut.status === 401, "logout_session_accepted");
     ok(loggedOut.cache?.includes("private") && loggedOut.cache.includes("no-store"), "logout_cache_unsafe");
 
+    currentPhase = "emergency";
     ok((await request(masterPage, "GET", "/api/auth/me")).status === 200, "master_missing_before_emergency");
     ok(externalRequests === 0, "external_request_seen");
     emit("emergency_ready", 6, checks, externalRequests);
@@ -259,6 +268,7 @@ async function run() {
     ok(externalRequests === 0, "external_request_seen");
     emit("recovery_ready", 7, checks, externalRequests);
 
+    currentPhase = "mock_recovery";
     const recovery = validateRecovery(await nextMessage(lines, "recovery_done"));
     const recoveredA = await contextFor(recovery.secrets.a);
     const recoveredMaster = await contextFor(recovery.secrets.master);
@@ -293,5 +303,10 @@ async function run() {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  run().catch(() => { process.exitCode = 1; });
+  run().catch(error => {
+    const known = new Set(["startup", "vite", ...GROUPS]);
+    const phase = known.has(currentPhase) ? currentPhase : "browser_step";
+    process.stdout.write(`${JSON.stringify({ type: "failed", phase })}\n`);
+    process.exitCode = 1;
+  });
 }

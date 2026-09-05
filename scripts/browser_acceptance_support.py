@@ -55,6 +55,9 @@ def parse_node_message(value: str, expected_type: str) -> dict:
         message = json.loads(value)
     except (TypeError, ValueError):
         raise HarnessError("browser_protocol_invalid") from None
+    if (isinstance(message, dict) and set(message) == {"type", "phase"} and message.get("type") == "failed"
+            and message.get("phase") in {"startup", "vite", *GROUPS, "browser_step"}):
+        raise HarnessError("browser_failed_" + message["phase"])
     allowed = {
         "emergency_ready": {"type", "groups", "checks", "external_requests"},
         "recovery_ready": {"type", "groups", "checks", "external_requests"},
@@ -202,35 +205,38 @@ def run_cycle(env_file: Path, cycle: int, *, runtime_factory=BrowserRuntime) -> 
     identity = MemoryIdentity()
     recovery_secrets = {case: secrets.token_urlsafe(32) for case in ("a", "master")}
     result = None
+    temporary = tempfile.TemporaryDirectory(prefix="creativeops-browser-")
     try:
         runtime.preflight()
-        with tempfile.TemporaryDirectory(prefix="creativeops-browser-") as directory:
-            runtime.start(directory)
-            runtime.seed(identity)
-            runtime.start_browser(identity)
-            ready = runtime.receive("emergency_ready")
-            if ready != {"type": "emergency_ready", "groups": 6, "checks": ready["checks"], "external_requests": 0}:
-                raise HarnessError("browser_phase_invalid")
-            preview = runtime.emergency(False)
-            execute = runtime.emergency(True)
-            replay = runtime.emergency(True)
-            if (preview["mode"] != "preview" or preview["revoked"] != 0
-                    or execute["mode"] != "execute" or execute["active_after"] != 0
-                    or execute["revoked"] < 2 or replay["revoked"] != 0):
-                raise HarnessError("emergency_semantics_failed")
-            runtime._send({"type": "emergency_done"})
-            recovery_ready = runtime.receive("recovery_ready")
-            if recovery_ready["groups"] != 7 or recovery_ready["external_requests"] != 0:
-                raise HarnessError("browser_phase_invalid")
-            recovery = runtime.recovery(recovery_secrets)
-            runtime._send({"type": "recovery_done", "secrets": recovery_secrets})
-            result = runtime.receive("complete")
-            if result["groups"] != 8 or result["checks"] < 80 or result["external_requests"] != 0:
-                raise HarnessError("browser_acceptance_incomplete")
-            result = {"cycle": cycle, "groups": result["groups"], "checks": result["checks"],
-                      "external_requests": 0, "recovered": recovery["recovered"]}
+        runtime.start(temporary.name)
+        runtime.seed(identity)
+        runtime.start_browser(identity)
+        ready = runtime.receive("emergency_ready")
+        if ready != {"type": "emergency_ready", "groups": 6, "checks": ready["checks"], "external_requests": 0}:
+            raise HarnessError("browser_phase_invalid")
+        preview = runtime.emergency(False)
+        execute = runtime.emergency(True)
+        replay = runtime.emergency(True)
+        if (preview["mode"] != "preview" or preview["revoked"] != 0
+                or execute["mode"] != "execute" or execute["active_after"] != 0
+                or execute["revoked"] < 2 or replay["revoked"] != 0):
+            raise HarnessError("emergency_semantics_failed")
+        runtime._send({"type": "emergency_done"})
+        recovery_ready = runtime.receive("recovery_ready")
+        if recovery_ready["groups"] != 7 or recovery_ready["external_requests"] != 0:
+            raise HarnessError("browser_phase_invalid")
+        recovery = runtime.recovery(recovery_secrets)
+        runtime._send({"type": "recovery_done", "secrets": recovery_secrets})
+        result = runtime.receive("complete")
+        if result["groups"] != 8 or result["checks"] < 80 or result["external_requests"] != 0:
+            raise HarnessError("browser_acceptance_incomplete")
+        result = {"cycle": cycle, "groups": result["groups"], "checks": result["checks"],
+                  "external_requests": 0, "recovered": recovery["recovered"]}
     finally:
-        runtime.cleanup()
+        try:
+            runtime.cleanup()
+        finally:
+            temporary.cleanup()
     result["cleanup"] = 0
     result["seconds"] = round(time.monotonic() - started, 3)
     return result
