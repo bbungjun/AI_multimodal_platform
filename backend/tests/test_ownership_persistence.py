@@ -94,10 +94,13 @@ def test_schema_migration_refuses_nonempty_before_ddl(monkeypatch, direction, no
 
 
 def test_schema_harness_and_verifier_head_parity():
-    head = "0006_credit_accounting_persistence"
-    for relative in ("scripts/verify_schema_migrations.py", "scripts/verify_auth_sessions.py",
-                     "scripts/mock_auth_support.py", "backend/tests/ownership_support.py"):
-        assert head in (ROOT / relative).read_text(), relative
+    from app.schema_revision import CODE_REVISION
+    from runpy import run_path
+    for relative, name in (("scripts/verify_schema_migrations.py", "EXPECTED_REVISION"),
+                           ("scripts/verify_auth_sessions.py", "HEAD"),
+                           ("scripts/mock_auth_support.py", "REVISION")):
+        assert run_path(str(ROOT / relative))[name] == CODE_REVISION
+    assert CODE_REVISION in (ROOT / "backend/tests/ownership_support.py").read_text()
 
 
 @pytest.mark.asyncio
