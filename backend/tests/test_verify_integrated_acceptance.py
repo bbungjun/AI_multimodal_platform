@@ -54,3 +54,11 @@ def test_existing_owned_guards_are_reused():
     assert 'runtime.assert_owned()' in source
     assert 'runtime.docker(*runtime.compose, "stop", "dispatcher", "worker")' in source
     assert 'database_url' not in source.lower()
+
+
+@pytest.mark.parametrize("path,cache,safe", [
+    ("/api/auth/me", "no-store", True), ("/api/auth/me", "private", False),
+    ("/api/usage/me", "no-store", False), ("/api/master/audit", "private, no-store", True),
+    ("/api/generations", "private, no-store", True)])
+def test_cache_contract_distinguishes_auth_from_content(path, cache, safe):
+    assert module.cache_is_safe(path, cache) is safe

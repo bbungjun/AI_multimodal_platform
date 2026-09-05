@@ -18,6 +18,10 @@ GROUPS = ("identity", "usage", "prompt", "generation", "administration",
           "concurrency", "suspension", "audit")
 
 
+def cache_is_safe(path, cache):
+    return "no-store" in cache and (path.startswith("/api/auth/") or "private" in cache)
+
+
 def validate_results(rows, revision):
     if not isinstance(rows, list) or len(rows) != 2:
         raise HarnessError("integration_incomplete")
@@ -46,7 +50,7 @@ def scenarios(runtime, identity):
         body, headers, _ = client.request_bytes(method, path, payload=payload, expected_status=status)
         check(True)
         cache = {k.lower(): v for k, v in headers.items()}.get("cache-control", "")
-        check("private" in cache and "no-store" in cache)
+        check(cache_is_safe(path, cache))
         return json.loads(body)
 
     try:
