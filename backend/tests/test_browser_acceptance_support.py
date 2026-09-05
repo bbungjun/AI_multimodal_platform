@@ -1,10 +1,12 @@
 import pytest
 from pathlib import Path
+import socket
 import sys
 
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+import browser_acceptance_support as support
 from browser_acceptance_support import (
     HarnessError, parse_emergency_receipt, parse_node_message, port_available,
 )
@@ -27,3 +29,11 @@ def test_node_protocol_is_closed_and_typed():
 
 def test_reserved_port_probe_returns_boolean():
     assert type(port_available()) is bool
+
+
+def test_port_probe_is_posix_compatible_and_refuses_listener(monkeypatch):
+    monkeypatch.delattr(support.socket, "SO_EXCLUSIVEADDRUSE", raising=False)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        assert port_available(listener.getsockname()[1]) is False

@@ -32,6 +32,13 @@ Audit uniqueness is asserted from the real API while matching real UI table rows
 avoiding ambiguous localized text selectors. No timeout was raised and no
 response was fulfilled or stubbed.
 
+The first final-head Linux CI then failed one new unit test because
+`SO_EXCLUSIVEADDRUSE` exists on Windows but not POSIX. The port guard now applies
+that option only when the platform exposes it; POSIX retains an ordinary bind
+without `SO_REUSEADDR`, so an occupied port is still refused. Both Scan/SBOM jobs
+had already passed. The fix remains inside the original eight-path boundary and
+requires a fresh final-head verify plus both scans before merge.
+
 ## Solution and safety decisions
 
 - Reuse the established owned runtime with a random

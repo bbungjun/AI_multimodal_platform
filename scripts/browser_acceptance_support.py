@@ -30,7 +30,10 @@ RECEIPT = re.compile(
 
 def port_available(port: int = 18155) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        # Windows exposes an exclusive bind option; an ordinary bind provides
+        # the same collision probe on POSIX without enabling address reuse.
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         try:
             probe.bind(("127.0.0.1", port))
         except OSError:

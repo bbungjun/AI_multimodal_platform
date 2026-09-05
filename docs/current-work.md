@@ -90,6 +90,9 @@ paste credential contents.
   G11A integrated2, auth and Master suspension PASS.
 - Backend Windows:1799 passed/3 guarded skips and the documented Bash path127
   exception only. Frontend lint/build, Session70, Chromium61 and Compose PASS.
+- PR156 first CI: both Scan/SBOM PASS; Linux verify exposed Windows-only
+  `SO_EXCLUSIVEADDRUSE`. The same support path now uses the option conditionally;
+  fresh final-head CI is required and auto-merge remains protected.
 - [Portfolio record](portfolio/issue-155-mock-browser-acceptance.md). Linux CI,
   protected delivery and PR number remain the delivery gate. Parent152 stays
   open: actual Google callback/relogin, deployed TLS/Secure-cookie/proxy and live
