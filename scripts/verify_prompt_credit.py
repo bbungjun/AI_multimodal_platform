@@ -12,7 +12,9 @@ _BASE_SPEC = importlib.util.spec_from_file_location(
 )
 base = importlib.util.module_from_spec(_BASE_SPEC)
 _BASE_SPEC.loader.exec_module(base)
-HEAD = "0006_credit_accounting_persistence"
+from runpy import run_path
+
+HEAD = run_path(str(ROOT / "backend/app/schema_revision.py"))["CODE_REVISION"]
 GROUPS = ("preflight", "admission", "terminal", "replay_race")
 MINIMUM_CHECKS = 30
 

@@ -12,7 +12,9 @@ import time
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
-HEAD = "0006_credit_accounting_persistence"
+from runpy import run_path
+
+HEAD = run_path(str(ROOT / "backend/app/schema_revision.py"))["CODE_REVISION"]
 GROUPS = ("input_quote", "allocation", "reserve_replay", "settlement", "release", "transaction", "integrity", "concurrency")
 WORK_SECONDS, CLEANUP_SECONDS = 300, 90
 PROOF = ROOT / "backend/tests/credit_accounting_support.py"
