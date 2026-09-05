@@ -69,7 +69,7 @@ async def proof(db, factory, database):
     check(await db.fetchval("SELECT count(*) FROM users") == 121)
     check(await db.fetchval("SELECT count(*) FROM jobs") == 3000)
     check(await db.fetchval("SELECT count(*) FROM user_sessions") == 0)
-    check(await db.fetchval("SELECT count(*) FROM job_outbox_events") == 0)
+    check(await db.fetchval("SELECT count(*) FROM outbox_events") == 0)
     check(await db.fetchval("SELECT count(*) FROM assets") == 0)
     check(await db.fetchval("SELECT role FROM users WHERE id=$1", master) == "master")
     groups[phase] = True
@@ -194,6 +194,12 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except Exception:
-        print("master_proof_failed:"+phase)
+    except Exception as error:
+        kind = type(error).__name__
+        if kind not in {"SeedError", "CreditAccountingError", "CreditLifecycleError", "IntegrityError", "ProgrammingError", "AssertionError", "TypeError", "AttributeError"}:
+            kind = "other"
+        code = getattr(error, "code", "none")
+        if code not in {"monthly_credit_exhausted", "credit_plan_refused", "credit_input_invalid", "credit_account_inconsistent", "user_concurrency_limit"}:
+            code = "none"
+        print("master_proof_failed:"+phase+":"+kind+":"+code)
         sys.exit(1)

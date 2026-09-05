@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
+import subprocess
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,23 @@ admin = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(admin)
 Failure = admin.Failure
 GROUPS = ("guards", "dryrun", "seed", "distribution", "accounting", "replay", "denials", "readmodel")
+
+
+def command(args, *, env, timeout, input=None):
+    try:
+        result = subprocess.run(args, cwd=ROOT, env=env, input=input, timeout=timeout,
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except subprocess.TimeoutExpired:
+        raise Failure("timeout") from None
+    except OSError:
+        raise Failure("command_failed") from None
+    if result.returncode:
+        match = re.fullmatch(r"master_proof_failed:([a-z_]+):(SeedError|CreditAccountingError|CreditLifecycleError|IntegrityError|ProgrammingError|AssertionError|TypeError|AttributeError|other):(none|monthly_credit_exhausted|credit_plan_refused|credit_input_invalid|credit_account_inconsistent|user_concurrency_limit)\s*", result.stdout)
+        if match and match[1] in GROUPS:
+            print("seed_diagnostic="+match[2]+":"+match[3], flush=True)
+            raise Failure("proof_"+match[1])
+        raise Failure("timeout" if result.returncode == 124 else "command_failed")
+    return result.stdout.rstrip("\r\n")
 
 
 def validate_project(project):
@@ -35,10 +53,22 @@ def parse_proof(output):
 
 
 class Runtime(admin.Runtime):
-    def __init__(self, env_file, *, run=admin.command):
+    def __init__(self, env_file, *, run=command):
         super().__init__(env_file, run=run)
         self.project = validate_project("master-seed-verify-"+uuid4().hex[:12])
         self.deadline = self.started+600
+
+    def call(self, args, *, input=None):
+        remaining = self.deadline-admin.base.time.monotonic()
+        if remaining <= 0:
+            raise Failure("timeout")
+        # Full-size fixture process uses this Goal's frozen600s total budget.
+        # Other Docker/git commands retain the inherited180s command ceiling.
+        limit = remaining if "exec" in args else min(180, remaining)
+        result = self.run(args, env=self.env, timeout=limit, input=input)
+        if admin.base.time.monotonic() > self.deadline:
+            raise Failure("timeout")
+        return result
 
     def configure(self, directory):
         super().configure(directory)
@@ -68,7 +98,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     activate()
     try:
-        path = admin.base.verify(args.env_file, run=admin.command)
+        path = admin.base.verify(args.env_file, run=command)
     except Failure as error:
         print("FAIL: "+str(error))
         return 1
