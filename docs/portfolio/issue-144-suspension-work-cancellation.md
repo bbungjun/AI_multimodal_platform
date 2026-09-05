@@ -57,3 +57,7 @@ resurrect cancelled work or revoked Sessions. No schema downgrade is needed.
 F1 scope12/14 and migration0 APPROVE; F2 transaction/security/races APPROVE;
 F3 local proof/regressions APPROVE pending final-head Linux CI;
 F4 records complete, protected Ready PR delivery pending.
+
+Delivery: PR145 final head344d2fa passed Linux verify and both Scan/SBOM;
+protected squash merge f99fa26 confirmed, Issue144 closed/main synchronized.
+F1–F4 APPROVE. Parent137 remains open for G10C/D/E.
