@@ -32,6 +32,7 @@ def test_reserved_port_probe_returns_boolean():
 
 
 def test_port_probe_is_posix_compatible_and_refuses_listener(monkeypatch):
+    # Linux CI has no SO_EXCLUSIVEADDRUSE; keep that exact fallback covered.
     monkeypatch.delattr(support.socket, "SO_EXCLUSIVEADDRUSE", raising=False)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("127.0.0.1", 0))
