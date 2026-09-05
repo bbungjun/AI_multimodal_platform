@@ -77,6 +77,19 @@ paste credential contents.
 
 ## Active Work
 
+### G10 design and preparation — 2026-09-05
+
+- User authorized design followed by sequential implementation. Parent137 tracks
+  the [G10 slices](initiatives/g10-master-operations-spec.md). G10P1 Issue138
+  starts on `codex/issue-138-schema-proof-head` from synchronized `a0a773e`.
+- Inspection found hardcoded current schema revision in host/container proofs.
+  G10P1/P2 address compatibility before Audit migration, followed by audited
+  administration, suspension, read model, existing-style console and seed.
+- G10P1 frozen Goal SHA-256:
+  `0b44e1246d6ad3f7965b00daacba4622a3496f26f8a282012797f08dfb64a2cf`.
+  First test is `python -m pytest tests/test_schema_revision.py -q` from backend.
+  No G10 feature or live verification is claimed; developer/preview DBs preserved.
+
 ### G9B personal Usage UI execution — 2026-09-05
 
 - **UI Mock Verified — Merged.** [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134)
