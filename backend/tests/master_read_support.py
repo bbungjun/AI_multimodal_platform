@@ -228,6 +228,8 @@ async def proof(db, factory):
                 async def execute(self, statement, *args, **kwargs):
                     result = await raw.execute(statement, *args, **kwargs)
                     if "SELECT id FROM users" in str(statement):
+                        check((await raw.execute(text("SHOW transaction_read_only"))).scalar() == "on")
+                        check((await raw.execute(text("SHOW transaction_isolation"))).scalar() == "repeatable read")
                         reached.set()
                         await asyncio.wait_for(resume.wait(), 5)
                     return result
@@ -252,6 +254,19 @@ async def proof(db, factory):
     await interleave(command)
     check(races == 3)
     groups[phase] = True
+    # DB JSON shape constraint is not a value sanitizer. Corrupted scalar values
+    # must be refused at the read Interface, not rendered into an operator page.
+    phase = "privacy"
+    await db.execute("INSERT INTO master_audit(request_id,actor_id,target_id,action,source,reason_code,"
+        "payload_fingerprint,before_value,after_value,created_at) VALUES($1,$2,$3,'bonus_grant','browser',"
+        "'support_adjustment',$4,$5::jsonb,'{}',$6)", uuid4(), master, users[0], "a"*64,
+        json.dumps({"role": "private_value"}), NOW)
+    try:
+        await read("audit")
+    except MasterReadError as error:
+        check(error.code == "master_unavailable")
+    else:
+        raise AssertionError("corrupt_audit_exposed")
     check(set(groups) == set(GROUPS))
     return dict(groups=groups, races=races, checks=checks, complete=True)
 

@@ -39,6 +39,13 @@ def amount(value):
     return str(integer(value))
 
 
+def count(value):
+    value = integer(value)
+    if value > 2**53-1:
+        raise MasterReadError()
+    return value
+
+
 def safe_values(value):
     if not isinstance(value, dict):
         raise MasterReadError()
@@ -51,7 +58,7 @@ def safe_values(value):
                 raise MasterReadError()
             result[key] = item
         elif key in {"bonus_microcredits", "revoked_sessions", "cancelled_jobs"}:
-            result[key] = amount(item) if key == "bonus_microcredits" else integer(item)
+            result[key] = amount(item) if key == "bonus_microcredits" else count(item)
         else:
             raise MasterReadError()
     return result
@@ -195,14 +202,14 @@ async def _overview(session, p):
     successes = sum(r["count"] for r in jobs if r["state"] == "completed")
     return dict(window=dict(starts_at=p["start"], ends_at=p["now"], days=p["days"]),
         plan_attribution="current_persisted_account_plan", duration_definition="queue_inclusive_updated_minus_created",
-        counts=[dict(r) for r in counts], credits=[dict(plan=r["plan"], **{
+        counts=[dict(r, count=count(r["count"])) for r in counts], credits=[dict(plan=r["plan"], **{
             k+"_microcredits": amount(r[k]) for k in ("reserved", "charged", "released", "held")}) for r in credits],
         usage=[dict(meter=m, unit=u, observed_units=amount(meters.get(m, {}).get("observed", 0)),
             charged_microcredits=amount(meters.get(m, {}).get("charged", 0))) for m, u in METER_UNITS],
         daily=[dict(day=r["day"], charged_microcredits=amount(r["charged"])) for r in daily],
-        jobs=[dict(r) for r in jobs], terminal_count=terminal,
+        jobs=[dict(r, count=count(r["count"])) for r in jobs], terminal_count=count(terminal),
         success_rate=successes/terminal if terminal else None,
-        recent_failures=[dict(r) for r in failed], errors=[dict(r) for r in errors])
+        recent_failures=[dict(r) for r in failed], errors=[dict(r, count=count(r["count"])) for r in errors])
 
 
 async def read_master(session, *, actor_id, view, now, days=30, origin="all", status="all", limit=25, after=None):

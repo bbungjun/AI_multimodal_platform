@@ -44,7 +44,7 @@ def test_money_preserves_aggregate_precision():
 
 
 @pytest.mark.parametrize("value", [{"email": "forbidden"}, {"role": {}}, {"status": "secret"},
-    {"bonus_microcredits": True}, {"plan": ["free"]}, {"cancelled_jobs": -1}])
+    {"bonus_microcredits": True}, {"plan": ["free"]}, {"cancelled_jobs": -1}, {"revoked_sessions": 2**60}])
 def test_audit_values_fail_closed(value):
     with pytest.raises(MasterReadError):
         safe_values(value)
