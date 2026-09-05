@@ -45,7 +45,7 @@ def test_failure_does_not_emit_raw_exception(capsys):
         raise ValueError("private-session-prompt-example")
     with pytest.raises(module.HarnessError, match="integration_failed"):
         module.scenarios(SimpleNamespace(base_url="http://127.0.0.1:1234"), SimpleNamespace(client=fail))
-    assert capsys.readouterr().out == '{"integration_failed_group": "identity"}\n'
+    assert capsys.readouterr().out == '{"integration_failed_group": "identity", "checks_completed": 0, "code": "unexpected"}\n'
 
 
 def test_existing_owned_guards_are_reused():

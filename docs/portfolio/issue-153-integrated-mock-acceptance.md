@@ -15,6 +15,11 @@ Content/Usage/Master require `private, no-store`. Fix the test's contract mappin
 not the application or its protection. Added focused cache-mapping regression.
 Original bounded receipt remains under `.omo/evidence/issue-153/`.
 
+Core89c9d6f reached suspension after identity/usage/prompt/generation/admin/
+concurrency, then failed; work29.656s/cleanup5.235s, cleanup0. Add only a bounded
+HTTP-status/error-code and completed-check count to locate the failure; never
+print exception repr, response body or identity. Diagnosis remains open.
+
 ## Verification status
 
 In Progress. No complete/mock-verified claim until fresh independent cycles and

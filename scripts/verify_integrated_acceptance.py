@@ -145,9 +145,13 @@ def scenarios(runtime, identity):
         check(checks >= 40)
         runtime.admission_checks = checks
         return len(GROUPS)
-    except Exception:
+    except Exception as error:
         # No exception repr, HTTP body, actor ID, prompt or secret crosses evidence.
-        print(json.dumps({"integration_failed_group": group}), flush=True)
+        code = str(error) if isinstance(error, HarnessError) else "unexpected"
+        allowed = {"integration_assertion", "http_transport_failed", "cycle_deadline"}
+        allowed.update("unexpected_http_" + str(status) for status in (200, 201, 400, 401, 403, 404, 409, 422, 429, 500, 503))
+        print(json.dumps({"integration_failed_group": group, "checks_completed": checks,
+                          "code": code if code in allowed else "unexpected"}), flush=True)
         raise HarnessError("integration_failed") from None
 
 
