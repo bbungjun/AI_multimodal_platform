@@ -27,6 +27,15 @@ No migration, runtime business behavior, schema acceptance or budget changed.
 - Final acceptance requires stable-commit schema and personal-usage proof,
   cleanup0 and final-head Linux verify/both Scan/SBOM.
 
+Stable `b037e6a` results: schema PASS (161.125s/cleanup1.875s),90 credit checks,
+42 accounting checks and4 downgrade cases; personal Usage PASS with8 groups,
+3 actual races and451 checks, cleanup0. Receipts:
+`.omo/evidence/schema/migration-schema-verify-6d484588f342.json` and
+`.omo/evidence/issue-131/personal-usage-verify-97b46522d17d.json`.
+Corrected full Windows1604 PASS/3 guarded skips/only known Bash exception.
+F1 scope and F2 security APPROVE; F3 local proofs APPROVE, final Linux CI required;
+F4 records ready, protected merge pending.
+
 ## Result and remaining work
 
 20 paths including shared resolver, no migration. No Master/Audit implementation

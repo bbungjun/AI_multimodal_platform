@@ -89,6 +89,9 @@ paste credential contents.
   the source-only assumption.20 paths/migration0; focused145 PASS. v2 SHA-256:
   `1184127469d7ce67ee7b8428656fbeda5fe8734f68249719fe8dacb54100754a`.
   Failed run cleanup passed; new committed proof required before delivery.
+- Stable G10P2 `b037e6a` passed schema (161.125s/1.875s cleanup) and personal
+  Usage8 groups/3 races/451 checks; cleanup0. Full Windows1604 plus only known
+  Bash failure; frontend60/47 PASS. Ready PR required CI is the delivery gate.
 
 - User authorized design followed by sequential implementation. Parent137 tracks
   the [G10 slices](initiatives/g10-master-operations-spec.md). G10P1 Issue138
