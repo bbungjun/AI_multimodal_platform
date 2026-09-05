@@ -77,7 +77,7 @@ paste credential contents.
 
 ## Active Work
 
-### G11B mock browser/proxy acceptance — locally Mock Verified
+### G11B mock browser/proxy acceptance — Mock Verified, merged
 
 - Issue155/branch `codex/issue-155-mock-browser-acceptance`; Astra designed the
   frozen scope and Sol/medium implemented it sequentially without subagents.
@@ -85,18 +85,18 @@ paste credential contents.
   loopback proxy → backend/worker verified User/Master UI, one mock PNG,
   ownership404, suspension/logout, emergency preview/execute/replay and hash-only
   recovery Sessions. No response stubs or product auth bypass.
-- Final code HEAD `b67e41c`: two independent cycles, each8 groups/109 checks;
+- Final PR HEAD `0994c5b`: two independent cycles, each8 groups/109 checks;
   aggregate218, external requests0, Docker/Node/port cleanup0. Emergency proof2,
   G11A integrated2, auth and Master suspension PASS.
 - Backend Windows:1799 passed/3 guarded skips and the documented Bash path127
   exception only. Frontend lint/build, Session70, Chromium61 and Compose PASS.
-- PR156 first CI: both Scan/SBOM PASS; Linux verify exposed Windows-only
-  `SO_EXCLUSIVEADDRUSE`. The same support path now uses the option conditionally;
-  fresh final-head CI is required and auto-merge remains protected.
-- [Portfolio record](portfolio/issue-155-mock-browser-acceptance.md). Linux CI,
-  protected delivery and PR number remain the delivery gate. Parent152 stays
-  open: actual Google callback/relogin, deployed TLS/Secure-cookie/proxy and live
-  operator/provider/cloud verification were not run.
+- [PR156](https://github.com/bbungjun/AI_multimodal_platform/pull/156)
+  final head `0994c5b`: Linux verify1801/3 guarded skips, Session70,
+  Chromium61 and both Scan/SBOM PASS. Protected auto-merge produced squash
+  `eda7c68`; Issue155 CLOSED and local main synchronized.
+- [Portfolio record](portfolio/issue-155-mock-browser-acceptance.md). Parent152
+  stays open: actual Google callback/relogin, deployed TLS/Secure-cookie/proxy
+  and live operator/provider/cloud verification were not run.
 
 ### G11A integrated mock acceptance — 2026-09-05
 

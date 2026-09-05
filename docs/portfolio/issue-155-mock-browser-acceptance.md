@@ -61,7 +61,7 @@ phase/assertion codes.
 
 ## Verification and result
 
-Final implementation head: `b67e41c18d9f2eebe05f30b82083a66c8bb5b11b`.
+Final PR head: `0994c5bad8882c1b48ad026af970a54a325abdf9`.
 
 | Verification | Result |
 | --- | --- |
@@ -75,6 +75,7 @@ Final implementation head: `b67e41c18d9f2eebe05f30b82083a66c8bb5b11b`.
 | Backend Windows | 1799 passed,3 guarded skips,1 documented Bash path127 failure |
 | Frontend | lint/build, Session70, Chromium61 PASS |
 | Compose | `.env.example` config PASS |
+| Final GitHub CI | Linux backend1801/3 guarded skips; frontend70+61; verify and both Scan/SBOM SUCCESS |
 
 The browser confirmed login-disabled503/no-store, Free Usage with seven meters,
 mock PNG completion and file bytes, foreign404, Pro/bonus persistence, Audit
@@ -85,8 +86,9 @@ old-cookie refusal and fresh mock recovery with prior Usage/Audit intact.
 
 This closes the missing local browser-to-worker acceptance seam and demonstrates
 FDE-style integration, AI Full Stack workflow verification and platform-grade
-cleanup/security boundaries without paid services. It is Mock Verified only.
-Final Linux CI and protected merge are delivery gates. Parent Issue152 remains
-open for actual Google callback/relogin, HTTPS/Secure-cookie transport, deployed
+cleanup/security boundaries without paid services. [PR156](https://github.com/bbungjun/AI_multimodal_platform/pull/156)
+was protected-auto-merged as squash `eda7c68fec41edb9d039a363217aee1a27f71889`;
+Issue155 is closed. It is Mock Verified only. Parent Issue152 remains open for
+actual Google callback/relogin, HTTPS/Secure-cookie transport, deployed
 proxy/ingress, a live operator revocation drill and any real provider/cloud
 verification. No local timing is presented as provider latency or throughput.
