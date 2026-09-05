@@ -79,6 +79,10 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10B PR145 merged `f99fa26`, all3 CI SUCCESS, Issue144 closed/F1–F4 APPROVE.
+  G10C Issue146 starts on `codex/issue-146-master-operational-read`: read-only
+  operational Module, nine allowed paths/migration0. Frozen Goal
+  `.omo/plans/issue-146-g10c-master-read-goal.md`; first test Master API/admin.
 - G10B core `d50b59c`: proof2 each8 groups/4 races/112 checks PASS, inherited
   administration/generation/auth and ownership all-suite1 PASS, cleanup0.
   Windows1677 PASS plus known Bash exception; frontend Session60/Chromium47 PASS.
