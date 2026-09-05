@@ -829,3 +829,24 @@ golden-path cycle passed. Tracked-only Linux passed1589/3 guarded skips; native
 Windows passed1588/3 guarded skips and reproduced only the established Bash
 absolute-path exception. Compose, frontend lint/build, Session48 and Chromium34
 passed. This is mock containment evidence, not a live incident drill.
+## G10 Master operations proofs
+
+Run from repository root with the public template, local Docker and mock only:
+
+```text
+python scripts/verify_master_admin.py --env-file .env.example
+python scripts/verify_master_suspension.py --env-file .env.example
+python scripts/verify_master_read.py --env-file .env.example
+python scripts/verify_synthetic_seed.py --env-file .env.example
+```
+
+Each owns and cleans a disposable project; do not edit/commit during a proof.
+Administration/suspension/read each use180s work/60s cleanup. Full-size synthetic
+fixture uses600s/60s and exercises dry-run rollback plus120 Users/3000 Jobs.
+Focused test and exact repeated-proof requirements belong to each frozen Goal.
+Frontend Session includes master-model contracts and Chromium includes master-ux
+contracts; G10D verified70/61 twice, including role refusal, replay and masked
+responsive screenshots. These do not execute actual Google login or Vertex.
+See [G10 evidence](portfolio/issue-137-g10-closeout.md) for failed attempts, counts,
+budget definitions and protected CI/merge gates. Never equate fixture durations
+or model-labelled Jobs with measured provider throughput or real media delivery.
