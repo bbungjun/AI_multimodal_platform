@@ -18,11 +18,33 @@ Original bounded receipt remains under `.omo/evidence/issue-153/`.
 Core89c9d6f reached suspension after identity/usage/prompt/generation/admin/
 concurrency, then failed; work29.656s/cleanup5.235s, cleanup0. Add only a bounded
 HTTP-status/error-code and completed-check count to locate the failure; never
-print exception repr, response body or identity. Diagnosis remains open.
+print exception repr, response body or identity.
+
+Core92fee38 reproduced suspension-group failure after97 successful assertions:
+work30.156s/cleanup5.094s, cleanup0. The failed assertion is the cache header on
+`GET /api/auth/me` returning401 after suspension/reactivation. Session revocation
+works; the error response lacks `Cache-Control: no-store`. `require_user` raises
+HTTPException before the endpoint's success-only header assignment. The outer
+PrivateContentResponses middleware does not cover `/api/auth`. An independent
+FastAPI router/real require_user check with a rejecting AuthService Adapter also
+returned status401/cache_control_present=false; no actual credentials or DB used.
+
+## Stop and redesign proposal
+
+The original exact2 test-only scope cannot fix product headers. Stop before any
+third code path; do not weaken no-store verification or declare success. Proposed
+v2 adds only backend/app/main.py and backend/tests/test_auth_api.py (total4 paths,
+migration0). At the existing outer response-start wrapper, cover `/api/auth`
+with `no-store` for success/error/redirect responses, preserving existing content
+`private, no-store`, streaming, Set-Cookie and Origin behavior. Add anonymous,
+revoked/suspended401,503 and callback/redirect cache regressions. Then run original
+two-cycle integration and full frozen matrix unchanged. Approval is required
+before applying this product fix. No Ready PR/merge until all gates pass.
 
 ## Verification status
 
-In Progress. No complete/mock-verified claim until fresh independent cycles and
+Needs redesign approval. Focused19 PASS; integration failed with cleanup0.
+No complete/mock-verified claim until fresh independent cycles and
 the frozen regression matrix pass. No actual Google, browser/backend live,
 provider/cloud, real account mutation or developer DB modification authorized.
 

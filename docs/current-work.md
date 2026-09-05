@@ -81,12 +81,17 @@ paste credential contents.
 
 - G10 PR151 MERGED b309dba; parent137 CLOSED; local main synchronized.
 - Parent152 tracks all G11 gates. Issue153/branch
-  `codex/issue-153-integrated-mock-acceptance` is In Progress for local mock only.
+  `codex/issue-153-integrated-mock-acceptance` needs redesign approval, mock only.
 - [Frozen scope](initiatives/g11-integrated-acceptance-spec.md): existing owned
   runtime and real HTTP integration; two test-only paths, migration0. First check:
   `python -m pytest tests/test_verify_integrated_acceptance.py -q` after creation.
 - Actual Google/browser/proxy/emergency live gates remain separately authorized;
   never mark the whole initiative complete from mock evidence.
+- Core92fee38 integration reached97 assertions then exposed auth401 missing
+  no-store after suspend/reactivate; cleanup0, focused19 PASS. Product fix exceeds
+  exact2 test-only paths. Proposed total4 paths adds main.py/test_auth_api.py;
+  see [failure and proposed fix](portfolio/issue-153-integrated-mock-acceptance.md).
+  No product fix, remaining full matrix, Ready PR or merge performed yet.
 
 ### G10 design and preparation — 2026-09-05
 
