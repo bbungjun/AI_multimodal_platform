@@ -90,6 +90,8 @@ async def proof(db, factory):
             await read(**kwargs)
         except MasterReadError as error:
             check(error.code == "master_input_invalid")
+        else:
+            raise AssertionError("input_guard_missing")
     groups[phase] = True
 
     phase = "users"
@@ -164,8 +166,8 @@ async def proof(db, factory):
     model = sorted(MODELS)[0]
     for state, seconds in [("completed", 10), ("completed", 20), ("failed", 30), ("cancelled", 40)]:
         await db.execute("INSERT INTO jobs(id,owner_user_id,mode,model,state,prompt,parameters,"
-            "attempts,blocked,created_at,updated_at,error) VALUES($1,$2,'t2i',$3,$4,'private',"
-            "'{}',0,false,$5,$6,$7::jsonb)", uuid4(), uid, model, state, NOW-timedelta(seconds=60),
+            "attempts,blocked,state_history,vertex_charged,created_at,updated_at,error) VALUES($1,$2,'t2i',$3,$4,'private',"
+            "'{}',0,false,'[]',false,$5,$6,$7::jsonb)", uuid4(), uid, model, state, NOW-timedelta(seconds=60),
             NOW-timedelta(seconds=60-seconds), json.dumps({"code":"private_error", "message":"private"}))
     overview = await read("overview")
     check(overview["terminal_count"] == 3)
