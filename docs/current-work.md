@@ -79,6 +79,10 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10C core7a389cf locally Mock Verified: proof2 each8 groups/3 MVCC interleavings/
+  112 checks, inherited Master85checks, cleanup0. Windows1724 plus known Bash
+  exception; Session60/Chromium47 PASS. [Evidence](portfolio/issue-146-master-operational-read.md).
+  Ready PR/final CI pending; G10D console and G10E fixture remain.
 - G10B PR145 merged `f99fa26`, all3 CI SUCCESS, Issue144 closed/F1–F4 APPROVE.
   G10C Issue146 starts on `codex/issue-146-master-operational-read`: read-only
   operational Module, nine allowed paths/migration0. Frozen Goal
