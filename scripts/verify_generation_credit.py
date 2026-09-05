@@ -7,7 +7,9 @@ from uuid import uuid4
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("verify_accounting_for_generation",ROOT/"scripts/verify_credit_accounting.py")
 base=importlib.util.module_from_spec(spec); spec.loader.exec_module(base)
-HEAD="0006_credit_accounting_persistence"
+from runpy import run_path
+
+HEAD = run_path(str(ROOT / "backend/app/schema_revision.py"))["CODE_REVISION"]
 GROUPS=("mapping_admission","imagen","veo","failure","retry","pipeline_success","pipeline_partial","replay_race")
 
 class Failure(RuntimeError): pass

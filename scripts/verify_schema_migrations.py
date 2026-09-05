@@ -21,7 +21,9 @@ DEFAULT_ENV_FILE = REPO_ROOT / ".env.example"
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / ".omo" / "evidence" / "schema"
 PROJECT_PATTERN = re.compile(r"^schema-verify-[a-z0-9]{8,32}$")
 G1_REVISION = "0001_generation_baseline"
-EXPECTED_REVISION = "0006_credit_accounting_persistence"
+from runpy import run_path
+
+EXPECTED_REVISION = run_path(str(REPO_ROOT / "backend/app/schema_revision.py"))["CODE_REVISION"]
 LIFECYCLE_REVISION = "0005_credit_lifecycle_operations"
 CREDIT_REVISION = "0004_credit_foundation"
 OWNERSHIP_REVISION = "0003_content_ownership"

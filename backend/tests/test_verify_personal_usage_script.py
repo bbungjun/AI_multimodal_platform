@@ -32,7 +32,8 @@ def test_personal_usage_receipt_contract_and_budgets():
     value = payload(module)
     assert module.parse_proof(json.dumps(value)) == value
     module.activate()
-    assert module.base.HEAD == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert module.base.HEAD == CODE_REVISION
     assert module.base.WORK_SECONDS == 120
     assert module.base.CLEANUP_SECONDS == 60
 

@@ -24,7 +24,9 @@ def test_project_and_receipt_contract():
     assert m.validate_project('auth-verify-12345678') == 'auth-verify-12345678'
     assert not {'email', 'token', 'cookie', 'digest', 'output', 'url'} & m.RECEIPT_FIELDS
     import inspect
-    assert "0006_credit_accounting_persistence" in inspect.getsource(m.verify)
+    from app.schema_revision import CODE_REVISION
+    assert m.HEAD == CODE_REVISION
+    assert "revision=HEAD" in inspect.getsource(m.verify)
 
 
 @pytest.mark.parametrize('value', ['0.0.0.0:5432', '[::]:5432', 'localhost:5432', 'not-a-port'])

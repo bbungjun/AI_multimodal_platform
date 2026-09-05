@@ -8,7 +8,8 @@ import mock_auth_support as support
 
 
 def test_credit_head_compatibility_preserves_explicit_revision_guard():
-    assert support.REVISION == "0006_credit_accounting_persistence"
+    from app.schema_revision import CODE_REVISION
+    assert support.REVISION == CODE_REVISION
 
 
 def test_access_structured_list_query_and_array_response():

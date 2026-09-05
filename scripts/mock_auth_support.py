@@ -21,7 +21,9 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 CASES = ("a", "b", "master", "idle", "absolute", "revoked", "suspended", "synthetic", "logout")
 ORIGIN = "http://localhost:5173"
 ROOT = Path(__file__).resolve().parents[1]
-REVISION = "0006_credit_accounting_persistence"
+from runpy import run_path
+
+REVISION = run_path(str(ROOT / "backend/app/schema_revision.py"))["CODE_REVISION"]
 EXECUTION_RESULTS = {
     "worker_proof": "execution_checks", "pipeline_proof": "pipeline_checks",
     "prepare_race": "prepared", "check_race": "race_checks", "lock_waiters": "lock_waiters",
