@@ -84,3 +84,29 @@ def test_user_denied_before_module(client):
     assert response.status_code == 403
     assert response.headers["cache-control"] == "private, no-store"
     mock.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["suspend", "reactivate"])
+def test_status_commands_reach_existing_authenticated_module(client, action):
+    http, mock = client
+    payload = body()
+    payload.update(action=action, target_plan=None)
+    response = http.post(f"/api/master/users/{UUID(int=2)}/commands", json=payload)
+    assert response.status_code == 200
+    assert mock.call_args.kwargs["command"].action == action
+
+
+def test_real_dependency_rejects_untrusted_origin_before_authentication(client, monkeypatch):
+    from app.api import auth_dependencies
+    http, mock = client
+    app.dependency_overrides.pop(require_user)
+    authenticate = AsyncMock(return_value=SimpleNamespace(id=UUID(int=1), role="master"))
+    app.dependency_overrides[auth_dependencies.get_auth_service] = lambda: SimpleNamespace(authenticate=authenticate)
+    monkeypatch.setattr(auth_dependencies, "get_settings", lambda: SimpleNamespace(
+        auth_frontend_origin="http://localhost:5173", cors_origins=[]))
+    response = http.post(f"/api/master/users/{UUID(int=2)}/commands", json=body(),
+                         headers={"Origin": "https://untrusted.invalid"})
+    assert response.status_code == 403
+    assert response.headers["cache-control"] == "private, no-store"
+    authenticate.assert_not_called()
+    mock.assert_not_called()

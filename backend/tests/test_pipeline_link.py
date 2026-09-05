@@ -33,6 +33,10 @@ class FakePipelineLinkSession:
         self.added: list[object] = []
         self.rollback_count = 0
         self.statements = []
+        self.owner_status = "active"
+
+    async def scalar(self, statement):
+        return self.owner_status
 
     async def scalars(self, *_args, **_kwargs) -> FakeScalarsResult:
         self.statements.append(_args[0])
@@ -277,6 +281,21 @@ async def test_pipeline_execution_rejects_corrupt_relation_without_child_mutatio
     assert child.blocked and child.source_asset_id is None and child.state == JobState.PENDING
     assert not session.added and session.commit_count == 0
     assert parent.state == JobState.COMPLETED
+
+
+async def test_suspended_owner_cancels_child_instead_of_enqueuing(monkeypatch):
+    from unittest.mock import AsyncMock
+    parent = _job(mode=GenerationMode.T2I, state=JobState.COMPLETED)
+    child, asset = _blocked_child(parent), _image_asset(parent)
+    session = FakePipelineLinkSession([[child], [asset]])
+    session.owner_status = "suspended"
+    terminal = AsyncMock()
+    monkeypatch.setattr(pipeline_link.generation_credit, "terminalize_generation", terminal)
+    result = await pipeline_link.link_completed_parent(session, parent)
+    assert result.reason == "user_suspended" and not result.linked
+    assert child.state == JobState.CANCELLED and not session.added
+    assert terminal.call_args.kwargs["job"] is child
+    assert terminal.call_args.kwargs["succeeded"] is False
 
 
 async def test_pipeline_execution_repeated_link_adds_only_one_outbox_and_locks_child():

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/master", tags=["master"])
 class CommandBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: UUID
-    action: Literal["plan_change", "bonus_grant"]
+    action: Literal["plan_change", "bonus_grant", "suspend", "reactivate"]
     reason_code: Literal["entitlement_change", "support_adjustment", "service_recovery",
                          "account_policy", "account_reactivated", "operator_bootstrap"]
     target_plan: Literal["free", "pro", "max"] | None = None

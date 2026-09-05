@@ -5,13 +5,15 @@ import hashlib
 import json
 from uuid import UUID
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update, func
 from sqlalchemy.exc import DBAPIError
 
 from app.credit_lifecycle import CreditLifecycleError, change_plan, ensure_cycle, grant_bonus
 from app.credit_models import CreditAccount
-from app.identity_models import User, UserOrigin, UserRole, UserStatus
+from app.identity_models import User, UserOrigin, UserRole, UserStatus, UserSession
 from app.master_models import MasterAudit
+from app.master_work import MasterWorkError, cancel_unpublished
+from app.generation_credit import GenerationCreditError
 
 
 REASONS = frozenset({"operator_bootstrap", "entitlement_change", "support_adjustment",
@@ -53,7 +55,7 @@ def validate_command(command, *, source, now):
             or not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None
             or type(source) is not str or source not in {"browser", "operator_cli"}):
         raise MasterError("master_input_invalid")
-    if command.action not in {"promote", "plan_change", "bonus_grant"}:
+    if command.action not in {"promote", "plan_change", "bonus_grant", "suspend", "reactivate"}:
         raise MasterError("master_input_invalid")
     if (source == "operator_cli") != (command.action == "promote"):
         raise MasterError("master_input_invalid")
@@ -87,8 +89,8 @@ def _receipt(row, replayed):
 
 
 def _snapshot(user, account):
-    return dict(role=str(user.role), status=str(user.status), plan=account.plan,
-                pending_plan=account.pending_plan)
+    return dict(role=str(user.role), status=str(user.status), plan=account.plan if account else None,
+                pending_plan=account.pending_plan if account else None)
 
 
 async def administer(session, *, actor_id: UUID, command: MasterCommand, now: datetime,
@@ -124,15 +126,37 @@ async def administer(session, *, actor_id: UUID, command: MasterCommand, now: da
                 if previous.payload_fingerprint != fingerprint:
                     raise MasterError("master_conflict")
                 return _receipt(previous, True)
-            if target.status != UserStatus.ACTIVE or now < target.signed_up_at:
+            status_action = command.action in {"suspend", "reactivate"}
+            if (not status_action and target.status != UserStatus.ACTIVE) or now < target.signed_up_at:
                 raise MasterError("master_conflict")
             if command.action == "promote" and target.data_origin != UserOrigin.OAUTH:
                 raise MasterError("master_conflict")
-            await ensure_cycle(session, user_id=target.id, now=now)
+            if not status_action:
+                await ensure_cycle(session, user_id=target.id, now=now)
             account = await session.get(CreditAccount, target.id)
             before = _snapshot(target, account)
             key = "master_" + command.request_id.hex
-            if command.action in {"promote", "plan_change"}:
+            revoked = cancelled = 0
+            if status_action:
+                target.updated_at = now
+                if command.action == "suspend":
+                    if target.id == actor_id:
+                        raise MasterError("master_conflict")
+                    active_masters = await session.scalar(select(func.count()).select_from(User).where(
+                        User.role == UserRole.MASTER, User.status == UserStatus.ACTIVE))
+                    if target.role == UserRole.MASTER and target.status == UserStatus.ACTIVE and active_masters <= 1:
+                        raise MasterError("master_conflict")
+                    target.status = UserStatus.SUSPENDED
+                    target.suspended_at = target.suspended_at or now
+                    result = await session.execute(update(UserSession).where(UserSession.user_id == target.id,
+                        UserSession.revoked_at.is_(None)).values(revoked_at=func.greatest(now, UserSession.created_at),
+                                                               revoke_reason="master_suspension"))
+                    revoked = result.rowcount
+                    cancelled = await cancel_unpublished(session, user_id=target.id, now=now)
+                else:
+                    target.status = UserStatus.ACTIVE
+                    target.suspended_at = None
+            elif command.action in {"promote", "plan_change"}:
                 # Upgrade before changing role: lifecycle rejects incoherent Master/Free state.
                 await change_plan(session, user_id=target.id,
                     target_plan="max" if command.action == "promote" else command.target_plan,
@@ -145,6 +169,8 @@ async def administer(session, *, actor_id: UUID, command: MasterCommand, now: da
                     expires_at=command.expires_at, reason_code=command.reason_code,
                     operation_key=key, now=now)
             after = _snapshot(target, account)
+            if status_action:
+                after.update(revoked_sessions=revoked, cancelled_jobs=cancelled)
             if command.action == "bonus_grant":
                 before["bonus_microcredits"] = 0
                 after["bonus_microcredits"] = command.amount_microcredits
@@ -154,6 +180,8 @@ async def administer(session, *, actor_id: UUID, command: MasterCommand, now: da
             session.add(row)
             await session.flush()
             return _receipt(row, False)
+    except (MasterWorkError, GenerationCreditError) as error:
+        raise MasterError("master_busy" if error.code in {"master_busy", "credit_busy"} else "master_unavailable") from None
     except CreditLifecycleError as error:
         code = {"credit_busy": "master_busy", "credit_input_invalid": "master_input_invalid",
                 "credit_plan_refused": "master_conflict", "credit_idempotency_conflict": "master_conflict"}.get(
