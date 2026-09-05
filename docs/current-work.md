@@ -77,19 +77,23 @@ paste credential contents.
 
 ## Active Work
 
-### G11B mock browser/proxy acceptance — design ready
+### G11B mock browser/proxy acceptance — locally Mock Verified
 
-- User requests mock-first; gpt-6-astra design verified, gpt-5.6-sol/medium
-  implementation requested in next turn of the same task, no subagents.
-- G11A PR154 MERGED1214dfd/Issue153 CLOSED; main synchronized before Issue155.
-- Issue155/branch `codex/issue-155-mock-browser-acceptance`:
-  [spec](initiatives/g11b-mock-browser-acceptance-spec.md), eight new test/harness
-  paths, migration0/product0. Goal plan under `.omo/plans/issue-155-...-goal.md`.
-- Real frontend/browser + local HTTP proxy + mock backend, User/Master actions,
-  emergency CLI and fresh test-session recovery. No actual Google/TLS/cloud;
-  parent152 stays open. Existing development DBs and browser profiles untouched.
-- First implementation checks: focused new Python and Node tests, then two
-  independent owned browser cycles. Design only so far; no new proof executed.
+- Issue155/branch `codex/issue-155-mock-browser-acceptance`; Astra designed the
+  frozen scope and Sol/medium implemented it sequentially without subagents.
+- Exactly eight new test-only paths, migration0/product0. Real Chromium → Vite
+  loopback proxy → backend/worker verified User/Master UI, one mock PNG,
+  ownership404, suspension/logout, emergency preview/execute/replay and hash-only
+  recovery Sessions. No response stubs or product auth bypass.
+- Final code HEAD `b67e41c`: two independent cycles, each8 groups/109 checks;
+  aggregate218, external requests0, Docker/Node/port cleanup0. Emergency proof2,
+  G11A integrated2, auth and Master suspension PASS.
+- Backend Windows:1799 passed/3 guarded skips and the documented Bash path127
+  exception only. Frontend lint/build, Session70, Chromium61 and Compose PASS.
+- [Portfolio record](portfolio/issue-155-mock-browser-acceptance.md). Linux CI,
+  protected delivery and PR number remain the delivery gate. Parent152 stays
+  open: actual Google callback/relogin, deployed TLS/Secure-cookie/proxy and live
+  operator/provider/cloud verification were not run.
 
 ### G11A integrated mock acceptance — 2026-09-05
 

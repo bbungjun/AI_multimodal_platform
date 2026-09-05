@@ -860,3 +860,33 @@ It accepts no target DB or credential options. Both cycles and cleanup must pass
 The broader required regression matrix and fresh results are recorded in
 [G11A evidence](portfolio/issue-153-integrated-mock-acceptance.md).
 This does not run real Google login or claim full Initiative completion.
+
+# G11B browser/proxy/emergency acceptance
+
+Run `python scripts/verify_browser_acceptance.py` from the repository root with
+local Docker available. It accepts no arguments and executes exactly two fresh
+mock cycles. Each cycle starts an owned PostgreSQL/Redis/backend/worker project,
+a strict loopback Vite proxy on port18155 and a fresh headless Chromium. It must
+report eight groups, at least80 assertions, external requests0 and cleanup0.
+
+The browser uses real frontend requests and backend auth dependencies. Initial
+and recovery Session secrets travel only through bounded stdin protocol; only
+hashes reach the disposable database. The verifier covers login-disabled JSON,
+personal Usage, mock PNG generation, owner/foreign file access, Master Plan and
+bonus commands, suspension, logout, emergency preview/execute/replay and fresh
+test-session recovery. It never calls Google or a live AI provider and does not
+prove deployed TLS, Secure cookies, ingress, cloud quota or billing.
+
+Focused checks:
+
+```powershell
+cd backend
+$env:AI_PROVIDER = "mock"
+python -m pytest tests/test_verify_browser_acceptance.py tests/test_browser_acceptance_support.py tests/test_browser_acceptance_fixtures.py -q
+
+cd ../frontend
+node --test tests/browser-acceptance-driver.test.mjs
+```
+
+See [G11B evidence](portfolio/issue-155-mock-browser-acceptance.md) for the
+failure trail, final counts and remaining live gates.
