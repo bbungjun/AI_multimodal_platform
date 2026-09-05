@@ -85,3 +85,6 @@ synthetic seed or live verification yet. G10B consumes the administration
 transaction and Audit format; it must preserve in-flight generation settlement.
 Disable new routes/CLI on rollback; populated Audit cannot be downgraded/deleted
 silently. Preserve Audit and roll forward rather than deleting operator evidence.
+
+Delivery: final head `9cceec6` passed verify and both Scan/SBOM, PR143 protected
+merged `b764502`; Issue142 closed and main synchronized. F1–F4 APPROVE.

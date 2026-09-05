@@ -42,3 +42,11 @@ def test_cli_promote_seam_only_and_time_guard():
         validate_command(promote, source="browser", now=NOW)
     with pytest.raises(MasterError):
         validate_command(CMD, source="browser", now=NOW.replace(tzinfo=None))
+
+
+@pytest.mark.parametrize("action", ["suspend", "reactivate"])
+def test_status_commands_have_no_credit_payload(action):
+    command = replace(CMD, action=action, target_plan=None)
+    validate_command(command, source="browser", now=NOW)
+    with pytest.raises(MasterError):
+        validate_command(command, source="operator_cli", now=NOW)

@@ -11,6 +11,7 @@ from app.models import Asset, AssetKind, GenerationMode, Job, JobState
 from app import generation_credit
 from app.models import utc_now
 from app.ownership import assert_same_owner
+from app.master_work import lock_owner_status, mark_cancelled
 from app.services.jobs.outbox import add_job_dispatch_event
 from app.state_machine import TERMINAL_STATES, transition
 
@@ -33,6 +34,7 @@ class PipelineFailureResult:
     failed_count: int = 0
     skipped_count: int = 0
     reason: str | None = None
+    cancelled_count: int = 0
 
 
 def _owned_child(parent: Job, child: Job) -> bool:
@@ -60,6 +62,10 @@ async def _link_completed_parent(session: AsyncSession, parent: Job) -> Pipeline
     if parent.state != JobState.COMPLETED:
         return PipelineLinkResult(linked=False, reason="parent_not_completed")
 
+    if parent.owner_user_id is None:
+        return PipelineLinkResult(linked=False, reason="ownership_reference_mismatch")
+    owner_status = await lock_owner_status(session, parent.owner_user_id)
+
     child = await _first_pipeline_child(session, parent.id)
     if child is None:
         return PipelineLinkResult(linked=False, reason="child_missing")
@@ -83,6 +89,13 @@ async def _link_completed_parent(session: AsyncSession, parent: Job) -> Pipeline
     asset = await _first_parent_asset(session, parent.id)
     if asset is not None and asset.job_id != parent.id:
         return PipelineLinkResult(linked=False, reason="ownership_reference_mismatch")
+    if owner_status == "suspended":
+        now = utc_now()
+        mark_cancelled(child, now)
+        await generation_credit.terminalize_generation(session, job=child, succeeded=False,
+            reason_code="cancelled_before_delivery", now=now)
+        await session.commit()
+        return PipelineLinkResult(linked=False, reason="user_suspended", child_id=child.id)
     if asset is None:
         await _fail_child(
             session,
@@ -131,14 +144,21 @@ async def fail_blocked_children_for_parent(
 
 
 async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) -> PipelineFailureResult:
+    owner_status = await lock_owner_status(session, parent.owner_user_id)
     children = await _pipeline_children(session, parent.id)
     failed = 0
     skipped = 0
+    cancelled = 0
     for child in children:
         if not _owned_child(parent, child):
             skipped += 1
             continue
         if not child.blocked or child.state in TERMINAL_STATES:
+            continue
+        if owner_status == "suspended":
+            # Parent failure already returned the single shared reservation.
+            mark_cancelled(child, utc_now())
+            cancelled += 1
             continue
         child.error = {
             "code": PIPELINE_PARENT_FAILED,
@@ -153,9 +173,9 @@ async def _fail_blocked_children_for_parent(session: AsyncSession, parent: Job) 
         )
         failed += 1
 
-    if failed:
+    if failed or cancelled:
         await session.commit()
-    return PipelineFailureResult(failed, skipped, "ownership_reference_mismatch" if skipped else None)
+    return PipelineFailureResult(failed, skipped, "ownership_reference_mismatch" if skipped else None, cancelled)
 
 
 async def _first_pipeline_child(session: AsyncSession, parent_id: UUID) -> Job | None:

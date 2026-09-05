@@ -79,6 +79,16 @@ paste credential contents.
 
 ### G10 design and preparation — 2026-09-05
 
+- G10B core `d50b59c`: proof2 each8 groups/4 races/112 checks PASS, inherited
+  administration/generation/auth and ownership all-suite1 PASS, cleanup0.
+  Windows1677 PASS plus known Bash exception; frontend Session60/Chromium47 PASS.
+  [Issue144 evidence](portfolio/issue-144-suspension-work-cancellation.md).
+  Ready PR/final Linux CI/protected merge pending. G10C/D/E remain, parent137 open.
+- G10A PR143 merged `b764502`, all3 required checks SUCCESS; Issue142 closed,
+  F1–F4 APPROVE. G10B Issue144 begins on `codex/issue-144-suspension-work-cancellation`.
+  Goal SHA-256 `01705d59a835014ec1b24066d52657d5c91d2b8691e4c46b05a5ba6974f2f13e`;
+  max14 paths/migration0. First focused verification is Master/pipeline pytest.
+
 - G10P2 PR141 merged `ea0a434`, final-head verify and both Scan/SBOM SUCCESS,
   Issue140 closed/F1–F4 APPROVE. G10A Issue142 begins on
   `codex/issue-142-audited-master-administration`; frozen17 code paths and one
