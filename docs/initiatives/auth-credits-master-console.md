@@ -257,7 +257,7 @@ document or inherit the full design interview.
 | G9A | Personal Plan and Usage read model | Mock Verified — Merged | [PR132](https://github.com/bbungjun/AI_multimodal_platform/pull/132) squash `2565a7a`, [Issue131](https://github.com/bbungjun/AI_multimodal_platform/issues/131), [accepted spec](g9a-personal-usage-read-model-spec.md), [record](../portfolio/issue-131-personal-usage-read-model.md); code `d103a44` | One Module/one GET Interface; 10 changed of exact11 allowlisted paths, migration0; personal usage2 each8 groups/races3/checks451, inherited ownership4/Linux1558/frontend48+34; no G9B/live provider claim |
 | G9B | Personal Plan and Usage frontend | UI Mock Verified — Merged | [PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135) squash `1e6e523`, [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134), [accepted spec](g9b-personal-usage-ui-spec.md), [record](../portfolio/issue-134-personal-usage-ui.md) | Exact11 frontend paths/backend0/migration0; Module60/Chromium47, four viewports and final required3 CI PASS |
 | G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Mock Verified — protected delivery PR151 | [Parent137](https://github.com/bbungjun/AI_multimodal_platform/issues/137), [closeout](../portfolio/issue-137-g10-closeout.md) | P1/P2/A/B/C/D merged PR139/141/143/145/147/149; E [PR151](https://github.com/bbungjun/AI_multimodal_platform/pull/151) seed2 each286checks/1race, read112/admin85, cleanup0. Final CI/merge evidence on linked PR; no live claims |
-| G11 | Integrated E2E, race, migration, security, and portfolio evidence | Needs redesign approval — G11A #153 | Parent #152; branch codex/issue-153-integrated-mock-acceptance | Core92fee38: auth401 no-store missing after97 assertions, cleanup0; focused19 PASS. Exact2 test scope cannot fix product middleware; proposed4 paths. See issue153 portfolio. Actual OAuth/browser/cloud separately authorized |
+| G11 | Integrated E2E, race, migration, security, and portfolio evidence | G11A locally Mock Verified; live gates Planned | Parent #152; G11A #153 | Approved v2 core ebbfc76/four paths/migration0: auth no-store fixed, HTTP2x108, schema2/full matrix/ownership all2, cleanup0; Windows1788+known Bash exception, frontend70/61. Final Linux CI/merge on linked PR; see issue153 portfolio. Not whole-G11 completion |
 
 Per-Goal soft limits:
 
@@ -306,6 +306,12 @@ At the end of a Goal:
    dated entry below. Do not silently let code and this document diverge.
 
 ## Decision Change Log
+
+2026-09-05 G11A: user approved resuming the bounded auth-cache redesign. Exact2
+test paths expanded to4 by adding main.py/test_auth_api.py only. All /api/auth
+response statuses receive no-store through the existing outer wrapper; no login,
+cookie, Origin, schema or live authorization changes. Original failed proofs and
+all verification time/count limits preserved. Mock completion does not close152.
 
 | Date | Decision | Reason |
 |---|---|---|
@@ -496,11 +502,12 @@ mode:
 
 ## Next Goal
 
-G10 implementation and local mock verification are complete across bounded
-P1/P2/A/B/C/D/E slices; protected delivery is recorded in the
-[closeout](../portfolio/issue-137-g10-closeout.md) and parent137. **G11 integrated
-acceptance** is next for bounded design after final G10 merge. Do not infer
-authorization for actual OAuth/provider/cloud execution from mock completion.
+G10 is merged through PR151/parent137 closed. G11A mock integration is locally
+verified on ebbfc76; protected delivery is tracked by Issue153 and its linked PR.
+See [G11A evidence](../portfolio/issue-153-integrated-mock-acceptance.md).
+Parent152 remains open for the separately scoped real Master/User Google browser
+smoke, proxy and emergency revocation live gates. Do not infer authorization for
+actual OAuth/provider/cloud execution from mock completion.
 
 G4 supplies User.id/signed_up_at, require_user, owner-only mutations and read-only
 Master inspection, protected files/Range and Master ops. PR113 merged6537025;

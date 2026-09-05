@@ -81,7 +81,7 @@ paste credential contents.
 
 - G10 PR151 MERGED b309dba; parent137 CLOSED; local main synchronized.
 - Parent152 tracks all G11 gates. Issue153/branch
-  `codex/issue-153-integrated-mock-acceptance` resumed with approved v2, mock only.
+  `codex/issue-153-integrated-mock-acceptance` is locally Mock Verified, approved v2.
 - [Frozen scope](initiatives/g11-integrated-acceptance-spec.md): existing owned
   runtime and real HTTP integration; four approved paths, migration0. First check:
   `python -m pytest tests/test_verify_integrated_acceptance.py -q` after creation.
@@ -91,8 +91,12 @@ paste credential contents.
   no-store after suspend/reactivate; cleanup0, focused19 PASS. Product fix exceeds
   exact2 test-only paths. Proposed total4 paths adds main.py/test_auth_api.py;
   see [failure and proposed fix](portfolio/issue-153-integrated-mock-acceptance.md).
-  v2 adds all-status auth no-store; focused auth/integration51 PASS, one guarded
-  integration skip. Fresh full proof matrix and protected delivery pending.
+  v2 core ebbfc76 adds all-status auth no-store: HTTP2x108, schema2, complete
+  inherited matrix and ownership all/cycles2 PASS;18 project cleanup0.
+  Windows1788 plus existing Bash127 exception/3 guarded skips; focused51,
+  frontend Session70/Chromium61, lint/build/Compose PASS.
+  Final Linux CI and protected delivery are recorded on Issue153/linked PR;
+  keep parent152 open for separately authorized live acceptance.
 
 ### G10 design and preparation — 2026-09-05
 
