@@ -1,318 +1,172 @@
 # CreativeOps Studio
 
-CreativeOps Studio는 Gemini, Imagen, Veo 기반 생성 경험을 Kubernetes에서 안전하게
-운영하기 위한 개인용 멀티모달 AI 플랫폼입니다. 사용자는 프롬프트를 검토한 뒤 이미지와
-영상을 생성하고, 운영자는 durable job, provider failure, queue, rollout과 SLO를 추적할
-수 있습니다.
+**프롬프트를 다듬고 이미지와 영상을 생성하며, 작업 결과와 사용량을 관리하는 AI 콘텐츠 제작 스튜디오입니다.**
 
-이 프로젝트의 핵심은 AI API 호출 자체보다 비용과 실패가 있는 장시간 생성 작업을
-PostgreSQL source of truth, transactional outbox, Redis/Celery worker, 좁은 provider
-boundary로 운영하는 것입니다. GKE/Terraform, Workload Identity, 부하테스트, 관리형
-Prometheus, digest release와 자동 rollback을 실제 운영 문제와 연결합니다.
+기획과 화면 설계부터 프론트엔드, 백엔드, Vertex AI 연동, 클라우드 배포와 운영 검증까지
+직접 수행한 **1인 개발 프로젝트**입니다. Gemini로 생성 지시문을 다듬고, Imagen과 Veo로
+이미지와 영상을 만들며, 생성한 이미지를 다음 영상 작업의 소스로 연결할 수 있습니다.
 
-포트폴리오에서는 이 end-to-end 경험을 `AI Full Stack Engineer`, `FDE`,
-`AX Consultant`, `AI Platform Engineer` 관점으로 설명합니다. 사용자 workflow와 제품
-구현, 현장 통합과 문제 해결, 도입 효과와 운영 절차, 배포·관측·복구 가능한 플랫폼을
-서로 분리된 기능이 아니라 하나의 전달 과정으로 다룹니다.
+## 서비스 화면
 
-## 운영 아키텍처
+<img src="docs/assets/readme/studio.png" alt="이미지·영상 생성 모드와 모델, 프롬프트 입력 영역을 제공하는 CreativeOps Studio 작업 화면" width="1100" />
 
-로그인 사용자에게는 개인 사용량 `/usage`, Master에게는 관리 콘솔 `/master`를 제공합니다.
-Master는 플랜·보너스·사용자 정지와 Audit을 확인할 수 있으며, 검증은 로컬 mock 기준입니다.
-[관리 운영 절차](docs/runbooks/master-operations.md)와
-[G10 구현·검증 근거](docs/portfolio/issue-137-g10-closeout.md)를 참고하세요.
+작업 공간에서 생성 방식과 모델을 선택하고, 프롬프트를 작성해 제작을 시작합니다.
+화면은 현재 코드의 로컬 mock 환경에서 촬영했습니다. 테스트 전용 사용자와 실제
+API·DB·worker를 연결했으며, 유료 AI 호출과 실제 Google 로그인은 수행하지 않았습니다.
+프롬프트와 식별 정보는 가렸습니다.
 
-```text
-React/Vite Studio
-  -> FastAPI API
-    -> PostgreSQL: jobs, state history, assets, prompt provenance, outbox
-    -> transactional outbox
-      -> dispatcher -> Redis/Celery -> worker
-        -> mock provider or Vertex AI through google-genai
-        -> GCS FUSE mounted DATA_DIR / local DATA_DIR
+## 개발 배경과 목표
 
-Operator surfaces
-  -> /api/health and /api/health/live
-  -> /api/ops/health and /api/ops/metrics
-  -> /metrics -> GKE Managed Prometheus -> alerts, dashboard, SLO
+이미지나 영상을 만드는 과정에는 생성 요청 외에도 여러 단계가 필요합니다.
+아이디어를 프롬프트로 구체화하고, 결과가 나올 때까지 기다리고, 만든 결과를 확인해
+다음 작업에 연결해야 합니다. 실패한 요청을 확인하거나 이전 결과를 다시 찾는 과정도
+사용 경험의 일부라고 생각했습니다.
 
-Delivery
-  -> CI/test -> Trivy/SBOM -> Cloud Build provenance
-  -> Artifact Registry digest -> Terraform rollout -> health gate
-  -> success or automatic digest rollback
+CreativeOps Studio는 이 과정을 하나의 작업 공간에서 이어갈 수 있도록 만들었습니다.
+프롬프트 향상 결과는 사용자가 검토하고 수정한 뒤 적용하도록 했고, 생성 요청은
+작업으로 저장해 진행 상태와 결과물을 다시 확인할 수 있도록 구성했습니다.
+
+개발 목표는 AI 기능을 사용자가 지속해서 이용할 수 있는 서비스로 구현하는 것입니다.
+화면과 API를 연결하는 것에서 시작해, 오래 걸리는 비동기 작업, 사용자별 접근 권한,
+사용량에 따른 크레딧 처리까지 범위를 확장했습니다. 이후 클라우드 배포와 부하·장애
+검증을 통해 서비스가 동작하는 조건과 복구 방법을 확인했습니다.
+
+## 핵심 기능과 사용 흐름
+
+### 1. 프롬프트를 검토하고 다듬기
+
+짧은 아이디어를 입력하면 Gemini 기반 프롬프트 향상 기능이 초안을 제안합니다.
+사용자는 원본과 초안을 비교하고 직접 수정한 뒤 수락하거나, 원본을 유지할 수 있습니다.
+최종 생성에는 사용자가 확인한 프롬프트를 사용합니다.
+
+<img src="docs/assets/readme/prompt-review.png" alt="원본과 향상 초안을 비교하고, 수정·수락·원본 유지 중 선택하는 화면. 프롬프트 내용은 가림 처리" width="1100" />
+
+### 2. 이미지와 영상을 만들고 다음 작업으로 연결하기
+
+- **텍스트 → 이미지:** Imagen으로 이미지 생성
+- **텍스트 → 영상:** Veo로 영상 생성
+- **이미지 → 영상:** 생성한 이미지에 움직임을 더하는 영상 제작
+- **이미지 → 영상 연속 작업:** 이미지 생성 결과를 후속 영상 작업의 소스로 자동 연결
+
+생성 요청을 제출하면 작업 상세에서 상태 변화와 결과를 확인할 수 있습니다.
+완료된 이미지에서는 후속 영상 제작을 시작할 수 있고, 작업 기록에서 이전 결과를 다시 찾을 수 있습니다.
+
+<details>
+<summary>작업 상태와 결과 미리보기 화면</summary>
+
+<img src="docs/assets/readme/generation-result.png" alt="완료된 이미지 작업의 파일 미리보기와 상태 이력. 이미지는 mock 환경의 테스트용 placeholder" width="1100" />
+
+이 이미지는 mock provider가 반환한 테스트용 placeholder입니다.
+실제 Imagen의 생성 품질을 보여주는 예시가 아니라, 요청 처리·파일 저장·미리보기 흐름을 실행한 화면입니다.
+
+</details>
+
+### 3. 개인 사용량과 크레딧 확인하기
+
+사용자는 자신의 플랜, 사용 가능한 크레딧, 처리 중인 요청에 예약된 크레딧,
+현재 주기의 사용량과 동시 처리 한도를 확인할 수 있습니다.
+표시되는 크레딧은 서비스 내부 사용량 정책이며, 클라우드 공급자의 실제 청구서와는 구분합니다.
+
+<img src="docs/assets/readme/usage.png" alt="개인 플랜, 사용 가능 크레딧, 30일 주기, 동시 처리 한도와 모델 계열별 사용량 화면" width="1100" />
+
+### 4. 관리 콘솔에서 계정과 운영 내역 확인하기
+
+Master 권한의 관리자는 사용자 플랜 변경, 보너스 크레딧 지급, 계정 정지·재활성화를
+처리할 수 있습니다. 운영 현황에서는 계정 분포, 생성 결과와 크레딧 흐름을 확인하고,
+Audit에서 관리 작업의 수행자·대상·변경 전후를 추적합니다.
+
+<details>
+<summary>관리 콘솔 화면</summary>
+
+<img src="docs/assets/readme/master.png" alt="격리된 테스트 사용자와 mock 생성 작업을 집계한 관리 콘솔의 계정 분포·크레딧·사용량·처리 현황" width="1100" />
+
+테스트 전용 계정과 이번 촬영에서 실행한 mock 요청의 집계입니다. 실제 가입자 수나 서비스 운영 실적이 아닙니다.
+
+</details>
+
+## 개인 개발 범위
+
+제품 기획부터 개발과 운영 검증까지 전체를 직접 담당했습니다.
+구현 범위는 생성 화면에서 시작해 작업 처리, 사용자 관리, 클라우드 운영으로 확장했습니다.
+
+| 영역 | 직접 설계하고 구현한 내용 |
+|---|---|
+| 제품·UX | 생성 모드 선택, 프롬프트 검토·수락, 결과 확인과 후속 제작 흐름 |
+| 프론트엔드 | 생성 스튜디오, 작업 기록·상세, 인증 화면, 개인 사용량, 관리 콘솔 |
+| 백엔드·데이터 | API, DB 모델과 migration, 비동기 작업·상태 이력, 파일 저장·접근 제어 |
+| AI 연동 | Gemini·Imagen·Veo 연동, 오류 처리·재시도·요청 제한, mock/Vertex 실행 모드 |
+| 사용자·사용량 | Google OAuth 연동 코드, 세션, 작업 소유권, 크레딧 예약·정산·해제, 동시 처리 제한 |
+| 배포·운영 | Docker Compose, GKE·Terraform, CI/CD, 모니터링·알림, 부하와 복구 검증, 운영 절차 문서화 |
+
+인증·크레딧·관리 기능은 격리 mock 환경에서 브라우저와 실제 백엔드를 연결해 검증했습니다.
+실제 Google 로그인 및 최신 통합 기능의 배포 환경 검증은 남아 있습니다.
+
+## 주요 문제와 해결 과정
+
+### 생성 요청 접수와 실제 실행 사이의 누락 위험 줄이기
+
+이미지·영상 생성은 요청을 접수한 시점과 결과가 준비되는 시점이 다릅니다.
+DB에 작업을 저장하는 단계와 큐에 실행 요청을 보내는 단계 사이에서 실패하면,
+사용자에게 접수된 작업이 실행되지 않을 수 있습니다.
+
+이를 다루기 위해 작업과 발행할 이벤트를 PostgreSQL의 같은 트랜잭션에 저장했습니다.
+별도의 dispatcher가 이벤트를 Redis/Celery로 보내고, worker는 DB에서 최신 작업을
+읽어 처리합니다. 사용자에게 보이는 상태도 DB에 보존하고, 정해진 상태 전이 규칙으로 변경합니다.
+프로세스가 하나 더 필요해지는 대신, 발행 대기와 실패를 데이터로 확인할 수 있는 구조를 선택했습니다.
+[작업 처리와 복구 설계](docs/job-lifecycle.md)
+
+### 사용자별 접근 권한과 크레딧을 작업 처리에 연결하기
+
+여러 사용자가 요청하는 서비스에서는 작업 목록뿐 아니라 결과 파일과 후속 작업의
+소스 이미지까지 소유권을 확인해야 합니다. 동시에 요청되거나 재처리되는 작업에서도
+사용량과 크레딧이 일관되게 반영되어야 합니다.
+
+작업·파일·소스 참조에 사용자 소유권 검사를 적용하고, 생성 요청 시 크레딧을 예약한 뒤
+결과에 따라 정산하거나 해제하도록 구성했습니다. 중복 처리와 동시성은 DB 트랜잭션과
+잠금, 재호출을 구분하는 키로 다룹니다. 격리 검증에서는 사용자 간 접근 차단과
+파일 스트리밍, 동시 요청, 크레딧 처리를 확인했습니다.
+[접근 제어 검증](docs/portfolio/issue-112-file-ops-access.md) ·
+[생성 크레딧 검증](docs/portfolio/issue-127-generation-credit-integration.md)
+
+### 배포 성공 여부를 확인하고 실패 시 복구하기
+
+컨테이너가 시작되더라도 API와 worker가 정상적으로 요청을 처리할 수 있는지는
+별도로 확인해야 합니다. 배포 과정에서 이 확인과 복구가 반복 가능하도록 만들었습니다.
+
+Terraform으로 GKE 인프라와 workload를 관리하고, 이미지 digest를 기준으로 배포하도록
+구성했습니다. 배포 후 상태 검사를 통과하지 못하면 이전 이미지로 되돌리는 절차를
+자동화했습니다. 과거 GKE mock 검증에서는 의도적으로 배포 상태 검사를 실패시킨 뒤
+API·worker·dispatcher·frontend 네 workload가 이전 digest와 readiness를 회복하는 것을 확인했습니다.
+현재 GKE workload는 비용 관리를 위해 중지한 상태입니다.
+[배포·복구 스크립트](scripts/deploy_gcp_release.sh) ·
+[운영 검증 기록](docs/portfolio/README.md#supply-chain-and-rollback)
+
+## 아키텍처와 기술 스택
+
+```mermaid
+flowchart TB
+    Web[React · TypeScript] <-->|작업 요청 · 결과 조회| API[FastAPI]
+    API -->|작업과 발행 이벤트 저장| DB[(PostgreSQL<br/>사용자 · 작업 · 크레딧 · outbox)]
+    API -->|프롬프트 향상| AI[Vertex AI<br/>Gemini · Imagen · Veo]
+    DB -->|발행 대기 이벤트| Dispatch[Outbox dispatcher]
+    Dispatch --> Queue[Redis · Celery]
+    Queue --> Worker[생성 worker]
+    Worker -->|상태 기록| DB
+    Worker -->|이미지 · 영상 생성| AI
+    Worker -->|파일 저장| Storage[결과 파일 저장소]
+    API -->|접근 권한 확인 후 파일 조회| Storage
 ```
 
-프론트엔드는 Vertex AI나 credential을 직접 다루지 않습니다. API는 job과 outbox를 같은
-DB transaction에 저장하고, dispatcher는 `job_id`만 큐에 발행합니다. Worker는 최신
-job을 다시 읽고 [state machine](backend/app/state_machine.py)을 통해서만 상태를
-변경합니다. 자세한 설계는 [Architecture](docs/architecture.md)와
-[Job lifecycle](docs/job-lifecycle.md)에 있습니다.
+프론트엔드는 백엔드 API를 통해 작업을 요청하고 결과를 확인합니다.
+AI 호출은 백엔드의 provider 경계 안에서 처리하며, 같은 서비스 코드를
+실제 Vertex AI 또는 credential이 필요 없는 mock 모드로 실행할 수 있습니다.
 
-## 플랫폼 신뢰성 설계
-
-- **Durable dispatch:** Postgres job/outbox가 source of truth이며 Celery result state에
-  사용자 상태를 맡기지 않습니다.
-- **Failure-aware provider boundary:** 429, 5xx, timeout, malformed response를 안전한
-  public error로 변환하고 bounded retry/backoff와 rate limit을 적용합니다.
-- **Recoverable video work:** late ack, worker-lost rejection, prefetch `1`, resumable Veo
-  polling으로 긴 작업의 중복·유실 위험을 제한합니다.
-- **Safe Kubernetes rollout:** readiness/liveness, PDB, resource request/limit,
-  multi-replica precondition과 health-gated rollback을 사용합니다.
-- **Observable operation:** DB-backed job/outbox/backlog 상태와 Prometheus HTTP latency,
-  error rate, provider failure code를 함께 노출합니다.
-- **Supply-chain guard:** runtime image 취약점 차단, SPDX SBOM, provenance가 있는 build,
-  digest-only release를 사용합니다.
-- **Cost-safe validation:** 기본 검증은 deterministic mock provider로 실행하며 실제
-  Vertex 요청은 별도의 승인, 요청 상한과 사용량 ledger를 요구합니다.
-
-## 구현과 검증 수준
-
-| Capability | Evidence level | 검증 근거 | 현재 상태 |
-|---|---|---|---|
-| Mock 생성·asset·정리 golden path | `Live Verified` | [Mock runbook](docs/runbooks/local-mock.md), [smoke workflow](.github/workflows/smoke-mock-golden-path.yml) | 로컬 기본 모드 |
-| Postgres outbox와 Redis/Celery worker | `Live Verified` | [Job lifecycle](docs/job-lifecycle.md), [testing](docs/testing.md) | Compose/GKE 검증 |
-| GKE, managed data, Workload Identity | `Live Verified` | [GCP Terraform](infra/gcp/README.md), [GKE runbook](docs/runbooks/gcp-gke.md) | 비용 관리 pause |
-| HPA, node autoscaling, k6 | `Live Verified` | [k6 runbook](docs/runbooks/k6-gcp-load-test.md), [operation record](docs/current-work.md) | HPA off, node pool paused |
-| Managed Prometheus, alerts, dashboard, SLO | `Live Verified` | [monitoring.tf](infra/gcp/monitoring.tf), [operation record](docs/current-work.md) | workload paused |
-| Image scan, SBOM, digest rollout, rollback | `Live Verified` | [supply-chain workflow](.github/workflows/image-supply-chain.yml), [release script](scripts/deploy_gcp_release.sh) | CI 구현 유지 |
-| Vertex provider boundary | `Live Verified` | [Vertex pilot runbook](docs/runbooks/prompt-enhancement-vertex-pilot.md), [provider modes](docs/provider-modes.md) | post-fix 유료 재검증 전 |
-| Paired prompt evaluation | `Implemented` | [evaluation gate](docs/runbooks/prompt-enhancement-evaluation-gate.md), [evaluation package](evals/prompt_enhancement) | mock 검증 완료, post-fix live 미검증 |
-| GPU node pool와 GPU telemetry | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 미구현 |
-| 분산학습 운영 | `Planned` | [Issue #89](https://github.com/bbungjun/AI_multimodal_platform/issues/89) | 범위 외, 미구현 |
-
-`Live Verified`는 특정 날짜와 revision에서 실제 runtime으로 확인했다는 뜻이며 현재
-상시 운영 중이라는 뜻은 아닙니다. 전체 판정 기준과 근거는
-[Portfolio Evidence Index](docs/portfolio/README.md)에 있습니다.
-
-## 대표 운영 증거
-
-- **HPA 검증:** GKE mock 환경에서 k6 590 iterations, 1,770 HTTP requests, checks
-  100%, HTTP failure rate 0%, request-duration p95 53 ms를 기록했습니다. HPA 제거 후
-  health와 Terraform no-drift를 다시 확인했습니다.
-- **Alert 검증:** 통제된 provider failure에서 20 requests, HTTP 5xx 3건, 5xx ratio
-  15%, 동일 코드 provider failure 3건을 관측했습니다. 두 alert가 firing된 뒤 mock
-  복구 후 resolved됐습니다.
-- **자동 rollback:** 의도적으로 health 조건을 불일치시킨 candidate rollout에서 API,
-  worker, dispatcher, frontend 네 workload가 이전 digest로 복구되고 readiness를
-  회복했습니다.
-- **Provider incident:** 실제 Vertex 파일럿에서 structured-response failure와 timeout을
-  관측했습니다. 새 실행으로 덮지 않고 prompt-free ledger와 failed manifest를 보존한 뒤
-  No-Go로 중단하고 contract repair를 구현했습니다.
-
-현재 AWS 포트폴리오 stack은 검증 후 제거된 `Destroyed` 상태이고, 개인 GCP stack은
-비용 관리를 위해 workload replica와 node pool을 0으로 둔 `Paused` 상태입니다. GPU
-node pool과 분산학습은 실제 구현 전이므로 완료 경험으로 주장하지 않습니다.
-
-## 실제 생성 흐름
-
-배포 서버에서 `잠자는 사자`를 입력한 뒤, 프롬프트 향상, 향상 프롬프트 적용, 동영상 생성까지 이어지는 화면입니다.
-
-1. 대기 화면 및 `잠자는 사자` 입력
-
-<img src="docs/assets/readme/creativeops-01-prompt-input.png" alt="잠자는 사자 입력 대기 화면" width="900" />
-
-2. 프롬프트 향상 검토
-
-<img src="docs/assets/readme/creativeops-02-prompt-enhance.png" alt="프롬프트 향상 검토 화면" width="900" />
-
-3. 향상 프롬프트 적용
-
-<img src="docs/assets/readme/creativeops-03-enhanced-applied.png" alt="향상 프롬프트 적용 화면" width="900" />
-
-4. 동영상 생성 결과
-
-<img src="docs/assets/readme/creativeops-04-video-result.png" alt="잠자는 사자 동영상 생성 결과 화면" width="900" />
-
-지원 기능:
-
-- Imagen text-to-image 생성
-- Veo text-to-video 생성
-- Veo image-to-video 생성
-- Gemini 기반 prompt enhancement 초안 생성
-- T2I -> I2V 파이프라인 job
-- job history, 상세 timeline, 생성 asset preview, provider readiness 확인
-
-## 기술 스택
-
-- Backend: Python 3.11, FastAPI, SQLAlchemy async, asyncpg
-- Database: PostgreSQL 16
-- Frontend: Vite, React, TypeScript, TanStack Query
-- AI SDK: `google-genai`
-- Runtime: Docker Compose, Redis/Celery dispatch, local Postgres volume, local asset volume
-
-## 빠른 시작: Mock Mode
-
-Mock mode는 로컬 개발의 기본 권장 모드입니다. Google credential이 필요 없고 Gemini, Imagen, Veo를 실제 호출하지 않습니다.
-
-1. 예시 파일로 `.env`를 만듭니다.
-
-```powershell
-Copy-Item .env.example .env
-```
-
-2. `.env`에서 아래 값을 유지하거나 설정합니다.
-
-```env
-AI_PROVIDER=mock
-POSTGRES_USER=app
-POSTGRES_PASSWORD=changeme
-POSTGRES_DB=multimodal
-GCP_PROJECT_ID=
-GCP_LOCATION=us-central1
-ENHANCE_MODEL=gemini-2.5-flash
-DATA_DIR=/data/assets
-JOB_RUNNER_CONCURRENCY=10
-JOB_RUNNER_AUTO_START=false
-JOB_DISPATCH_MODE=celery
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_DEFAULT_QUEUE=generation
-RATE_LIMIT_IMAGEN_PER_MIN=5
-RATE_LIMIT_VEO_PER_MIN=1
-RATE_LIMIT_GEMINI_PER_MIN=10
-PROVIDER_RETRY_MAX_ATTEMPTS=3
-PROVIDER_RETRY_BASE_DELAY_SEC=1.0
-PROVIDER_RETRY_MAX_DELAY_SEC=20.0
-CELERY_WORKER_CONCURRENCY=2
-CELERY_WORKER_HEALTHCHECK_TIMEOUT_SEC=5
-CELERY_WORKER_SHUTDOWN_GRACE_SEC=60
-CELERY_TASK_ACKS_LATE=true
-CELERY_TASK_REJECT_ON_WORKER_LOST=true
-CELERY_WORKER_PREFETCH_MULTIPLIER=1
-OUTBOX_DISPATCHER_BATCH_SIZE=50
-OUTBOX_DISPATCHER_POLL_INTERVAL_SEC=1.0
-OUTBOX_DISPATCHER_MAX_ATTEMPTS=10
-VITE_API_BASE=
-VITE_API_PROXY_TARGET=http://backend:8000
-VITE_ALLOWED_HOSTS=localhost,127.0.0.1
-```
-
-Mock mode에서는 credential 관련 값을 비워둘 수 있습니다.
-
-3. 로컬 환경을 확인합니다. 이 명령은 `.env`가 없으면 `.env.example`에서 만들고,
-   기존 `.env`는 덮어쓰지 않습니다.
-
-```powershell
-.\scripts\setup_local.ps1
-```
-
-4. stack을 실행합니다.
-
-```powershell
-docker compose up -d --build
-```
-
-5. 앱을 엽니다.
-
-- Frontend: <http://127.0.0.1:5173>
-- Backend API docs: <http://127.0.0.1:8000/docs>
-- Health: <http://127.0.0.1:8000/api/health>
-
-## Vertex Mode
-
-Vertex mode는 실제 provider 요청을 보내며 비용이 발생할 수 있습니다. Gemini, Imagen, Veo live check를 의도적으로 실행할 때만 사용합니다.
-
-필수 설정:
-
-```env
-AI_PROVIDER=vertex
-GCP_PROJECT_ID=your-gcp-project-id
-GCP_LOCATION=us-central1
-ENHANCE_MODEL=gemini-2.5-flash
-```
-
-Docker에서 ADC 또는 credential 파일을 쓰려면 host credential 경로와 container 경로를 함께 설정합니다.
-
-```env
-GOOGLE_APPLICATION_CREDENTIALS=/secrets/google-credentials.json
-GOOGLE_APPLICATION_CREDENTIALS_HOST=/absolute/path/to/google-credentials.json
-```
-
-Service account 파일을 사용할 때도 같은 패턴을 사용합니다. credential JSON 내용은 `.env`, 문서, 로그, 커밋에 붙여 넣지 않습니다.
-
-Health readiness는 provider 설정 가능 여부를 확인합니다. 모델 품질, quota, billing, live generation 성공을 보장하지는 않습니다.
-
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.vertex.yml up -d --build
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/health"
-```
-
-비용이 발생할 수 있는 generation 요청을 보내기 전에는 [Vertex live QA runbook](docs/runbooks/vertex-live-qa.md)을 먼저 확인합니다.
-
-## API
-
-| Method | Path | Purpose |
+| 영역 | 기술 | 사용 목적 |
 |---|---|---|
-| GET | `/api/health` | DB 및 provider readiness 확인 |
-| POST | `/api/prompts/enhance` | 편집 가능한 prompt enhancement 초안 생성 |
-| POST | `/api/generations` | T2I, T2V, I2V generation job 생성 |
-| GET | `/api/generations` | 필터 기반 job history 조회 |
-| GET | `/api/generations/{job_id}` | asset과 state history를 포함한 단일 job 조회 |
-| DELETE | `/api/generations/{job_id}` | terminal job 및 local asset 삭제 |
-| POST | `/api/pipelines` | T2I parent와 blocked I2V child 생성 |
-| GET | `/api/pipelines/{parent_job_id}` | parent/child pipeline 조회 |
-| GET | `/api/assets/{asset_id}` | asset metadata 조회 |
-| GET | `/files/{job_uuid}/{filename}` | 검증된 local media file streaming |
-
-## 개발 검증
-
-Backend:
-
-```powershell
-cd backend
-$env:AI_PROVIDER = "mock"
-python -m pytest
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm install
-npm run build
-```
-
-Compose:
-
-```powershell
-docker compose config
-```
-
-## 문서
-
-- [Architecture](docs/architecture.md)
-- [Portfolio evidence](docs/portfolio/README.md)
-- [Provider modes](docs/provider-modes.md)
-- [Job lifecycle](docs/job-lifecycle.md)
-- [Storage and assets](docs/storage-and-assets.md)
-- [Testing strategy](docs/testing.md)
-- [Local mock runbook](docs/runbooks/local-mock.md)
-- [Vertex live QA runbook](docs/runbooks/vertex-live-qa.md)
-- [Troubleshooting notes](docs/troubleshooting.md)
-- [Architecture decision records](docs/adr)
-
-## 안전 규칙
-
-- `.env`, credential JSON, 생성 media, runtime log를 커밋하지 않습니다.
-- 자동화 테스트는 mock 또는 fake provider를 사용합니다.
-- Vertex live QA는 명시적이고 수동적이며 비용을 인지한 상태에서만 실행합니다.
-- 현재 private repo의 git history에는 archived legacy context가 남아 있습니다. portfolio/public repo로 공개하려면 clean public history를 따로 만드는 것이 안전합니다.
-
-## Mock Golden-Path Smoke
-
-Run the backend HTTP golden path in mock mode only:
-
-```powershell
-python scripts/smoke_mock_golden_path.py --compose --env-file .env.example --timeout-sec 90
-```
-
-If `db`, `redis`, `backend`, `dispatcher`, and `worker` are already running:
-
-```powershell
-python scripts/smoke_mock_golden_path.py --base-url http://127.0.0.1:8000
-```
-
-The smoke refuses `--env-file .env`, requires `AI_PROVIDER=mock`, starts the
-redis, dispatcher, and worker services when `--compose` is used, and verifies health,
-prompt enhancement, T2I generation, job state history, PNG asset serving,
-byte-range streaming, and cleanup. In mock mode, `vertex_charged: true` only
-means the mock provider handler completed; it is not real Vertex billing.
+| 웹 화면 | React, TypeScript, Vite, TanStack Query | 제작 화면과 서버 작업 상태 조회 |
+| API | Python, FastAPI, SQLAlchemy, Alembic | 요청 처리, 트랜잭션과 DB 스키마 관리 |
+| 데이터·비동기 작업 | PostgreSQL, Redis, Celery | 상태·사용량 보존과 생성 작업의 별도 실행 |
+| AI | Vertex AI, google-genai, Gemini, Imagen, Veo | 프롬프트 향상과 이미지·영상 생성 |
+| 파일 | 공통 storage helper, 로컬 volume, GCS FUSE | 환경별 결과 파일 저장과 권한을 확인한 제공 |
+| 인프라·배포 | Docker Compose, GKE, Terraform, Artifact Registry | 로컬 실행, 클라우드 구성 재현, 이미지 기반 배포 |
+| 검증·관측 | pytest, Playwright, k6, Managed Prometheus | 동작·브라우저 흐름 검증, 부하 측정과 장애 관측 |
