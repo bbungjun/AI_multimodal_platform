@@ -111,3 +111,6 @@ README에서 제품의 용도, 제작 흐름, 전체 개인 개발 범위와 세
 
 Issue: [#158](https://github.com/bbungjun/AI_multimodal_platform/issues/158)
 Branch: `codex/issue-158-readme-product-story`
+
+Core commit: `b94a954` (push 완료). [Draft PR #159](https://github.com/bbungjun/AI_multimodal_platform/pull/159)
+를 main 대상으로 열었다. 이 기록은 로컬 검증 결과이며 PR CI 결과나 main 병합을 대신하지 않는다.

@@ -90,7 +90,8 @@ paste credential contents.
   image/link checks and GitHub Markdown/Mermaid rendering PASS. Default Compose lacks
   local POSTGRES_USER; no .env inspected/changed. Full product/cloud/live suites not rerun.
 - [Record and capture reproduction](portfolio/issue-158-readme-product-story.md).
-  Delivery: draft PR pending; merge remains a separate review step. G11 live gates unchanged.
+  Core commit b94a954 pushed; [draft PR159](https://github.com/bbungjun/AI_multimodal_platform/pull/159)
+  targets main. Merge remains a separate review step. G11 live gates unchanged.
 
 ### G11B mock browser/proxy acceptance — Mock Verified, merged
 
