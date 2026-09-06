@@ -1,0 +1,50 @@
+{
+  "source_revision": "c409f9853e46ae6cbde3a89ac3bb319975dfd1c5",
+  "captured_on": "2026-09-06",
+  "provider": "mock",
+  "browser": "Chromium",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "receipt": {
+    "complete": true,
+    "screenshots": 5,
+    "external_requests": 0,
+    "mock_generations": 1,
+    "prompt_reviews": 1,
+    "cleanup": 0
+  },
+  "images": [
+    {
+      "file": "studio.png",
+      "width": 1214,
+      "height": 927,
+      "sha256": "33821e756020783c732eac3121239c86ea5ff1873523c6183cc324ae2ba3fe54"
+    },
+    {
+      "file": "prompt-review.png",
+      "width": 1186,
+      "height": 428,
+      "sha256": "38078a661a749e0ef006f34859ae744fa6531182d88015e26d2951246920b123"
+    },
+    {
+      "file": "generation-result.png",
+      "width": 1186,
+      "height": 1035,
+      "sha256": "d337bc2e561dd8da6568ae9787629ce84da894200c7f94a2b4fc93181baa3dd3"
+    },
+    {
+      "file": "usage.png",
+      "width": 1186,
+      "height": 1086,
+      "sha256": "503212211631bfb2938e3a7f3a0feba9b65974c53daf9879474ff42e48b55768"
+    },
+    {
+      "file": "master.png",
+      "width": 1186,
+      "height": 1030,
+      "sha256": "41026305f44d58a2b1cf3c2bad2bfe227ae75e017be2325f27c7b611e03955fb"
+    }
+  ]
+}

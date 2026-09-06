@@ -77,6 +77,22 @@ paste credential contents.
 
 ## Active Work
 
+### README product story and current UI captures — 2026-09-06
+
+- Issue158 / `codex/issue-158-readme-product-story`: product-first Korean README,
+  explicit end-to-end solo ownership, three engineering decisions, compact architecture.
+  No standalone verification matrix, setup or document-index section, as requested.
+- Five current UI screenshots and restricted heading/control snapshots captured using
+  isolated mock BrowserRuntime and real API/Postgres/Celery. Product baseline c409f98.
+  Two successful captures; final enhancement1/generation1, browser external0/cleanup0.
+  Existing preview unchanged. Prompts/identity masked; mock placeholder clearly captioned.
+- Related backend12 PASS; frontend build/lint, capture syntax, env-example Compose,
+  image/link checks and GitHub Markdown/Mermaid rendering PASS. Default Compose lacks
+  local POSTGRES_USER; no .env inspected/changed. Full product/cloud/live suites not rerun.
+- [Record and capture reproduction](portfolio/issue-158-readme-product-story.md).
+  Core commit b94a954 pushed; [draft PR159](https://github.com/bbungjun/AI_multimodal_platform/pull/159)
+  targets main. Merge remains a separate review step. G11 live gates unchanged.
+
 ### G11B mock browser/proxy acceptance — Mock Verified, merged
 
 - Issue155/branch `codex/issue-155-mock-browser-acceptance`; Astra designed the

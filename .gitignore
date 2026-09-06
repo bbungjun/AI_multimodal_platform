@@ -14,6 +14,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Local browser/documentation capture staging; publish only reviewed assets.
+output/playwright/
+
 # Local runtime data
 data/
 data/assets/

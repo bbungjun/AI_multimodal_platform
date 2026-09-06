@@ -1,0 +1,70 @@
+{
+  "environment": "isolated mock; test-only sessions; real API/database/worker; no Google OAuth",
+  "snapshots": [
+    {
+      "name": "studio",
+      "selector": ".creative-main",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "max_height": null,
+      "masked_selectors": [
+        ".creative-account"
+      ],
+      "aria": "\n- button \"설정\"\n- button \"T2I\"\n- button \"T2V\"\n- button \"I2V\"\n- button \"PIPELINE\"\n- heading \"제목 없는 장면\" [level=2]\n- button \"향상\" [disabled]\n- button \"생성\" [disabled]"
+    },
+    {
+      "name": "prompt-review",
+      "selector": ".creative-enhance-drawer",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "max_height": null,
+      "masked_selectors": [
+        ".prompt-box",
+        ".creative-enhance-drawer textarea",
+        ".component-list"
+      ],
+      "aria": "- heading \"향상된 프롬프트 검토\" [level=2]\n- button \"버리기\"\n- button \"원본 유지\"\n- button \"초안 수락\""
+    },
+    {
+      "name": "generation-result",
+      "selector": ".creative-detail-grid",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "max_height": 1035,
+      "masked_selectors": [
+        ".prompt-detail"
+      ],
+      "aria": "- heading \"결과 미리보기\" [level=2]\n- heading \"이미지 결과 준비됨\" [level=2]\n- button \"이 이미지로 I2V 시작\"\n- heading \"작업 상태\" [level=2]\n- heading \"요청 요약\" [level=2]"
+    },
+    {
+      "name": "usage",
+      "selector": ".creative-page--usage",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "max_height": null,
+      "masked_selectors": [],
+      "aria": "- heading \"플랜 및 사용량\" [level=1]\n- button \"사용량 새로고침\": 새로고침\n- heading \"크레딧\" [level=2]\n- progressbar \"주기 기본 한도 대비 사용\"\n- heading \"30일 주기\" [level=2]\n- progressbar \"현재 주기 경과\"\n- heading \"동시 처리\" [level=2]\n- progressbar \"동시 처리 슬롯\"\n- heading \"과금 meter\" [level=2]\n- columnheader \"Meter\"\n- columnheader \"관측 사용량\"\n- columnheader \"차감 크레딧\"\n- rowheader \"Gemini 입력 gemini_input_token\":\n  - strong: Gemini 입력\n  - text: gemini_input_token\n- rowheader \"Gemini 출력 gemini_output_token\":\n  - strong: Gemini 출력\n  - text: gemini_output_token\n- rowheader \"Imagen Fast imagen_fast_image\":\n  - strong: Imagen Fast\n  - text: imagen_fast_image\n- rowheader \"Imagen Standard imagen_standard_image\":\n  - strong: Imagen Standard\n  - text: imagen_standard_image\n- rowheader \"Imagen Ultra imagen_ultra_image\":\n  - strong: Imagen Ultra\n  - text: imagen_ultra_image\n- rowheader \"Veo Fast veo_fast_ms\":\n  - strong: Veo Fast\n  - text: veo_fast_ms\n- rowheader \"Veo Standard veo_standard_ms\":\n  - strong: Veo Standard\n  - text: veo_standard_ms"
+    },
+    {
+      "name": "master",
+      "selector": ".master-page",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "max_height": 1030,
+      "masked_selectors": [
+        ".master-identity"
+      ],
+      "aria": "- heading \"관리 콘솔\" [level=1]\n- button \"새로고침\"\n- button \"운영 현황\" [pressed]\n- button \"사용자\"\n- button \"Audit\"\n- heading \"사용자\" [level=2]\n- heading \"생성 성공률\" [level=2]\n- heading \"계정 분포\" [level=2]\n- columnheader \"구분\"\n- columnheader \"플랜\"\n- columnheader \"상태\"\n- columnheader \"계정 수\"\n- heading \"크레딧 흐름\" [level=2]\n- columnheader \"플랜\"\n- columnheader \"기간 예약\"\n- columnheader \"기간 차감\"\n- columnheader \"기간 반환\"\n- columnheader \"처리 중 예약\"\n- heading \"관측 사용량\" [level=2]\n- columnheader \"Meter\"\n- columnheader \"원본 사용량\"\n- columnheader \"내부 차감\"\n- heading \"일별 차감\" [level=2]\n- columnheader \"일자 (UTC)\"\n- columnheader \"크레딧\"\n- heading \"생성 처리\" [level=2]\n- columnheader \"저장된 모델\"\n- columnheader \"상태\"\n- columnheader \"건수\"\n- columnheader \"p95\"\n- heading \"실패 유형\" [level=2]\n- columnheader \"공개 오류 코드\"\n- columnheader \"건수\"\n- heading \"최근 실패\" [level=2]\n- columnheader \"Job\"\n- columnheader \"모델\"\n- columnheader \"오류\"\n- columnheader \"생성 (KST)\""
+    }
+  ]
+}
