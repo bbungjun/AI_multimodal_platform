@@ -93,7 +93,7 @@ async def _link_completed_parent(session: AsyncSession, parent: Job) -> Pipeline
         now = utc_now()
         mark_cancelled(child, now)
         await generation_credit.terminalize_generation(session, job=child, succeeded=False,
-            reason_code="cancelled_before_delivery", now=now)
+            reason_code="cancelled_before_delivery", now=utc_now)
         await session.commit()
         return PipelineLinkResult(linked=False, reason="user_suspended", child_id=child.id)
     if asset is None:
@@ -224,6 +224,6 @@ async def _fail_child(
     }
     await generation_credit.terminalize_generation(
         session, job=child, succeeded=False,
-        reason_code="delivery_failed", now=utc_now())
+        reason_code="delivery_failed", now=utc_now)
     transition(child, JobState.FAILED, detail={"error": code})
     await session.commit()

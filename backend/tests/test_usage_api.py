@@ -69,7 +69,7 @@ async def request_usage(monkeypatch, *, error=None):
 
     async def read(received, *, user_id, now):
         assert received is session and user_id == UUID(int=1)
-        assert now.tzinfo is not None
+        assert callable(now) and now().tzinfo is not None
         if error is not None:
             raise error
         return usage_view()

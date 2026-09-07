@@ -1,5 +1,6 @@
 """Coherent owner-scoped Plan, Credit, concurrency and Usage read model."""
 from contextlib import asynccontextmanager
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
@@ -10,6 +11,7 @@ from sqlalchemy.exc import DBAPIError
 from app.credit_lifecycle import CreditLifecycleError, ensure_cycle
 from app.credit_models import CreditGrant, CreditReservation, CreditUsageRecord
 from app.credit_policy import RATE_CARD_VERSION, plan_policy
+from app.identity_models import User
 
 
 _MAX_BIGINT = 2**63 - 1
@@ -178,12 +180,16 @@ async def read_personal_usage(
     session,
     *,
     user_id: UUID,
-    now: datetime,
+    now: datetime | Callable[[], datetime],
 ) -> PersonalUsageView:
     if not isinstance(user_id, UUID):
         raise PersonalUsageError("usage_input_invalid")
-    now = _instant(now)
+    if not callable(now):
+        now = _instant(now)
     async with _transaction(session):
+        if callable(now):
+            await session.scalar(select(User).where(User.id == user_id).with_for_update(key_share=True))
+            now = _instant(now())
         cycle = await ensure_cycle(session, user_id=user_id, now=now)
         try:
             policy = plan_policy(cycle.plan)

@@ -1,0 +1,34 @@
+{
+  "revision": "2b280f81fe019145ed794e584931a62d3e9d86b7",
+  "tracked_dirty": true,
+  "provider": "mock",
+  "environment": "isolated local Docker",
+  "resources": {
+    "api_processes": 1,
+    "dispatcher_processes": 1,
+    "worker_concurrency": 2,
+    "model_rate_limits_per_min": 600,
+    "poll_interval_s": 0.5,
+    "fixture_users": 64,
+    "plan": "max",
+    "docker_cpus": 20,
+    "docker_memory_bytes": 16677769216
+  },
+  "source_sha256": {
+    "scripts/verify_user_journey_load.py": "135e14dee96c40e2f2f46a0731421fb5052f37b58311574e9858922649c4ef1b",
+    "scripts/k6/user_journeys.js": "9c08ef47d0efb19f1b50a58fa834bbb1986737e4ede7ad05e0efcdc8a3b6f9c8",
+    "backend/tests/user_journey_fixtures.py": "185694357b2be709a3fbdf17b7674d2a81edffdb304361aed95222e85bbf313e",
+    "frontend/scripts/user-journey-browser.mjs": "11873d4971e566072f9e11ee7d8b71db0ede85aee324f9834adfec7d329f507d",
+    "backend/app/db.py": "cfa6f07ce1c23c3961146f14753609f4e8608bb20c4068237363af823bacc854",
+    "backend/app/credit_accounting.py": "907164673d6de584270ceb796b44666072b22d405fdb5489d5949f89831158bd",
+    "backend/app/credit_lifecycle.py": "71341b9c4d92bacb88ec1c1578d65b90d83531ca0c552fd71d2255583fa1edc9"
+  },
+  "cleanup": null,
+  "passed": false,
+  "error": {
+    "phase": "start",
+    "code": "command_failed"
+  },
+  "local_run": "20260907-130827",
+  "profiles": []
+}

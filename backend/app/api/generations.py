@@ -144,7 +144,7 @@ async def create_generation(
     )
     session.add(job)
     try:
-        await _admit_generation(session, job, now=now)
+        await _admit_generation(session, job, now=utc_now)
         add_job_dispatch_event(session, job.id, reason="generation_created")
         await session.commit()
     except IntegrityError as exc:
@@ -274,7 +274,7 @@ async def retry_generation(
     )
     session.add(retry)
     try:
-        await _admit_generation(session, retry, now=now)
+        await _admit_generation(session, retry, now=utc_now)
         add_job_dispatch_event(session, retry.id, reason="generation_retry_created")
         await session.commit()
     except IntegrityError as exc:

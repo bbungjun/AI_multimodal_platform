@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app import generation_credit
 from app.db import AsyncSessionLocal
-from app.models import Asset, AssetKind, GenerationMode, Job, JobState
+from app.models import Asset, AssetKind, GenerationMode, Job, JobState, utc_now
 from app.ownership import OwnershipReferenceMismatch, validate_execution_references
 from app.state_machine import TERMINAL_STATES, transition
 from app.services import rate_limit, storage
@@ -106,7 +106,7 @@ async def handle_t2i(session: AsyncSession, job: Job) -> None:
 
         await generation_credit.terminalize_generation(
             session, job=job, succeeded=True, reason_code=None,
-            now=datetime.now(timezone.utc))
+            now=utc_now)
         transition(job, JobState.COMPLETED)
         await session.commit()
     except Exception as exc:
@@ -197,7 +197,7 @@ async def _mark_failed(session: AsyncSession, job: Job, exc: Exception) -> None:
     transition(job, JobState.FAILED, detail={"error": error["code"]}, at=now)
     await generation_credit.terminalize_generation(
         session, job=job, succeeded=False,
-        reason_code=_credit_failure_reason(exc, job), now=now)
+        reason_code=_credit_failure_reason(exc, job), now=utc_now)
     await session.commit()
 
 
@@ -369,7 +369,7 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
 
             await generation_credit.terminalize_generation(
                 session, job=job, succeeded=True, reason_code=None,
-                now=datetime.now(timezone.utc))
+                now=utc_now)
             transition(job, JobState.COMPLETED)
             await session.commit()
             return
@@ -442,7 +442,7 @@ async def handle_t2v(session: AsyncSession, job: Job) -> None:
 
         await generation_credit.terminalize_generation(
             session, job=job, succeeded=True, reason_code=None,
-            now=datetime.now(timezone.utc))
+            now=utc_now)
         transition(job, JobState.COMPLETED)
         await session.commit()
     except Exception as exc:
@@ -498,7 +498,7 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
 
             await generation_credit.terminalize_generation(
                 session, job=job, succeeded=True, reason_code=None,
-                now=datetime.now(timezone.utc))
+                now=utc_now)
             transition(job, JobState.COMPLETED)
             await session.commit()
             return
@@ -580,7 +580,7 @@ async def handle_i2v(session: AsyncSession, job: Job) -> None:
 
         await generation_credit.terminalize_generation(
             session, job=job, succeeded=True, reason_code=None,
-            now=datetime.now(timezone.utc))
+            now=utc_now)
         transition(job, JobState.COMPLETED)
         await session.commit()
     except Exception as exc:

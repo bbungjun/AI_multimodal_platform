@@ -135,7 +135,7 @@ async def _release_hold(
                 usage=usage or UsageReport(lines=()),
                 reason_code=reason,
                 operation_key=terminal_key,
-                now=clock(),
+                now=clock,
             )
     except Exception as error:
         safe_code = getattr(error, "code", "credit_account_unavailable")
@@ -175,7 +175,7 @@ async def execute_prompt_enhancement(
                         UsageEstimate("gemini_output_token", plan.maximum_output_tokens),
                     ),
                 ),
-                now=clock(),
+                now=clock,
             )
             reservation_status = await session.scalar(
                 select(CreditReservation.status).where(
@@ -260,7 +260,7 @@ async def execute_prompt_enhancement(
                 usage=usage,
                 delivery="delivered",
                 operation_key=terminal_key,
-                now=clock(),
+                now=clock,
             )
     except (CreditAccountingError, IntegrityError) as error:
         await _release_hold(

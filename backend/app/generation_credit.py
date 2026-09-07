@@ -1,5 +1,6 @@
 """Imagen/Veo credit admission and terminal accounting behind one deep Interface."""
 from dataclasses import dataclass
+from collections.abc import Callable
 from datetime import datetime
 from uuid import UUID
 
@@ -88,7 +89,7 @@ def _metadata(*, job: Job, reservation_id: UUID, role: str,
     }
 
 
-async def admit_generation(session, *, job: Job, now: datetime,
+async def admit_generation(session, *, job: Job, now: datetime | Callable[[], datetime],
                            pipeline_child: Job | None = None) -> AdmissionReceipt:
     if not isinstance(job.id, UUID) or not isinstance(job.owner_user_id, UUID):
         _fail()
@@ -176,7 +177,8 @@ async def _usage(session, job_ids: tuple[UUID, ...]) -> tuple[UsageLine, ...]:
 
 
 async def terminalize_generation(session, *, job: Job, succeeded: bool,
-                                 reason_code: str | None, now: datetime) -> TerminalResult:
+                                 reason_code: str | None,
+                                 now: datetime | Callable[[], datetime]) -> TerminalResult:
     parsed = _parse(job)
     if parsed is None:
         return TerminalResult("unmanaged")

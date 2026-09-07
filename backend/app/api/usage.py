@@ -20,7 +20,7 @@ async def personal_usage_me(
 ) -> PersonalUsageResponse:
     try:
         async with session.begin():
-            view = await read_personal_usage(session, user_id=actor.id, now=utc_now())
+            view = await read_personal_usage(session, user_id=actor.id, now=utc_now)
     except PersonalUsageError as error:
         code = error.code if error.code in {"usage_busy", "usage_unavailable"} else "usage_unavailable"
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=code) from None
