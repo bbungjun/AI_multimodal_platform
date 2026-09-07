@@ -174,6 +174,67 @@ def test_aware_time_required(now):
         run(accounting.reserve(EmptySession(), request=request(estimate()), now=now))
 
 
+def test_explicit_historical_clock_regression_remains_refused():
+    session = MemorySession()
+    run(ensure_cycle(session, user_id=UID, now=NOW + timedelta(seconds=2)))
+    with pytest.raises(accounting.CreditAccountingError, match="credit_account_inconsistent"):
+        reserve(session, estimate(), now=NOW)
+
+
+@pytest.mark.parametrize("operation", ["reserve", "settle", "release"])
+def test_live_clock_is_read_after_user_lock_for_every_accounting_operation(operation):
+    session = MemorySession()
+    original = reserve(session, estimate()) if operation != "reserve" else None
+    later = NOW + timedelta(seconds=2)
+    run(ensure_cycle(session, user_id=UID, now=later))
+    session.statements.clear()
+    calls = []
+
+    def clock():
+        assert session.statements, "clock read before lock acquisition"
+        first = session.statements[0]
+        assert first.column_descriptions[0]["entity"] is User
+        assert first._for_update_arg is not None
+        calls.append(True)
+        return later + timedelta(seconds=1)
+
+    if operation == "reserve":
+        reserve(session, estimate(), now=clock)
+    elif operation == "settle":
+        settle(session, original.reservation_id, line(), now=clock)
+    else:
+        release(session, original.reservation_id, now=clock)
+    assert calls == [True]
+
+
+def test_stale_terminal_time_reproduces_failure_but_live_clock_preserves_delivery():
+    session = MemorySession()
+    original = reserve(session, estimate())
+    arrived = NOW + timedelta(seconds=1)
+    run(ensure_cycle(session, user_id=UID, now=arrived + timedelta(seconds=1)))
+    with pytest.raises(accounting.CreditAccountingError, match="credit_account_inconsistent"):
+        settle(session, original.reservation_id, line(), now=arrived)
+    assert session.rows[CreditReservation][0].status == "held"
+    result = settle(session, original.reservation_id, line(), now=lambda: arrived + timedelta(seconds=2))
+    assert result.status == "settled" and result.consumed_microcredits > 0
+
+
+@pytest.mark.parametrize("value", [None, NOW.replace(tzinfo=None)])
+def test_live_clock_does_not_bypass_aware_time_validation(value):
+    with pytest.raises(accounting.CreditAccountingError, match="credit_input_invalid"):
+        reserve(MemorySession(), estimate(), now=lambda: value)
+
+
+def test_user_serialization_is_compatible_with_foreign_key_key_share_locks():
+    from sqlalchemy.dialects import postgresql
+    from app import credit_lifecycle
+    for module in (accounting, credit_lifecycle):
+        user_sql = str(module._locked(User, User.id == UID).compile(dialect=postgresql.dialect()))
+        grant_sql = str(module._locked(CreditGrant, CreditGrant.user_id == UID).compile(dialect=postgresql.dialect()))
+        assert user_sql.endswith("FOR NO KEY UPDATE")
+        assert grant_sql.endswith("FOR UPDATE")
+
+
 def test_active_outer_transaction_required():
     with pytest.raises(accounting.CreditAccountingError, match="^credit_transaction_required$"):
         run(accounting.reserve(EmptySession(False), request=request(estimate()), now=NOW))

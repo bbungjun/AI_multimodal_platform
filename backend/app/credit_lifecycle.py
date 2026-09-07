@@ -75,7 +75,10 @@ async def _transaction(session):
 
 
 def _locked(model, *criteria):
-    return select(model).where(*criteria).with_for_update().execution_options(populate_existing=True)
+    # Lifecycle is nested under accounting: do not upgrade the User lock back
+    # to FOR UPDATE, which would conflict with concurrent child-row FK checks.
+    return select(model).where(*criteria).with_for_update(
+        key_share=model is User).execution_options(populate_existing=True)
 
 
 async def _load(session, user_id, now):

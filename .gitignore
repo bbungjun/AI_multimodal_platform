@@ -16,6 +16,7 @@ build/
 
 # Local browser/documentation capture staging; publish only reviewed assets.
 output/playwright/
+output/load/
 
 # Local runtime data
 data/

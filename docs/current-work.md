@@ -77,6 +77,22 @@ paste credential contents.
 
 ## Active Work
 
+### Authenticated user journeys and load — 2026-09-07
+
+- Issue160 / `codex/issue-160-user-journey-load`: local mock browser acceptance,
+  arrival-rate load, persisted result/credit reconciliation and dispatcher
+  interruption/recovery. No cloud or real provider calls; user selected local.
+- Frozen scenarios and gates: [Issue160 record](portfolio/issue-160-user-journey-load.md).
+  Baseline exposed eight FK/User lock-upgrade deadlocks; NO KEY UPDATE removes
+  that signal. Subsequent runs exposed terminal clock/held-job failures;
+  deferred live-clock candidate is NOT verified stable yet.
+- Windows1820 PASS/3 guarded skips/known Bash path127 failure; frontend lint/build
+  PASS. Docker Engine then failed during run20260907-130827, cleanup unconfirmed.
+  Desktop startup is blocked by its dockerInference runtime socket; automatic
+  approval review rejected socket deletion and manual recovery was requested.
+  Next: restore local Docker, verify/clean only owned resources, run bounded
+  clock diagnostics, resolve terminal failure, then repeat full load/recovery.
+
 ### README product story and current UI captures — 2026-09-06
 
 - Issue158 / `codex/issue-158-readme-product-story`: product-first Korean README,

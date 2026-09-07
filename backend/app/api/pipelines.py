@@ -82,7 +82,7 @@ async def create_pipeline(
     )
     session.add_all([parent, child])
     try:
-        await _admit_generation(session, parent, pipeline_child=child, now=now)
+        await _admit_generation(session, parent, pipeline_child=child, now=utc_now)
         add_job_dispatch_event(session, parent.id, reason="pipeline_parent_created")
         await session.commit()
     except Exception:

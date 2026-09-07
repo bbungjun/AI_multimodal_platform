@@ -1,0 +1,1118 @@
+{
+  "revision": "2b280f81fe019145ed794e584931a62d3e9d86b7",
+  "tracked_dirty": true,
+  "provider": "mock",
+  "environment": "isolated local Docker",
+  "resources": {
+    "api_processes": 1,
+    "dispatcher_processes": 1,
+    "worker_concurrency": 2,
+    "model_rate_limits_per_min": 600,
+    "poll_interval_s": 0.5,
+    "fixture_users": 64,
+    "plan": "max",
+    "docker_cpus": 20,
+    "docker_memory_bytes": 16677769216
+  },
+  "source_sha256": {
+    "scripts/verify_user_journey_load.py": "cf90136eaf237accf4c6d4600c24c65f79115fe81509066726276d92d2512303",
+    "scripts/k6/user_journeys.js": "914f42a7ea2c85b4f3fd92a2f009a502d9819a8c921b07be67fcbad2c157842e",
+    "backend/tests/user_journey_fixtures.py": "185694357b2be709a3fbdf17b7674d2a81edffdb304361aed95222e85bbf313e",
+    "frontend/scripts/user-journey-browser.mjs": "11873d4971e566072f9e11ee7d8b71db0ede85aee324f9834adfec7d329f507d",
+    "backend/app/db.py": "cfa6f07ce1c23c3961146f14753609f4e8608bb20c4068237363af823bacc854",
+    "backend/app/credit_accounting.py": "6567a7896f5954c31bcb7c55f7e6c97d91380eda4e4e72b857f4ef7f3a7802f9",
+    "backend/app/credit_lifecycle.py": "71341b9c4d92bacb88ec1c1578d65b90d83531ca0c552fd71d2255583fa1edc9"
+  },
+  "browser": {
+    "passed": true,
+    "external_requests": 0,
+    "prompt_review": true,
+    "accepted_prompt_matches": true,
+    "png_decoded": true,
+    "download_bytes": 556941,
+    "library_visible": true,
+    "credit_settled": true
+  },
+  "cleanup": 0,
+  "passed": false,
+  "error": {
+    "phase": "steady",
+    "code": "load_stranded_work"
+  },
+  "local_run": "20260907-130401",
+  "profiles": [
+    {
+      "profile": "baseline",
+      "configuration": {
+        "rate": 1,
+        "time_unit": "2s",
+        "duration": "20s",
+        "vus": 4
+      },
+      "passed": false,
+      "seconds": 29.016,
+      "k6_exit": 99,
+      "before": {
+        "jobs": {
+          "completed": 1
+        },
+        "outbox": {
+          "published": 1
+        },
+        "reservations": {
+          "settled": 2
+        },
+        "assets": {
+          "image": 1
+        },
+        "connections": 3,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 0,
+        "queue_length": 0
+      },
+      "after": {
+        "jobs": {
+          "completed": 14
+        },
+        "outbox": {
+          "published": 14
+        },
+        "reservations": {
+          "settled": 17
+        },
+        "assets": {
+          "image": 10,
+          "video": 4
+        },
+        "connections": 3,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 0,
+        "queue_length": 0
+      },
+      "audit": {
+        "jobs": {
+          "completed": 14
+        },
+        "outbox": {
+          "published": 14
+        },
+        "reservations": {
+          "settled": 17
+        },
+        "assets": {
+          "image": 10,
+          "video": 4
+        },
+        "connections": 3,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 0,
+        "ledger_consistent": true,
+        "asset_usage_consistent": true,
+        "duplicate_asset_jobs": 0,
+        "image_units": 10,
+        "video_ms": 16000
+      },
+      "thresholds": {
+        "completion_ms": {
+          "p(95)<15000": {
+            "ok": true
+          }
+        },
+        "journey_success": {
+          "rate>=0.99": {
+            "ok": false
+          }
+        },
+        "dropped_iterations": {
+          "count==0": {
+            "ok": true
+          }
+        },
+        "api_ms": {
+          "p(95)<1000": {
+            "ok": true
+          },
+          "p(99)<2000": {
+            "ok": true
+          }
+        },
+        "server_errors": {
+          "count==0": {
+            "ok": true
+          }
+        }
+      },
+      "browser_under_load": null,
+      "metrics": {
+        "journey_failures{phase:completion}": {
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "type": "counter"
+        },
+        "api_ms{endpoint:poll}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "max": 19.1352,
+            "p(95)": 19.061025,
+            "p(99)": 19.124385,
+            "avg": 11.068425000000003,
+            "min": 6.6405,
+            "med": 8.85835
+          }
+        },
+        "api_ms{endpoint:library}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "p(99)": 10.458309999999999,
+            "avg": 9.044436363636363,
+            "min": 7.7204,
+            "med": 8.9212,
+            "max": 10.5178,
+            "p(95)": 10.22035
+          }
+        },
+        "api_ms{endpoint:enhance}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "max": 28.5693,
+            "p(95)": 28.360739999999996,
+            "p(99)": 28.527587999999998,
+            "avg": 27.122275,
+            "min": 25.7155,
+            "med": 27.10215
+          }
+        },
+        "journey_failures{phase:delivery}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 1,
+            "rate": 0.048485843590671124
+          }
+        },
+        "http_req_failed": {
+          "type": "rate",
+          "contains": "default",
+          "values": {
+            "rate": 0,
+            "passes": 0,
+            "fails": 98
+          }
+        },
+        "http_reqs": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 98,
+            "rate": 4.751612671885771
+          }
+        },
+        "completion_ms": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "max": 1584,
+            "p(95)": 1581,
+            "p(99)": 1583.4,
+            "avg": 1104.3636363636363,
+            "min": 536,
+            "med": 1057
+          },
+          "thresholds": {
+            "p(95)<15000": {
+              "ok": true
+            }
+          }
+        },
+        "completed_journeys": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 10,
+            "rate": 0.4848584359067113
+          }
+        },
+        "journey_success": {
+          "type": "rate",
+          "contains": "default",
+          "values": {
+            "rate": 0.9090909090909091,
+            "passes": 10,
+            "fails": 1
+          },
+          "thresholds": {
+            "rate>=0.99": {
+              "ok": false
+            }
+          }
+        },
+        "journey_failures{phase:enhance}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "api_ms{endpoint:download}": {
+          "values": {
+            "med": 11.4398,
+            "max": 15.3775,
+            "p(95)": 15.1756,
+            "p(99)": 15.337119999999999,
+            "avg": 11.250015384615383,
+            "min": 7.1381
+          },
+          "type": "trend",
+          "contains": "time"
+        },
+        "api_ms{endpoint:usage}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "avg": 17.510727272727273,
+            "min": 12.1904,
+            "med": 14.367049999999999,
+            "max": 30.5475,
+            "p(95)": 26.66679,
+            "p(99)": 29.741141999999996
+          }
+        },
+        "journey_failures": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "rate": 0.048485843590671124,
+            "count": 1
+          }
+        },
+        "dropped_iterations": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "thresholds": {
+            "count==0": {
+              "ok": true
+            }
+          }
+        },
+        "api_ms": {
+          "values": {
+            "min": 6.6405,
+            "med": 12.7461,
+            "max": 31.0018,
+            "p(95)": 27.0561,
+            "p(99)": 30.565671999999996,
+            "avg": 14.17999896907217
+          },
+          "thresholds": {
+            "p(95)<1000": {
+              "ok": true
+            },
+            "p(99)<2000": {
+              "ok": true
+            }
+          },
+          "type": "trend",
+          "contains": "time"
+        },
+        "journey_ms": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "p(99)": 1657.2,
+            "avg": 1172.8181818181818,
+            "min": 619,
+            "med": 1124,
+            "max": 1658,
+            "p(95)": 1654
+          }
+        },
+        "journey_failures{phase:usage}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "accepted_journeys": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 11,
+            "rate": 0.5333442794973824
+          }
+        },
+        "journey_failures{phase:create}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "server_errors": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "thresholds": {
+            "count==0": {
+              "ok": true
+            }
+          }
+        },
+        "api_ms{endpoint:create}": {
+          "values": {
+            "avg": 21.593863636363636,
+            "min": 17.5052,
+            "med": 20.9028,
+            "max": 31.0018,
+            "p(95)": 29.93475,
+            "p(99)": 30.78839
+          },
+          "type": "trend",
+          "contains": "time"
+        }
+      },
+      "samples": [
+        {
+          "elapsed_s": 5.05,
+          "jobs": {
+            "completed": 5
+          },
+          "outbox": {
+            "published": 5
+          },
+          "reservations": {
+            "settled": 9
+          },
+          "assets": {
+            "image": 5
+          },
+          "connections": 3,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 0,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 2.71,
+              "memory": "104.1MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 0.74,
+              "memory": "42.59MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.14,
+              "memory": "100.9MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.41,
+              "memory": "3.719MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 74.65,
+              "memory": "196.4MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 15.78,
+          "jobs": {
+            "completed": 12,
+            "pending": 1
+          },
+          "outbox": {
+            "pending": 1,
+            "published": 12
+          },
+          "reservations": {
+            "settled": 14,
+            "held": 1
+          },
+          "assets": {
+            "image": 9,
+            "video": 3
+          },
+          "connections": 3,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 290000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 0.08,
+              "memory": "103.9MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 5.02,
+              "memory": "42.8MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.12,
+              "memory": "100.9MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.36,
+              "memory": "3.965MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 69.71,
+              "memory": "261.2MiB / 15.53GiB"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "profile": "steady",
+      "configuration": {
+        "rate": 2,
+        "time_unit": "1s",
+        "duration": "30s",
+        "vus": 20
+      },
+      "passed": false,
+      "seconds": 130.765,
+      "k6_exit": 99,
+      "before": {
+        "jobs": {
+          "completed": 14
+        },
+        "outbox": {
+          "published": 14
+        },
+        "reservations": {
+          "settled": 17
+        },
+        "assets": {
+          "image": 10,
+          "video": 4
+        },
+        "connections": 3,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 0,
+        "queue_length": 0
+      },
+      "after": {
+        "jobs": {
+          "downloading": 1,
+          "completed": 86
+        },
+        "outbox": {
+          "published": 87
+        },
+        "reservations": {
+          "held": 1,
+          "settled": 96
+        },
+        "assets": {
+          "video": 28,
+          "image": 58
+        },
+        "connections": 6,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 50000000,
+        "queue_length": 0
+      },
+      "audit": {
+        "jobs": {
+          "downloading": 1,
+          "completed": 86
+        },
+        "outbox": {
+          "published": 87
+        },
+        "reservations": {
+          "held": 1,
+          "settled": 96
+        },
+        "assets": {
+          "video": 28,
+          "image": 58
+        },
+        "connections": 6,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 50000000,
+        "ledger_consistent": true,
+        "asset_usage_consistent": true,
+        "duplicate_asset_jobs": 0,
+        "image_units": 58,
+        "video_ms": 112000
+      },
+      "thresholds": {
+        "api_ms": {
+          "p(95)<1000": {
+            "ok": true
+          },
+          "p(99)<2000": {
+            "ok": true
+          }
+        },
+        "journey_success": {
+          "rate>=0.99": {
+            "ok": false
+          }
+        },
+        "completion_ms": {
+          "p(95)<15000": {
+            "ok": true
+          }
+        },
+        "server_errors": {
+          "count==0": {
+            "ok": true
+          }
+        },
+        "dropped_iterations": {
+          "count==0": {
+            "ok": true
+          }
+        }
+      },
+      "browser_under_load": null,
+      "metrics": {
+        "api_ms{endpoint:download}": {
+          "values": {
+            "avg": 13.252312500000002,
+            "min": 6.217,
+            "med": 12.839300000000001,
+            "max": 22.0289,
+            "p(95)": 19.28251,
+            "p(99)": 21.088576000000007
+          },
+          "type": "trend",
+          "contains": "time"
+        },
+        "http_reqs": {
+          "values": {
+            "count": 648,
+            "rate": 9.652319877958211
+          },
+          "type": "counter",
+          "contains": "default"
+        },
+        "journey_failures{phase:completion}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 1,
+            "rate": 0.014895555367219463
+          }
+        },
+        "api_ms{endpoint:poll}": {
+          "values": {
+            "avg": 12.24013662420383,
+            "min": 6.1999,
+            "med": 9.5014,
+            "max": 83.6153,
+            "p(95)": 21.83095499999997,
+            "p(99)": 50.81109100000002
+          },
+          "type": "trend",
+          "contains": "time"
+        },
+        "api_ms": {
+          "thresholds": {
+            "p(95)<1000": {
+              "ok": true
+            },
+            "p(99)<2000": {
+              "ok": true
+            }
+          },
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "avg": 14.664596290571849,
+            "min": 6.1999,
+            "med": 12.605,
+            "max": 83.6153,
+            "p(95)": 29.20224999999997,
+            "p(99)": 46.99364799999993
+          }
+        },
+        "journey_success": {
+          "type": "rate",
+          "contains": "default",
+          "values": {
+            "rate": 0.9836065573770492,
+            "passes": 60,
+            "fails": 1
+          },
+          "thresholds": {
+            "rate>=0.99": {
+              "ok": false
+            }
+          }
+        },
+        "api_ms{endpoint:library}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "max": 40.1564,
+            "p(95)": 16.780935,
+            "p(99)": 30.438450999999944,
+            "avg": 11.732556666666671,
+            "min": 7.3319,
+            "med": 10.2749
+          }
+        },
+        "http_req_failed": {
+          "type": "rate",
+          "contains": "default",
+          "values": {
+            "rate": 0,
+            "passes": 0,
+            "fails": 648
+          }
+        },
+        "journey_ms": {
+          "contains": "time",
+          "values": {
+            "max": 60126,
+            "p(95)": 2162,
+            "p(99)": 25360.199999999917,
+            "avg": 2142.6393442622953,
+            "min": 584,
+            "med": 1121
+          },
+          "type": "trend"
+        },
+        "journey_failures": {
+          "contains": "default",
+          "values": {
+            "count": 1,
+            "rate": 0.014895555367219463
+          },
+          "type": "counter"
+        },
+        "completion_ms": {
+          "contains": "time",
+          "values": {
+            "med": 1054,
+            "max": 2092,
+            "p(95)": 2086,
+            "p(99)": 2089.64,
+            "avg": 1103.7333333333333,
+            "min": 534
+          },
+          "thresholds": {
+            "p(95)<15000": {
+              "ok": true
+            }
+          },
+          "type": "trend"
+        },
+        "journey_failures{phase:delivery}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "server_errors": {
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "thresholds": {
+            "count==0": {
+              "ok": true
+            }
+          },
+          "type": "counter",
+          "contains": "default"
+        },
+        "journey_failures{phase:create}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "journey_failures{phase:usage}": {
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "type": "counter",
+          "contains": "default"
+        },
+        "accepted_journeys": {
+          "values": {
+            "count": 61,
+            "rate": 0.9086288774003872
+          },
+          "type": "counter",
+          "contains": "default"
+        },
+        "journey_failures{phase:enhance}": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          }
+        },
+        "api_ms{endpoint:enhance}": {
+          "contains": "time",
+          "values": {
+            "med": 29.326,
+            "max": 63.8643,
+            "p(95)": 47.300519999999956,
+            "p(99)": 60.55154400000001,
+            "avg": 32.91922105263158,
+            "min": 25.641
+          },
+          "type": "trend"
+        },
+        "api_ms{endpoint:usage}": {
+          "contains": "time",
+          "values": {
+            "min": 11.2787,
+            "med": 15.0993,
+            "max": 34.3564,
+            "p(95)": 24.416,
+            "p(99)": 31.930459999999993,
+            "avg": 16.579347107438014
+          },
+          "type": "trend"
+        },
+        "dropped_iterations": {
+          "type": "counter",
+          "contains": "default",
+          "values": {
+            "count": 0,
+            "rate": 0
+          },
+          "thresholds": {
+            "count==0": {
+              "ok": true
+            }
+          }
+        },
+        "completed_journeys": {
+          "values": {
+            "count": 60,
+            "rate": 0.8937333220331678
+          },
+          "type": "counter",
+          "contains": "default"
+        },
+        "api_ms{endpoint:create}": {
+          "type": "trend",
+          "contains": "time",
+          "values": {
+            "avg": 22.21155409836065,
+            "min": 15.9757,
+            "med": 19.2169,
+            "max": 57.4421,
+            "p(95)": 33.6032,
+            "p(99)": 51.72949999999999
+          }
+        }
+      },
+      "samples": [
+        {
+          "elapsed_s": 5.02,
+          "jobs": {
+            "completed": 30,
+            "downloading": 1,
+            "pending": 1
+          },
+          "outbox": {
+            "pending": 1,
+            "published": 31
+          },
+          "reservations": {
+            "settled": 37,
+            "held": 2
+          },
+          "assets": {
+            "image": 22,
+            "video": 8
+          },
+          "connections": 5,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 100000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 14.07,
+              "memory": "105.4MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 15.13,
+              "memory": "55.05MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.32,
+              "memory": "100.9MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 1.68,
+              "memory": "3.723MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 11.83,
+              "memory": "221.4MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 16.12,
+          "jobs": {
+            "completed": 56,
+            "pending": 1,
+            "downloading": 1
+          },
+          "outbox": {
+            "pending": 1,
+            "published": 57
+          },
+          "reservations": {
+            "settled": 65,
+            "held": 2
+          },
+          "assets": {
+            "image": 39,
+            "video": 17
+          },
+          "connections": 6,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 290000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 14.82,
+              "memory": "107.6MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 9.33,
+              "memory": "67.47MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.35,
+              "memory": "100.9MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.36,
+              "memory": "3.734MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 42.96,
+              "memory": "244MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 27.27,
+          "jobs": {
+            "completed": 83,
+            "pending": 2,
+            "downloading": 1
+          },
+          "outbox": {
+            "pending": 2,
+            "published": 84
+          },
+          "reservations": {
+            "settled": 92,
+            "held": 3
+          },
+          "assets": {
+            "image": 57,
+            "video": 26
+          },
+          "connections": 6,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 630000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 1.1,
+              "memory": "107.3MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 0.27,
+              "memory": "62.58MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.13,
+              "memory": "101MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.33,
+              "memory": "3.723MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 0.02,
+              "memory": "232.9MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 38.42,
+          "jobs": {
+            "downloading": 1,
+            "completed": 86
+          },
+          "outbox": {
+            "published": 87
+          },
+          "reservations": {
+            "held": 1,
+            "settled": 96
+          },
+          "assets": {
+            "video": 28,
+            "image": 58
+          },
+          "connections": 6,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 50000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 1.13,
+              "memory": "107.1MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 0.24,
+              "memory": "62.51MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.14,
+              "memory": "101MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.3,
+              "memory": "3.719MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 0.02,
+              "memory": "232.6MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 49.58,
+          "jobs": {
+            "downloading": 1,
+            "completed": 86
+          },
+          "outbox": {
+            "published": 87
+          },
+          "reservations": {
+            "held": 1,
+            "settled": 96
+          },
+          "assets": {
+            "video": 28,
+            "image": 58
+          },
+          "connections": 6,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 50000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 1.11,
+              "memory": "107.1MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 3.51,
+              "memory": "62.62MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.15,
+              "memory": "101MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.3,
+              "memory": "3.965MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 0.03,
+              "memory": "232.6MiB / 15.53GiB"
+            }
+          }
+        },
+        {
+          "elapsed_s": 60.64,
+          "jobs": {
+            "downloading": 1,
+            "completed": 86
+          },
+          "outbox": {
+            "published": 87
+          },
+          "reservations": {
+            "held": 1,
+            "settled": 96
+          },
+          "assets": {
+            "video": 28,
+            "image": 58
+          },
+          "connections": 6,
+          "max_connections": 100,
+          "deadlocks": 0,
+          "held_microcredits": 50000000,
+          "queue_length": 0,
+          "resources": {
+            "backend": {
+              "cpu_percent": 1.0,
+              "memory": "107.4MiB / 15.53GiB"
+            },
+            "db": {
+              "cpu_percent": 0.21,
+              "memory": "62.78MiB / 15.53GiB"
+            },
+            "dispatcher": {
+              "cpu_percent": 0.15,
+              "memory": "101MiB / 15.53GiB"
+            },
+            "redis": {
+              "cpu_percent": 0.27,
+              "memory": "3.723MiB / 15.53GiB"
+            },
+            "worker": {
+              "cpu_percent": 0.0,
+              "memory": "232.6MiB / 15.53GiB"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

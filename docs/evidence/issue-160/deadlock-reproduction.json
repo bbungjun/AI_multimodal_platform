@@ -1,0 +1,116 @@
+{
+  "revision": "2b280f81fe019145ed794e584931a62d3e9d86b7",
+  "tracked_dirty": true,
+  "provider": "mock",
+  "environment": "isolated local Docker",
+  "resources": {
+    "api_processes": 1,
+    "dispatcher_processes": 1,
+    "worker_concurrency": 2,
+    "model_rate_limits_per_min": 600,
+    "poll_interval_s": 0.5,
+    "fixture_users": 64,
+    "plan": "max",
+    "docker_cpus": 20,
+    "docker_memory_bytes": 16677769216
+  },
+  "source_sha256": {
+    "scripts/verify_user_journey_load.py": "c48421d818439e637158de6d8b9c5cead69743a40e720afd10ffb5eba7f706c8",
+    "scripts/k6/user_journeys.js": "914f42a7ea2c85b4f3fd92a2f009a502d9819a8c921b07be67fcbad2c157842e",
+    "backend/tests/user_journey_fixtures.py": "185694357b2be709a3fbdf17b7674d2a81edffdb304361aed95222e85bbf313e",
+    "frontend/scripts/user-journey-browser.mjs": "11873d4971e566072f9e11ee7d8b71db0ede85aee324f9834adfec7d329f507d",
+    "backend/app/db.py": "cfa6f07ce1c23c3961146f14753609f4e8608bb20c4068237363af823bacc854",
+    "backend/app/credit_accounting.py": "6a5e417d048583211567a708e6e63a951c30dcab33f8cef488ab108d32d1cb89",
+    "backend/app/credit_lifecycle.py": "2ee677a86d2f13c5e63815e1dcb68e14c2c85844ac1da4eb28b82f8e4df04266"
+  },
+  "cleanup": 0,
+  "passed": false,
+  "local_run": "20260907-125609",
+  "profiles": [
+    {
+      "profile": "recovery",
+      "passed": false,
+      "accepted": 20,
+      "same_user_accepted": 2,
+      "same_user_429": 0,
+      "same_user_codes": {
+        "accepted": 2,
+        "credit_busy": 8
+      },
+      "clock_regressions": 0,
+      "recovery_seconds": 12.219,
+      "before": {
+        "jobs": {},
+        "outbox": {},
+        "reservations": {},
+        "assets": {},
+        "connections": 3,
+        "max_connections": 100,
+        "deadlocks": 0,
+        "held_microcredits": 0,
+        "queue_length": 0
+      },
+      "during": {
+        "jobs": {
+          "pending": 22
+        },
+        "outbox": {
+          "pending": 22
+        },
+        "reservations": {
+          "held": 22
+        },
+        "assets": {},
+        "connections": 6,
+        "max_connections": 100,
+        "deadlocks": 8,
+        "held_microcredits": 1100000000,
+        "queue_length": 0
+      },
+      "after": {
+        "jobs": {
+          "completed": 22
+        },
+        "outbox": {
+          "published": 22
+        },
+        "reservations": {
+          "settled": 22
+        },
+        "assets": {
+          "image": 22
+        },
+        "connections": 7,
+        "max_connections": 100,
+        "deadlocks": 8,
+        "held_microcredits": 0,
+        "queue_length": 0
+      },
+      "audit": {
+        "jobs": {
+          "completed": 22
+        },
+        "outbox": {
+          "published": 22
+        },
+        "reservations": {
+          "settled": 22
+        },
+        "assets": {
+          "image": 22
+        },
+        "connections": 7,
+        "max_connections": 100,
+        "deadlocks": 8,
+        "held_microcredits": 0,
+        "ledger_consistent": true,
+        "asset_usage_consistent": true,
+        "duplicate_asset_jobs": 0,
+        "image_units": 22,
+        "video_ms": 0
+      },
+      "metrics": {},
+      "samples": []
+    }
+  ]
+}

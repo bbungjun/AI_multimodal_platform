@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import logging
 import re
 from uuid import UUID, uuid4
 
@@ -188,12 +189,18 @@ async def _transaction(session):
 
 
 def _locked(model, *criteria):
-    return select(model).where(*criteria).with_for_update().execution_options(populate_existing=True)
+    # Jobs/Enhancements acquire KEY SHARE on their User FK before accounting.
+    # NO KEY UPDATE still serializes credit writers and blocks suspension, but
+    # avoids upgrading those compatible FK locks into a deadlock with peers.
+    return select(model).where(*criteria).with_for_update(
+        key_share=model is User).execution_options(populate_existing=True)
 
 
 def _lifecycle_error(error: CreditLifecycleError):
     code = error.code
     if code == "credit_clock_regressed":
+        # A bounded diagnostic: never include user, request, SQL or credit values.
+        logging.getLogger(__name__).warning("Credit lifecycle rejected a regressed operation clock.")
         code = "credit_account_inconsistent"
     if code not in {
         "credit_transaction_required", "credit_user_missing", "credit_input_invalid",
@@ -240,17 +247,19 @@ def _reservation_receipt(reservation, *, replayed):
 
 
 async def reserve(session, *, request, now) -> ReservationReceipt:
+    """A live clock is sampled after the User lock; explicit instants stay strict."""
     if not isinstance(request, ReservationRequest):
         _fail()
     normalized = ReservationRequest(_uuid(request.user_id), _key(request.operation_key), _estimates(request.estimates))
-    instant = _instant(now)
+    instant = now if callable(now) else _instant(now)
     async with _transaction(session):
         return await _reserve(session, normalized, instant)
 
 
 async def settle(session, *, user_id, reservation_id, usage, delivery,
                  operation_key, now) -> TerminalReceipt:
-    uid, rid, key, instant = _uuid(user_id), _uuid(reservation_id), _key(operation_key), _instant(now)
+    uid, rid, key = _uuid(user_id), _uuid(reservation_id), _key(operation_key)
+    instant = now if callable(now) else _instant(now)
     lines = _usage(usage, allow_empty=False)
     if type(delivery) is not str or delivery not in _DELIVERIES:
         _fail()
@@ -260,7 +269,8 @@ async def settle(session, *, user_id, reservation_id, usage, delivery,
 
 async def release(session, *, user_id, reservation_id, usage, reason_code,
                   operation_key, now) -> TerminalReceipt:
-    uid, rid, key, instant = _uuid(user_id), _uuid(reservation_id), _key(operation_key), _instant(now)
+    uid, rid, key = _uuid(user_id), _uuid(reservation_id), _key(operation_key)
+    instant = now if callable(now) else _instant(now)
     lines = _usage(usage, allow_empty=True)
     if type(reason_code) is not str or reason_code not in _REASONS:
         _fail()
@@ -272,6 +282,7 @@ async def _reserve(session, request, now):
     user = await session.scalar(_locked(User, User.id == request.user_id))
     if user is None:
         _fail("credit_user_missing")
+    now = _instant(now() if callable(now) else now)
 
     existing = await session.scalar(_locked(
         CreditReservation, CreditReservation.user_id == request.user_id,
@@ -377,9 +388,14 @@ async def _reserve(session, request, now):
 
 
 async def _terminal(session, user_id, reservation_id, lines, delivery, reason, key, now, charge):
+    live_clock = callable(now)
     user = await session.scalar(_locked(User, User.id == user_id))
     if user is None:
         _fail("credit_user_missing")
+    # A usage read or another command can advance the account while this
+    # operation waits. Capture live time at serialization, not at HTTP arrival
+    # or before the delivery queries; never clamp explicit historical inputs.
+    now = _instant(now() if callable(now) else now)
     account = await session.scalar(_locked(CreditAccount, CreditAccount.user_id == user_id))
     cycle = await session.scalar(_locked(CreditCycle, CreditCycle.user_id == user_id)
                                  .order_by(CreditCycle.cycle_index.desc()).limit(1))
@@ -412,6 +428,9 @@ async def _terminal(session, user_id, reservation_id, lines, delivery, reason, k
         return _terminal_receipt(replay, records, replayed=True)
 
     if now < account.updated_at:
+        logging.getLogger(__name__).warning(
+            "Credit terminal rejected a regressed operation clock source=%s lag_us=%d",
+            "live" if live_clock else "fixed", int((account.updated_at - now).total_seconds() * 1_000_000))
         _fail("credit_account_inconsistent")
     reservation = await session.scalar(_locked(
         CreditReservation, CreditReservation.id == reservation_id,
