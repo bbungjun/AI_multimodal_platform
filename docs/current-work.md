@@ -92,6 +92,10 @@ paste credential contents.
   approval review rejected socket deletion and manual recovery was requested.
   Next: restore local Docker, verify/clean only owned resources, run bounded
   clock diagnostics, resolve terminal failure, then repeat full load/recovery.
+- Candidate/evidence commit `8ca26ae` pushed to
+  [draft PR161](https://github.com/bbungjun/AI_multimodal_platform/pull/161).
+  Not ready to merge; Issue160 remains open. Five sanitized failed-run artifacts
+  are committed under `docs/evidence/issue-160/`; raw logs and Sessions are not.
 
 ### README product story and current UI captures — 2026-09-06
 
