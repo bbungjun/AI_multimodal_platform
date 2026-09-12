@@ -77,6 +77,22 @@ paste credential contents.
 
 ## Active Work
 
+### Test-only mock Google OAuth browser journey — 2026-09-13
+
+- Issue162 / `codex/issue-162-mock-oauth-browser` is Mock Verified at core
+  `c3b1b6b`; draft delivery remains pending. Product routes, default Compose and
+  migrations are unchanged.
+- The owned verifier replaces only the Google adapter and proves the real
+  start/callback, Redis flow, PostgreSQL User/Session, cookie, `/me`, logout,
+  replay refusal and re-login paths. Two fresh cycles each passed six groups and
+  ten checks with external requests0 and exact cleanup0.
+- Focused backend auth/harness regression70 PASS/2 guarded skips, Node driver2,
+  frontend lint/build and env-example Compose PASS. Real Google, TLS/Secure
+  cookies and deployment are not proven.
+- [Issue162 record](portfolio/issue-162-mock-oauth-browser.md). Next separate
+  slices: sanitized structured request events, E2E trace bundles, then
+  AI-proposed candidate tests with deterministic review gates.
+
 ### README product story and current UI captures — 2026-09-06
 
 - Issue158 / `codex/issue-158-readme-product-story`: product-first Korean README,

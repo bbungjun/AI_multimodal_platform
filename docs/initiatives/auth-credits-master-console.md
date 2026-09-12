@@ -258,6 +258,7 @@ document or inherit the full design interview.
 | G9B | Personal Plan and Usage frontend | UI Mock Verified — Merged | [PR135](https://github.com/bbungjun/AI_multimodal_platform/pull/135) squash `1e6e523`, [Issue134](https://github.com/bbungjun/AI_multimodal_platform/issues/134), [accepted spec](g9b-personal-usage-ui-spec.md), [record](../portfolio/issue-134-personal-usage-ui.md) | Exact11 frontend paths/backend0/migration0; Module60/Chromium47, four viewports and final required3 CI PASS |
 | G10 | Master promotion/suspension, console, audit controls, and deterministic seed | Mock Verified — protected delivery PR151 | [Parent137](https://github.com/bbungjun/AI_multimodal_platform/issues/137), [closeout](../portfolio/issue-137-g10-closeout.md) | P1/P2/A/B/C/D merged PR139/141/143/145/147/149; E [PR151](https://github.com/bbungjun/AI_multimodal_platform/pull/151) seed2 each286checks/1race, read112/admin85, cleanup0. Final CI/merge evidence on linked PR; no live claims |
 | G11 | Integrated E2E, race, migration, security, and portfolio evidence | G11A/G11B Mock Verified — Merged; live gates Planned | Parent #152; G11A #153; [G11B #155/PR156](https://github.com/bbungjun/AI_multimodal_platform/pull/156) | G11B final0994c5b/exact8 test-only/migration0/product0: real Chromium/Vite proxy/mock backend2x109, external0/cleanup0; emergency2/G11A2/auth/suspension PASS. Linux1801/frontend70+61 and both Scan/SBOM SUCCESS; protected squash eda7c68. Not whole-G11 completion; see issue155 portfolio |
+| G11C | Test-only mock Google OAuth browser journey | Mock Verified — PR pending | [Issue #162](https://github.com/bbungjun/AI_multimodal_platform/issues/162), [record](../portfolio/issue-162-mock-oauth-browser.md), code `c3b1b6b` | Product0/migration0; isolated2 each6 groups/10 checks, external0/cleanup0. Real start/callback/Redis/PostgreSQL Session/cookie/logout with only the Google adapter replaced. Structured request logging and AI case generation remain later Issues; live Google/TLS remains unverified |
 
 Per-Goal soft limits:
 
@@ -306,6 +307,14 @@ At the end of a Goal:
    dated entry below. Do not silently let code and this document diverge.
 
 ## Decision Change Log
+
+2026-09-13 user approved temporarily replacing Google OAuth for continued E2E
+automation. Issue162 confines the replacement to a separately invoked test app
+inside an owned local verifier: product routes/default Compose and the rule
+against a public mock-login endpoint remain unchanged. The browser still crosses
+the real start/callback/Session interfaces, and zero external requests is a hard
+gate. Structured API events and AI-generated candidate tests remain separate
+delivery slices.
 
 2026-09-05 G11B mock-first scope approved by user: Astra design, Sol/medium
 implementation. Issue155 adds test-only real browser/loopback HTTP proxy and
