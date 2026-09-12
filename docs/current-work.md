@@ -80,8 +80,8 @@ paste credential contents.
 ### Test-only mock Google OAuth browser journey — 2026-09-13
 
 - Issue162 / `codex/issue-162-mock-oauth-browser` is Mock Verified at core
-  `c3b1b6b`; draft delivery remains pending. Product routes, default Compose and
-  migrations are unchanged.
+  `c3b1b6b`; [draft PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163)
+  targets `main`. Product routes, default Compose and migrations are unchanged.
 - The owned verifier replaces only the Google adapter and proves the real
   start/callback, Redis flow, PostgreSQL User/Session, cookie, `/me`, logout,
   replay refusal and re-login paths. Two fresh cycles each passed six groups and
