@@ -89,6 +89,11 @@ paste credential contents.
 - Focused backend auth/harness regression70 PASS/2 guarded skips, Node driver2,
   frontend lint/build and env-example Compose PASS. Real Google, TLS/Secure
   cookies and deployment are not proven.
+- Final documented head `d2f7422` repeated the isolated proof: two cycles,
+  six groups,20 checks, external0 and cleanup0. The full Windows gate reached
+  1804 PASS/3 guarded skips and reproduced only the established Bash path127
+  failure in `test_supply_chain_release.py`; explicitly deselecting that one
+  host-path check produced1804 PASS/3 skips/1 deselected.
 - [Issue162 record](portfolio/issue-162-mock-oauth-browser.md). Next separate
   slices: sanitized structured request events, E2E trace bundles, then
   AI-proposed candidate tests with deterministic review gates.

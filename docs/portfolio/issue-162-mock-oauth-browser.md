@@ -97,6 +97,14 @@ authenticated profile, logout, consumed-flow replay refusal and re-login. Each
 reported six groups, ten checks, zero external requests and zero owned resources
 after cleanup.
 
+Final documented head `d2f7422` repeated the same two-cycle receipt with
+20 aggregate checks, external requests zero and cleanup zero. The full Windows
+quality gate ran1808 backend tests:1804 passed, three guarded tests skipped and
+only the already-documented Bash/Windows absolute-path syntax check failed with
+exit127. Rerunning the complete suite with that exact one test deselected passed
+1804 with three skips. This host limitation is not counted as an Issue162
+product or harness regression.
+
 ## Result and impact
 
 Local E2E automation can now begin from the real login button and reach an
