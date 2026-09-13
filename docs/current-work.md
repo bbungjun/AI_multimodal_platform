@@ -77,6 +77,21 @@ paste credential contents.
 
 ## Active Work
 
+### Backend runtime vulnerability refresh — 2026-09-13
+
+- Issue166 / `codex/issue-166-backend-runtime-security`: protected delivery for
+  PR163/PR165 was blocked by12 fixable Debian findings in the rolling
+  `python:3.11-slim` runtime (High9/Critical3). Functional CI was already green.
+- The final runtime stage now runs the Debian security/package upgrade before
+  removing Python packaging tools and apt lists. A fresh `--pull` build upgraded
+  the12 affected OS packages; local Trivy0.70 reported0 High/Critical findings.
+- Focused Dockerfile contract test PASS; Windows reproduces only the existing
+  unrelated Bash path127 failure when the complete supply-chain test file runs.
+  Compose/full CI and draft delivery remain pending.
+- [Issue166 record](portfolio/issue-166-backend-runtime-security.md). Rollback is
+  the Dockerfile/test change, but it would restore a scan-blocked image until the
+  upstream base itself contains the fixes.
+
 ### README product story and current UI captures — 2026-09-06
 
 - Issue158 / `codex/issue-158-readme-product-story`: product-first Korean README,
