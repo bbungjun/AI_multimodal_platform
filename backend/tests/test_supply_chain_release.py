@@ -67,6 +67,9 @@ def test_scanned_runtime_images_exclude_development_dependencies():
     assert "FROM python:3.11-slim AS build" in backend
     assert "FROM python:3.11-slim AS runtime" in backend
     assert "--prefix=/install ." in backend
+    assert "apt-get update" in backend
+    assert "apt-get upgrade -y" in backend
+    assert "rm -rf /var/lib/apt/lists/*" in backend
     assert "pip uninstall -y pip setuptools wheel jaraco.context" in backend
     assert ".[dev]" not in backend
     assert "COPY tests" not in backend
