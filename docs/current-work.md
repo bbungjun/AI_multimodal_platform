@@ -77,20 +77,37 @@ paste credential contents.
 
 ## Active Work
 
-### Backend runtime vulnerability refresh — 2026-09-13
+### Backend runtime vulnerability refresh — merged 2026-09-13
 
-- Issue166 / `codex/issue-166-backend-runtime-security`: protected delivery for
-  PR163/PR165 was blocked by12 fixable Debian findings in the rolling
-  `python:3.11-slim` runtime (High9/Critical3). Functional CI was already green.
-- The final runtime stage now runs the Debian security/package upgrade before
-  removing Python packaging tools and apt lists. A fresh `--pull` build upgraded
-  the12 affected OS packages; local Trivy0.70 reported0 High/Critical findings.
-- Focused Dockerfile contract test PASS; Windows reproduces only the existing
-  unrelated Bash path127 failure when the complete supply-chain test file runs.
-  Compose/full CI and draft delivery remain pending.
-- [Issue166 record](portfolio/issue-166-backend-runtime-security.md). Rollback is
-  the Dockerfile/test change, but it would restore a scan-blocked image until the
-  upstream base itself contains the fixes.
+- Issue166 / `codex/issue-166-backend-runtime-security` fixed the protected
+  delivery blocker:12 fixable Debian findings in the rolling
+  `python:3.11-slim` runtime (High9/Critical3).
+- The final runtime stage upgrades installed Debian packages before removing
+  packaging tools and apt lists. Local and hosted Trivy reported0
+  High/Critical findings; verify and both Scan/SBOM checks passed.
+- [PR167](https://github.com/bbungjun/AI_multimodal_platform/pull/167)
+  squash-merged as `5342166`. [Issue166 record](portfolio/issue-166-backend-runtime-security.md).
+
+### Test-only mock Google OAuth browser journey — 2026-09-13
+
+- Issue162 / `codex/issue-162-mock-oauth-browser` is Mock Verified at core
+  `c3b1b6b`; [draft PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163)
+  targets `main`. Product routes, default Compose and migrations are unchanged.
+- The owned verifier replaces only the Google adapter and proves the real
+  start/callback, Redis flow, PostgreSQL User/Session, cookie, `/me`, logout,
+  replay refusal and re-login paths. Two fresh cycles each passed six groups and
+  ten checks with external requests0 and exact cleanup0.
+- Focused backend auth/harness regression70 PASS/2 guarded skips, Node driver2,
+  frontend lint/build and env-example Compose PASS. Real Google, TLS/Secure
+  cookies and deployment are not proven.
+- Final documented head `d2f7422` repeated the isolated proof: two cycles,
+  six groups,20 checks, external0 and cleanup0. The full Windows gate reached
+  1804 PASS/3 guarded skips and reproduced only the established Bash path127
+  failure in `test_supply_chain_release.py`; explicitly deselecting that one
+  host-path check produced1804 PASS/3 skips/1 deselected.
+- [Issue162 record](portfolio/issue-162-mock-oauth-browser.md). Next separate
+  slices: sanitized structured request events, E2E trace bundles, then
+  AI-proposed candidate tests with deterministic review gates.
 
 ### README product story and current UI captures — 2026-09-06
 

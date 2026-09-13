@@ -890,3 +890,43 @@ node --test tests/browser-acceptance-driver.test.mjs
 
 See [G11B evidence](portfolio/issue-155-mock-browser-acceptance.md) for the
 failure trail, final counts and remaining live gates.
+
+# G11C test-only mock Google OAuth browser journey
+
+Run `python scripts/verify_mock_oauth_browser.py` from the repository root with
+local Docker available. The command accepts no arguments and runs exactly two
+fresh owned cycles. Each cycle uses `AI_PROVIDER=mock`, `APP_ENV=test`, an
+ephemeral loopback backend port, the fixed loopback Vite port `18156`, a new
+PostgreSQL/Redis project, and a fresh headless Chromium.
+
+The default product app and Compose configuration remain unchanged. Only the
+verifier's backend command imports `backend/tests/mock_oauth_app.py`, which
+overrides the Google adapter while retaining the real `/api/auth/google/start`,
+`/api/auth/google/callback`, Redis flow, PostgreSQL User/Session, cookie,
+`/api/auth/me`, and logout paths. The test app refuses non-test/non-mock mode,
+secure-cookie mode, a non-fixed frontend origin, enabled Google credentials, or
+disabled login.
+
+Each cycle verifies login start, callback Session creation, authenticated
+profile, logout, consumed-flow replay refusal, and a clean re-login. Accept only
+the final receipt with `cycles=2`, `groups=6`, at least `checks=20`,
+`external_requests=0`, and `cleanup=0`. Output is count-only; browser errors,
+OAuth query values, cookies, identities, response bodies, and raw logs are not
+emitted.
+
+Focused checks:
+
+```powershell
+cd backend
+$env:AI_PROVIDER = "mock"
+python -m pytest tests/test_verify_mock_oauth_browser.py tests/test_auth_api.py tests/test_auth_service.py tests/test_google_identity_adapter.py -q
+
+cd ../frontend
+node --test tests/mock-oauth-browser-driver.test.mjs
+npm run lint
+npm run build
+```
+
+This is deterministic local OAuth-flow evidence, not real Google, TLS,
+Secure-cookie, deployed proxy, provider, or cloud verification. See
+[Issue162 evidence](portfolio/issue-162-mock-oauth-browser.md).

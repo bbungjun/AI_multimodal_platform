@@ -1,6 +1,7 @@
 # Issue166 — Backend runtime vulnerability refresh
 
-Status: Implemented and locally scanned; protected delivery pending.
+Status: Mock Verified and merged through
+[PR167](https://github.com/bbungjun/AI_multimodal_platform/pull/167) as `5342166`.
 
 ## Background and problem
 
@@ -63,8 +64,8 @@ as a successful full file run.
 ## Result and remaining risk
 
 The locally rebuilt final backend image has zero High/Critical findings under
-the same Trivy severity and fixability policy used by CI. Repository protection
-still requires hosted Scan/SBOM and verify results at the pushed PR head. A
+the same Trivy severity and fixability policy used by CI. Hosted verify and both
+Scan/SBOM jobs also passed at the PR head before the protected squash merge. A
 future rolling base refresh can introduce new fixable findings; the explicit
 runtime upgrade makes the build consume the current Debian security repository
 state, so image reproducibility still depends on build time and should later be
