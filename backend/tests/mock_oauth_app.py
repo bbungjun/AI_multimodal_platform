@@ -2,7 +2,8 @@
 
 The default product entry point never imports this module.  It deliberately
 keeps the real auth routes, Redis flow store, PostgreSQL Session writes, and
-cookie handling while replacing only the outbound Google adapter.
+cookie handling while replacing only the outbound Google adapter. Browser QA
+may reuse this entry point, but its import guards remain the security boundary.
 """
 from __future__ import annotations
 
