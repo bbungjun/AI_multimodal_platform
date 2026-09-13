@@ -4,6 +4,10 @@
 화면의 서로 다른 버튼 동작을 실행했고, 아래 결함과 제한을 확인했다. 제품 수정은
 이번 작업에 포함하지 않았다.
 
+전달: [Issue164](https://github.com/bbungjun/AI_multimodal_platform/issues/164),
+[Draft PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165),
+QA 기록 commit `7bf0f29`. PR163의 mock OAuth 코드에 의존하며 병합은 하지 않았다.
+
 ## 실행 증거
 
 - 대상 코드: `28f5c58241f5d56acaf02549d78da456f355879b` (PR163 기반).
