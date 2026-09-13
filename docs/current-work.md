@@ -77,6 +77,28 @@ paste credential contents.
 
 ## Active Work
 
+### AI button QA and E2E coverage audit — 2026-09-13
+
+- Issue164 / `codex/issue-164-ai-ui-qa`: AI-operated browser exploration of the
+  existing mock OAuth preview at code `28f5c58` (PR163 dependency). Product fixes
+  are not part of this report. [PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165)
+  delivers audit commit `7bf0f29`. [Korean QA report](portfolio/issue-164-ai-ui-qa.md),
+  [17 proposed regression cases](qa/issue-164-regression-cases.md), and sanitized
+  [45 action observations](evidence/issue-164/ai-qa-session.json) /
+  [191 HTTP events](evidence/issue-164/http-events.json) record actual evidence.
+- Main failure: Free image2/video6s both201/completed despite policy1/4.
+  Other findings: unconnected menus/search, raw plan/quota/ops errors,
+  unplayable mock-video UX, absent download action and static record badge.
+  Login return intent is a separate UX candidate. No5xx observed.
+- Fresh existing Chromium suite61 PASS (fixture HTTP); related backend179 PASS.
+  These tests do not cover the reported request-size and UI gaps. New regression
+  cases are specifications, not implemented automation.
+- Ordinary-user scope only. Pipeline success blocked by remaining mock credits;
+  Master UI not entered. One newly created failed QA Job was deleted after a
+  click timeout with no exposed dialog handle; DELETE204 and list reduction
+  verified, confirmation/cancel UX not verified. Ten QA Jobs remain for review,
+  no active Jobs or held reservations. Further deletion stopped and disclosed.
+
 ### Backend runtime vulnerability refresh — merged 2026-09-13
 
 - Issue166 / `codex/issue-166-backend-runtime-security` fixed the protected
@@ -90,9 +112,10 @@ paste credential contents.
 
 ### Test-only mock Google OAuth browser journey — 2026-09-13
 
-- Issue162 / `codex/issue-162-mock-oauth-browser` is Mock Verified at core
-  `c3b1b6b`; [draft PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163)
-  targets `main`. Product routes, default Compose and migrations are unchanged.
+- Issue162 / `codex/issue-162-mock-oauth-browser` is Mock Verified and
+  [PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163)
+  squash-merged as `ba24316`. Product routes, default Compose and migrations
+  are unchanged.
 - The owned verifier replaces only the Google adapter and proves the real
   start/callback, Redis flow, PostgreSQL User/Session, cookie, `/me`, logout,
   replay refusal and re-login paths. Two fresh cycles each passed six groups and

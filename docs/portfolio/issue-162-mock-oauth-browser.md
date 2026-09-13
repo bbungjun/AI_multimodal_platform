@@ -1,7 +1,8 @@
 # Issue162 — Test-only mock Google OAuth browser journey
 
-Status: Mock Verified at core `c3b1b6b`; delivery tracked by
-[draft PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163).
+Status: Mock Verified at core `c3b1b6b` and protected delivery completed through
+[PR163](https://github.com/bbungjun/AI_multimodal_platform/pull/163), squash
+`ba24316`.
 
 ## Background and problem
 
