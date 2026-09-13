@@ -5,7 +5,7 @@
 이번 작업에 포함하지 않았다.
 
 전달: [Issue164](https://github.com/bbungjun/AI_multimodal_platform/issues/164),
-[Draft PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165),
+[PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165),
 QA 기록 commit `7bf0f29`. PR163의 mock OAuth 코드에 의존하며 병합은 하지 않았다.
 
 ## 실행 증거

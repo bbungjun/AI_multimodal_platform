@@ -81,7 +81,7 @@ paste credential contents.
 
 - Issue164 / `codex/issue-164-ai-ui-qa`: AI-operated browser exploration of the
   existing mock OAuth preview at code `28f5c58` (PR163 dependency). Product fixes
-  are not part of this report. [Draft PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165)
+  are not part of this report. [PR165](https://github.com/bbungjun/AI_multimodal_platform/pull/165)
   delivers audit commit `7bf0f29`. [Korean QA report](portfolio/issue-164-ai-ui-qa.md),
   [17 proposed regression cases](qa/issue-164-regression-cases.md), and sanitized
   [45 action observations](evidence/issue-164/ai-qa-session.json) /
