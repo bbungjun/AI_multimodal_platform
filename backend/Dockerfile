@@ -24,7 +24,10 @@ WORKDIR /app
 COPY --from=build /install /usr/local
 COPY alembic.ini ./alembic.ini
 COPY migrations ./migrations
-RUN python -m pip uninstall -y pip setuptools wheel jaraco.context
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip setuptools wheel jaraco.context
 
 EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
