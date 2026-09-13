@@ -1,0 +1,1148 @@
+[
+  {
+    "time": "2026-09-13T04:43:32.683411766Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:43:35.020298145Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:43:39.861722558Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:43:44.712585390Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:43:50.614473682Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:43:55.460074819Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:00.301460489Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:05.147192447Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:09.981564602Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:14.826848885Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:20.754841172Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:21.268762511Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:44:21.306339917Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:23.275037636Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:23.322754542Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:25.595701775Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:30.435538212Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:30.542632527Z",
+    "method": "GET",
+    "route": "/api/assets/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:35.278359754Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:37.456800233Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:44:37.480329105Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:39.443299724Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:39.485829467Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:44:40.109510439Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:44.942275709Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:49.781111355Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:44:55.712448997Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:00.561456222Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:01.267667704Z",
+    "method": "POST",
+    "route": "/api/prompts/enhance",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:45:04.993294873Z",
+    "method": "POST",
+    "route": "/api/prompts/enhance",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:45:05.398956178Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:08.603998531Z",
+    "method": "POST",
+    "route": "/api/prompts/enhance",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:45:10.229413657Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:15.060290338Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:19.903158922Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:25.845244096Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:29.368015392Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 403
+  },
+  {
+    "time": "2026-09-13T04:45:30.693713137Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:35.541215232Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:39.970737266Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:45:39.992948967Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:40.377284549Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:41.982804354Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:42.007992761Z",
+    "method": "GET",
+    "route": "/files/{id}/output-2.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:42.012812230Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:45.222628348Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:50.059394623Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:45:55.975619155Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:00.814573668Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:05.645005538Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:09.909122330Z",
+    "method": "GET",
+    "route": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:09.916657266Z",
+    "method": "GET",
+    "route": "/api/assets/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:10.476329365Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:13.782578454Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:15.304673345Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:20.144148669Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:26.092127332Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:28.586373972Z",
+    "method": "GET",
+    "route": "/api/assets/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:30.932670566Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:35.772781495Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:40.431930634Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:46:40.452700272Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:40.610607304Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:42.422169835Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:42.447225598Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:46:45.446875296Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:50.285002027Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:50.866325428Z",
+    "method": "GET",
+    "route": "/api/usage/me",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:56.211779823Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:58.491448395Z",
+    "method": "GET",
+    "route": "/api/usage/me",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:46:58.724783452Z",
+    "method": "GET",
+    "route": "/api/ops/health",
+    "status": 403
+  },
+  {
+    "time": "2026-09-13T04:47:01.049453300Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:03.582252584Z",
+    "method": "GET",
+    "route": "/api/ops/health",
+    "status": 403
+  },
+  {
+    "time": "2026-09-13T04:47:05.886622177Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:08.433350669Z",
+    "method": "GET",
+    "route": "/api/ops/health",
+    "status": 403
+  },
+  {
+    "time": "2026-09-13T04:47:10.727778498Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:15.560558624Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:20.404097885Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:22.918319392Z",
+    "method": "POST",
+    "route": "/api/pipelines",
+    "status": 402
+  },
+  {
+    "time": "2026-09-13T04:47:25.238948393Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:31.169861647Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:31.730588851Z",
+    "method": "POST",
+    "route": "/api/generations",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:47:31.752359553Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:33.733416510Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:36.016291989Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:40.859403072Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:45.707286509Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:49.414575603Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:47:49.437493220Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:50.550619900Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:51.415888433Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:52.712129010Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:52.781148929Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:52.785291025Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:47:52.806880991Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:47:52.811559676Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:47:55.386315928Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:01.306890201Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:04.117552313Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:48:04.137599012Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:04.196736030Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:06.144383595Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:06.169568242Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:09.908204040Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:10.973073893Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:15.802592349Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:18.063935169Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:20.618486750Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:22.841909545Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:25.448596414Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.355095558Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.682482800Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.682970458Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.714528915Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.716659523Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.736141161Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.739334553Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.750619678Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.753306243Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.764463887Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.774892702Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.781060694Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.783195411Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:29.794444590Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:31.419971121Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:34.135304497Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:36.258280330Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:41.103124908Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:45.950389361Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:50.790812247Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:54.316209058Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:54.322062187Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:54.323362360Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:48:54.371000902Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:48:54.374387358Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:48:55.637693574Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:01.570458448Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:16.726803267Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:16.763976399Z",
+    "method": "DELETE",
+    "route": "/api/generations/{id}",
+    "status": 204
+  },
+  {
+    "time": "2026-09-13T04:49:16.792699841Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:21.569160515Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:26.417510800Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:32.345689042Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:37.189573823Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:42.028628229Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:46.117324929Z",
+    "method": "GET",
+    "route": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:46.134398384Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:46.149168878Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:46.173797759Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:46.362548316Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:49:46.399181278Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:48.385471070Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:49.526649522Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:49:49.554519879Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:50.986496885Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:51.535821325Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:52.660338378Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:49:52.688637916Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:54.676616351Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:55.789866872Z",
+    "method": "POST",
+    "route": "/api/generations/{id}/retry",
+    "status": 201
+  },
+  {
+    "time": "2026-09-13T04:49:55.810893752Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:55.831211609Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:49:57.771615160Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:00.669007988Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:04.502357481Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:04.543434499Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:04.549509434Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:04.555227168Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:50:04.559261150Z",
+    "method": "GET",
+    "route": "/files/{id}/output.mp4",
+    "status": 206
+  },
+  {
+    "time": "2026-09-13T04:50:06.604071970Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:07.624928652Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:10.986538309Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:11.447564899Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:16.070115653Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:16.080355692Z",
+    "method": "GET",
+    "route": "/api/generations",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:16.081684178Z",
+    "method": "GET",
+    "route": "/files/{id}/output.png",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:16.275108640Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:21.108826601Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:22.432354040Z",
+    "method": "GET",
+    "route": "/api/generations/{id}",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:25.951682626Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:30.794900293Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:36.012506431Z",
+    "method": "POST",
+    "route": "/api/auth/logout",
+    "status": 204
+  },
+  {
+    "time": "2026-09-13T04:50:36.747715336Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:40.238596316Z",
+    "method": "GET",
+    "route": "/api/auth/google/start",
+    "status": 307
+  },
+  {
+    "time": "2026-09-13T04:50:40.269387407Z",
+    "method": "GET",
+    "route": "/api/auth/google/callback",
+    "status": 303
+  },
+  {
+    "time": "2026-09-13T04:50:40.415740558Z",
+    "method": "GET",
+    "route": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:40.420243795Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:40.432014106Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:45.266588755Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:50.096701437Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  },
+  {
+    "time": "2026-09-13T04:50:54.935298147Z",
+    "method": "GET",
+    "route": "/api/health",
+    "status": 200
+  }
+]

@@ -1,0 +1,430 @@
+{
+  "schema_version": 1,
+  "issue": 164,
+  "source_revision": "28f5c58241f5d56acaf02549d78da456f355879b",
+  "environment": {
+    "name": "creativeops-mock-oauth-preview",
+    "provider": "mock",
+    "identity": "test-only mock OAuth",
+    "role": "user",
+    "plan": "free"
+  },
+  "operator": "AI assistant via browser tools; annotations generated from observed tool results",
+  "window": {
+    "from": "2026-09-13T04:43:32Z",
+    "to": "2026-09-13T04:50:55Z"
+  },
+  "limitations": [
+    "Not a cryptographically attested recording",
+    "Timestamps on annotations are observation completion times",
+    "No per-action trace IDs; backend records correlated by time and route",
+    "No browser outbound network recorder was installed in this exploratory run",
+    "QA09 is a failed input automation attempt, not a product defect",
+    "Delete click timed out and no dialog handle was exposed; DELETE204 verified; confirmation UX not verified"
+  ],
+  "actions": [
+    {
+      "id": "QA01",
+      "observed_at": "2026-09-13T04:43:38.039Z",
+      "action": "모델 메뉴 클릭",
+      "observation": "화면·URL 변화 없음"
+    },
+    {
+      "id": "QA02",
+      "observed_at": "2026-09-13T04:43:42.813Z",
+      "action": "템플릿 메뉴 클릭",
+      "observation": "화면·URL 변화 없음"
+    },
+    {
+      "id": "QA03",
+      "observed_at": "2026-09-13T04:43:46.122Z",
+      "action": "사이드바 설정 클릭",
+      "observation": "화면·URL 변화 없음"
+    },
+    {
+      "id": "QA04",
+      "observed_at": "2026-09-13T04:43:49.536Z",
+      "action": "상단 설정 클릭",
+      "observation": "화면·URL 변화 없음"
+    },
+    {
+      "id": "QA05",
+      "observed_at": "2026-09-13T04:43:53.835Z",
+      "action": "계정 정보 열기와 Escape",
+      "observation": "팝오버 열림·닫힘"
+    },
+    {
+      "id": "QA06",
+      "observed_at": "2026-09-13T04:43:57.032Z",
+      "action": "T2V 탭 클릭",
+      "observation": "Veo 모델·길이 컨트롤 표시"
+    },
+    {
+      "id": "QA07",
+      "observed_at": "2026-09-13T04:44:00.800Z",
+      "action": "소스 없이 I2V 탭 클릭",
+      "observation": "이미지 소스 선택 비활성"
+    },
+    {
+      "id": "QA08",
+      "observed_at": "2026-09-13T04:44:12.811Z",
+      "action": "PIPELINE 탭 클릭",
+      "observation": "두 프롬프트·모델 표시; 향상 비활성"
+    },
+    {
+      "id": "QA09",
+      "observed_at": "2026-09-13T04:44:16.692Z",
+      "action": "자동화 fill로 입력 비우기 시도",
+      "observation": "입력이 실제 변경되지 않음; 제품 검증 결과에서 제외"
+    },
+    {
+      "id": "QA10",
+      "observed_at": "2026-09-13T04:44:26.060Z",
+      "action": "기본 입력으로 T2I 생성",
+      "observation": "상세 이동·완료"
+    },
+    {
+      "id": "QA11",
+      "observed_at": "2026-09-13T04:44:34.262Z",
+      "action": "이미지 로딩 관측·단일 결과 I2V 시작",
+      "observation": "640x360 PNG 디코딩; 소스 잠김·빈 모션 입력 비활성"
+    },
+    {
+      "id": "QA12",
+      "observed_at": "2026-09-13T04:44:37.585Z",
+      "action": "모션 입력 후 I2V 생성",
+      "observation": "상세 이동"
+    },
+    {
+      "id": "QA13",
+      "observed_at": "2026-09-13T04:44:51.128Z",
+      "action": "I2V 결과 관측",
+      "observation": "완료·290 B video/mp4; 미디어 재생 불가"
+    },
+    {
+      "id": "QA14",
+      "observed_at": "2026-09-13T04:45:00.692Z",
+      "action": "키보드로 입력 비우기",
+      "observation": "0자·향상/생성 비활성"
+    },
+    {
+      "id": "QA15",
+      "observed_at": "2026-09-13T04:45:04.775Z",
+      "action": "향상 후 버리기",
+      "observation": "검토 표시 후 닫힘·원본 보존"
+    },
+    {
+      "id": "QA16",
+      "observed_at": "2026-09-13T04:45:08.541Z",
+      "action": "향상 후 원본 유지",
+      "observation": "검토 닫힘·원본 보존"
+    },
+    {
+      "id": "QA17",
+      "observed_at": "2026-09-13T04:45:13.098Z",
+      "action": "향상 초안 편집·수락",
+      "observation": "편집문이 주 입력에 반영·적용됨"
+    },
+    {
+      "id": "QA18",
+      "observed_at": "2026-09-13T04:45:29.160Z",
+      "action": "Standard·1:1·2장·원본충실 선택 후 생성",
+      "observation": "선택값 반영; 요청 전송"
+    },
+    {
+      "id": "QA19",
+      "observed_at": "2026-09-13T04:45:39.627Z",
+      "action": "Standard 생성 거절 관측",
+      "observation": "403 credit_plan_refused 원문 노출"
+    },
+    {
+      "id": "QA20",
+      "observed_at": "2026-09-13T04:46:10.032Z",
+      "action": "Fast로 복원·2장 생성·첫 I2V 클릭",
+      "observation": "512x512 PNG 두 개 디코딩·첫 소스 선택"
+    },
+    {
+      "id": "QA21",
+      "observed_at": "2026-09-13T04:46:28.255Z",
+      "action": "두 번째 결과 I2V 클릭",
+      "observation": "다른 소스 선택"
+    },
+    {
+      "id": "QA22",
+      "observed_at": "2026-09-13T04:46:40.538Z",
+      "action": "T2V 6초 선택·생성",
+      "observation": "201 접수·상세 이동"
+    },
+    {
+      "id": "QA23",
+      "observed_at": "2026-09-13T04:46:51.096Z",
+      "action": "T2V 결과 관측",
+      "observation": "완료·396 B video/mp4; 재생 불가"
+    },
+    {
+      "id": "QA24",
+      "observed_at": "2026-09-13T04:46:58.130Z",
+      "action": "사용량 메뉴·새로고침",
+      "observation": "Free·이미지3·영상10000ms·held0·247.612 크레딧"
+    },
+    {
+      "id": "QA25",
+      "observed_at": "2026-09-13T04:47:03.154Z",
+      "action": "운영 메뉴 클릭",
+      "observation": "403 master_required 원문·사용불가"
+    },
+    {
+      "id": "QA26",
+      "observed_at": "2026-09-13T04:47:27.348Z",
+      "action": "Pipeline 영상 모델 변경·복원 후 생성",
+      "observation": "402 monthly_credit_exhausted; 완료 경로 미검증"
+    },
+    {
+      "id": "QA27",
+      "observed_at": "2026-09-13T04:47:49.767Z",
+      "action": "mock 실패 생성·상세 재시도",
+      "observation": "실패 메시지·재시도 버튼·새 작업 이동"
+    },
+    {
+      "id": "QA28",
+      "observed_at": "2026-09-13T04:48:03.872Z",
+      "action": "기록 행 내 재시도 클릭",
+      "observation": "새 작업 상세 이동"
+    },
+    {
+      "id": "QA29",
+      "observed_at": "2026-09-13T04:48:18.386Z",
+      "action": "기록 모드 T2I 선택",
+      "observation": "5행 표시"
+    },
+    {
+      "id": "QA30",
+      "observed_at": "2026-09-13T04:48:23.345Z",
+      "action": "결과 유형 이미지 선택",
+      "observation": "2행 표시"
+    },
+    {
+      "id": "QA31",
+      "observed_at": "2026-09-13T04:48:28.932Z",
+      "action": "실패 상태 결합 필터",
+      "observation": "0행·빈 결과 안내"
+    },
+    {
+      "id": "QA32",
+      "observed_at": "2026-09-13T04:48:33.854Z",
+      "action": "모델 검색·페이지 크기10",
+      "observation": "필터 반영·빈 페이지 이전/다음 비활성"
+    },
+    {
+      "id": "QA33",
+      "observed_at": "2026-09-13T04:48:34.035Z",
+      "action": "브랜드 홈 링크 클릭",
+      "observation": "생성 화면 복귀"
+    },
+    {
+      "id": "QA34",
+      "observed_at": "2026-09-13T04:49:34.532Z",
+      "action": "이번 QA의 실패 재시도 작업 삭제 클릭",
+      "observation": "도구 timeout·확인창 handle 없음; DELETE204·7행에서6행; 추가삭제 없음"
+    },
+    {
+      "id": "PAG1",
+      "observed_at": "2026-09-13T04:49:49.451Z",
+      "action": "페이지 경계용 mock 실패 재시도1",
+      "observation": "새 작업 이동"
+    },
+    {
+      "id": "PAG2",
+      "observed_at": "2026-09-13T04:49:52.724Z",
+      "action": "페이지 경계용 mock 실패 재시도2",
+      "observation": "새 작업 이동"
+    },
+    {
+      "id": "PAG3",
+      "observed_at": "2026-09-13T04:49:55.962Z",
+      "action": "페이지 경계용 mock 실패 재시도3",
+      "observation": "새 작업 이동"
+    },
+    {
+      "id": "PAG4",
+      "observed_at": "2026-09-13T04:49:59.215Z",
+      "action": "페이지 경계용 mock 실패 재시도4",
+      "observation": "새 작업 이동"
+    },
+    {
+      "id": "QA35",
+      "observed_at": "2026-09-13T04:50:10.912Z",
+      "action": "10행 경계에서 다음 클릭",
+      "observation": "2페이지 빈 결과·이전 활성"
+    },
+    {
+      "id": "QA36",
+      "observed_at": "2026-09-13T04:50:16.217Z",
+      "action": "이전 클릭",
+      "observation": "1페이지 10행 복귀"
+    },
+    {
+      "id": "QA37",
+      "observed_at": "2026-09-13T04:50:25.682Z",
+      "action": "기록 행 클릭",
+      "observation": "해당 작업 상세 이동"
+    },
+    {
+      "id": "QA38",
+      "observed_at": "2026-09-13T04:50:35.636Z",
+      "action": "계정·로그아웃 클릭",
+      "observation": "로그인 게이트"
+    },
+    {
+      "id": "QA39",
+      "observed_at": "2026-09-13T04:50:39.804Z",
+      "action": "로그아웃 후 기록 링크 클릭",
+      "observation": "비공개 행 미표시·로그인 게이트 유지"
+    },
+    {
+      "id": "QA40",
+      "observed_at": "2026-09-13T04:50:52.526Z",
+      "action": "기록 게이트에서 Google로 계속하기 클릭",
+      "observation": "307→303→me200; /history 대신 /generate 복귀"
+    },
+    {
+      "id": "QA41",
+      "observed_at": "2026-09-13T04:50:52.849Z",
+      "action": "검색처럼 보이는 영역 클릭",
+      "observation": "검색 입력·대화상자 없음"
+    }
+  ],
+  "http_summary": [
+    {
+      "request": "GET /api/health 200",
+      "count": 90
+    },
+    {
+      "request": "POST /api/generations 201",
+      "count": 5
+    },
+    {
+      "request": "GET /api/generations/{id} 200",
+      "count": 25
+    },
+    {
+      "request": "GET /files/{id}/output.png 200",
+      "count": 10
+    },
+    {
+      "request": "GET /api/assets/{id} 200",
+      "count": 3
+    },
+    {
+      "request": "GET /files/{id}/output.mp4 206",
+      "count": 8
+    },
+    {
+      "request": "POST /api/prompts/enhance 201",
+      "count": 3
+    },
+    {
+      "request": "POST /api/generations 403",
+      "count": 1
+    },
+    {
+      "request": "GET /files/{id}/output-2.png 200",
+      "count": 1
+    },
+    {
+      "request": "GET /api/auth/me 200",
+      "count": 3
+    },
+    {
+      "request": "GET /api/usage/me 200",
+      "count": 2
+    },
+    {
+      "request": "GET /api/ops/health 403",
+      "count": 3
+    },
+    {
+      "request": "POST /api/pipelines 402",
+      "count": 1
+    },
+    {
+      "request": "POST /api/generations/{id}/retry 201",
+      "count": 6
+    },
+    {
+      "request": "GET /api/generations 200",
+      "count": 26
+    },
+    {
+      "request": "DELETE /api/generations/{id} 204",
+      "count": 1
+    },
+    {
+      "request": "POST /api/auth/logout 204",
+      "count": 1
+    },
+    {
+      "request": "GET /api/auth/google/start 307",
+      "count": 1
+    },
+    {
+      "request": "GET /api/auth/google/callback 303",
+      "count": 1
+    }
+  ],
+  "database_snapshot": {
+    "jobs": [
+      {
+        "mode": "i2v",
+        "state": "completed",
+        "seconds": 4,
+        "count": 1
+      },
+      {
+        "mode": "t2i",
+        "state": "completed",
+        "images": 1,
+        "count": 1
+      },
+      {
+        "mode": "t2i",
+        "state": "completed",
+        "images": 2,
+        "count": 1
+      },
+      {
+        "mode": "t2i",
+        "state": "failed",
+        "images": 1,
+        "count": 6
+      },
+      {
+        "mode": "t2v",
+        "state": "completed",
+        "seconds": 6,
+        "count": 1
+      }
+    ],
+    "plans": {
+      "free": 1
+    },
+    "reservations": {
+      "released": 7,
+      "settled": 7,
+      "held": 0
+    }
+  },
+  "fresh_tests": [
+    {
+      "command": "cd frontend; npm run test:auth:browser",
+      "passed": 61,
+      "seconds": 41.6,
+      "note": "frontend routes intercepted by fixtures; not real backend E2E"
+    },
+    {
+      "command": "cd backend; AI_PROVIDER=mock python -m pytest tests/test_credit_policy.py tests/test_generation_api.py tests/test_generation_credit.py tests/test_ops_api.py -q",
+      "passed": 179,
+      "seconds": 4.98
+    }
+  ]
+}
