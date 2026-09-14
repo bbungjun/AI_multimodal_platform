@@ -65,6 +65,13 @@ edited accept와 정상 한 장 생성의 partial Mock Verified 증거다. disca
 empty disabled, Free over-limit refusal와 DB delta는 아직 검증하지 않았으므로 두 contract
 scenario 전체 PASS로 승격하지 않는다.
 
+Core `b38d597`에서는 상태 머신을 empty→discard→keep→edit/accept로 확장했다. 실제 owned
+실행은 checkpoint15, enhancement3, generation1, source unchanged와 cleanup0으로 기술적
+완료에 도달했다. discard, 원본 유지, edited accept는 모두 성공했고 유일한 제품 실패는
+`empty_submission_disabled=false`였다. [경계 summary](../evidence/issue-183/prompt-boundary-summary.json)에
+정제 결과를 남겼다. 이 신호는 다음 실행에서 DOM `disabled` property와 accessibility
+snapshot을 교차검증하기 전까지 확정 결함으로 과장하지 않는다.
+
 ## 남은 구현
 
 1. Chrome DevTools MCP action driver에서 empty/discard/keep/edit/accept/over-limit/allowed

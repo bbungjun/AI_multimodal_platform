@@ -94,6 +94,11 @@ paste credential contents.
   Adapter 결과도 compiler check8/8이다.
 - Issue183은 아직 완료가 아니다. 이 실행은 edited accept와 정상 PNG만 증명한다. 다음은
   discard/original choice, empty disabled, Free over-limit와 DB delta를 별도 phase로 연결한다.
+- Core `b38d597` 경계 실행은 기술적으로 완료/cleanup0: checkpoint15, enhancement3,
+  discard·원본유지·edited accept와 정상 generation을 수행했다. 제품 결과는
+  `empty_submission_disabled=false` 한 건 때문에 FAIL이며 나머지 check failure0이다.
+  다음 실행에서 DOM property와 accessibility disabled를 교차검증한 후 over-limit DB
+  delta를 연결한다.
 - [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
 
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
