@@ -4,6 +4,9 @@
 위 상태는 Issue164 작성 시점의 기록이다. 후속 [Issue172](../portfolio/issue-172-image-journey-qa.md)에서
 TC10의 편집·수락과 TC14의 기록 재조회 일부를 agent-operated mock E2E로 검증했다.
 버리기·원본 유지, 모든 필터/페이지 이동을 포함한 총17개 명세 전체가 자동화된 것은 아니다.
+후속 [Issue174 전체 탐색](../portfolio/issue-174-full-ui-qa.md)은 TC01~17에 대응하는
+주요 화면을 실제 Chrome에서 다시 검사하고 결함을 재현했지만 탐색 실행이다.
+결정적 회귀 코드17개가 모두 구현됐다는 의미는 아니다.
 기준 revision과 실제 실행 기록은 [QA 보고서](../portfolio/issue-164-ai-ui-qa.md)를 따른다.
 계약 기반 기대값을 사용하며 이번에 관측한 버그를 성공 조건으로 고정하지 않는다.
 

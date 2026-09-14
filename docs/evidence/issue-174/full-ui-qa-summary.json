@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "issue": 174,
+  "source_revision": "1748e27e25e8f78a8a05cbf8bd2493171085fed3",
+  "executed_at": "2026-09-14",
+  "environment": {
+    "provider": "mock",
+    "identity": "test-only mock OAuth",
+    "browser": "Chrome extension Computer Use",
+    "owned_runtime_cycles": 2,
+    "real_google_or_vertex_requests": false
+  },
+  "coverage": {
+    "user_journeys": [
+      "anonymous navigation and login return",
+      "account popover logout and relogin",
+      "free T2I two-image policy edge",
+      "free I2V four-second generation",
+      "free T2V six-second policy edge",
+      "free successful T2I-to-I2V pipeline",
+      "prompt discard keep-original and edited accept",
+      "mock failure with detail and history retry",
+      "history filters empty result and two-page navigation",
+      "usage and ordinary-user ops",
+      "master overview users audit and ops",
+      "max Imagen Ultra and Veo Standard",
+      "second image source selection"
+    ],
+    "not_executed": [
+      "permanent delete confirmation",
+      "real Google OAuth Vertex TLS or deployed ingress",
+      "real video decoding and playback",
+      "live-runtime mobile viewport",
+      "concurrency and race conditions",
+      "destructive Master commands"
+    ]
+  },
+  "findings": [
+    {"id": "F01", "priority": "P1", "result": "FAIL", "summary": "Free image two and T2V six-second requests completed despite one-image and four-second policy"},
+    {"id": "F02", "priority": "P2", "result": "FAIL", "summary": "Model template and two settings controls remained inert; search has no operable control"},
+    {"id": "F03", "priority": "P2", "result": "FAIL", "summary": "Free can select forbidden Imagen Standard and sees raw credit_plan_refused"},
+    {"id": "F04", "priority": "P2", "result": "FAIL", "summary": "Ordinary user sees Ops navigation and raw master_required"},
+    {"id": "F05", "priority": "P2", "result": "FAIL", "summary": "Four completed mock video surfaces claimed controls but could not play"},
+    {"id": "F06", "priority": "P2", "result": "FAIL", "summary": "No user-visible download action was found on image video or pipeline result surfaces"},
+    {"id": "F07", "priority": "P3", "result": "FAIL", "summary": "History badge remained eight while visible totals changed; mock timelines used Vertex wording"},
+    {"id": "F08", "priority": "P2-candidate", "result": "FAIL", "summary": "Anonymous History intent returned to Generate after login"},
+    {"id": "F09", "priority": "P3", "result": "FAIL", "summary": "Image detail displayed unknown resolution while browser-rendered images existed"}
+  ],
+  "positive_evidence": {
+    "free_cycle": {
+      "pipeline_parent_child_completed": true,
+      "pipeline_source_linked": true,
+      "usage_credits": {"allowance": 1000, "charged": 990, "available": 10, "held": 0},
+      "observed_usage": {"imagen_fast_images": 3, "veo_fast_ms": 14000}
+    },
+    "master_cycle": {
+      "product_jobs": 6,
+      "pagination_fixture_jobs": 9,
+      "jobs_total": 15,
+      "jobs_by_state": {"completed": 3, "failed": 12},
+      "assets_by_mime": {"image/png": 3, "video/mp4": 1},
+      "retry_jobs": 2,
+      "enhancements": 3,
+      "outbox_by_status": {"published": 6},
+      "reservations_by_status": {"settled": 6, "released": 3},
+      "held_reservations": 0,
+      "master_audit_rows": 1,
+      "http": {"total": 165, "server_errors": 0}
+    },
+    "cleanup": {"cycle_one": 0, "cycle_two": 0}
+  },
+  "regression": {
+    "backend_windows_initial": {"passed": 1806, "skipped": 3, "failed": 1, "failure": "documented Bash Windows path check"},
+    "backend_without_host_path_check": {"passed": 1806, "skipped": 3, "deselected": 1},
+    "frontend_session": 70,
+    "frontend_chromium": 61,
+    "frontend_lint": "PASS",
+    "frontend_build": "PASS",
+    "compose_example": "PASS"
+  },
+  "limitations": [
+    "This is a bounded all-surface audit, not exhaustive combinatorial coverage",
+    "UI observations are agent annotations, not an independently signed recording",
+    "First-cycle database was destroyed after UI and Usage inspection; its values are not a committed DB export",
+    "Second-cycle DB and HTTP summaries exclude prompt bodies and identifiers",
+    "Cancel dialog dismissal destabilized one extension tab; a fresh tab showed the job remained",
+    "Existing responsive tests use fixture HTTP, not the live owned runtime"
+  ]
+}

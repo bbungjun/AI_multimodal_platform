@@ -77,6 +77,27 @@ paste credential contents.
 
 ## Active Work
 
+### 전체 프론트 E2E 탐색 QA — Issue174, 2026-09-14
+
+- Branch `codex/issue-174-full-ui-qa`, target revision `1748e27`. Two isolated
+  mock runtimes covered anonymous/auth, all four generation modes, successful
+  Pipeline, prompt choices, failure/retry, History/filter/pagination, Usage,
+  User/Master Ops, Master console and Max models through actual Chrome controls.
+- Product QA FAIL: reconfirmed F01 Free image2/video6 policy admission gap plus
+  inert navigation, entitlement/error UX, User Ops exposure, unplayable mock
+  video, missing download, static history/provider copy and return-intent gap.
+  Added F09 unknown image resolution metadata observation.
+- Free workload charged990/1000, held0; Pipeline parent/child completed and linked.
+  Second runtime DB: product jobs6+fixtures9, completed3/failed12, outbox published6,
+  held0;165 HTTP events and0 5xx. Both runtime cleanup0.
+- Fresh regression: backend1806 PASS/3 guarded skips plus existing Windows Bash
+  path failure; deselecting that host check1806 PASS. Session70/Chromium61,
+  lint/build and Compose PASS. Permanent delete, live/mobile/provider/races excluded.
+- [Korean report](portfolio/issue-174-full-ui-qa.md) and
+  [sanitized summary](evidence/issue-174/full-ui-qa-summary.json), delivered through
+  [PR175](https://github.com/bbungjun/AI_multimodal_platform/pull/175). No product
+  fix. Next bounded slice: enforce Free request-size admission and add regression.
+
 ### PR 작성 규칙 변경 — 2026-09-14
 
 - 사용자 요청에 따라 `AGENTS.md`에 PR 제목·본문 한국어 작성과 일반 PR 생성
