@@ -93,8 +93,10 @@ paste credential contents.
   실패는 기존 Windows→Bash absolute-path 해석 문제이며 default Compose는 로컬 `.env`의
   `POSTGRES_USER` 부재로 막혔다. 이 단계는 QA 실행 엔진이나 merge 권한을 구현하지
   않았으며 evidence level은 `Implemented`다.
-- [구현·판단 기록](portfolio/issue-176-qa-contract-registry.md). 다음 단계는 변경 파일을
-  Registry scenario에 매핑하고 영향 없는 scenario의 제외 근거를 남기는 impact selector다.
+- [구현·판단 기록](portfolio/issue-176-qa-contract-registry.md)과
+  [일반 PR177](https://github.com/bbungjun/AI_multimodal_platform/pull/177)로 전달했다.
+  다음 단계는 변경 파일을 Registry scenario에 매핑하고 영향 없는 scenario의 제외
+  근거를 남기는 impact selector다.
 
 ### PR 작성 규칙 변경 — 2026-09-14
 

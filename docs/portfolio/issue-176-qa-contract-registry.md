@@ -1,5 +1,8 @@
 # Issue176 — Agent QA Contract와 Scenario Registry v1
 
+- [Issue176](https://github.com/bbungjun/AI_multimodal_platform/issues/176)
+- [일반 PR177](https://github.com/bbungjun/AI_multimodal_platform/pull/177)
+
 ## 배경과 문제
 
 Agent가 개발부터 QA까지 수행하고 최종적으로 PR merge 판단을 맡으려면, 브라우저를
