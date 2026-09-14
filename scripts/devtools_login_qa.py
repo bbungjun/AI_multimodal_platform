@@ -52,11 +52,12 @@ def source_digest():
 
 def main():
     args = sys.argv[1:]
-    if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"]):
+    if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"],
+                    ["--scenario", "video", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
-    scenario = "image" if args else "login"
-    automatic = args == ["--scenario", "image", "--auto"]
+    scenario = args[1] if args else "login"
+    automatic = args[-1:] == ["--auto"]
     run_id = "devtools-" + scenario + "-" + uuid4().hex[:12]
     output = ROOT / "output" / "playwright" / run_id
     output.mkdir(parents=True, exist_ok=False)
@@ -73,9 +74,10 @@ def main():
                 runtime.preflight()
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
-                probe_before = read_owned_db_probe(runtime, "counts") if automatic else None
+                probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario == "image" else None
                 result = subprocess.run(
-                    (["node", str(ROOT / "qa/devtools/image-controller.mjs"), runtime.base_url,
+                    (["node", str(ROOT / "qa/devtools" /
+                                  ("image-controller.mjs" if scenario == "image" else "video-controller.mjs")), runtime.base_url,
                       str(output), str(Path(temporary) / "chrome-profile")]
                      if automatic else
                      ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
@@ -83,7 +85,7 @@ def main():
                     cwd=ROOT, env=runtime.env, timeout=720,
                 )
                 report["driver_exit_code"] = result.returncode
-                if automatic:
+                if automatic and scenario == "image":
                     probe_after = read_owned_db_probe(runtime, "counts")
                     report["prompt_t2i_probe"] = {
                         "before": probe_before,
