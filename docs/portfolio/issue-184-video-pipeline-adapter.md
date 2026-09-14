@@ -26,3 +26,12 @@ Free6초는 HTTP201이고 정상 요청을 제외한 DB delta가 jobs1/outbox1/r
 mock video file은 browser에서 관측되지 않아 MIME/usable이 false였고 빠른 mock 상태는
 pending→completed로 관측됐다. 따라서 contract6개 중 policy, side effect, state path,
 asset MIME, usable 총5개가 FAIL이다. [정제 증거](../evidence/issue-184/t2v-failure-summary.json).
+
+## I2V 실제 실행
+
+Core `a3792f2`에서 같은 owned runtime에 자동 T2I source를 만든 후, source Job detail의
+실제 `I2V 시작` control을 클릭했다. source ID는 process memory에만 전달하고 receipt에는
+저장하지 않았다. source selection과 persisted Job identity, video/mp4 asset은 PASS했다.
+no-source DOM disabled는 true였지만 accessibility disabled가 false였고, state는
+pending→completed, mock video usable은 false여서 scenario FAIL이다. external0/Console0/
+cleanup0이다. [정제 증거](../evidence/issue-184/i2v-failure-summary.json).

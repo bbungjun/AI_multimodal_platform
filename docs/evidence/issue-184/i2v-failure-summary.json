@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "issue": 184,
+  "evidence_level": "Mock Verified",
+  "revision": "a3792f2c302de1d01e4a65cd6493ddafb0221135",
+  "scenario_id": "i2v_generation",
+  "technical_complete": true,
+  "verdict": "FAIL",
+  "source_setup_complete": true,
+  "no_source_dom_disabled": true,
+  "no_source_accessibility_disabled": false,
+  "selected_asset_retained": true,
+  "job_uses_selected_asset": true,
+  "state_path": ["pending", "completed"],
+  "asset_mime": "video/mp4",
+  "outcome_usable": false,
+  "external_page_requests": 0,
+  "unexpected_console_errors": 0,
+  "cleanup_total": 0,
+  "source_identifiers_persisted": false,
+  "seconds": 137.922
+}
