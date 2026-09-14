@@ -234,10 +234,16 @@ async function main() {
             ? ['fill'] : ['click', 'press_key', 'type_text'];
           let text;
           if (prepared?.purpose === 'delete') {
-            action.mcp_tools = ['click', 'handle_dialog'];
-            const dismiss = new Promise(resolveDismiss => setTimeout(resolveDismiss, 100))
-              .then(() => call('handle_dialog', { pageId: prepared.args.pageId, action: 'dismiss' }));
-            try { text = await call('click', prepared.args); } finally { await dismiss; }
+            action.mcp_tools = ['click'];
+            action.dialog = 'dismissed_without_text';
+            const dismissed = new Promise((resolveDismiss, rejectDismiss) => {
+              const timer = setTimeout(() => rejectDismiss(Error('dialog_timeout')), 5000);
+              page.once('dialog', dialog => dialog.dismiss().then(() => {
+                clearTimeout(timer); resolveDismiss();
+              }, rejectDismiss));
+            });
+            text = await call('click', prepared.args);
+            await dismissed;
           } else {
             text = journey && command.name === 'fill' && !nativeSelect
               ? await fillWithKeyboard(prepared.args, call)
