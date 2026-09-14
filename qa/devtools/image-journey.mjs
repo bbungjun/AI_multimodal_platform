@@ -184,6 +184,7 @@ export class ImageJourney {
       const x = ${JSON.stringify(expected)};
       const visible = e => !!e && e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().height > 0 && getComputedStyle(e).visibility !== 'hidden';
       const main = document.querySelector('.creative-prompt-field textarea');
+      const submit = document.querySelector('.creative-composer__actions button[type="submit"]');
       const draft = document.querySelector('[aria-label="편집 가능한 향상 프롬프트 초안"]');
       const image = document.querySelector('img.asset-media');
       let decoded = false;
@@ -202,8 +203,9 @@ export class ImageJourney {
         same_image: !!image && x.assetPath !== null && new URL(image.currentSrc).pathname === x.assetPath,
         width: image?.naturalWidth ?? 0, height: image?.naturalHeight ?? 0,
         history_row: location.pathname === '/history' && rows.some(r => visible(r) && r.querySelector('small[title]')?.getAttribute('title') === x.jobId),
-        empty_disabled: location.pathname === '/generate' && [...document.querySelectorAll('button')]
-          .some(b => b.textContent?.trim().startsWith('생성') && b.disabled)
+        empty_prompt: location.pathname === '/generate' && main?.value === '',
+        empty_submit_found: !!submit,
+        empty_disabled: !!submit && submit.disabled
       };
     }`;
     const probe = parseProbe(await call('evaluate_script', { pageId, function: script }));
@@ -245,6 +247,8 @@ export class ImageJourney {
       three_enhancements: this.postCounts.enhancement === 3, one_generation: this.postCounts.generation === 1,
       no_observation_failures: this.failures.length === 0,
       empty_dom_disabled: this.checkpoints.empty?.empty_disabled === true,
+      empty_prompt_confirmed: this.checkpoints.empty?.empty_prompt === true,
+      empty_submit_found: this.checkpoints.empty?.empty_submit_found === true,
       empty_accessibility_disabled: this.emptyAccessibilityDisabled === true };
     const technicalComplete = Object.values(phases).every(value => value === true) && this.failures.length === 0;
     return { scenario: 'reviewed_prompt_image', technical_complete: technicalComplete,

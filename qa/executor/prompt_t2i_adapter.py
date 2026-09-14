@@ -105,7 +105,8 @@ def sanitize_image_journey_report(browser_report: dict[str, Any]) -> dict[str, A
                 "persisted_matches": checks["no_observation_failures"] and not failures,
                 "image_visible": checks["completed"],
                 "empty_disabled": checks["empty_dom_disabled"]
-                and checks["empty_accessibility_disabled"],
+                and checks["empty_accessibility_disabled"] and checks["empty_prompt_confirmed"]
+                and checks["empty_submit_found"],
             },
             "post_counts": {"enhancement": posts["enhancement"], "generation": posts["generation"]},
             "file": {"decoded": checks["completed"], "mime": file["mime"]},
