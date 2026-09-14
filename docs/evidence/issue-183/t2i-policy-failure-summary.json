@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "issue": 183,
+  "evidence_level": "Mock Verified",
+  "revision": "501f9be6619f4fb081b6a535a0c50e92858eb9de",
+  "provider": "mock",
+  "technical_complete": true,
+  "prompt_review_verdict": "PASS",
+  "t2i_generation_verdict": "FAIL",
+  "enhancement_requests": 3,
+  "generation_requests": 2,
+  "allowed_state_path": ["pending", "running", "completed"],
+  "over_limit_status": 201,
+  "over_limit_side_effects": {"jobs": 1, "outbox": 1, "reservations": 1},
+  "failed_assertions": [
+    "t2i.free_limit_refused",
+    "t2i.refusal_has_zero_jobs",
+    "t2i.refusal_has_zero_outbox",
+    "t2i.refusal_has_zero_reservations"
+  ],
+  "empty_submit_dom_disabled": true,
+  "empty_submit_accessibility_disabled": true,
+  "external_page_requests": 0,
+  "unexpected_console_errors": 0,
+  "cleanup_total": 0,
+  "source_unchanged": true,
+  "seconds": 95.5
+}

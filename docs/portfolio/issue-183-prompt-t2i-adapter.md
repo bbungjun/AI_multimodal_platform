@@ -2,7 +2,7 @@
 
 - Parent: [Issue182](https://github.com/bbungjun/AI_multimodal_platform/issues/182)
 - Current: [Issue183](https://github.com/bbungjun/AI_multimodal_platform/issues/183)
-- Status: `In Progress`
+- Status: `Mock Verified / Product QA FAIL`
 
 ## 목표
 
@@ -92,3 +92,25 @@ external0/Console0/browser·runtime cleanup0이87.812s에 PASS했다.
 
 제품 코드, 실제 Gemini/Imagen, 전체 Receipt와 자동 merge decision은 이 child의 범위가
 아니다.
+
+## 최종 실행 결과
+
+Core `501f9be`에서 전체 경계 flow를 실행했다. prompt review6개 assertion은 PASS했다.
+T2I는 정상 1장 생성의 pending→running→completed, PNG decode/visible, empty DOM·접근성
+disabled가 PASS했다. 이후 동일 Free 사용자가 UI combobox에서2장을 선택해 제출하자
+HTTP201이 반환됐고 정상 요청을 제외한 DB delta는 job1/outbox1/reservation1이었다.
+
+따라서 T2I의 policy refusal과 세 side-effect0 assertion, 총4개가 FAIL이다. 이는 Adapter
+실패가 아니라 기존 admission 결함을 자동으로 재현한 제품 QA 결과다.
+[정제 실패 summary](../evidence/issue-183/t2i-policy-failure-summary.json)에만 수치와
+assertion ID를 남겼으며 prompt/identity/cookie/request body는 없다.
+
+Issue183의 Adapter 범위는 완료됐다. 제품 수정은 별도 Issue로 유지하며 다음 child184가
+video와 Pipeline 계약을 같은 원칙으로 자동화한다.
+
+## 최종 회귀
+
+- backend 전체:1879 PASS,3 guarded SKIP, 기존 Windows/Bash absolute-path 검사1 FAIL.
+- 해당 기존 검사만 제외:1879 PASS,3 SKIP,1 deselected.
+- DevTools Node:24 PASS.
+- frontend lint/build, `.env.example` Compose config, `git diff --check`: PASS.

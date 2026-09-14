@@ -77,7 +77,7 @@ paste credential contents.
 
 ## Active Work
 
-### Agent QA prompt review + T2I Adapter — Issue183 In Progress, 2026-09-15
+### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 
 - Parent Issue182를 prompt/T2I, video/pipeline, history/usage/retry/role, aggregate Receipt의
   4개 bounded child로 분리했다. 현재 branch는 `codex/issue-183-prompt-t2i-adapter`다.
@@ -104,6 +104,14 @@ paste credential contents.
   true였고 checkpoint15, enhancement3, discard/keep/edit-accept, generation1,
   external0/Console0/cleanup0이87.812s에 전체 PASS했다. 이전 false 관측은 QA 절차 실패로
   보존한다. Issue183의 남은 범위는 Free2장 refusal과 DB delta뿐이다.
+- Core `501f9be` 최종 실행은 prompt review PASS/T2I FAIL을 산출했다. 정상 Job state는
+  pending→running→completed, Free2장 요청은201이고 정상 요청을 제외한 DB delta가
+  jobs1/outbox1/reservations1이다. Adapter는 contract14개를 모두 판정했고 external0,
+  Console0, cleanup0, source unchanged다. [정제 실패 증거](evidence/issue-183/t2i-policy-failure-summary.json).
+- Issue183 구현은 완료됐고 제품 F01을 정직하게 FAIL로 보존한다. 다음 child184는
+  T2V/I2V/Pipeline Adapter이며, Free video length도 같은 admission 결함을 판정한다.
+- Fresh regression: backend1879 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
+  DevTools Node24, frontend lint/build, env-example Compose와 diff check PASS.
 - [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
 
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
