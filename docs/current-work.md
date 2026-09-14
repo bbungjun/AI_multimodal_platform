@@ -77,6 +77,13 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA Workspace surfaces — Issue185 In Progress, 2026-09-15
+
+- PR188 merge 후 `codex/issue-185-ops-surface-adapter`를 최신 main에서 시작했다.
+- History6/Usage6/Retry6/Role9 총27 assertion compiler Interface를 구현했다. 완전 evidence
+  PASS, 제품 불일치 FAIL, tool/source/cleanup 누락은 전체 BLOCKED다. focused4 PASS.
+- 다음은 owned fixture와 실제 DevTools History/Usage/retry/User-Master action이다.
+
 ### Agent QA Video + Pipeline Adapter — Issue184 Mock Verified, 2026-09-15
 
 - PR187 merge 후 branch `codex/issue-184-video-pipeline-adapter`를 최신 main에서 시작했다.
