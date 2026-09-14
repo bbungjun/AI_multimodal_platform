@@ -77,6 +77,30 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA aggregate Receipt — Issue186 Mock Verified, 2026-09-15
+
+- PR189를 required CI3건 통과 후 `main`에 병합했고 branch
+  `codex/issue-186-aggregate-receipt`를 시작했다.
+- aggregate Interface는 같은 immutable HEAD에서 Auth1, Prompt/T2I2,
+  T2V/I2V/Pipeline3, History/Usage/Retry/Role4의10 scenario를 실행한다.
+- 각 slice의 revision, source unchanged, cleanup을 재검증하고 Registry 순서의68 assertion
+  Receipt를 contract validator에 통과시킨다. PASS만 merge `ALLOW`, 제품 FAIL 또는
+  evidence BLOCKED는 `REJECT`이며 실제 GitHub merge 권한은 연결하지 않는다.
+- Core `f6ca646`에서 실제10 scenario/68 assertion 전체 실행을550.656s에 완료했다.
+  결과는58 PASS/10 FAIL/0 BLOCKED, source unchanged, browser/MCP/Vite/runtime cleanup0이며
+  aggregate verdict `FAIL`, merge decision `REJECT`다. PASS scenario는 Auth, Prompt review,
+  Pipeline, History, Usage, Retry 6개이고 FAIL은 T2I/T2V/I2V/Role 4개다.
+- 초기 aggregate 실행에서 빠른 T2I의 browser polling이 running을 놓쳐 false FAIL을 냈다.
+  계약의 database/runtime evidence에 맞춰 DB state history를 authoritative source로 바꿨고
+  최종 결과에서는 이 오판이 제거됐다. Docker Desktop이 다섯 번째 runtime에서 내려간
+  문제에는 exact revision/source/cleanup을 강제하는 `--resume`을 추가했다.
+- [contract-valid Receipt](evidence/issue-186/aggregate-receipt.json)와
+  [진행 기록](portfolio/issue-186-aggregate-receipt.md)을 보존했다. 다음 작업은10개 제품
+  FAIL을 별도 Issue로 고치고 같은 gate가 `ALLOW`로 바뀌는지 재검증하는 것이다.
+  Fresh regression은 backend1903 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
+  DevTools Node38, frontend lint/build, Registry/aggregate Receipt validation과 env-example
+  Compose PASS다. Delivery13파일.
+
 ### Agent QA Workspace surfaces — Issue185 Mock Verified, 2026-09-15
 
 - PR188 merge 후 `codex/issue-185-ops-surface-adapter`를 최신 main에서 시작했다.
