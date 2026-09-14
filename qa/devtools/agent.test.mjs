@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeRoute, safeSnapshot, validateCommand, checksFor } from './agent.mjs';
+import { safeRoute, safeSnapshot, validateCommand, checksFor, networkRows, consoleSummary } from './agent.mjs';
 
 test('evidence drops OAuth query, foreign origins and identity text', () => {
   assert.equal(safeRoute('http://127.0.0.1:18156/api/auth/google/callback?code=secret&state=secret'), '/api/auth/google/callback');
@@ -35,4 +35,12 @@ test('login is not passed from UI alone or incomplete observation', () => {
   assert.equal(Object.values(checksFor({ ...base, external: 1 })).every(Boolean), false);
   assert.equal(Object.values(checksFor({ ...base, consoleErrors: 1 })).every(Boolean), false);
   assert.equal(Object.values(checksFor({ ...base, workspace: false })).every(Boolean), false);
+});
+
+test('pinned DevTools network format is parsed without exposing OAuth values', () => {
+  assert.deepEqual(networkRows('reqid=42 GET http://127.0.0.1:18156/api/auth/google/callback?code=private [303]'),
+    [{ request_id: 42, route: '/api/auth/google/callback', status: 303 }]);
+  assert.equal(networkRows('reqid=4 GET http://127.0.0.1:18156/api/auth/me [pending]')[0].status, 0);
+  assert.deepEqual(consoleSummary('Failed to load resource: the server responded with a status of 401 (Unauthorized)'),
+    { route: 'other', kind: 'resource_load', http_status: 401 });
 });

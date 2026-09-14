@@ -27,6 +27,22 @@ export function safeSnapshot(text) {
     .map(line => line.match(/uid=[\d_]+ button "(?:Google로 계속하기|계정 정보)"/)[0]);
 }
 
+export function networkRows(text) {
+  return text.split('\n').filter(row => /reqid=\d+/.test(row) && /\/api\/auth\//.test(row)).map(row => ({
+    request_id: Number(row.match(/reqid=(\d+)/)?.[1]),
+    route: safeRoute(row.match(/https?:\/\/[^\s]+/)?.[0]),
+    status: Number(row.match(/\[(\d{3})\]/)?.[1] ?? 0),
+  }));
+}
+
+export function consoleSummary(text, url = '') {
+  return { route: safeRoute(url),
+    kind: /Failed to load resource/.test(text) ? 'resource_load' :
+      /React Router Future Flag Warning/.test(text) ? 'react_router_future' :
+      /WebSocket/.test(text) ? 'websocket' : 'other',
+    http_status: Number(text.match(/(?:status of |\[)(\d{3})/)?.[1] ?? 0) };
+}
+
 export function validateCommand(command, loginUid, clicked) {
   if (!command || typeof command !== 'object' || Array.isArray(command)) throw Error('command_refused');
   if (['tools', 'verify', 'finish'].includes(command.op) && Object.keys(command).length === 1) return;
@@ -70,10 +86,10 @@ async function main() {
   const frontendRequire = createRequire(resolve(ROOT, 'frontend/package.json'));
   const { createServer } = await import(pathToFileURL(resolve(dirname(frontendRequire.resolve('vite')), 'dist/node/index.js')).href);
   const react = (await import(pathToFileURL(frontendRequire.resolve('@vitejs/plugin-react')).href)).default;
-  const events = [], actions = [], inspected = { network: false, console: false };
+  const events = [], actions = [], consoleRows = [], inspected = { network: false, console: false };
   let external = 0, consoleErrors = 0, profile = false, clicked = false, loginUid = null;
   let browser, vite, client, transport, chromeProcess, mcpPid, finished = false;
-  const report = { passed: false, cleanup: 'pending', events, actions };
+  const report = { passed: false, cleanup: 'pending', events, actions, console: consoleRows };
   const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const timeout = setTimeout(() => input.close(), 600_000);
   const pending = new Set();
@@ -107,8 +123,10 @@ async function main() {
       }
     });
     // Browser emits a resource error for the expected initial anonymous /me 401.
-    page.on('pageerror', () => { consoleErrors++; });
+    page.on('pageerror', () => { consoleErrors++; consoleRows.push({ kind: 'uncaught_exception' }); });
     page.on('console', message => {
+      if (['error', 'warn'].includes(message.type())) consoleRows.push({
+        type: message.type(), ...consoleSummary(message.text(), message.location().url) });
       if (message.type() === 'error' && !(safeRoute(message.location().url) === '/api/auth/me'
           && /401/.test(message.text()))) consoleErrors++;
     });
@@ -153,18 +171,18 @@ async function main() {
               catch { return '[url]'; }
             }) });
           } else if (command.name === 'list_network_requests') {
-            inspected.network = true;
             // Return only normalized auth request lines, never headers or bodies.
-            const rows = text.split('\n').filter(row => /\/api\/auth\//.test(row)).map(row => {
-              const url = row.match(/https?:\/\/[^\s]+/)?.[0];
-              return { route: safeRoute(url), status: Number(row.match(/(?:status: | - )(\d{3})/)?.[1] ?? 0) };
-            });
+            const rows = networkRows(text);
+            inspected.network = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303],
+              ['/api/auth/me', 200]].every(([route, status]) => rows.some(row => row.route === route && row.status === status));
             action.network = rows;
             emit({ action: action.id, devtools_auth_requests: rows });
           } else if (command.name === 'list_console_messages') {
             inspected.console = true;
             action.console_entries = (text.match(/msgid=/g) ?? []).length;
-            emit({ action: action.id, console_entries: action.console_entries, unexpected_errors: consoleErrors });
+            action.console = text.split('\n').filter(row => /msgid=/.test(row)).map(row => consoleSummary(row));
+            emit({ action: action.id, console_entries: action.console_entries, unexpected_errors: consoleErrors,
+              devtools_console: action.console, browser_console: consoleRows });
           } else {
             if (command.name === 'click') clicked = true;
             emit({ action: action.id, tool: command.name, ok: true });
