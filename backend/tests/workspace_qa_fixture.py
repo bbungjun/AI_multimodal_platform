@@ -6,7 +6,7 @@ from sqlalchemy import func,select
 from sqlalchemy.engine import make_url
 from app.config import get_settings
 from app.db import AsyncSessionLocal
-from app.identity_models import User,UserRole
+from app.identity_models import User,UserOrigin,UserRole,UserStatus
 from app.models import Asset,GenerationMode,Job,JobState,utc_now
 
 PROJECT=re.compile(r"^ownership-verify-[0-9a-f]{12}$")
@@ -25,7 +25,11 @@ async def execute(payload):
  s=get_settings();op=validate(payload,s.database_url,s.ai_provider,s.app_env);now=utc_now()
  async with AsyncSessionLocal()as db:
   user=await db.scalar(select(User).where(User.google_sub=='mock-oauth-browser-user'))
-  if user is None:raise ValueError('workspace_fixture_user_missing')
+  if user is None:
+   user=User(google_sub='mock-oauth-browser-user',email='oauth-fixture@example.test',email_verified=True,
+    display_name='OAuth Fixture',profile_image_url=None,role=UserRole.USER,status=UserStatus.ACTIVE,
+    data_origin=UserOrigin.OAUTH,signed_up_at=now,updated_at=now)
+   db.add(user);await db.flush()
   if op=='prepare':
    existing=await db.scalar(select(func.count()).select_from(Job).where(Job.owner_user_id==user.id))
    if existing:raise ValueError('workspace_fixture_nonempty')

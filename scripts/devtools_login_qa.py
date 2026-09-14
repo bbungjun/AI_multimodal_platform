@@ -95,15 +95,8 @@ def main():
                 runtime.start(temporary)
                 probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario in {"image", "video"} else None
                 if automatic and scenario == "workspace":
-                    bootstrap_output, workspace_output = output / "bootstrap", output / "workspace"
-                    bootstrap_output.mkdir(); workspace_output.mkdir()
-                    bootstrap = subprocess.run(
-                        ["node", str(ROOT / "qa/devtools/auth-contract.mjs"), runtime.base_url,
-                         str(bootstrap_output), str(Path(temporary) / "bootstrap-profile")],
-                        cwd=ROOT, env=runtime.env, timeout=360,
-                    )
-                    if bootstrap.returncode != 0:
-                        raise RuntimeError("workspace_bootstrap_failed")
+                    workspace_output = output / "workspace"
+                    workspace_output.mkdir()
                     fixture = workspace_fixture(runtime, "prepare")
                     result = subprocess.run(
                         ["node", str(ROOT / "qa/devtools/workspace-controller.mjs"), runtime.base_url,
