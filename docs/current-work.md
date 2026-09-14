@@ -77,6 +77,56 @@ paste credential contents.
 
 ## Active Work
 
+### PR 작성 규칙 변경 — 2026-09-14
+
+- 사용자 요청에 따라 `AGENTS.md`에 PR 제목·본문 한국어 작성과 일반 PR 생성
+  (Draft 사용 안 함)을 명시했다. 현재 QA PR169/171/173에도 같은 규칙을 적용한다.
+- 이 변경은 문서와 PR 메타데이터만 수정하며, 기존 실행 증거의 revision과 결과는
+  그대로 유지한다. 검증은 Git diff 검사와 GitHub 제목·본문·isDraft 재조회로 수행한다.
+
+### Agent-operated reviewed-prompt image journey — Issue172 Mock Verified
+
+- Branch `codex/issue-172-image-journey-qa` depends on PR171/169. Executed
+  core `e262d6b`: one complete user journey,9 ordered checkpoints; enhancement1,
+  generation1; accepted payload matches;640x360 PNG556940B; reload/history revisit
+  retain same Job/asset/hash. No product changes. Console unexpected0/page external0.
+- `python scripts/devtools_login_qa.py --scenario image` exit0, source unchanged,
+  browser/runtime cleanup0. Node14/Python6, frontend lint/build, Compose/diff PASS.
+- [Record/reproduction](portfolio/issue-172-image-journey-qa.md) and
+  [final receipt](evidence/issue-172/image-journey-receipt.json). Initial direct-fill
+  and intermediate Network-retention failures are preserved. Keyboard input and
+  per-checkpoint DevTools capture resolved the harness gaps without relaxing expectations.
+- Delivery tracked by Issue172 and PR173. Next: reusable QA Skill;
+  video, credit/ownership and unattended CI/merge automation remain separate work.
+
+### Favicon repair and agent QA rerun — Issue170 Mock Verified
+
+- Branch `codex/issue-170-favicon-qa` depends on PR169. Verified core `f06dfd7`
+  adds a local brand SVG/favicon link; same agent-driven DevTools login9/9 PASS,
+  `/favicon.svg`200, unexpected Console errors1→0, browser/runtime cleanup0.
+- Original Issue168 failure is preserved. Node5/Python6, frontend lint/build,
+  built SVG hash/XML, env-example Compose and diff checks PASS.
+- [Before/after record](portfolio/issue-170-favicon-qa.md) and
+  [receipt](evidence/issue-170/devtools-login-receipt.json). Delivery is
+  tracked by Issue170/PR171. Next: image-generation user journey and reusable QA Skill.
+
+### Agent-operated Chrome DevTools login QA — Issue168 connection proof executed
+
+- Branch `codex/issue-168-devtools-login-qa`, executed core `8558113` with Chrome153
+  and DevTools MCP1.9.0: agent-selected actual login click, start307/callback303/
+  me200 and visible workspace. 8/9 checks: favicon404 is an unexpected Console
+  error, so strict QA remains FAIL/exit1. Browser/MCP/runtime cleanup0.
+- Test-only interactive MCP client, no global configuration/product/migration/Hook
+  changes. Browser page external requests0, not a backend/full-browser egress claim.
+- Node5 PASS, focused backend72/2 guarded skips and final focused6 PASS,
+  frontend lint/build, env-example Compose, diff check and dependency audit PASS.
+- [Record and reproduction](portfolio/issue-168-devtools-login-qa.md),
+  [sanitized receipt](evidence/issue-168/devtools-login-receipt.json). Delivery is
+  tracked by Issue168/PR169. Favicon is fixed and reverified
+  separately in Issue170 above; this entry preserves the original failed run.
+- Docker startup socket errors were recovered using preserved socket-only folder
+  backups; existing data was not reset. Other running/stopped projects remain.
+
 ### AI button QA and E2E coverage audit — 2026-09-13
 
 - Issue164 / `codex/issue-164-ai-ui-qa`: AI-operated browser exploration of the

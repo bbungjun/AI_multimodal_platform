@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "run_id": "devtools-login-060a1e71bec4",
+  "revision": "f06dfd7059eeddb7120006710e2565993e01ce5a",
+  "source_sha256": "52856e2c966b4cb274c58cefb58147c47e1c5e1fe578a66392b3968ff8de8436",
+  "provider": "mock",
+  "complete": true,
+  "runtime_cleanup": 0,
+  "driver_exit_code": 0,
+  "browser": {
+    "passed": true,
+    "cleanup": 0,
+    "events": [
+      {
+        "at": "2026-09-14T10:44:40.391Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 401
+      },
+      {
+        "at": "2026-09-14T10:44:40.406Z",
+        "method": "GET",
+        "route": "/favicon.svg",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:44:52.083Z",
+        "method": "GET",
+        "route": "/api/auth/google/start",
+        "status": 307
+      },
+      {
+        "at": "2026-09-14T10:44:52.140Z",
+        "method": "GET",
+        "route": "/api/auth/google/callback",
+        "status": 303
+      },
+      {
+        "at": "2026-09-14T10:44:52.306Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 200
+      }
+    ],
+    "actions": [
+      {
+        "id": "A1",
+        "at": "2026-09-14T10:44:35.009Z",
+        "op": "call",
+        "tool": "list_pages",
+        "arguments": {},
+        "ok": true
+      },
+      {
+        "id": "A2",
+        "at": "2026-09-14T10:44:39.391Z",
+        "op": "call",
+        "tool": "navigate_page",
+        "arguments": {
+          "pageId": 1,
+          "type": "url",
+          "url": "http://127.0.0.1:18156/login"
+        },
+        "ok": true
+      },
+      {
+        "id": "A3",
+        "at": "2026-09-14T10:44:40.583Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "ok": true
+      },
+      {
+        "id": "A4",
+        "at": "2026-09-14T10:44:52.041Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "1_34"
+        },
+        "ok": true
+      },
+      {
+        "id": "A5",
+        "at": "2026-09-14T10:44:58.053Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "ok": true
+      },
+      {
+        "id": "A6",
+        "at": "2026-09-14T10:44:58.061Z",
+        "op": "call",
+        "tool": "list_network_requests",
+        "arguments": {
+          "pageId": 1,
+          "includePreservedRequests": true
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 43,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 44,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 81,
+            "route": "/api/auth/me",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A7",
+        "at": "2026-09-14T10:44:58.064Z",
+        "op": "call",
+        "tool": "list_console_messages",
+        "arguments": {
+          "pageId": 1,
+          "types": [
+            "error",
+            "warn"
+          ],
+          "includePreservedMessages": true
+        },
+        "console_entries": 2,
+        "console": [
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          },
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A8",
+        "at": "2026-09-14T10:44:58.067Z",
+        "op": "finish",
+        "ok": true
+      }
+    ],
+    "console": [
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "error",
+        "route": "/api/auth/me",
+        "kind": "resource_load",
+        "http_status": 401
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      }
+    ],
+    "chrome_version": "Chrome/153.0.8010.37",
+    "mcp_version": "1.9.0",
+    "checks": {
+      "actual_login_click": true,
+      "login_start_307": true,
+      "callback_303": true,
+      "authenticated_me_200": true,
+      "workspace_visible": true,
+      "no_external_page_requests": true,
+      "no_unexpected_console_errors": true,
+      "devtools_network_inspected": true,
+      "devtools_console_inspected": true
+    },
+    "external_page_requests": 0,
+    "unexpected_console_errors": 0
+  },
+  "source_unchanged": true,
+  "seconds": 58.656
+}

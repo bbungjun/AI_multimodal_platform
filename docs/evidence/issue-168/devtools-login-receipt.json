@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "run_id": "devtools-login-2073c7943176",
+  "revision": "85581133fa2d3223efd974bcac70ce12c9463db9",
+  "source_sha256": "2d3b870e68b3b92dca2842ec72bfae6fc49ea70e87f2829a37dbaa2a44dd8de3",
+  "provider": "mock",
+  "complete": false,
+  "runtime_cleanup": 0,
+  "driver_exit_code": 1,
+  "browser": {
+    "passed": false,
+    "cleanup": 0,
+    "events": [
+      {
+        "at": "2026-09-14T10:11:15.817Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 401
+      },
+      {
+        "at": "2026-09-14T10:11:16.031Z",
+        "method": "GET",
+        "route": "/favicon.ico",
+        "status": 404
+      },
+      {
+        "at": "2026-09-14T10:11:45.876Z",
+        "method": "GET",
+        "route": "/api/auth/google/start",
+        "status": 307
+      },
+      {
+        "at": "2026-09-14T10:11:45.933Z",
+        "method": "GET",
+        "route": "/api/auth/google/callback",
+        "status": 303
+      },
+      {
+        "at": "2026-09-14T10:11:46.085Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 200
+      }
+    ],
+    "actions": [
+      {
+        "id": "A1",
+        "at": "2026-09-14T10:11:09.217Z",
+        "op": "call",
+        "tool": "list_pages",
+        "arguments": {},
+        "ok": true
+      },
+      {
+        "id": "A2",
+        "at": "2026-09-14T10:11:14.708Z",
+        "op": "call",
+        "tool": "navigate_page",
+        "arguments": {
+          "pageId": 1,
+          "type": "url",
+          "url": "http://127.0.0.1:18156/login"
+        },
+        "ok": true
+      },
+      {
+        "id": "A3",
+        "at": "2026-09-14T10:11:16.030Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "ok": true
+      },
+      {
+        "id": "A4",
+        "at": "2026-09-14T10:11:45.825Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "1_34"
+        },
+        "ok": true
+      },
+      {
+        "id": "A5",
+        "at": "2026-09-14T10:11:50.526Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "ok": true
+      },
+      {
+        "id": "A6",
+        "at": "2026-09-14T10:11:50.533Z",
+        "op": "call",
+        "tool": "list_network_requests",
+        "arguments": {
+          "pageId": 1,
+          "includePreservedRequests": true
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.ico",
+            "status": 404
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 47,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 84,
+            "route": "/api/auth/me",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A7",
+        "at": "2026-09-14T10:11:50.535Z",
+        "op": "call",
+        "tool": "list_console_messages",
+        "arguments": {
+          "pageId": 1,
+          "types": [
+            "error",
+            "warn"
+          ],
+          "includePreservedMessages": true
+        },
+        "console_entries": 3,
+        "console": [
+          {
+            "route": "other",
+            "kind": "resource_load",
+            "http_status": 404
+          },
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          },
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A8",
+        "at": "2026-09-14T10:11:50.538Z",
+        "op": "finish",
+        "ok": true
+      }
+    ],
+    "console": [
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "error",
+        "route": "/api/auth/me",
+        "kind": "resource_load",
+        "http_status": 401
+      },
+      {
+        "type": "error",
+        "route": "/favicon.ico",
+        "kind": "resource_load",
+        "http_status": 404
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      }
+    ],
+    "chrome_version": "Chrome/153.0.8010.37",
+    "mcp_version": "1.9.0",
+    "checks": {
+      "actual_login_click": true,
+      "login_start_307": true,
+      "callback_303": true,
+      "authenticated_me_200": true,
+      "workspace_visible": true,
+      "no_external_page_requests": true,
+      "no_unexpected_console_errors": false,
+      "devtools_network_inspected": true,
+      "devtools_console_inspected": true
+    },
+    "external_page_requests": 0,
+    "unexpected_console_errors": 1
+  },
+  "source_unchanged": true,
+  "seconds": 85.563
+}

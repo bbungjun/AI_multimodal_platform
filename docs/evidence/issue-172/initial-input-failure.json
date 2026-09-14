@@ -1,0 +1,768 @@
+{
+  "schema_version": 1,
+  "run_id": "devtools-image-a3bc0b47e4b7",
+  "scenario": "image",
+  "revision": "b5f2e613f69b6234fb2cbda2bf9146d723a8f4e2",
+  "source_sha256": "5c639378165dbb8d87e1c33914e5d3af6a502c6c87699d14bd7b803e15df996d",
+  "provider": "mock",
+  "complete": false,
+  "runtime_cleanup": 0,
+  "driver_exit_code": 1,
+  "browser": {
+    "scenario": "image",
+    "passed": false,
+    "cleanup": 0,
+    "events": [
+      {
+        "at": "2026-09-14T10:52:14.089Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 401
+      },
+      {
+        "at": "2026-09-14T10:52:14.107Z",
+        "method": "GET",
+        "route": "/favicon.svg",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:52:25.588Z",
+        "method": "GET",
+        "route": "/api/auth/google/start",
+        "status": 307
+      },
+      {
+        "at": "2026-09-14T10:52:25.657Z",
+        "method": "GET",
+        "route": "/api/auth/google/callback",
+        "status": 303
+      },
+      {
+        "at": "2026-09-14T10:52:25.801Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:52:40.552Z",
+        "method": "POST",
+        "route": "/api/prompts/enhance",
+        "status": 201
+      }
+    ],
+    "actions": [
+      {
+        "id": "A1",
+        "at": "2026-09-14T10:52:08.697Z",
+        "op": "call",
+        "tool": "list_pages",
+        "arguments": {},
+        "ok": true
+      },
+      {
+        "id": "A2",
+        "at": "2026-09-14T10:52:12.958Z",
+        "op": "call",
+        "tool": "navigate_page",
+        "arguments": {
+          "pageId": 1,
+          "type": "url",
+          "url": "http://127.0.0.1:18156/login"
+        },
+        "ok": true
+      },
+      {
+        "id": "A3",
+        "at": "2026-09-14T10:52:14.211Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "1_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "1_34",
+            "role": "button",
+            "purpose": "login",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A4",
+        "at": "2026-09-14T10:52:25.530Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "1_34"
+        },
+        "purpose": "login",
+        "ok": true
+      },
+      {
+        "id": "A5",
+        "at": "2026-09-14T10:52:29.738Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "login",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A6",
+        "at": "2026-09-14T10:52:29.965Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A7",
+        "at": "2026-09-14T10:52:34.380Z",
+        "op": "call",
+        "tool": "fill",
+        "arguments": {
+          "pageId": 1,
+          "uid": "2_51",
+          "fixture": "original"
+        },
+        "purpose": "original",
+        "ok": true
+      },
+      {
+        "id": "A8",
+        "at": "2026-09-14T10:52:34.837Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "original",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A9",
+        "at": "2026-09-14T10:52:35.068Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A10",
+        "at": "2026-09-14T10:52:40.455Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "2_72"
+        },
+        "purpose": "enhance",
+        "ok": true
+      },
+      {
+        "id": "A11",
+        "at": "2026-09-14T10:52:44.617Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "draft",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": true,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A12",
+        "at": "2026-09-14T10:52:44.837Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          },
+          {
+            "uid": "4_5",
+            "role": "button",
+            "purpose": "accept",
+            "disabled": false
+          },
+          {
+            "uid": "4_18",
+            "role": "textbox",
+            "purpose": "draft",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A13",
+        "at": "2026-09-14T10:52:50.696Z",
+        "op": "call",
+        "tool": "fill",
+        "arguments": {
+          "pageId": 1,
+          "uid": "4_18",
+          "fixture": "reviewed"
+        },
+        "purpose": "draft",
+        "ok": true
+      },
+      {
+        "id": "A14",
+        "at": "2026-09-14T10:52:50.921Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "edited",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": true,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A15",
+        "at": "2026-09-14T10:52:51.138Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          },
+          {
+            "uid": "4_5",
+            "role": "button",
+            "purpose": "accept",
+            "disabled": false
+          },
+          {
+            "uid": "4_18",
+            "role": "textbox",
+            "purpose": "draft",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A16",
+        "at": "2026-09-14T10:52:55.693Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "4_5"
+        },
+        "purpose": "accept",
+        "ok": true
+      },
+      {
+        "id": "A17",
+        "at": "2026-09-14T10:52:55.939Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "accepted",
+          "passed": false,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A18",
+        "at": "2026-09-14T10:52:56.158Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A19",
+        "at": "2026-09-14T10:53:08.961Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "accepted",
+          "passed": false,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "ok": true
+      },
+      {
+        "id": "A20",
+        "at": "2026-09-14T10:53:35.954Z",
+        "op": "call",
+        "tool": "list_network_requests",
+        "arguments": {
+          "pageId": 1,
+          "includePreservedRequests": true
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 43,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 44,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 81,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 86,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A21",
+        "at": "2026-09-14T10:53:35.957Z",
+        "op": "call",
+        "tool": "list_console_messages",
+        "arguments": {
+          "pageId": 1,
+          "types": [
+            "error",
+            "warn"
+          ],
+          "includePreservedMessages": true
+        },
+        "console_entries": 2,
+        "console": [
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          },
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A22",
+        "at": "2026-09-14T10:53:35.959Z",
+        "op": "finish",
+        "ok": true
+      }
+    ],
+    "console": [
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "error",
+        "route": "/api/auth/me",
+        "kind": "resource_load",
+        "http_status": 401
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      }
+    ],
+    "chrome_version": "Chrome/153.0.8010.37",
+    "mcp_version": "1.9.0",
+    "checks": {
+      "actual_login_click": true,
+      "login_start_307": true,
+      "callback_303": true,
+      "authenticated_me_200": true,
+      "workspace_visible": true,
+      "no_external_page_requests": true,
+      "no_unexpected_console_errors": true,
+      "devtools_network_inspected": true,
+      "devtools_console_inspected": true
+    },
+    "image": {
+      "scenario": "reviewed_prompt_image",
+      "passed": false,
+      "checks": {
+        "login": true,
+        "original": true,
+        "draft": true,
+        "edited": true,
+        "accepted": false,
+        "completed": false,
+        "reloaded": false,
+        "history": false,
+        "revisited": false,
+        "enhancement_payload_matches": true,
+        "accepted_generation_payload_matches": false,
+        "one_enhancement": true,
+        "one_generation": false,
+        "no_observation_failures": true
+      },
+      "steps": [
+        {
+          "phase": "login",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "original",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "draft",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": true,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "edited",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": true,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "accepted",
+          "passed": false,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "accepted",
+          "passed": false,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        }
+      ],
+      "post_counts": {
+        "enhancement": 1,
+        "generation": 0
+      },
+      "job_reads": 0,
+      "file_reads": 0,
+      "file": null,
+      "failures": []
+    },
+    "external_page_requests": 0,
+    "unexpected_console_errors": 0
+  },
+  "source_unchanged": true,
+  "seconds": 121.61
+}

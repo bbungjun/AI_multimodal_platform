@@ -1,0 +1,11 @@
+{
+  "name": "creativeops-devtools-login-qa",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test agent.test.mjs image-journey.test.mjs" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "chrome-devtools-mcp": "1.9.0",
+    "puppeteer-core": "25.10.0"
+  }
+}

@@ -107,7 +107,10 @@ Workload Identity, Vertex AI 연동, runbook, mock/vertex 모드 분리, k6 부�
 - 구현 작업은 먼저 GitHub Issue를 발행해 범위와 수용 기준을 기록합니다.
 - 작업 브랜치는 해당 Issue에서 만들고 `codex/issue-번호-짧은-설명` 형식을
   사용합니다.
-- 검증이 끝나면 브랜치를 push하고 `main` 대상으로 draft PR을 엽니다.
+- 검증이 끝나면 브랜치를 push하고 `main` 대상으로 리뷰 가능한 일반 PR을 엽니다.
+  Draft PR로 만들지 않습니다.
+- PR 제목과 본문은 한국어로 작성합니다. 코드 식별자, 명령어, 도구명 등 필요한
+  기술 용어는 원문을 유지합니다.
 - 작업을 시작할 때는 `AGENTS.md`를 읽은 뒤 `docs/current-work.md`를 읽어 현재
   작업 상태, 마지막 검증 결과, 다음 단계, 주의사항을 먼저 확인합니다.
 - 작업을 마칠 때는 `docs/current-work.md`에 이번에 어디까지 했는지, 남은 일,
