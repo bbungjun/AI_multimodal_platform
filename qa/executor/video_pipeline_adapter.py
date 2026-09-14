@@ -33,11 +33,13 @@ def read_pipeline_probe(runtime: Any) -> dict[str, Any]:
     except Exception as error:
         raise ValueError("pipeline_probe_failed") from error
     fields = {"complete", "same_owner", "source_linked", "parent_state", "child_state",
-              "reservations", "held"}
+              "parent_path", "child_path", "reservations", "held"}
     if (type(value) is not dict or set(value) != fields or value.get("complete") is not True
             or type(value["same_owner"]) is not bool or type(value["source_linked"]) is not bool
             or value["parent_state"] not in {"completed", "failed", "cancelled"}
             or value["child_state"] not in {"completed", "failed", "cancelled"}
+            or value["parent_path"] not in {"pending,running,completed", "pending,running,failed"}
+            or value["child_path"] not in {"blocked,pending,running,completed", "blocked,pending,running,failed"}
             or type(value["reservations"]) is not int or type(value["held"]) is not int):
         raise ValueError("pipeline_probe_invalid")
     return value

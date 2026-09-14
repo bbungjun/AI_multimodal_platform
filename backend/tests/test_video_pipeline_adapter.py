@@ -67,5 +67,7 @@ def test_pipeline_probe_accepts_only_aggregate_fields():
         def docker(self, *args, input=None):
             return ('{"complete":true,"same_owner":true,"source_linked":true,'
                     '"parent_state":"completed","child_state":"completed",'
+                    '"parent_path":"pending,running,completed",'
+                    '"child_path":"blocked,pending,running,completed",'
                     '"reservations":1,"held":0}')
     assert read_pipeline_probe(Runtime())["held"] == 0

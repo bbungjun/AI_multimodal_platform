@@ -21,6 +21,18 @@ from app.models import Asset, GenerationMode, Job, JobState, OutboxEvent
 PROJECT = re.compile(r"^ownership-verify-[0-9a-f]{12}$")
 
 
+def normalized_path(job: Job, *, blocked: bool = False) -> str:
+    values = ["blocked"] if blocked else []
+    values.append("pending")
+    for entry in job.state_history or []:
+        raw = entry.get("state") if isinstance(entry, dict) else None
+        state = raw if raw in {"pending", "completed", "failed", "cancelled"} else (
+            "running" if raw in {"enhancing", "queued", "generating", "polling", "downloading"} else None)
+        if state and values[-1] != state:
+            values.append(state)
+    return ",".join(values)
+
+
 def validate_request(payload, *, database_url: str, provider: str, app_env: str) -> tuple[str, UUID | None]:
     if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source", "latest_pipeline"}:
         raise ValueError("prompt_t2i_probe_refused")
@@ -85,6 +97,8 @@ async def inspect(payload) -> dict:
                 "source_linked": parent_asset is not None and child.source_asset_id == parent_asset.id,
                 "parent_state": parent.state.value,
                 "child_state": child.state.value,
+                "parent_path": normalized_path(parent),
+                "child_path": normalized_path(child, blocked=True),
                 "reservations": 1 if reservation is not None else 0,
                 "held": 1 if reservation is not None and reservation.status == "held" else 0,
             }
