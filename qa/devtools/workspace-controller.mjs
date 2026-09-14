@@ -1,3 +1,80 @@
-import{spawn}from'node:child_process';import{createInterface}from'node:readline';import{once}from'node:events';import{dirname,resolve}from'node:path';import{fileURLToPath}from'node:url';import{controlUid,pageId}from'./image-controller.mjs';const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../..'),delay=ms=>new Promise(d=>setTimeout(d,ms));
-async function main(){const[backend,output,profile,retryJob]=process.argv.slice(2);const child=spawn(process.execPath,[resolve(ROOT,'qa/devtools/agent.mjs'),backend,output,profile,'workspace',retryJob],{cwd:ROOT,stdio:['pipe','pipe','ignore']});const rd=createInterface({input:child.stdout,crlfDelay:Infinity}),q=[],w=[];rd.on('line',l=>{let v;try{v=JSON.parse(l)}catch{v={error:'protocol'}}const x=w.shift();x?x(v):q.push(v)});const next=(t=35000)=>q.length?Promise.resolve(q.shift()):Promise.race([new Promise(d=>w.push(d)),new Promise((_,r)=>setTimeout(()=>r(Error('timeout')),t))]);const send=async c=>{child.stdin.write(JSON.stringify(c)+'\n');const r=await next();if(r.error||r.ok===false)throw Error('action');return r},call=(n,a)=>send({op:'call',name:n,arguments:a}),snap=p=>call('take_snapshot',{pageId:p});const click=async(p,x)=>{const u=controlUid(await snap(p),x);if(!u)throw Error(`control_${x}`);await call('click',{pageId:p,uid:u})},fill=async(p,x,f)=>{const u=controlUid(await snap(p),x);if(!u)throw Error(`control_${x}`);await call('fill',{pageId:p,uid:u,fixture:f})};const check=async(p,phase,o={})=>{for(let i=0;i<(o.retries??1);i++){await delay(o.wait??500);const r=await send({op:'checkpoint',phase});if(r.checkpoint?.passed)return}throw Error(`checkpoint_${phase}`)};let stage='ready';try{const ready=await next();if(ready.phase!=='ready')throw Error('ready');const p=pageId(await call('list_pages',{}));await call('navigate_page',{pageId:p,type:'url',url:'http://127.0.0.1:18156/login'});await delay(750);stage='login';await click(p,'login');await check(p,'login',{retries:4,wait:1000});stage='history';await click(p,'history');await check(p,'history',{retries:5,wait:750});await fill(p,'state','failed');await check(p,'filtered',{retries:5,wait:750});await click(p,'next');await check(p,'page2',{retries:5,wait:750});await click(p,'previous');await check(p,'page1',{retries:5,wait:750});stage='delete_cancel';await click(p,'delete');await call('handle_dialog',{action:'dismiss'});stage='detail';await click(p,'retry_row');await check(p,'detail',{retries:4,wait:750});stage='retry';await click(p,'retry');await check(p,'retry_completed',{retries:15,wait:1000});stage='usage';await click(p,'usage');await check(p,'usage',{retries:5,wait:750});await call('navigate_page',{pageId:p,type:'reload'});await check(p,'usage_reloaded',{retries:5,wait:750});await call('list_network_requests',{pageId:p,includePreservedRequests:true});await call('list_console_messages',{pageId:p,types:['error','warn'],includePreservedMessages:true});await send({op:'verify'});await send({op:'finish'});let closed=await next();while(closed.phase!=='browser_closed')closed=await next();if(closed.cleanup!==0)throw Error('cleanup');child.stdin.end();process.stdout.write(JSON.stringify({complete:true,product_passed:closed.passed===true,cleanup:0})+'\n')}catch(e){child.stdin.end();try{await Promise.race([once(child,'exit'),delay(60000)])}catch{}process.stdout.write(JSON.stringify({complete:false,error:`${stage}_${e.message}`})+'\n');process.exitCode=1}finally{rd.close()}}
-if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { createInterface } from 'node:readline';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { controlUid, pageId } from './image-controller.mjs';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const delay = ms => new Promise(done => setTimeout(done, ms));
+
+async function main() {
+  const [backend, output, profile, retryJob] = process.argv.slice(2);
+  const child = spawn(process.execPath,
+    [resolve(ROOT, 'qa/devtools/agent.mjs'), backend, output, profile, 'workspace', retryJob],
+    { cwd: ROOT, stdio: ['pipe', 'pipe', 'ignore'] });
+  const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
+  const queue = [], waiters = [];
+  reader.on('line', line => {
+    let value; try { value = JSON.parse(line); } catch { value = { error: 'protocol' }; }
+    const waiter = waiters.shift(); if (waiter) waiter(value); else queue.push(value);
+  });
+  const next = (timeout = 35_000) => queue.length ? Promise.resolve(queue.shift()) : Promise.race([
+    new Promise(done => waiters.push(done)),
+    new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), timeout)),
+  ]);
+  const send = async command => {
+    child.stdin.write(JSON.stringify(command) + '\n'); const response = await next();
+    if (response.error || response.ok === false) throw Error('action'); return response;
+  };
+  const call = (name, args) => send({ op: 'call', name, arguments: args });
+  const snapshot = page => call('take_snapshot', { pageId: page });
+  const click = async (page, purpose, retries = 1) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const uid = controlUid(await snapshot(page), purpose);
+      if (uid) { await call('click', { pageId: page, uid }); return; }
+      await delay(750);
+    }
+    throw Error(`control_${purpose}`);
+  };
+  const fill = async (page, purpose, fixture) => {
+    const uid = controlUid(await snapshot(page), purpose); if (!uid) throw Error(`control_${purpose}`);
+    await call('fill', { pageId: page, uid, fixture });
+  };
+  const checkpoint = async (page, phase, options = {}) => {
+    for (let attempt = 0; attempt < (options.retries ?? 1); attempt++) {
+      await delay(options.wait ?? 500); const response = await send({ op: 'checkpoint', phase });
+      if (response.checkpoint?.passed) return;
+    }
+    throw Error(`checkpoint_${phase}`);
+  };
+  let stage = 'ready';
+  try {
+    const ready = await next(); if (ready.phase !== 'ready') throw Error('ready');
+    const page = pageId(await call('list_pages', {}));
+    await call('navigate_page', { pageId: page, type: 'url', url: 'http://127.0.0.1:18156/login' });
+    stage = 'login'; await click(page, 'login', 5); await checkpoint(page, 'login', { retries: 4, wait: 1000 });
+    stage = 'history'; await click(page, 'history'); await checkpoint(page, 'history', { retries: 5, wait: 750 });
+    await fill(page, 'state', 'failed'); await checkpoint(page, 'filtered', { retries: 5, wait: 750 });
+    await click(page, 'next'); await checkpoint(page, 'page2', { retries: 5, wait: 750 });
+    await click(page, 'previous'); await checkpoint(page, 'page1', { retries: 5, wait: 750 });
+    stage = 'delete_cancel'; await click(page, 'delete'); await call('handle_dialog', { action: 'dismiss' });
+    stage = 'detail'; await click(page, 'retry_row'); await checkpoint(page, 'detail', { retries: 4, wait: 750 });
+    stage = 'retry'; await click(page, 'retry'); await checkpoint(page, 'retry_completed', { retries: 15, wait: 1000 });
+    stage = 'usage'; await click(page, 'usage'); await checkpoint(page, 'usage', { retries: 5, wait: 750 });
+    await call('navigate_page', { pageId: page, type: 'reload' });
+    await checkpoint(page, 'usage_reloaded', { retries: 5, wait: 750 });
+    await call('list_network_requests', { pageId: page, includePreservedRequests: true });
+    await call('list_console_messages', { pageId: page, types: ['error', 'warn'], includePreservedMessages: true });
+    await send({ op: 'verify' }); await send({ op: 'finish' });
+    let closed = await next(); while (closed.phase !== 'browser_closed') closed = await next();
+    if (closed.cleanup !== 0) throw Error('cleanup'); child.stdin.end();
+    process.stdout.write(JSON.stringify({ complete: true, product_passed: closed.passed === true, cleanup: 0 }) + '\n');
+  } catch (error) {
+    child.stdin.end(); try { await Promise.race([once(child, 'exit'), delay(60_000)]); } catch {}
+    process.stdout.write(JSON.stringify({ complete: false, error: `${stage}_${error.message}` }) + '\n');
+    process.exitCode = 1;
+  } finally { reader.close(); }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
