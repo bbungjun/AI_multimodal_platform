@@ -77,6 +77,20 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA prompt review + T2I Adapter — Issue183 In Progress, 2026-09-15
+
+- Parent Issue182를 prompt/T2I, video/pipeline, history/usage/retry/role, aggregate Receipt의
+  4개 bounded child로 분리했다. 현재 branch는 `codex/issue-183-prompt-t2i-adapter`다.
+- `compile_prompt_t2i_results` Interface가 정제 DevTools/browser evidence와 DB/runtime
+  probe를 prompt6개/T2I8개 contract assertion으로 변환한다. 완전하지 않은 tool evidence는
+  `BLOCKED`, 제품 기대 위반은 `FAIL`이며 allow-failure가 없다.
+- Free over-limit이201이고 job/outbox/reservation이 각각1인 기존 결함 입력은 T2I의
+  policy refusal 및 side-effect0 assertion4개를 FAIL로 판정한다. focused6 PASS.
+- 아직 실제 Chrome action driver와 DB probe Adapter가 연결되지 않았으므로 Issue183은
+  완료가 아니다. 다음 구현은 discard/keep/edited accept, empty disabled, over-limit 요청,
+  allowed PNG journey와 DB delta를 한 owned runtime에서 수집하는 것이다.
+- [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
+
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
 
 - PR177/179는 required checks 통과 후 `main`에 squash merge됐다. Branch
