@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "policy_id": "creativeops-agent-qa-impact",
+  "rules": [
+    {
+      "id": "qa_contract_changed",
+      "effect": "all",
+      "scenarios": [],
+      "paths": [],
+      "prefixes": ["qa/contracts/", "qa/impact/"],
+      "reason": "qa_contract_requires_full_e2e"
+    },
+    {
+      "id": "shared_runtime_changed",
+      "effect": "all",
+      "scenarios": [],
+      "paths": [
+        ".env.example",
+        "docker-compose.yml",
+        "docker-compose.vertex.yml",
+        "backend/Dockerfile",
+        "backend/app/main.py",
+        "backend/app/config.py",
+        "backend/app/db.py",
+        "backend/app/api/__init__.py",
+        "backend/app/models.py",
+        "backend/app/schema_control.py",
+        "backend/app/schema_revision.py",
+        "backend/app/schemas.py",
+        "backend/app/services/__init__.py",
+        "backend/app/state_machine.py",
+        "backend/app/synthetic_seed.py",
+        "backend/app/synthetic_seed_cli.py",
+        "backend/app/worker.py",
+        "backend/app/celery_app.py",
+        "frontend/package.json",
+        "frontend/src/App.tsx",
+        "frontend/src/api/client.ts",
+        "frontend/src/api/types.ts",
+        "frontend/src/index.css",
+        "frontend/src/ui/copy.ts",
+        "frontend/src/ui/viewModels.ts",
+        "frontend/src/main.tsx"
+      ],
+      "prefixes": ["backend/migrations/", "frontend/src/components/", "frontend/src/hooks/"],
+      "reason": "shared_runtime_requires_full_e2e"
+    },
+    {
+      "id": "auth_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["auth_login", "role_ops_master"],
+      "paths": ["backend/app/api/auth.py", "backend/app/api/auth_dependencies.py"],
+      "prefixes": ["backend/app/auth/", "frontend/src/auth/"],
+      "reason": "auth_surface_impacted"
+    },
+    {
+      "id": "prompt_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["prompt_review", "t2i_generation", "t2v_generation", "i2v_generation"],
+      "paths": [
+        "backend/app/api/prompts.py",
+        "backend/app/prompt_credit.py",
+        "backend/app/prompt_enhancement.py"
+      ],
+      "prefixes": ["backend/app/services/llm/"],
+      "reason": "prompt_surface_impacted"
+    },
+    {
+      "id": "generation_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["t2i_generation", "t2v_generation", "i2v_generation", "history_navigation", "failure_retry"],
+      "paths": [
+        "backend/app/api/generations.py",
+        "backend/app/generation_credit.py",
+        "backend/app/api/assets.py",
+        "backend/app/api/files.py",
+        "backend/app/services/mock_media.py",
+        "backend/app/services/storage.py",
+        "frontend/src/api/asset.contract.ts"
+      ],
+      "prefixes": ["backend/app/services/vertex/"],
+      "reason": "generation_surface_impacted"
+    },
+    {
+      "id": "provider_reliability_changed",
+      "effect": "scenario",
+      "scenarios": ["prompt_review", "t2i_generation", "t2v_generation", "i2v_generation", "pipeline_generation", "failure_retry"],
+      "paths": ["backend/app/services/rate_limit.py", "backend/app/services/retry.py"],
+      "prefixes": [],
+      "reason": "provider_reliability_impacted"
+    },
+    {
+      "id": "job_runtime_changed",
+      "effect": "scenario",
+      "scenarios": ["t2i_generation", "t2v_generation", "i2v_generation", "pipeline_generation", "failure_retry", "usage_credits"],
+      "paths": [],
+      "prefixes": ["backend/app/services/jobs/"],
+      "reason": "job_runtime_impacted"
+    },
+    {
+      "id": "credit_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["prompt_review", "t2i_generation", "t2v_generation", "i2v_generation", "pipeline_generation", "usage_credits", "failure_retry"],
+      "paths": [
+        "backend/app/credit_accounting.py",
+        "backend/app/credit_lifecycle.py",
+        "backend/app/credit_models.py",
+        "backend/app/credit_policy.py",
+        "backend/app/personal_usage.py",
+        "backend/app/api/usage.py"
+      ],
+      "prefixes": [],
+      "reason": "credit_surface_impacted"
+    },
+    {
+      "id": "pipeline_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["pipeline_generation", "i2v_generation"],
+      "paths": ["backend/app/api/pipelines.py", "frontend/src/pages/PipelinePage.tsx"],
+      "prefixes": [],
+      "reason": "pipeline_surface_impacted"
+    },
+    {
+      "id": "history_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["history_navigation", "failure_retry"],
+      "paths": [
+        "frontend/src/pages/HistoryPage.tsx",
+        "frontend/src/pages/JobDetailPage.tsx",
+        "frontend/src/api/history.contract.ts",
+        "frontend/src/utils/repair.ts"
+      ],
+      "prefixes": [],
+      "reason": "history_surface_impacted"
+    },
+    {
+      "id": "usage_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["usage_credits"],
+      "paths": ["frontend/src/pages/UsagePage.tsx", "frontend/src/ui/usage.ts"],
+      "prefixes": [],
+      "reason": "usage_surface_impacted"
+    },
+    {
+      "id": "operations_surface_changed",
+      "effect": "scenario",
+      "scenarios": ["role_ops_master"],
+      "paths": [
+        "frontend/src/pages/OpsPage.tsx",
+        "frontend/src/pages/MasterPage.tsx",
+        "frontend/src/api/ops.contract.ts",
+        "frontend/src/ui/master.ts",
+        "backend/app/api/ops.py",
+        "backend/app/api/master.py",
+        "backend/app/api/health.py",
+        "backend/app/api/metrics.py"
+      ],
+      "prefixes": ["backend/app/services/ops/"],
+      "reason": "operations_surface_impacted"
+    },
+    {
+      "id": "master_domain_changed",
+      "effect": "scenario",
+      "scenarios": ["role_ops_master", "auth_login"],
+      "paths": [
+        "backend/app/master_admin.py",
+        "backend/app/master_models.py",
+        "backend/app/master_read.py",
+        "backend/app/master_work.py",
+        "backend/app/master_cli.py",
+        "backend/app/identity_models.py",
+        "backend/app/ownership.py"
+      ],
+      "prefixes": [],
+      "reason": "master_domain_impacted"
+    },
+    {
+      "id": "documentation_only",
+      "effect": "no_e2e",
+      "scenarios": [],
+      "paths": ["README.md", "AGENTS.md", "CONTEXT.md"],
+      "prefixes": ["docs/"],
+      "reason": "documentation_does_not_change_runtime"
+    },
+    {
+      "id": "tests_only",
+      "effect": "no_e2e",
+      "scenarios": [],
+      "paths": ["frontend/src/ui/viewModels.test-d.ts"],
+      "prefixes": ["backend/tests/", "frontend/tests/"],
+      "reason": "tests_do_not_change_runtime"
+    },
+    {
+      "id": "infrastructure_only",
+      "effect": "no_e2e",
+      "scenarios": [],
+      "paths": [],
+      "prefixes": ["infra/", ".github/"],
+      "reason": "local_browser_e2e_not_applicable"
+    }
+  ]
+}
