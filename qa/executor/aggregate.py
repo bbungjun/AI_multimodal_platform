@@ -49,7 +49,7 @@ def _prompt_results(r:dict[str,Any])->tuple[dict[str,Any],...]:
     try:
         image=r["browser"]["image"];delta=r["prompt_t2i_probe"]["refusal_deltas"]
         probes=PromptT2IProbes(image["checks"]["discarded"],image["checks"]["empty_dom_disabled"],
-            image["over_limit_status"],delta["jobs"],delta["outbox"],delta["reservations"],tuple(image["state_path"]))
+            image["over_limit_status"],delta["jobs"],delta["outbox"],delta["reservations"],tuple(r["prompt_t2i_job_probe"]["state_path"].split(",")))
         clean=sanitize_image_journey_report(r["browser"])
         ready=r["runtime_cleanup"]==0 and r["source_unchanged"]is True and r["driver_exit_code"]==0
         return compile_prompt_t2i_results(clean,probes,runtime_receipt_ready=ready)

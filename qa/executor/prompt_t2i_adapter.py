@@ -162,8 +162,7 @@ def compile_prompt_t2i_results(
         _observation("t2i.refusal_has_zero_outbox", probes.refusal_outbox == 0, ["database"]),
         _observation("t2i.refusal_has_zero_reservations", probes.refusal_reservations == 0, ["database"]),
         _observation("t2i.allowed_job_completed",
-                     tuple(browser["state_path"]) == probes.allowed_state_path
-                     == ("pending", "running", "completed"),
+                     probes.allowed_state_path == ("pending", "running", "completed"),
                      ["database", "runtime_receipt"]),
         _observation("t2i.asset_decodes", browser["file"]["decoded"]
                      and browser["file"]["mime"] == "image/png", ["asset_probe"]),

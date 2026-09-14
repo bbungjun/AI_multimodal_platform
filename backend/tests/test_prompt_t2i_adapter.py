@@ -49,6 +49,12 @@ def test_complete_evidence_produces_two_pass_results():
     assert len(t2i["assertions"]) == 8
 
 
+def test_db_state_history_is_authoritative_when_browser_misses_fast_running_state():
+    value=browser();value["state_path"]=["pending","completed"]
+    _,t2i=compile_prompt_t2i_results(value,probes(),runtime_receipt_ready=True)
+    assert next(row for row in t2i["assertions"] if row["id"]=="t2i.allowed_job_completed")["passed"]is True
+
+
 def test_free_request_size_defect_is_fail_not_allow_failure():
     prompt, t2i = compile_prompt_t2i_results(
         browser(), probes(over_limit_status=201, refusal_jobs=1, refusal_outbox=1,

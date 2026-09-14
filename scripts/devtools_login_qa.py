@@ -159,6 +159,7 @@ def main():
                         "after": probe_after,
                         "refusal_deltas": refusal_deltas(probe_before, probe_after),
                     }
+                    report["prompt_t2i_job_probe"] = read_video_job_probe(runtime, "first_t2i_summary")
                 elif automatic and scenario == "video":
                     probe_after = read_owned_db_probe(runtime, "counts")
                     report["video_probe"] = {
