@@ -26,6 +26,7 @@ async function main() {
   const input = createInterface({ input: child.stdout, crlfDelay: Infinity });
   const queue = [];
   const waiters = [];
+  let stage = 'ready';
   input.on('line', line => {
     let value;
     try { value = JSON.parse(line); } catch { value = { error: 'protocol_invalid' }; }
@@ -70,34 +71,44 @@ async function main() {
   try {
     const ready = await next();
     if (ready.phase !== 'ready' || ready.scenario !== 'image') throw Error('ready_invalid');
+    stage = 'login';
     const page = pageId(await call('list_pages', {}));
     await call('navigate_page', { pageId: page, type: 'url', url: 'http://127.0.0.1:18156/login' });
     await delay(750);
     await clickPurpose(page, 'login');
     await checkpoint(page, 'login', { retries: 3, wait: 1000 });
+    stage = 'empty';
     await checkpoint(page, 'empty');
+    stage = 'original';
     await fillPurpose(page, 'original', 'original');
     await checkpoint(page, 'original');
+    stage = 'discard';
     await clickPurpose(page, 'enhance');
     await checkpoint(page, 'draft_discard', { retries: 5, wait: 1000 });
     await clickPurpose(page, 'discard');
     await checkpoint(page, 'discarded');
+    stage = 'keep';
     await clickPurpose(page, 'enhance');
     await checkpoint(page, 'draft_keep', { retries: 5, wait: 1000 });
     await clickPurpose(page, 'keep');
     await checkpoint(page, 'kept');
+    stage = 'accept';
     await clickPurpose(page, 'enhance');
     await checkpoint(page, 'draft', { retries: 5, wait: 1000 });
     await fillPurpose(page, 'draft', 'reviewed');
     await checkpoint(page, 'edited');
     await clickPurpose(page, 'accept');
     await checkpoint(page, 'accepted');
+    stage = 'generation';
     await clickPurpose(page, 'generate');
     await checkpoint(page, 'completed', { retries: 12, wait: 1000 });
+    stage = 'reload';
     await call('navigate_page', { pageId: page, type: 'reload' });
     await checkpoint(page, 'reloaded', { retries: 5, wait: 1000 });
+    stage = 'history';
     await clickPurpose(page, 'history');
     await checkpoint(page, 'history', { retries: 5, wait: 1000 });
+    stage = 'revisit';
     await clickPurpose(page, 'job');
     await checkpoint(page, 'revisited', { retries: 5, wait: 1000 });
     await call('list_network_requests', { pageId: page, includePreservedRequests: true });
@@ -111,8 +122,11 @@ async function main() {
     process.stdout.write(JSON.stringify({ complete: true, scenario: 'image', cleanup: 0 }) + '\n');
   } catch (error) {
     child.stdin.end();
-    child.kill();
-    process.stdout.write(JSON.stringify({ complete: false, error: error.message }) + '\n');
+    try {
+      const closed = await next(15_000);
+      if (closed.phase !== 'browser_closed') child.kill();
+    } catch { child.kill(); }
+    process.stdout.write(JSON.stringify({ complete: false, error: `${stage}_${error.message}` }) + '\n');
     process.exitCode = 1;
   } finally {
     input.close();
