@@ -64,7 +64,8 @@ async function main() {
     let entry = await snapshot(page);
     const loginUid = controlUid(entry, 'login');
     if (loginUid) await call('click', { pageId: page, uid: loginUid });
-    else throw Error('entry_unavailable');
+    else if (!(pages.pages?.includes('/generate')
+      && (entry.controls ?? []).some(control => control.purpose === 'history'))) throw Error('entry_unavailable');
     await checkpoint(page, 'login', { retries: 4, wait: 1000 });
     stage = 'history'; await click(page, 'history'); await checkpoint(page, 'history', { retries: 5, wait: 750 });
     await fill(page, 'state', 'failed'); await checkpoint(page, 'filtered', { retries: 5, wait: 750 });
