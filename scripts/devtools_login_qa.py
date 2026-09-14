@@ -33,6 +33,16 @@ def video_refusal_deltas(before, after):
     return {key: after[key] - before[key] - 1 for key in ("jobs", "outbox", "reservations")}
 
 
+def workspace_fixture(runtime, operation):
+    raw = runtime.docker(*runtime.compose, "exec", "-T", "backend", "python",
+                         "tests/workspace_qa_fixture.py",
+                         input=json.dumps({"operation": operation}, separators=(",", ":")))
+    value = json.loads(raw)
+    if not isinstance(value, dict) or value.get("complete") is not True:
+        raise ValueError("workspace_fixture_failed")
+    return value
+
+
 def revision():
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
 
@@ -62,7 +72,7 @@ def main():
     args = sys.argv[1:]
     if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"],
                     ["--scenario", "video", "--auto"], ["--scenario", "i2v", "--auto"],
-                    ["--scenario", "pipeline", "--auto"]):
+                    ["--scenario", "pipeline", "--auto"], ["--scenario", "workspace", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = args[1] if args else "login"
@@ -84,7 +94,26 @@ def main():
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
                 probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario in {"image", "video"} else None
-                if automatic and scenario == "i2v":
+                if automatic and scenario == "workspace":
+                    bootstrap_output, workspace_output = output / "bootstrap", output / "workspace"
+                    bootstrap_output.mkdir(); workspace_output.mkdir()
+                    bootstrap = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/auth-contract.mjs"), runtime.base_url,
+                         str(bootstrap_output), str(Path(temporary) / "bootstrap-profile")],
+                        cwd=ROOT, env=runtime.env, timeout=360,
+                    )
+                    if bootstrap.returncode != 0:
+                        raise RuntimeError("workspace_bootstrap_failed")
+                    fixture = workspace_fixture(runtime, "prepare")
+                    result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/workspace-controller.mjs"), runtime.base_url,
+                         str(workspace_output), str(Path(temporary) / "workspace-profile"),
+                         fixture["retry_job_id"]], cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    report["workspace_fixture"] = {"jobs": fixture["jobs"]}
+                    report["workspace_inspect"] = workspace_fixture(runtime, "inspect")
+                    browser_report = workspace_output / "browser.json"
+                elif automatic and scenario == "i2v":
                     source_output, i2v_output = output / "source", output / "i2v"
                     source_output.mkdir(); i2v_output.mkdir()
                     source_result = subprocess.run(
