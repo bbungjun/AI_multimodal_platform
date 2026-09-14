@@ -25,6 +25,13 @@ def refusal_deltas(before, after):
             for key in ("jobs", "outbox", "reservations")}
 
 
+def video_refusal_deltas(before, after):
+    if (set(before) != {"complete", "jobs", "outbox", "reservations"}
+            or set(after) != set(before)):
+        raise ValueError("probe_counts_invalid")
+    return {key: after[key] - before[key] - 1 for key in ("jobs", "outbox", "reservations")}
+
+
 def revision():
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
 
@@ -74,7 +81,7 @@ def main():
                 runtime.preflight()
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
-                probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario == "image" else None
+                probe_before = read_owned_db_probe(runtime, "counts") if automatic else None
                 result = subprocess.run(
                     (["node", str(ROOT / "qa/devtools" /
                                   ("image-controller.mjs" if scenario == "image" else "video-controller.mjs")), runtime.base_url,
@@ -91,6 +98,13 @@ def main():
                         "before": probe_before,
                         "after": probe_after,
                         "refusal_deltas": refusal_deltas(probe_before, probe_after),
+                    }
+                elif automatic and scenario == "video":
+                    probe_after = read_owned_db_probe(runtime, "counts")
+                    report["video_probe"] = {
+                        "before": probe_before,
+                        "after": probe_after,
+                        "refusal_deltas": video_refusal_deltas(probe_before, probe_after),
                     }
                 browser_report = output / "browser.json"
                 if browser_report.is_file():
