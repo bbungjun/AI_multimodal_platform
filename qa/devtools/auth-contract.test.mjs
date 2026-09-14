@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { controlUid, firstPageId, networkRows, parseProbe, safeRoute, scenarioResult,
+import { controlUid, firstPageId, networkRows, parsePathProbe, parseProbe, safeRoute, scenarioResult,
   selectedPage, unexpectedConsoleCount } from './auth-contract.mjs';
 
 test('routes and network evidence remove query values and foreign origins', () => {
@@ -33,6 +33,11 @@ test('selected page accepts only the owned origin', () => {
 test('probe parser accepts only one integer status', () => {
   assert.deepEqual(parseProbe('```json\n{"status":401}\n```'), { status: 401 });
   assert.throws(() => parseProbe('```json\n{"status":401,"body":"private"}\n```'));
+});
+
+test('path probe permits only contract routes', () => {
+  assert.deepEqual(parsePathProbe('```json\n{"path":"/generate"}\n```'), { path: '/generate' });
+  assert.throws(() => parsePathProbe('```json\n{"path":"/admin"}\n```'));
 });
 
 test('console summary permits expected auth 401 and router warning only', () => {

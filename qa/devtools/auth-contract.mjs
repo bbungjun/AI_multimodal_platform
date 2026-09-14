@@ -67,6 +67,16 @@ export function parseProbe(text) {
   return value;
 }
 
+export function parsePathProbe(text) {
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (!match) throw Error('probe_invalid');
+  const value = JSON.parse(match[1]);
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !== 'path' || !['/generate', '/login'].includes(value.path))
+    throw Error('probe_invalid');
+  return value;
+}
+
 export function unexpectedConsoleCount(text) {
   return text.split('\n').filter(row => /msgid=/.test(row)).filter(row =>
     !/React Router Future Flag Warning/.test(row) &&
@@ -170,8 +180,8 @@ async function main() {
     phase = 'authenticated_wait';
     await call('wait_for', { pageId: current.pageId, text: ['계정 정보'], timeout: 15_000 });
     phase = 'authenticated_page';
-    current = selectedPage(await call('list_pages', {}));
-    evidence.workspacePath = current.path;
+    evidence.workspacePath = parsePathProbe(await call('evaluate_script', { pageId: current.pageId,
+      function: '() => ({ path: location.pathname })' })).path;
     phase = 'login_network';
     evidence.network.push(...networkRows(await call('list_network_requests', {
       pageId: current.pageId, includePreservedRequests: true })));
@@ -193,8 +203,8 @@ async function main() {
     phase = 'logged_out_wait';
     await call('wait_for', { pageId: current.pageId, text: ['Google로 계속하기'], timeout: 10_000 });
     phase = 'logged_out_page';
-    current = selectedPage(await call('list_pages', {}));
-    evidence.finalPath = current.path;
+    evidence.finalPath = parsePathProbe(await call('evaluate_script', { pageId: current.pageId,
+      function: '() => ({ path: location.pathname })' })).path;
     phase = 'logout_probe';
     const probe = parseProbe(await call('evaluate_script', { pageId: current.pageId,
       function: 'async () => ({ status: (await fetch("/api/auth/me", { credentials: "include" })).status })' }));
