@@ -25,6 +25,24 @@ def read_latest_image_source(runtime: Any) -> dict[str, str]:
     return {"job_id": value["job_id"], "asset_id": value["asset_id"]}
 
 
+def read_pipeline_probe(runtime: Any) -> dict[str, Any]:
+    try:
+        raw = runtime.docker(*runtime.compose, "exec", "-T", "backend", "python",
+                             "tests/prompt_t2i_probe.py", input='{"operation":"latest_pipeline"}')
+        value = json.loads(raw)
+    except Exception as error:
+        raise ValueError("pipeline_probe_failed") from error
+    fields = {"complete", "same_owner", "source_linked", "parent_state", "child_state",
+              "reservations", "held"}
+    if (type(value) is not dict or set(value) != fields or value.get("complete") is not True
+            or type(value["same_owner"]) is not bool or type(value["source_linked"]) is not bool
+            or value["parent_state"] not in {"completed", "failed", "cancelled"}
+            or value["child_state"] not in {"completed", "failed", "cancelled"}
+            or type(value["reservations"]) is not int or type(value["held"]) is not int):
+        raise ValueError("pipeline_probe_invalid")
+    return value
+
+
 @dataclass(frozen=True)
 class VideoPipelineEvidence:
     technical_complete: bool

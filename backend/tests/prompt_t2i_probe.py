@@ -8,6 +8,7 @@ import sys
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import aliased
 from sqlalchemy.engine import make_url
 
 from app.config import get_settings
@@ -21,9 +22,9 @@ PROJECT = re.compile(r"^ownership-verify-[0-9a-f]{12}$")
 
 
 def validate_request(payload, *, database_url: str, provider: str, app_env: str) -> tuple[str, UUID | None]:
-    if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source"}:
+    if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source", "latest_pipeline"}:
         raise ValueError("prompt_t2i_probe_refused")
-    required = {"operation"} if payload["operation"] in {"counts", "latest_image_source"} else {"operation", "job_id"}
+    required = {"operation"} if payload["operation"] in {"counts", "latest_image_source", "latest_pipeline"} else {"operation", "job_id"}
     if set(payload) != required:
         raise ValueError("prompt_t2i_probe_refused")
     url = make_url(database_url)
@@ -63,6 +64,30 @@ async def inspect(payload) -> dict:
             if row is None:
                 raise ValueError("prompt_t2i_probe_source_missing")
             return {"job_id": str(row[0]), "asset_id": str(row[1])}
+        if operation == "latest_pipeline":
+            child_alias = aliased(Job)
+            pair = (await session.execute(
+                select(Job, child_alias).join(child_alias, child_alias.parent_job_id == Job.id)
+                .where(Job.mode == GenerationMode.T2I, child_alias.mode == GenerationMode.I2V)
+                .order_by(Job.created_at.desc()).limit(1)
+            )).first()
+            if pair is None:
+                raise ValueError("prompt_t2i_probe_pipeline_missing")
+            parent, child = pair
+            parent_asset = await session.scalar(select(Asset).where(Asset.job_id == parent.id).limit(1))
+            try:
+                reservation_id = UUID((parent.parameters or {})[CREDIT_PARAMETER_KEY]["reservation_id"])
+            except (KeyError, TypeError, ValueError, AttributeError):
+                raise ValueError("prompt_t2i_probe_reservation_missing") from None
+            reservation = await session.get(CreditReservation, reservation_id)
+            return {
+                "same_owner": parent.owner_user_id == child.owner_user_id,
+                "source_linked": parent_asset is not None and child.source_asset_id == parent_asset.id,
+                "parent_state": parent.state.value,
+                "child_state": child.state.value,
+                "reservations": 1 if reservation is not None else 0,
+                "held": 1 if reservation is not None and reservation.status == "held" else 0,
+            }
         job = await session.get(Job, job_id)
         if job is None:
             raise ValueError("prompt_t2i_probe_job_missing")
@@ -89,7 +114,7 @@ def main() -> int:
             raise ValueError("prompt_t2i_probe_refused")
         result = asyncio.run(inspect(json.loads(raw)))
         if (type(result) is not dict or not result
-                or any(type(value) not in {int, str} for value in result.values())):
+                or any(type(value) not in {bool, int, str} for value in result.values())):
             raise ValueError("prompt_t2i_probe_result_invalid")
     except Exception as error:
         code = str(error) if isinstance(error, ValueError) and re.fullmatch(

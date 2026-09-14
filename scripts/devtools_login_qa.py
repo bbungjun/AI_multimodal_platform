@@ -14,7 +14,7 @@ from mock_auth_support import ROOT
 from verify_mock_oauth_browser import MockOAuthRuntime
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from prompt_t2i_adapter import read_owned_db_probe
-from video_pipeline_adapter import read_latest_image_source
+from video_pipeline_adapter import read_latest_image_source, read_pipeline_probe
 
 
 def refusal_deltas(before, after):
@@ -131,6 +131,8 @@ def main():
                         "after": probe_after,
                         "refusal_deltas": video_refusal_deltas(probe_before, probe_after),
                     }
+                elif automatic and scenario == "pipeline":
+                    report["pipeline_probe"] = read_pipeline_probe(runtime)
                 if browser_report.is_file():
                     report["browser"] = json.loads(browser_report.read_text(encoding="utf-8"))
                 report["source_unchanged"] = (
