@@ -77,6 +77,14 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA Video + Pipeline Adapter — Issue184 In Progress, 2026-09-15
+
+- PR187 merge 후 branch `codex/issue-184-video-pipeline-adapter`를 최신 main에서 시작했다.
+- compiler Interface가 T2V6, I2V6, Pipeline8 assertion을 정확히 생성한다. 완전한 evidence는
+  PASS, Free long-video201/side-effect1은 T2V FAIL, cleanup/tool 누락은 전체 BLOCKED,
+  unusable mock video는 T2V/I2V FAIL이다. focused4 PASS.
+- 다음은 실제 DevTools mode/duration/source/Pipeline action과 owned DB/asset/credit probe다.
+
 ### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 
 - Parent Issue182를 prompt/T2I, video/pipeline, history/usage/retry/role, aggregate Receipt의
