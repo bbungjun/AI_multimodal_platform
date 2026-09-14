@@ -77,6 +77,25 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA 변경 영향 Selector — Issue178, 2026-09-15
+
+- Branch `codex/issue-178-qa-impact-selector`는 Issue176/PR177의 Registry를 입력으로,
+  두 immutable Git SHA 사이 변경을 10개 QA scenario에 매핑하는 Impact Selector v1을
+  구현한다. 외부 명령은 `python qa/impact/select_impact.py --base <SHA> --head <SHA>`다.
+- exact `related_paths`와 versioned domain rule은 targeted selection을 만들고, QA 계약,
+  공용 runtime/shell, unknown path는 fail-safe `FULL_E2E`로 승격한다. 모든 변경이
+  docs/tests/infra 전용일 때만 `NO_E2E_REQUIRED`이며 이는 전체 QA PASS가 아니다.
+- Manifest는 base/head, Registry SHA, Policy SHA, 정렬된 변경 파일, unmatched path,
+  scenario별 선택/제외 근거, Selection SHA를 기록한다. rename은 이전/새 경로를 모두
+  평가하고 absolute/traversal/secret-like 경로와 mutable ref를 거부한다.
+- focused Interface test27개 PASS. 현재 tracked backend/app+frontend/src 제품 경로100개는
+  명시적 rule coverage100%, unmatched0이다. 기존 Windows/Bash host-path 검사 1개를
+  제외한 backend1851개, frontend lint/build, env-example Compose도 PASS했다. Chrome
+  executor/fixture/CI gate/merge 권한은 아직 구현하지 않았으며 evidence level은
+  `Implemented`다.
+- [구현·판단 기록](portfolio/issue-178-qa-impact-selector.md). 다음 단계는 선택 Manifest를
+  받아 격리 fixture와 Chrome DevTools evidence를 생성하는 Executor다.
+
 ### Agent QA Contract와 Scenario Registry — Issue176, 2026-09-15
 
 - Branch `codex/issue-176-qa-contract-registry`에서 Agent가 임의 체크리스트가 아니라

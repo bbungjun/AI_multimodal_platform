@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "creativeops://qa/impact-selection/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "base_revision", "head_revision", "registry_sha256", "policy_sha256", "classification", "changed_files", "unmatched_paths", "scenario_decisions", "selection_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "base_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "head_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "registry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "classification": {"enum": ["FULL_E2E", "TARGETED_E2E", "NO_E2E_REQUIRED"]},
+    "changed_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "path", "previous_path"],
+        "properties": {
+          "status": {"enum": ["A", "C", "D", "M", "R", "T"]},
+          "path": {"type": "string"},
+          "previous_path": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "unmatched_paths": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "scenario_decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scenario_id", "selected", "reason", "rule_ids"],
+        "properties": {
+          "scenario_id": {"type": "string"},
+          "selected": {"type": "boolean"},
+          "reason": {"enum": ["full_e2e_required", "directly_impacted", "not_impacted_by_changed_paths", "no_e2e_required"]},
+          "rule_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+        }
+      }
+    },
+    "selection_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
