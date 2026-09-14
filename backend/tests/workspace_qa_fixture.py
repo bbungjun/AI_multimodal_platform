@@ -2,12 +2,16 @@
 from __future__ import annotations
 import asyncio,json,re,sys
 from datetime import timedelta
+from uuid import UUID
 from sqlalchemy import func,select
 from sqlalchemy.engine import make_url
 from app.config import get_settings
+from app.credit_models import CreditUsageRecord
 from app.db import AsyncSessionLocal
+from app.generation_credit import CREDIT_PARAMETER_KEY
 from app.identity_models import User,UserOrigin,UserRole,UserStatus
 from app.models import Asset,GenerationMode,Job,JobState,utc_now
+from app.personal_usage import read_personal_usage
 
 PROJECT=re.compile(r"^ownership-verify-[0-9a-f]{12}$")
 def validate(payload,url,provider,app_env):
@@ -45,8 +49,17 @@ async def execute(payload):
   if op=='promote':user.role=UserRole.MASTER;await db.commit();return{'promoted':True}
   original=await db.scalar(select(Job).where(Job.owner_user_id==user.id,Job.prompt=='A recoverable studio image.').order_by(Job.created_at.asc()).limit(1))
   retry=await db.scalar(select(Job).where(Job.retry_of_job_id==original.id).order_by(Job.created_at.desc()).limit(1))if original else None
+  usage=await read_personal_usage(db,user_id=user.id,now=now)
+  original_assets=await db.scalar(select(func.count()).select_from(Asset).where(Asset.job_id==original.id))if original else -1
+  retry_credit=(retry.parameters or{}).get(CREDIT_PARAMETER_KEY)if retry else None
+  retry_reservation=UUID(retry_credit['reservation_id'])if retry_credit else None
+  retry_charges=await db.scalar(select(func.count()).select_from(CreditUsageRecord).where(CreditUsageRecord.reservation_id==retry_reservation))if retry_reservation else -1
   return{'retry_created':retry is not None,'retry_distinct':bool(retry and retry.id!=original.id),'retry_link':bool(retry and retry.retry_of_job_id==original.id),
-    'retry_state_path':path(retry)if retry else'missing','retry_assets':await db.scalar(select(func.count()).select_from(Asset).where(Asset.job_id==retry.id))if retry else 0}
+    'retry_state_path':path(retry)if retry else'missing','retry_assets':await db.scalar(select(func.count()).select_from(Asset).where(Asset.job_id==retry.id))if retry else 0,
+    'original_failed_clean':bool(original and original.state==JobState.FAILED and original_assets==0),'original_error_present':bool(original and original.error),
+    'retry_charge_once':bool(original and CREDIT_PARAMETER_KEY not in(original.parameters or{})and retry_charges==1),'usage_plan':usage.plan,'usage_available':usage.credit.available_microcredits,
+    'usage_held':usage.credit.held_microcredits,'usage_charged':usage.cycle.charged_microcredits,
+    'usage_meter_charged':sum(item.charged_microcredits for item in usage.usage)}
 def main():
  try:
   raw=sys.stdin.read(1025)
