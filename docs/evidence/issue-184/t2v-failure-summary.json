@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "issue": 184,
+  "evidence_level": "Mock Verified",
+  "revision": "3bbc8e08a9c8dad408a629faa8c5f8083e32ee0f",
+  "scenario_id": "t2v_generation",
+  "technical_complete": true,
+  "verdict": "FAIL",
+  "empty_submission_disabled": true,
+  "allowed_state_path": ["pending", "completed"],
+  "over_limit_status": 201,
+  "over_limit_side_effects": {"jobs": 1, "outbox": 1, "reservations": 1},
+  "asset_mime_observed": false,
+  "outcome_usable": false,
+  "failed_assertions": [
+    "t2v.free_duration_refused",
+    "t2v.refusal_has_zero_side_effects",
+    "t2v.allowed_job_completed",
+    "t2v.asset_mime",
+    "t2v.outcome_is_usable"
+  ],
+  "external_page_requests": 0,
+  "unexpected_console_errors": 0,
+  "cleanup_total": 0,
+  "seconds": 77.609
+}

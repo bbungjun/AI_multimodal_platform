@@ -83,7 +83,10 @@ paste credential contents.
 - compiler Interface가 T2V6, I2V6, Pipeline8 assertion을 정확히 생성한다. 완전한 evidence는
   PASS, Free long-video201/side-effect1은 T2V FAIL, cleanup/tool 누락은 전체 BLOCKED,
   unusable mock video는 T2V/I2V FAIL이다. focused4 PASS.
-- 다음은 실제 DevTools mode/duration/source/Pipeline action과 owned DB/asset/credit probe다.
+- T2V 실제 owned run은 technical complete/external0/Console0/cleanup0이다. empty guard는
+  PASS했지만 Free6초가201, 초과 side effect jobs1/outbox1/reservations1, state는
+  pending→completed, video file/usable false여서 contract6개 중5개 FAIL이다.
+  [정제 T2V 증거](evidence/issue-184/t2v-failure-summary.json). 다음은 I2V source와 Pipeline이다.
 
 ### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 
