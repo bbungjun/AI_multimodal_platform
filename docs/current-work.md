@@ -77,6 +77,15 @@ paste credential contents.
 
 ## Active Work
 
+### 사용자 입회 Chrome 화면 QA — 2026-09-14
+
+- `@Chrome` 확장 연결로 로그인→향상·편집·수락→이미지 생성→새로고침→기록 재조회
+  화면 흐름1개를 실제 클릭·키보드로 완료했다. 최초 이미지640×360 로딩 확인.
+- 재조회 뒤 보조 DOM 검사 timeout2회는 화면/접근성 확인과 구분해 기록했다.
+  전체 Network/hash 재검증 결과로 확대하지 않는다. Console 조회는 Router 경고6건.
+- QA 탭과 임시 Chrome/owned Compose 정리 완료, cleanup0/18156 listener 없음.
+  [시연 범위와 제한](portfolio/issue-172-image-journey-qa.md#사용자-입회-chrome-화면-시연--2026-09-14).
+
 ### PR 작성 규칙 변경 — 2026-09-14
 
 - 사용자 요청에 따라 `AGENTS.md`에 PR 제목·본문 한국어 작성과 일반 PR 생성
