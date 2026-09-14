@@ -112,6 +112,7 @@ paste credential contents.
   T2V/I2V/Pipeline Adapter이며, Free video length도 같은 admission 결함을 판정한다.
 - Fresh regression: backend1879 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
   DevTools Node24, frontend lint/build, env-example Compose와 diff check PASS.
+- [일반 PR187](https://github.com/bbungjun/AI_multimodal_platform/pull/187)로 전달했다.
 - [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
 
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15

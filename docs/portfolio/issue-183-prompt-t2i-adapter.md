@@ -2,6 +2,7 @@
 
 - Parent: [Issue182](https://github.com/bbungjun/AI_multimodal_platform/issues/182)
 - Current: [Issue183](https://github.com/bbungjun/AI_multimodal_platform/issues/183)
+- Delivery: [일반 PR187](https://github.com/bbungjun/AI_multimodal_platform/pull/187)
 - Status: `Mock Verified / Product QA FAIL`
 
 ## 목표
