@@ -77,6 +77,18 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA aggregate Receipt — Issue186 In Progress, 2026-09-15
+
+- PR189를 required CI3건 통과 후 `main`에 병합했고 branch
+  `codex/issue-186-aggregate-receipt`를 시작했다.
+- aggregate Interface는 같은 immutable HEAD에서 Auth1, Prompt/T2I2,
+  T2V/I2V/Pipeline3, History/Usage/Retry/Role4의10 scenario를 실행한다.
+- 각 slice의 revision, source unchanged, cleanup을 재검증하고 Registry 순서의68 assertion
+  Receipt를 contract validator에 통과시킨다. PASS만 merge `ALLOW`, 제품 FAIL 또는
+  evidence BLOCKED는 `REJECT`이며 실제 GitHub merge 권한은 연결하지 않는다.
+- focused aggregate/기존 Adapter/Contract test51 PASS. 다음은 core commit의 clean HEAD에서
+  실제10 scenario 전체 실행과 정제 evidence 기록이다.
+
 ### Agent QA Workspace surfaces — Issue185 Mock Verified, 2026-09-15
 
 - PR188 merge 후 `codex/issue-185-ops-surface-adapter`를 최신 main에서 시작했다.

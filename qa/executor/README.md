@@ -29,4 +29,17 @@ Network와 Console 검사는 DevTools MCP를 통과한다. 결과는 ignored
 
 보고서에는 prompt, identity, cookie, OAuth query, header와 body를 기록하지 않는다.
 브라우저 JSON도 허용된 route/status/method, boolean, count, 버전만 Python seam을 통과한다.
-현재 다른 9개 scenario Adapter, 전체 Receipt, CI gate와 merge decision은 제공하지 않는다.
+## 전체 10개 scenario
+
+모든 Adapter를 같은 immutable HEAD에서 실행해 단일 Receipt를 만들려면 다음 명령을 쓴다.
+
+```powershell
+python scripts/agent_qa_all.py --base <base commit SHA> --head <현재 HEAD SHA>
+```
+
+명령은 Auth, Prompt/T2I, T2V/I2V/Pipeline, History/Usage/Retry/Role slice를 각각 owned
+mock runtime에서 실행한다. 10개 scenario와68개 assertion의 revision/source/cleanup을
+교차검증하고 Registry 순서로 집계한 뒤 Receipt contract validator를 다시 통과시킨다.
+결과가 모두 PASS일 때만 `merge_decision=ALLOW`이며, 제품 FAIL이나 증거 BLOCKED가 하나라도
+있으면 `REJECT`다. 이 결정은 판정값일 뿐 GitHub merge 권한이나 자동 merge 동작을
+포함하지 않는다.
