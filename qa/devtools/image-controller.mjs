@@ -60,10 +60,11 @@ async function main() {
     if (!uid) throw Error('control_missing');
     await call('fill', { pageId: page, uid, fixture });
   };
-  const checkpoint = async (page, phase, { retries = 1, wait = 500 } = {}) => {
+  const checkpoint = async (page, phase, { retries = 1, wait = 500, accessibilityDisabled = null } = {}) => {
     for (let attempt = 0; attempt < retries; attempt++) {
       await delay(wait);
-      const response = await send({ op: 'checkpoint', phase });
+      const response = await send({ op: 'checkpoint', phase,
+        ...(phase === 'empty' ? { accessibility_disabled: accessibilityDisabled } : {}) });
       if (response.checkpoint?.passed === true) return response.checkpoint;
     }
     throw Error('checkpoint_failed');
@@ -78,7 +79,10 @@ async function main() {
     await clickPurpose(page, 'login');
     await checkpoint(page, 'login', { retries: 3, wait: 1000 });
     stage = 'empty';
-    await checkpoint(page, 'empty');
+    const emptySnapshot = await snapshot(page);
+    const emptyGenerate = emptySnapshot.controls?.find(row => row.purpose === 'generate');
+    if (!emptyGenerate) throw Error('empty_generate_missing');
+    await checkpoint(page, 'empty', { accessibilityDisabled: emptyGenerate.disabled === true });
     stage = 'original';
     await fillPurpose(page, 'original', 'original');
     await checkpoint(page, 'original');

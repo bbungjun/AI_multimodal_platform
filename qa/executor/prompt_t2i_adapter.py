@@ -68,7 +68,8 @@ def _check_map(browser: dict[str, Any]) -> dict[str, bool]:
     file = browser["file"]
     if (type(checks) is not dict or any(type(value) is not bool for value in checks.values())
             or set(checks) != {"original", "draft", "edited", "accepted", "completed",
-                               "payload_matches", "persisted_matches", "image_visible"}
+                               "payload_matches", "persisted_matches", "image_visible",
+                               "empty_disabled"}
             or type(posts) is not dict or set(posts) != {"enhancement", "generation"}
             or any(type(value) is not int or value < 0 for value in posts.values())
             or type(file) is not dict or set(file) != {"decoded", "mime"}
@@ -103,6 +104,8 @@ def sanitize_image_journey_report(browser_report: dict[str, Any]) -> dict[str, A
                 "payload_matches": checks["accepted_generation_payload_matches"],
                 "persisted_matches": checks["no_observation_failures"] and not failures,
                 "image_visible": checks["completed"],
+                "empty_disabled": checks["empty_dom_disabled"]
+                and checks["empty_accessibility_disabled"],
             },
             "post_counts": {"enhancement": posts["enhancement"], "generation": posts["generation"]},
             "file": {"decoded": checks["completed"], "mime": file["mime"]},
@@ -148,7 +151,8 @@ def compile_prompt_t2i_results(
                      checks["original"] and checks["draft"], ["runtime_receipt"]),
     ]
     t2i_assertions = [
-        _observation("t2i.empty_submission_disabled", probes.empty_submission_disabled, ["ui_snapshot"]),
+        _observation("t2i.empty_submission_disabled",
+                     probes.empty_submission_disabled and checks["empty_disabled"], ["ui_snapshot"]),
         _observation("t2i.free_limit_refused", probes.over_limit_status == 403, ["network"]),
         _observation("t2i.refusal_has_zero_jobs", probes.refusal_jobs == 0, ["database"]),
         _observation("t2i.refusal_has_zero_outbox", probes.refusal_outbox == 0, ["database"]),

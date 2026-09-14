@@ -12,7 +12,8 @@ const response = (path, method, body, sent = {}, status = 200) => ({
   json: async () => body, buffer: async () => PNG, headers: () => ({ 'content-type': 'image/png' }),
 });
 const probeCall = value => async () => '```json\n' + JSON.stringify(value) + '\n```';
-const phaseCommand = phase => ({ op: 'checkpoint', phase });
+const phaseCommand = phase => ({ op: 'checkpoint', phase,
+  ...(phase === 'empty' ? { accessibility_disabled: true } : {}) });
 async function phase(journey, name, probe) {
   journey.prepare(phaseCommand(name));
   return journey.checkpoint(name, 1, probeCall(probe));

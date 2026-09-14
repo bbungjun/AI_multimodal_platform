@@ -25,7 +25,7 @@ def browser():
         "network_cross_check": True,
         "checks": {"original": True, "draft": True, "edited": True, "accepted": True,
                    "completed": True, "payload_matches": True, "persisted_matches": True,
-                   "image_visible": True},
+                   "image_visible": True, "empty_disabled": True},
         "post_counts": {"enhancement": 3, "generation": 1},
         "file": {"decoded": True, "mime": "image/png"},
     }
@@ -117,7 +117,8 @@ def test_image_journey_report_is_reduced_to_closed_compiler_shape():
             "passed": True, "technical_complete": True,
             "checks": {"original": True, "draft": True, "edited": True, "accepted": True,
                        "completed": True, "accepted_generation_payload_matches": True,
-                       "no_observation_failures": True},
+                       "no_observation_failures": True, "empty_dom_disabled": True,
+                       "empty_accessibility_disabled": True},
             "post_counts": {"enhancement": 1, "generation": 1},
             "file": {"mime": "image/png", "bytes": 100, "sha256": "a" * 64},
             "failures": [],

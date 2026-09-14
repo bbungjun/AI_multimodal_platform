@@ -51,6 +51,7 @@ export class ImageJourney {
     this.reloadReads = null;
     this.revisitReads = null;
     this.lastPhase = null;
+    this.emptyAccessibilityDisabled = null;
   }
 
   get edited() { return this.enhancement ? this.enhancement.enhanced + EDIT_SUFFIX : null; }
@@ -75,8 +76,12 @@ export class ImageJourney {
 
   prepare(command) {
     if (command.op === 'checkpoint') {
-      if (Object.keys(command).sort().join(',') !== 'op,phase' || !PHASES.includes(command.phase)) throw Error('phase_refused');
+      const fields = command.phase === 'empty' ? 'accessibility_disabled,op,phase' : 'op,phase';
+      if (Object.keys(command).sort().join(',') !== fields || !PHASES.includes(command.phase)
+          || (command.phase === 'empty' && typeof command.accessibility_disabled !== 'boolean'))
+        throw Error('phase_refused');
       if (command.phase !== PHASES[Object.keys(this.checkpoints).length]) throw Error('phase_order');
+      if (command.phase === 'empty') this.emptyAccessibilityDisabled = command.accessibility_disabled;
       return { phase: command.phase };
     }
     if (command.op !== 'call' || !['click', 'fill', 'navigate_page'].includes(command.name)) return null;
@@ -239,7 +244,8 @@ export class ImageJourney {
       accepted_generation_payload_matches: this.payloadMatches,
       three_enhancements: this.postCounts.enhancement === 3, one_generation: this.postCounts.generation === 1,
       no_observation_failures: this.failures.length === 0,
-      empty_submission_disabled: this.checkpoints.empty?.empty_disabled === true };
+      empty_dom_disabled: this.checkpoints.empty?.empty_disabled === true,
+      empty_accessibility_disabled: this.emptyAccessibilityDisabled === true };
     const technicalComplete = Object.values(phases).every(value => value === true) && this.failures.length === 0;
     return { scenario: 'reviewed_prompt_image', technical_complete: technicalComplete,
       passed: Object.values(checks).every(value => value === true),
