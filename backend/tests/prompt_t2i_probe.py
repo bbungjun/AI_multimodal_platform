@@ -71,7 +71,7 @@ async def inspect(payload) -> dict:
             row = (await session.execute(
                 select(Job.id, Asset.id).join(Asset, Asset.job_id == Job.id).where(
                     Job.mode == GenerationMode.T2I, Job.state == JobState.COMPLETED,
-                    Asset.mime == "image/png").order_by(Job.created_at.desc(), Asset.id).limit(1)
+                    Asset.mime == "image/png").order_by(Job.created_at.asc(), Asset.id).limit(1)
             )).first()
             if row is None:
                 raise ValueError("prompt_t2i_probe_source_missing")
