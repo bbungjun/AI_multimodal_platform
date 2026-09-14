@@ -58,10 +58,9 @@ async function main() {
     await call('navigate_page', { pageId: page, type: 'url', url: 'http://127.0.0.1:18156/login' });
     stage = 'login';
     const pages = await call('list_pages', {});
-    if (pages.pages?.includes('/login')) await call('wait_for', {
+    let entry = pages.pages?.includes('/login') ? await call('wait_for', {
       pageId: page, text: ['Google로 계속하기'], timeout: 15000
-    });
-    let entry = await snapshot(page);
+    }) : await snapshot(page);
     const loginUid = controlUid(entry, 'login');
     if (loginUid) await call('click', { pageId: page, uid: loginUid });
     else {
@@ -69,8 +68,7 @@ async function main() {
       const settled = await call('list_pages', {});
       entry = await snapshot(page);
       if (settled.pages?.includes('/login')) {
-        await call('wait_for', { pageId: page, text: ['Google로 계속하기'], timeout: 15000 });
-        entry = await snapshot(page);
+        entry = await call('wait_for', { pageId: page, text: ['Google로 계속하기'], timeout: 15000 });
         const settledLoginUid = controlUid(entry, 'login');
         if (!settledLoginUid) throw Error('settled_login_control_missing');
         await call('click', { pageId: page, uid: settledLoginUid });

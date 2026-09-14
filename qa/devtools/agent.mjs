@@ -256,6 +256,10 @@ async function main() {
             action.console = text.split('\n').filter(row => /msgid=/.test(row)).map(row => consoleSummary(row));
             emit({ action: action.id, console_entries: action.console_entries, unexpected_errors: consoleErrors,
               devtools_console: action.console, browser_console: consoleRows });
+          } else if (command.name === 'wait_for') {
+            const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
+            action.controls = controls;
+            emit({ action: action.id, controls });
           } else {
             if (command.name === 'click' && (!journey || prepared?.purpose === 'login')) clicked = true;
             emit({ action: action.id, tool: command.name, ok: true });
