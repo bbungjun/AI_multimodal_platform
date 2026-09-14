@@ -11,13 +11,15 @@ import { ImageJourney, imageRoute, fillWithKeyboard } from './image-journey.mjs'
 import { VideoJourney, videoRoute } from './video-journey.mjs';
 import { I2VJourney } from './i2v-journey.mjs';
 import { PipelineJourney, pipelineRoute } from './pipeline-journey.mjs';
+import { WorkspaceJourney, workspaceRoute } from './workspace-journey.mjs';
+import { MasterJourney } from './master-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
 const AUTH_PATHS = new Set(['/api/auth/me', '/api/auth/google/start', '/api/auth/google/callback']);
 const PUBLIC_DIAGNOSTIC_PATHS = new Set(['/favicon.ico', '/favicon.svg', '/vite.svg']);
 const TOOLS = new Set(['list_pages', 'navigate_page', 'take_snapshot', 'click',
-  'list_network_requests', 'list_console_messages']);
+  'list_network_requests', 'list_console_messages', 'wait_for']);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
 
 export function safeRoute(value) {
@@ -25,7 +27,7 @@ export function safeRoute(value) {
     const url = new URL(value);
     if (url.origin !== ORIGIN) return 'other';
     return AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname)
-      ? url.pathname : imageRoute(url.pathname) ?? videoRoute(url.pathname) ?? pipelineRoute(url.pathname) ?? 'other';
+      ? url.pathname : imageRoute(url.pathname) ?? videoRoute(url.pathname) ?? pipelineRoute(url.pathname) ?? workspaceRoute(url.pathname) ?? 'other';
   } catch { return 'other'; }
 }
 
@@ -59,6 +61,10 @@ export function hasNetworkEvidence(rows, media = null) {
   if (media === 'video') required.push(['/api/generations', 201],
     ['/api/generations/{job}', 200], ['/files/{job}/output.mp4', 200]);
   if (media === 'pipeline') required.push(['/api/pipelines', 201], ['/api/pipelines/{parent}', 200]);
+  if (media === 'workspace') required.push(['/api/generations', 200], ['/api/generations/{job}/retry', 201], ['/api/usage/me', 200]);
+  if (media === 'master') return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status))
+    && ['/api/master/overview', '/api/master/users', '/api/master/audit', '/api/ops/health']
+      .every(route => rows.some(row => row.route === route));
   return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
 }
 
@@ -68,6 +74,13 @@ export function consoleSummary(text, url = '') {
       /React Router Future Flag Warning/.test(text) ? 'react_router_future' :
       /WebSocket/.test(text) ? 'websocket' : 'other',
     http_status: Number(text.match(/(?:status of |\[)(\d{3})/)?.[1] ?? 0) };
+}
+
+export function isExpectedConsoleError(text, url = '') {
+  const route = safeRoute(url);
+  return route === '/api/auth/me' && /401/.test(text)
+    || PUBLIC_DIAGNOSTIC_PATHS.has(route) && /404/.test(text)
+    || ['/api/ops/health', '/api/master/overview'].includes(route) && /403/.test(text);
 }
 
 export function validateCommand(command, loginUid, clicked) {
@@ -81,6 +94,7 @@ export function validateCommand(command, loginUid, clicked) {
     list_pages: [], navigate_page: ['pageId', 'type', 'url'], take_snapshot: ['pageId'],
     click: ['pageId', 'uid'], list_network_requests: ['pageId', 'includePreservedRequests'],
     list_console_messages: ['pageId', 'types', 'includePreservedMessages'],
+    wait_for: ['pageId', 'text', 'timeout'],
   }[command.name];
   if (Object.keys(args).some(key => !allowed.includes(key))) throw Error('arguments_refused');
   if (command.name !== 'list_pages' && (!Number.isInteger(args.pageId) || args.pageId < 0))
@@ -88,6 +102,8 @@ export function validateCommand(command, loginUid, clicked) {
   if (command.name === 'navigate_page' && (args.url !== ORIGIN + '/login' || args.type !== 'url'))
     throw Error('origin_refused');
   if (command.name === 'click' && (!loginUid || args.uid !== loginUid || clicked)) throw Error('click_refused');
+  if (command.name === 'wait_for' && (JSON.stringify(args.text) !== '["Google로 계속하기"]'
+      || !Number.isInteger(args.timeout) || args.timeout < 1 || args.timeout > 15000)) throw Error('wait_refused');
 }
 
 export function checksFor({ events, profile, workspace, clicked, external, consoleErrors, inspected }) {
@@ -107,11 +123,13 @@ export function checksFor({ events, profile, workspace, clicked, external, conso
 
 async function main() {
   const [backend, output, profileDir, scenario = 'login', ...scenarioArgs] = process.argv.slice(2);
-  if (!['login', 'image', 'video', 'i2v', 'pipeline'].includes(scenario)) throw Error('scenario_refused');
+  if (!['login', 'image', 'video', 'i2v', 'pipeline', 'workspace', 'master'].includes(scenario)) throw Error('scenario_refused');
   const journey = scenario === 'image' ? new ImageJourney() : scenario === 'video' ? new VideoJourney()
-    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : scenario === 'pipeline' ? new PipelineJourney() : null;
+    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : scenario === 'pipeline' ? new PipelineJourney()
+    : scenario === 'workspace' ? new WorkspaceJourney(...scenarioArgs) : scenario === 'master' ? new MasterJourney() : null;
   const journeyKey = scenario === 'video' ? 'video' : scenario === 'i2v' ? 'i2v'
-    : scenario === 'pipeline' ? 'pipeline' : 'image';
+    : scenario === 'pipeline' ? 'pipeline' : scenario === 'workspace' ? 'workspace'
+    : scenario === 'master' ? 'master' : 'image';
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(backend ?? '') ||
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');
@@ -157,7 +175,7 @@ async function main() {
         pending.add(task);
       }
       if (route === '/api/auth/me' && response.status() === 200) {
-        const task = response.json().then(value => { profile = value.role === 'user' && value.status === 'active'; })
+        const task = response.json().then(value => { profile = ['user', 'master'].includes(value.role) && value.status === 'active'; })
           .catch(() => {}).finally(() => pending.delete(task));
         pending.add(task);
       }
@@ -167,8 +185,14 @@ async function main() {
     page.on('console', message => {
       if (['error', 'warn'].includes(message.type())) consoleRows.push({
         type: message.type(), ...consoleSummary(message.text(), message.location().url) });
-      if (message.type() === 'error' && !(safeRoute(message.location().url) === '/api/auth/me'
-          && /401/.test(message.text()))) consoleErrors++;
+      const journeyRoleRefusal = scenario === 'workspace' && /403/.test(message.text())
+        && (journey?.opsStatuses?.includes(403) || journey?.masterStatuses?.includes(403));
+      const journeyProductHttp = scenario === 'master' && /(?:4|5)\d\d/.test(message.text())
+        && ['/api/master/overview', '/api/master/users', '/api/master/audit', '/api/ops/health']
+          .includes(safeRoute(message.location().url));
+      if (message.type() === 'error'
+          && !isExpectedConsoleError(message.text(), message.location().url)
+          && !journeyRoleRefusal && !journeyProductHttp) consoleErrors++;
     });
     const ws = new URL(browser.wsEndpoint());
     transport = new StdioClientTransport({ command: process.execPath,
@@ -223,12 +247,26 @@ async function main() {
           action.tool = command.name;
           action.arguments = command.arguments;
           if (prepared?.purpose) action.purpose = prepared.purpose;
-          const nativeSelect = ['image_count', 'duration'].includes(prepared?.purpose);
+          const nativeSelect = ['image_count', 'duration', 'state'].includes(prepared?.purpose);
           if (journey && command.name === 'fill') action.mcp_tools = nativeSelect
             ? ['fill'] : ['click', 'press_key', 'type_text'];
-          const text = journey && command.name === 'fill' && !nativeSelect
-            ? await fillWithKeyboard(prepared.args, call)
-            : await call(command.name, prepared?.args ?? command.arguments);
+          let text;
+          if (prepared?.purpose === 'delete') {
+            action.mcp_tools = ['click'];
+            action.dialog = 'dismissed_without_text';
+            const dismissed = new Promise((resolveDismiss, rejectDismiss) => {
+              const timer = setTimeout(() => rejectDismiss(Error('dialog_timeout')), 5000);
+              page.once('dialog', dialog => dialog.dismiss().then(() => {
+                clearTimeout(timer); resolveDismiss();
+              }, rejectDismiss));
+            });
+            text = await call('click', prepared.args);
+            await dismissed;
+          } else {
+            text = journey && command.name === 'fill' && !nativeSelect
+              ? await fillWithKeyboard(prepared.args, call)
+              : await call(command.name, prepared?.args ?? command.arguments);
+          }
           if (command.name === 'take_snapshot') {
             const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
             if (!journey) loginUid = controls.find(row => row.includes('Google로 계속하기'))?.match(/uid=([\d_]+)/)?.[1] ?? null;
@@ -250,6 +288,10 @@ async function main() {
             action.console = text.split('\n').filter(row => /msgid=/.test(row)).map(row => consoleSummary(row));
             emit({ action: action.id, console_entries: action.console_entries, unexpected_errors: consoleErrors,
               devtools_console: action.console, browser_console: consoleRows });
+          } else if (command.name === 'wait_for') {
+            const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
+            action.controls = controls;
+            emit({ action: action.id, controls });
           } else {
             if (command.name === 'click' && (!journey || prepared?.purpose === 'login')) clicked = true;
             emit({ action: action.id, tool: command.name, ok: true });

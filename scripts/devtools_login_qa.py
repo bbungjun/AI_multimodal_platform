@@ -15,6 +15,7 @@ from verify_mock_oauth_browser import MockOAuthRuntime
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from prompt_t2i_adapter import read_owned_db_probe
 from video_pipeline_adapter import read_latest_image_source, read_pipeline_probe, read_video_job_probe
+from workspace_adapter import compile_workspace_results, evidence_from_workspace_receipt
 
 
 def refusal_deltas(before, after):
@@ -31,6 +32,16 @@ def video_refusal_deltas(before, after):
             or set(after) != set(before)):
         raise ValueError("probe_counts_invalid")
     return {key: after[key] - before[key] - 1 for key in ("jobs", "outbox", "reservations")}
+
+
+def workspace_fixture(runtime, operation):
+    raw = runtime.docker(*runtime.compose, "exec", "-T", "backend", "python",
+                         "tests/workspace_qa_fixture.py",
+                         input=json.dumps({"operation": operation}, separators=(",", ":")))
+    value = json.loads(raw)
+    if not isinstance(value, dict) or value.get("complete") is not True:
+        raise ValueError("workspace_fixture_failed")
+    return value
 
 
 def revision():
@@ -62,7 +73,7 @@ def main():
     args = sys.argv[1:]
     if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"],
                     ["--scenario", "video", "--auto"], ["--scenario", "i2v", "--auto"],
-                    ["--scenario", "pipeline", "--auto"]):
+                    ["--scenario", "pipeline", "--auto"], ["--scenario", "workspace", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = args[1] if args else "login"
@@ -84,7 +95,31 @@ def main():
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
                 probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario in {"image", "video"} else None
-                if automatic and scenario == "i2v":
+                if automatic and scenario == "workspace":
+                    workspace_output = output / "workspace"
+                    workspace_output.mkdir()
+                    fixture = workspace_fixture(runtime, "prepare")
+                    result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/workspace-controller.mjs"), runtime.base_url,
+                         str(workspace_output), str(Path(temporary) / "workspace-profile"),
+                         fixture["retry_job_id"]], cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    report["workspace_fixture"] = {"jobs": fixture["jobs"]}
+                    report["workspace_inspect"] = workspace_fixture(runtime, "inspect")
+                    browser_report = workspace_output / "browser.json"
+                    workspace_fixture(runtime, "promote")
+                    master_output = output / "master"
+                    master_output.mkdir()
+                    master_result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/master-controller.mjs"), runtime.base_url,
+                         str(master_output), str(Path(temporary) / "master-profile")],
+                        cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    report["master_driver_exit_code"] = master_result.returncode
+                    master_report = master_output / "browser.json"
+                    if master_report.is_file():
+                        report["master_browser"] = json.loads(master_report.read_text(encoding="utf-8"))
+                elif automatic and scenario == "i2v":
                     source_output, i2v_output = output / "source", output / "i2v"
                     source_output.mkdir(); i2v_output.mkdir()
                     source_result = subprocess.run(
@@ -150,9 +185,19 @@ def main():
         report["error_type"] = type(exc).__name__
     report["seconds"] = round(time.monotonic() - started, 3)
     browser = report.get("browser", {})
-    report["complete"] = (report.get("driver_exit_code") == 0 and browser.get("passed") is True
-                          and browser.get("cleanup") == 0 and report["runtime_cleanup"] == 0
-                          and report.get("source_unchanged") is True and "error" not in report)
+    if automatic and scenario == "workspace" and "error" not in report:
+        try:
+            evidence = evidence_from_workspace_receipt(report)
+            report["scenario_results"] = compile_workspace_results(evidence)
+            report["complete"] = evidence.technical_complete and all(
+                row["verdict"] != "BLOCKED" for row in report["scenario_results"])
+        except ValueError:
+            report["error"] = "workspace_receipt_invalid"
+            report["complete"] = False
+    else:
+        report["complete"] = (report.get("driver_exit_code") == 0 and browser.get("passed") is True
+                              and browser.get("cleanup") == 0 and report["runtime_cleanup"] == 0
+                              and report.get("source_unchanged") is True and "error" not in report)
     (output / "receipt.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"complete": report["complete"], "receipt": str(output.relative_to(ROOT) / "receipt.json"),
                       "runtime_cleanup": report["runtime_cleanup"]}), flush=True)

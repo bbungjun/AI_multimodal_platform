@@ -77,6 +77,25 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA Workspace surfaces — Issue185 Mock Verified, 2026-09-15
+
+- PR188 merge 후 `codex/issue-185-ops-surface-adapter`를 최신 main에서 시작했다.
+- History6/Usage6/Retry6/Role9 총27 assertion compiler Interface를 구현했다. 완전 evidence
+  PASS, 제품 불일치 FAIL, tool/source/cleanup 누락은 전체 BLOCKED다. focused4 PASS.
+- owned fixture는 fresh OAuth user에 pagination용 failed Job22개를 만들고 첫 Job만 정상
+  prompt의 retryable failure로 둔다. promote는 실제 audited operator 경계에서 Max
+  Master로 전환하며 inspect는 원장/usage/retry 정합성만 반환한다.
+- Core `ed296fe` owned mock 실행은 Workspace12+Master6단계, external0/Console0,
+  browser/runtime cleanup0, source unchanged로131.312s에 완료됐다. History6/6,
+  Usage6/6, Retry6/6, Role8/9로 총26/27 PASS다. 유일한 제품 FAIL은 일반 사용자에게
+  `운영` 메뉴가 보이는 역할별 navigation 불일치이며 Ops/Master 직접 API는403이다.
+  Master overview/users/audit/ops는 모두200이다.
+- [정제 evidence](evidence/issue-185/workspace-summary.json)와
+  [진행 기록](portfolio/issue-185-workspace-adapter.md)을 보존했다. 다음은 Issue186에서
+  10개 scenario/68 assertion을 단일 Receipt로 집계한다. Fresh regression은
+  backend1898 PASS/3 guarded skips/기존 Windows Bash path1 deselected, DevTools Node38,
+  frontend lint/build, Registry와 env-example Compose PASS다. Delivery16파일.
+
 ### Agent QA Video + Pipeline Adapter — Issue184 Mock Verified, 2026-09-15
 
 - PR187 merge 후 branch `codex/issue-184-video-pipeline-adapter`를 최신 main에서 시작했다.

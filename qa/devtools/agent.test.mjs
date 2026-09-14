@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { safeRoute, safeSnapshot, validateCommand, checksFor, networkRows, consoleSummary,
-  hasNetworkEvidence, isExternalPageRequest } from './agent.mjs';
+  hasNetworkEvidence, isExternalPageRequest, isExpectedConsoleError } from './agent.mjs';
 
 test('evidence drops OAuth query, foreign origins and identity text', () => {
   assert.equal(safeRoute('http://127.0.0.1:18156/api/auth/google/callback?code=secret&state=secret'), '/api/auth/google/callback');
@@ -15,6 +15,13 @@ test('only foreign HTTP origins count as external page requests', () => {
   assert.equal(isExternalPageRequest('blob:http://127.0.0.1:18156/value'), false);
   assert.equal(isExternalPageRequest('http://127.0.0.1:18156/files/value'), false);
   assert.equal(isExternalPageRequest('https://foreign.test/value'), true);
+});
+
+test('only allowlisted auth and role refusal errors are expected', () => {
+  assert.equal(isExpectedConsoleError('Failed 401', 'http://127.0.0.1:18156/api/auth/me'), true);
+  assert.equal(isExpectedConsoleError('Failed 403', 'http://127.0.0.1:18156/api/ops/health'), true);
+  assert.equal(isExpectedConsoleError('Failed 500', 'http://127.0.0.1:18156/api/ops/health'), false);
+  assert.equal(isExpectedConsoleError('Failed 404', 'http://127.0.0.1:18156/favicon.ico'), true);
 });
 
 test('agent can only click the observed login control once', () => {
@@ -31,6 +38,15 @@ test('arbitrary scripts, foreign navigation and file outputs are refused', () =>
     { op: 'call', name: 'navigate_page', arguments: { pageId: 1, type: 'url', url: 'https://foreign.test' } },
     { op: 'call', name: 'take_snapshot', arguments: { pageId: 1, filePath: 'private.txt' } },
   ]) assert.throws(() => validateCommand(command, null, false));
+});
+
+test('wait is restricted to the login control and bounded timeout', () => {
+  assert.doesNotThrow(() => validateCommand({ op:'call', name:'wait_for', arguments:{
+    pageId:1, text:['Google로 계속하기'], timeout:15000
+  } }, null, false));
+  assert.throws(() => validateCommand({ op:'call', name:'wait_for', arguments:{
+    pageId:1, text:['private'], timeout:15000
+  } }, null, false));
 });
 
 test('login is not passed from UI alone or incomplete observation', () => {
@@ -66,4 +82,8 @@ test('multi-navigation proof requires preserved login plus image network evidenc
   assert.equal(hasNetworkEvidence(login, true), false);
   assert.equal(hasNetworkEvidence(image, true), false);
   assert.equal(hasNetworkEvidence([...login, ...image], true), true);
+  const master = [['/api/master/overview', 200], ['/api/master/users', 503],
+    ['/api/master/audit', 200], ['/api/ops/health', 200]]
+    .map(([route, status]) => ({ route, status }));
+  assert.equal(hasNetworkEvidence([...login, ...master], 'master'), true);
 });
