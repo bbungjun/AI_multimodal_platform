@@ -52,6 +52,8 @@ export class ImageJourney {
     this.revisitReads = null;
     this.lastPhase = null;
     this.emptyAccessibilityDisabled = null;
+    this.overLimitSelected = false;
+    this.overLimitStatus = 0;
   }
 
   get edited() { return this.enhancement ? this.enhancement.enhanced + EDIT_SUFFIX : null; }
@@ -60,14 +62,16 @@ export class ImageJourney {
   snapshot(text) {
     this.controls.clear();
     for (const line of text.split('\n')) {
-      const match = line.match(/uid=([\d_]+) (button|textbox|link) "([^"]*)"/);
+      const match = line.match(/uid=([\d_]+) (button|textbox|link|combobox) "([^"]*)"/);
       if (!match) continue;
       const [, uid, role, name] = match;
       let purpose = LABELS.get(name);
+      if (role === 'combobox' && /value="1장"/.test(line)) purpose = 'image_count';
       if (role === 'link' && /^기록(?:\s+\d+)?$/.test(name)) purpose = 'history';
       if (role === 'button' && this.jobId && name.includes(this.jobId.slice(0, 8)) && name.includes('작업')) purpose = 'job';
       if (!purpose) continue;
-      const expectedRole = ['original', 'draft'].includes(purpose) ? 'textbox' : purpose === 'history' ? 'link' : 'button';
+      const expectedRole = ['original', 'draft'].includes(purpose) ? 'textbox'
+        : purpose === 'history' ? 'link' : purpose === 'image_count' ? 'combobox' : 'button';
       if (role !== expectedRole) continue;
       this.controls.set(uid, { uid, role, purpose, disabled: /(?:^|\s)disabled(?:\s|$)/.test(line) });
     }
@@ -89,6 +93,11 @@ export class ImageJourney {
     const args = command.arguments;
     if (!args || !Number.isInteger(args.pageId) || args.pageId < 0) throw Error('arguments_refused');
     if (command.name === 'navigate_page') {
+      if (args.type === 'url' && args.url === 'http://127.0.0.1:18156/generate'
+          && Object.keys(args).sort().join(',') === 'pageId,type,url' && this.checkpoints.revisited) {
+        this.controls.clear();
+        return { args, purpose: 'boundary_return' };
+      }
       if (args.type !== 'reload') return null;
       if (Object.keys(args).sort().join(',') !== 'pageId,type' || !this.checkpoints.completed || this.reloadReads !== null)
         throw Error('reload_refused');
@@ -105,18 +114,21 @@ export class ImageJourney {
         && this.checkpoints.login && !this.checkpoints.empty;
       const original = control.purpose === 'original' && args.fixture === 'original' && this.checkpoints.login && !this.checkpoints.original;
       const reviewed = control.purpose === 'draft' && args.fixture === 'reviewed' && this.checkpoints.draft && !this.checkpoints.edited;
-      if (!empty && !original && !reviewed) throw Error('fixture_refused');
+      const two = control.purpose === 'image_count' && args.fixture === 'two' && this.checkpoints.revisited;
+      if (!empty && !original && !reviewed && !two) throw Error('fixture_refused');
+      if (two) this.overLimitSelected = true;
       this.controls.clear();
       return { args: { pageId: args.pageId, uid: args.uid,
-        value: empty ? '' : original ? ORIGINAL : this.edited }, purpose: control.purpose };
+        value: empty ? '' : original ? ORIGINAL : reviewed ? this.edited : '2장' }, purpose: control.purpose };
     }
+    const count = this.clickCounts[control.purpose] ?? 0;
     const prerequisites = { login: true, enhance: !!this.checkpoints.original,
       discard: !!this.checkpoints.draft_discard && !this.checkpoints.discarded,
       keep: !!this.checkpoints.draft_keep && !this.checkpoints.kept,
-      accept: !!this.checkpoints.edited, generate: !!this.checkpoints.accepted,
+      accept: !!this.checkpoints.edited,
+      generate: !!this.checkpoints.accepted && (count === 0 || this.overLimitSelected),
       history: !!this.checkpoints.reloaded, job: !!this.checkpoints.history };
-    const limits = { login: 1, enhance: 3, discard: 1, keep: 1, accept: 1, generate: 1, history: 1, job: 1 };
-    const count = this.clickCounts[control.purpose] ?? 0;
+    const limits = { login: 1, enhance: 3, discard: 1, keep: 1, accept: 1, generate: 2, history: 1, job: 1 };
     if (!prerequisites[control.purpose] || count >= (limits[control.purpose] ?? 0)) throw Error('click_refused');
     // Reserve before calling MCP: a timeout is not permission to create a second job.
     this.attempts.add(control.purpose);
@@ -141,6 +153,11 @@ export class ImageJourney {
       this.enhancement = { id: body.id, enhanced: body.enhanced };
     } else if (path === '/api/generations' && method === 'POST') {
       this.postCounts.generation++;
+      if (this.postCounts.generation === 2) {
+        this.overLimitStatus = status;
+        if (![201, 403].includes(status)) this.failures.push('over_limit_http_unexpected');
+        return;
+      }
       if (status !== 201) { this.failures.push('generation_http_failure'); return; }
       const body = await response.json();
       const sent = JSON.parse(response.request().postData() ?? '{}');
@@ -247,18 +264,20 @@ export class ImageJourney {
     const phases = Object.fromEntries(PHASES.map(phase => [phase, !!this.checkpoints[phase]]));
     const checks = { ...phases, enhancement_payload_matches: this.enhancementMatches,
       accepted_generation_payload_matches: this.payloadMatches,
-      three_enhancements: this.postCounts.enhancement === 3, one_generation: this.postCounts.generation === 1,
+      three_enhancements: this.postCounts.enhancement === 3,
+      two_generation_requests: this.postCounts.generation === 2,
       no_observation_failures: this.failures.length === 0,
       empty_dom_disabled: this.checkpoints.empty?.empty_disabled === true,
       empty_prompt_confirmed: this.checkpoints.empty?.empty_prompt === true,
       empty_submit_found: this.checkpoints.empty?.empty_submit_found === true,
       empty_accessibility_disabled: this.emptyAccessibilityDisabled === true };
+    checks.over_limit_observed = [201, 403].includes(this.overLimitStatus);
     const technicalComplete = Object.values(phases).every(value => value === true) && this.failures.length === 0;
     return { scenario: 'reviewed_prompt_image', technical_complete: technicalComplete,
-      passed: Object.values(checks).every(value => value === true),
+      passed: Object.values(checks).every(value => value === true) && this.overLimitStatus === 403,
       checks, steps: this.steps, post_counts: this.postCounts, job_reads: this.jobReads,
       file_reads: this.fileReads, file: this.file ? { bytes: this.file.bytes, mime: this.file.mime, sha256: this.file.sha256 } : null,
-      failures: this.failures };
+      failures: this.failures, over_limit_status: this.overLimitStatus };
   }
 }
 

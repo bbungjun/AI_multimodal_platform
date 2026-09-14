@@ -122,6 +122,8 @@ test('full ordered proof needs new job reads on reload/revisit and no duplicate 
   assert.equal((await phase(journey, 'revisited', image)).passed, false);
   journey.jobReads++;
   await phase(journey, 'revisited', image);
+  journey.overLimitStatus = 403;
+  journey.postCounts.generation++;
   assert.equal(journey.result().passed, true);
   assert.doesNotMatch(JSON.stringify(journey.result()), /11111111|22222222|33333333|small blue|soft light/);
   journey.postCounts.generation++;

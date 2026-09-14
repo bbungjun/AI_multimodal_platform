@@ -12,6 +12,15 @@ from uuid import uuid4
 
 from mock_auth_support import ROOT
 from verify_mock_oauth_browser import MockOAuthRuntime
+sys.path.insert(0, str(ROOT / "qa" / "executor"))
+from prompt_t2i_adapter import read_owned_db_probe
+
+
+def refusal_deltas(before, after):
+    if (set(before) != {"complete", "jobs", "outbox", "reservations"}
+            or set(after) != set(before)):
+        raise ValueError("probe_counts_invalid")
+    return {key: after[key] - before[key] - 1 for key in ("jobs", "outbox", "reservations")}
 
 
 def revision():
@@ -62,6 +71,7 @@ def main():
                 runtime.preflight()
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
+                probe_before = read_owned_db_probe(runtime, "counts") if automatic else None
                 result = subprocess.run(
                     (["node", str(ROOT / "qa/devtools/image-controller.mjs"), runtime.base_url,
                       str(output), str(Path(temporary) / "chrome-profile")]
@@ -71,6 +81,13 @@ def main():
                     cwd=ROOT, env=runtime.env, timeout=720,
                 )
                 report["driver_exit_code"] = result.returncode
+                if automatic:
+                    probe_after = read_owned_db_probe(runtime, "counts")
+                    report["prompt_t2i_probe"] = {
+                        "before": probe_before,
+                        "after": probe_after,
+                        "refusal_deltas": refusal_deltas(probe_before, probe_after),
+                    }
                 browser_report = output / "browser.json"
                 if browser_report.is_file():
                     report["browser"] = json.loads(browser_report.read_text(encoding="utf-8"))

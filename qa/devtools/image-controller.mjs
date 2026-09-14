@@ -116,6 +116,12 @@ async function main() {
     stage = 'revisit';
     await clickPurpose(page, 'job');
     await checkpoint(page, 'revisited', { retries: 5, wait: 1000 });
+    stage = 'over_limit';
+    await call('navigate_page', { pageId: page, type: 'url', url: 'http://127.0.0.1:18156/generate' });
+    await delay(750);
+    await fillPurpose(page, 'image_count', 'two');
+    await clickPurpose(page, 'generate');
+    await delay(1500);
     await call('list_network_requests', { pageId: page, includePreservedRequests: true });
     await call('list_console_messages', { pageId: page, types: ['error', 'warn'], includePreservedMessages: true });
     await send({ op: 'verify' });

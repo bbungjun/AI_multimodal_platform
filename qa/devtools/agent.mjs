@@ -204,8 +204,9 @@ async function main() {
           action.tool = command.name;
           action.arguments = command.arguments;
           if (prepared?.purpose) action.purpose = prepared.purpose;
-          if (journey && command.name === 'fill') action.mcp_tools = ['click', 'press_key', 'type_text'];
-          const text = journey && command.name === 'fill'
+          if (journey && command.name === 'fill') action.mcp_tools = prepared?.purpose === 'image_count'
+            ? ['fill'] : ['click', 'press_key', 'type_text'];
+          const text = journey && command.name === 'fill' && prepared?.purpose !== 'image_count'
             ? await fillWithKeyboard(prepared.args, call)
             : await call(command.name, prepared?.args ?? command.arguments);
           if (command.name === 'take_snapshot') {
