@@ -77,6 +77,34 @@ paste credential contents.
 
 ## Active Work
 
+### Favicon repair and agent QA rerun — Issue170 Mock Verified
+
+- Branch `codex/issue-170-favicon-qa` depends on draft PR169. Verified core `f06dfd7`
+  adds a local brand SVG/favicon link; same agent-driven DevTools login9/9 PASS,
+  `/favicon.svg`200, unexpected Console errors1→0, browser/runtime cleanup0.
+- Original Issue168 failure is preserved. Node5/Python6, frontend lint/build,
+  built SVG hash/XML, env-example Compose and diff checks PASS.
+- [Before/after record](portfolio/issue-170-favicon-qa.md) and
+  [receipt](evidence/issue-170/devtools-login-receipt.json). Draft delivery is
+  tracked by Issue170. Next: image-generation user journey and reusable QA Skill.
+
+### Agent-operated Chrome DevTools login QA — Issue168 connection proof executed
+
+- Branch `codex/issue-168-devtools-login-qa`, executed core `8558113` with Chrome153
+  and DevTools MCP1.9.0: agent-selected actual login click, start307/callback303/
+  me200 and visible workspace. 8/9 checks: favicon404 is an unexpected Console
+  error, so strict QA remains FAIL/exit1. Browser/MCP/runtime cleanup0.
+- Test-only interactive MCP client, no global configuration/product/migration/Hook
+  changes. Browser page external requests0, not a backend/full-browser egress claim.
+- Node5 PASS, focused backend72/2 guarded skips and final focused6 PASS,
+  frontend lint/build, env-example Compose, diff check and dependency audit PASS.
+- [Record and reproduction](portfolio/issue-168-devtools-login-qa.md),
+  [sanitized receipt](evidence/issue-168/devtools-login-receipt.json). Delivery is
+  tracked by Issue168 and its linked draft PR. Favicon is fixed and reverified
+  separately in Issue170 above; this entry preserves the original failed run.
+- Docker startup socket errors were recovered using preserved socket-only folder
+  backups; existing data was not reset. Other running/stopped projects remain.
+
 ### AI button QA and E2E coverage audit — 2026-09-13
 
 - Issue164 / `codex/issue-164-ai-ui-qa`: AI-operated browser exploration of the
