@@ -38,8 +38,32 @@ Focused test:
 python -m pytest backend/tests/test_prompt_t2i_adapter.py backend/tests/test_prompt_t2i_probe_support.py -q
 ```
 
-결과는15 PASS다. compiler와 DB probe contract의 구현 증거이며 아직 실제 Chrome/DB
-통합 실행 증거는 아니다.
+결과는 compiler/DB probe15 PASS다.
+
+## 자동 Chrome 체크포인트
+
+기존 agent.mjs image protocol에 `image-controller.mjs`를 추가했다. Controller가 각 화면
+변경 후 새 accessibility snapshot에서 control UID를 다시 얻고 fixture 이름으로만 입력한
+뒤, enhance/edit/accept/generate/completed/reload/History/revisit 순서를 자동 수행한다.
+
+Core `d071e85` 실제 owned mock 실행 결과:
+
+| Metric | 결과 |
+|---|---:|
+| DevTools actions | 33 |
+| Journey checks | 14/14 |
+| 정제 compiler checks | 8/8 |
+| Enhancement / generation POST | 1 / 1 |
+| PNG | image/png, 556940B, decoded |
+| Job / file reads | 4 / 2 |
+| External / unexpected Console | 0 / 0 |
+| Browser / runtime cleanup | 0 / 0 |
+| 실행 시간 | 82.063s |
+
+[정제 summary](../evidence/issue-183/auto-image-journey-summary.json)만 커밋한다. 이 실행은
+edited accept와 정상 한 장 생성의 partial Mock Verified 증거다. discard/original choice,
+empty disabled, Free over-limit refusal와 DB delta는 아직 검증하지 않았으므로 두 contract
+scenario 전체 PASS로 승격하지 않는다.
 
 ## 남은 구현
 

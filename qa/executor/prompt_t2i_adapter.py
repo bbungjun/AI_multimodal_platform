@@ -77,6 +77,42 @@ def _check_map(browser: dict[str, Any]) -> dict[str, bool]:
     return checks
 
 
+def sanitize_image_journey_report(browser_report: dict[str, Any]) -> dict[str, Any]:
+    try:
+        image = browser_report["image"]
+        checks = image["checks"]
+        posts = image["post_counts"]
+        file = image["file"]
+        browser_checks = browser_report["checks"]
+        failures = image["failures"]
+        cleaned = {
+            "technical_complete": (
+                browser_report["passed"] is True and browser_report["cleanup"] == 0
+                and image["passed"] is True and browser_checks["devtools_network_inspected"] is True
+                and browser_checks["devtools_console_inspected"] is True
+            ),
+            "external_page_requests": browser_report["external_page_requests"],
+            "unexpected_console_errors": browser_report["unexpected_console_errors"],
+            "network_cross_check": browser_checks["devtools_network_inspected"] is True,
+            "checks": {
+                "original": checks["original"],
+                "draft": checks["draft"],
+                "edited": checks["edited"],
+                "accepted": checks["accepted"],
+                "completed": checks["completed"],
+                "payload_matches": checks["accepted_generation_payload_matches"],
+                "persisted_matches": checks["no_observation_failures"] and not failures,
+                "image_visible": checks["completed"],
+            },
+            "post_counts": {"enhancement": posts["enhancement"], "generation": posts["generation"]},
+            "file": {"decoded": checks["completed"], "mime": file["mime"]},
+        }
+    except (KeyError, TypeError, AttributeError):
+        raise PromptT2IAdapterError("prompt_t2i_journey_report_invalid") from None
+    _check_map(cleaned)
+    return cleaned
+
+
 def _observation(assertion_id: str, passed: bool, evidence: list[str]) -> dict[str, Any]:
     return {"id": assertion_id, "passed": passed, "evidence": evidence}
 

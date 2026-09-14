@@ -13,6 +13,7 @@ from prompt_t2i_adapter import (  # noqa: E402
     PromptT2IProbes,
     compile_prompt_t2i_results,
     read_owned_db_probe,
+    sanitize_image_journey_report,
 )
 
 
@@ -105,3 +106,29 @@ def test_owned_db_probe_rejects_extra_fields():
 
     with pytest.raises(PromptT2IAdapterError, match="prompt_t2i_probe_result_invalid"):
         read_owned_db_probe(Runtime(), "counts")
+
+
+def test_image_journey_report_is_reduced_to_closed_compiler_shape():
+    value = {
+        "passed": True, "cleanup": 0, "external_page_requests": 0,
+        "unexpected_console_errors": 0,
+        "checks": {"devtools_network_inspected": True, "devtools_console_inspected": True},
+        "image": {
+            "passed": True,
+            "checks": {"original": True, "draft": True, "edited": True, "accepted": True,
+                       "completed": True, "accepted_generation_payload_matches": True,
+                       "no_observation_failures": True},
+            "post_counts": {"enhancement": 1, "generation": 1},
+            "file": {"mime": "image/png", "bytes": 100, "sha256": "a" * 64},
+            "failures": [],
+        },
+        "actions": [{"private": "ignored"}],
+    }
+
+    cleaned = sanitize_image_journey_report(value)
+
+    assert set(cleaned) == {"technical_complete", "external_page_requests",
+                            "unexpected_console_errors", "network_cross_check", "checks",
+                            "post_counts", "file"}
+    assert "private" not in json.dumps(cleaned)
+    assert cleaned["file"] == {"decoded": True, "mime": "image/png"}

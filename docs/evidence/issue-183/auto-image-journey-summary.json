@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "issue": 183,
+  "evidence_level": "partial_mock_verified",
+  "revision": "d071e85b35f5247767def93cf651bcc83945f9b7",
+  "provider": "mock",
+  "controller": "chrome_devtools_mcp",
+  "complete": true,
+  "actions": 33,
+  "journey_checks": 14,
+  "sanitized_compiler_checks": 8,
+  "enhancement_requests": 1,
+  "generation_requests": 1,
+  "job_reads": 4,
+  "file_reads": 2,
+  "asset": {"mime": "image/png", "bytes": 556940, "decoded": true},
+  "external_page_requests": 0,
+  "unexpected_console_errors": 0,
+  "browser_cleanup": 0,
+  "runtime_cleanup": 0,
+  "seconds": 82.063,
+  "not_yet_verified": [
+    "discard_and_original_choice",
+    "empty_submission_disabled",
+    "free_over_limit_refusal",
+    "refusal_database_deltas"
+  ]
+}

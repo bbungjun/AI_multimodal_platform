@@ -88,9 +88,12 @@ paste credential contents.
   policy refusal 및 side-effect0 assertion4개를 FAIL로 판정한다. owned backend stdin
   DB probe는 count delta와 정상 Job의 state/PNG/outbox/reservation만 반환하며 foreign/
   non-mock target을 거부한다. focused15 PASS.
-- 아직 실제 Chrome action driver와 DB probe Adapter가 연결되지 않았으므로 Issue183은
-  완료가 아니다. 다음 구현은 discard/keep/edited accept, empty disabled, over-limit 요청,
-  allowed PNG journey와 DB delta를 한 owned runtime에서 수집하는 것이다.
+- 기존 image DevTools protocol을 자동 조작하는 controller를 추가했다. Core `d071e85`의
+  실제 owned Chrome 실행은 action33, journey check14, enhancement1/generation1,
+  PNG556940B, external0, Console0, browser/runtime cleanup0으로82.063s에 PASS했다. 정제
+  Adapter 결과도 compiler check8/8이다.
+- Issue183은 아직 완료가 아니다. 이 실행은 edited accept와 정상 PNG만 증명한다. 다음은
+  discard/original choice, empty disabled, Free over-limit와 DB delta를 별도 phase로 연결한다.
 - [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
 
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
