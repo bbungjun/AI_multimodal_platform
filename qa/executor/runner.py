@@ -25,6 +25,7 @@ from registry import ContractError, derive_scenario_verdict, load_registry  # no
 from select_impact import changes_between  # noqa: E402
 from selector import ImpactError, REVISION, load_policy, select_impact  # noqa: E402
 from browser_acceptance_support import HarnessError  # noqa: E402
+from mock_auth_support import command as owned_command  # noqa: E402
 from verify_mock_oauth_browser import MockOAuthRuntime  # noqa: E402
 
 
@@ -51,6 +52,20 @@ FAILURE_PHASES = {
 
 class ExecutorError(RuntimeError):
     pass
+
+
+def executor_command(args: list[str], **kwargs) -> str:
+    try:
+        return owned_command(args, **kwargs)
+    except HarnessError as error:
+        if error.args != ("command_failed",):
+            raise
+        operation = "docker_command"
+        for candidate in ("config", "up", "ps", "exec", "down", "inspect", "show", "ls"):
+            if candidate in args:
+                operation = "docker_" + candidate
+                break
+        raise HarnessError(operation + "_failed") from None
 
 
 def _git(repository_root: Path, arguments: list[str]) -> bytes:
@@ -286,7 +301,7 @@ def run_execution(
     output = repository_root / "output" / "playwright" / run_id
     output.mkdir(parents=True, exist_ok=False)
     before_digest = source_digest(repository_root)
-    runtime = runtime_factory(repository_root / ".env.example")
+    runtime = runtime_factory(repository_root / ".env.example", run=executor_command)
     runtime.deadline = time.monotonic() + 900
     runtime_cleanup = 1
     runtime_started = False

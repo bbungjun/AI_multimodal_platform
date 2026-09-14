@@ -89,6 +89,15 @@ def test_browser_report_rejects_extra_identity_field(tmp_path: Path) -> None:
         runner._browser_result(path)
 
 
+def test_owned_command_failure_keeps_only_safe_operation(monkeypatch) -> None:
+    def fail(*args, **kwargs):
+        raise runner.HarnessError("command_failed")
+
+    monkeypatch.setattr(runner, "owned_command", fail)
+    with pytest.raises(runner.HarnessError, match="docker_up_failed"):
+        runner.executor_command(["docker", "compose", "up", "-d"])
+
+
 def test_finalize_pass_adds_runtime_receipt_evidence() -> None:
     registry = load_registry(ROOT / "qa" / "contracts")
     payload = _browser_payload()
@@ -196,7 +205,7 @@ def test_selected_execution_uses_owned_runtime_and_writes_sanitized_report(
         base_url = "http://127.0.0.1:19000"
         env = {}
 
-        def __init__(self, env_file):
+        def __init__(self, env_file, run=None):
             self.deadline = None
 
         def preflight(self):
