@@ -11,8 +11,8 @@ from aggregate import run_all  # noqa:E402
 from runner import ExecutorError  # noqa:E402
 
 def main(argv=None):
- p=argparse.ArgumentParser();p.add_argument("--base",required=True);p.add_argument("--head",required=True);a=p.parse_args(argv)
- try:r=run_all(a.base,a.head,ROOT)
+ p=argparse.ArgumentParser();p.add_argument("--base",required=True);p.add_argument("--head",required=True);p.add_argument("--resume",action="store_true");a=p.parse_args(argv)
+ try:r=run_all(a.base,a.head,ROOT,resume=a.resume)
  except(ExecutorError,OSError,ValueError)as e:print(json.dumps({"complete":False,"error":str(e)},separators=(",",":")));return 2
  print(json.dumps({"complete":True,"verdict":r.receipt["verdict"],"merge_decision":r.merge_decision,
   "scenarios":len(r.receipt["scenario_results"]),"assertions":sum(len(x["assertions"])for x in r.receipt["scenario_results"]),

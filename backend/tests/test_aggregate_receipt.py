@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 import pytest
 ROOT=Path(__file__).resolve().parents[2];sys.path[:0]=[str(ROOT/'qa'/'executor'),str(ROOT/'qa'/'contracts')]
-from aggregate import aggregate_reports  # noqa:E402
+from aggregate import _latest_slice,aggregate_reports  # noqa:E402
 from registry import load_registry,validate_receipt  # noqa:E402
 from runner import ExecutorError  # noqa:E402
 
@@ -23,3 +23,11 @@ def test_aggregate_is_contract_valid_and_rejects_known_product_failures():
 def test_aggregate_rejects_mixed_revisions():
  registry=load_registry();values=list(reports(registry));values[1]['revision']='2'*40
  with pytest.raises(ExecutorError,match='aggregate_revision_stale'):aggregate_reports(revision=REV,registry=registry,auth=values[0],image=values[1],video=values[2],i2v=values[3],pipeline=values[4],workspace=values[5])
+def test_resume_only_reuses_exact_clean_revision(tmp_path):
+ root=tmp_path;(root/'output/playwright/devtools-image-old').mkdir(parents=True);(root/'output/playwright/devtools-image-new').mkdir()
+ base={'provider':'mock','runtime_cleanup':0,'source_unchanged':True,'driver_exit_code':0}
+ (root/'output/playwright/devtools-image-old/receipt.json').write_text(__import__('json').dumps({**base,'revision':'2'*40}))
+ (root/'output/playwright/devtools-image-new/receipt.json').write_text(__import__('json').dumps({**base,'revision':REV}))
+ assert _latest_slice(root,'image',REV)['revision']==REV
+ (root/'output/playwright/devtools-image-new/receipt.json').write_text(__import__('json').dumps({**base,'revision':REV,'runtime_cleanup':1}))
+ assert _latest_slice(root,'image',REV)is None

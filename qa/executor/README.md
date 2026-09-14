@@ -43,3 +43,7 @@ mock runtime에서 실행한다. 10개 scenario와68개 assertion의 revision/so
 결과가 모두 PASS일 때만 `merge_decision=ALLOW`이며, 제품 FAIL이나 증거 BLOCKED가 하나라도
 있으면 `REJECT`다. 이 결정은 판정값일 뿐 GitHub merge 권한이나 자동 merge 동작을
 포함하지 않는다.
+
+Docker/Chrome 같은 로컬 runtime이 중간에 중단되면 `--resume`을 추가할 수 있다. 이때도
+현재 HEAD와 정확히 같은 revision, `source_unchanged=true`, process/cleanup0인 slice만
+재사용하며 나머지는 다시 실행한다. 다른 revision의 과거 PASS/FAIL은 재사용하지 않는다.

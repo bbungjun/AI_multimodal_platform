@@ -39,10 +39,36 @@ def _slice(command:list[str],root:Path,run:Callable[...,Any]=subprocess.run)->di
         value=json.loads(path.read_text(encoding="utf-8"))
     except(OSError,ValueError,KeyError,StopIteration,TypeError,json.JSONDecodeError):
         raise ExecutorError("aggregate_slice_invalid")from None
-    if(result.returncode not in{0,1}or type(value)is not dict or value.get("provider")!="mock"or"error"in value or value.get("runtime_cleanup")!=0
-       or value.get("source_unchanged")is not True or value.get("driver_exit_code")!=0):
-        raise ExecutorError("aggregate_slice_incomplete")
+    if result.returncode not in{0,1}:raise ExecutorError("aggregate_slice_incomplete")
+    _validate_slice(value)
     return value
+
+
+def _validate_slice(value:dict[str,Any],revision:str|None=None)->None:
+    if(type(value)is not dict or value.get("provider")!="mock"or"error"in value or value.get("runtime_cleanup")!=0
+       or value.get("source_unchanged")is not True or value.get("driver_exit_code")!=0
+       or revision is not None and value.get("revision")!=revision):
+        raise ExecutorError("aggregate_slice_incomplete")
+
+
+def _latest_slice(root:Path,name:str,revision:str)->dict[str,Any]|None:
+    paths=sorted((root/"output"/"playwright").glob(f"devtools-{name}-*/receipt.json"),key=lambda p:p.stat().st_mtime,reverse=True)
+    for path in paths:
+        try:value=json.loads(path.read_text(encoding="utf-8"));_validate_slice(value,revision);return value
+        except(OSError,ValueError,TypeError,ExecutorError,json.JSONDecodeError):continue
+    return None
+
+
+def _latest_auth(root:Path,revision:str)->dict[str,Any]|None:
+    paths=sorted((root/"output"/"playwright").glob("agent-qa-auth-*/execution.json"),key=lambda p:p.stat().st_mtime,reverse=True)
+    for path in paths:
+        try:
+            value=json.loads(path.read_text(encoding="utf-8"));cleanup=value["cleanup"]
+            if(value.get("revision")==revision and value.get("provider")=="mock"and value.get("source_unchanged")is True
+               and value.get("process_exit_code")==0 and value["scenario_result"]["scenario_id"]=="auth_login"
+               and value["scenario_result"]["verdict"]=="PASS"and not any(cleanup.values())):return value
+        except(OSError,ValueError,TypeError,KeyError,json.JSONDecodeError):continue
+    return None
 
 
 def _prompt_results(r:dict[str,Any])->tuple[dict[str,Any],...]:
@@ -94,13 +120,16 @@ def aggregate_reports(*,revision:str,registry:Any,auth:dict[str,Any],image:dict[
            "scenario_results":ordered,"cleanup":cleanup,"verdict":verdict}
 
 
-def run_all(base_revision:str,head_revision:str,root:Path,*,run:Callable[...,Any]=subprocess.run)->AggregateRun:
+def run_all(base_revision:str,head_revision:str,root:Path,*,run:Callable[...,Any]=subprocess.run,resume:bool=False)->AggregateRun:
     started=time.monotonic();registry,selection=build_selection(base_revision,head_revision,root)
     if selection["classification"]!="FULL_E2E"or not all(row["selected"]for row in selection["scenario_decisions"]):
         raise ExecutorError("aggregate_full_selection_required")
-    before=source_digest(root);auth=run_execution(base_revision,head_revision,"auth_login",repository_root=root,process_runner=run)
-    slices={name:_slice(["python",str(root/"scripts"/"devtools_login_qa.py"),"--scenario",name,"--auto"],root,run)
-            for name in("image","video","i2v","pipeline","workspace")}
+    before=source_digest(root);auth=_latest_auth(root,head_revision)if resume else None
+    auth=auth or run_execution(base_revision,head_revision,"auth_login",repository_root=root,process_runner=run)
+    slices={}
+    for name in("image","video","i2v","pipeline","workspace"):
+        value=_latest_slice(root,name,head_revision)if resume else None
+        slices[name]=value or _slice(["python",str(root/"scripts"/"devtools_login_qa.py"),"--scenario",name,"--auto"],root,run)
     if current_revision(root)!=head_revision or source_digest(root)!=before:raise ExecutorError("aggregate_source_changed")
     receipt=aggregate_reports(revision=head_revision,registry=registry,auth=auth,**slices)
     from registry import validate_receipt
