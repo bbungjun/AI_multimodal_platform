@@ -56,7 +56,15 @@ async function main() {
     const ready = await next(); if (ready.phase !== 'ready') throw Error('ready');
     const page = pageId(await call('list_pages', {}));
     await call('navigate_page', { pageId: page, type: 'url', url: 'http://127.0.0.1:18156/login' });
-    stage = 'login'; await click(page, 'login', 5); await checkpoint(page, 'login', { retries: 4, wait: 1000 });
+    stage = 'login';
+    let entry = await snapshot(page);
+    for (let attempt = 0; attempt < 5 && !(entry.controls ?? []).some(c => ['login', 'history'].includes(c.purpose)); attempt++) {
+      await delay(750); entry = await snapshot(page);
+    }
+    const loginUid = controlUid(entry, 'login');
+    if (loginUid) await call('click', { pageId: page, uid: loginUid });
+    else if (!(entry.controls ?? []).some(control => control.purpose === 'history')) throw Error('entry_unavailable');
+    await checkpoint(page, 'login', { retries: 4, wait: 1000 });
     stage = 'history'; await click(page, 'history'); await checkpoint(page, 'history', { retries: 5, wait: 750 });
     await fill(page, 'state', 'failed'); await checkpoint(page, 'filtered', { retries: 5, wait: 750 });
     await click(page, 'next'); await checkpoint(page, 'page2', { retries: 5, wait: 750 });
