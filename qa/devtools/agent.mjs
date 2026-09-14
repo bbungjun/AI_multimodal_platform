@@ -27,6 +27,13 @@ export function safeRoute(value) {
   } catch { return 'other'; }
 }
 
+export function isExternalPageRequest(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && url.origin !== ORIGIN;
+  } catch { return true; }
+}
+
 export function safeSnapshot(text) {
   // Only expose controls needed for this login proof. No profile names or input values.
   return text.split('\n').filter(line =>
@@ -130,7 +137,9 @@ async function main() {
     await page.setRequestInterception(true);
     page.on('request', request => {
       const url = new URL(request.url());
-      if (url.origin !== ORIGIN) { external++; void request.abort().catch(() => {}); }
+      if (isExternalPageRequest(url.href)) {
+        external++; void request.abort().catch(() => {});
+      }
       else void request.continue().catch(() => {});
     });
     page.on('response', response => {
