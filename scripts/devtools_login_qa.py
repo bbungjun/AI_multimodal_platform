@@ -70,6 +70,7 @@ def main():
                 report["source_unchanged"] = (
                     report["source_sha256"] == source_digest() and report["revision"] == revision())
             finally:
+                report["runtime_cleanup"] = "failed"
                 runtime.cleanup()
                 report["runtime_cleanup"] = 0
     except (Exception, KeyboardInterrupt) as exc:

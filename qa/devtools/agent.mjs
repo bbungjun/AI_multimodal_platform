@@ -11,12 +11,14 @@ import { once } from 'node:events';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
 const AUTH_PATHS = new Set(['/api/auth/me', '/api/auth/google/start', '/api/auth/google/callback']);
+const PUBLIC_DIAGNOSTIC_PATHS = new Set(['/favicon.ico', '/vite.svg']);
 const TOOLS = new Set(['list_pages', 'navigate_page', 'take_snapshot', 'click',
   'list_network_requests', 'list_console_messages']);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
 
 export function safeRoute(value) {
-  try { const url = new URL(value); return url.origin === ORIGIN && AUTH_PATHS.has(url.pathname)
+  try { const url = new URL(value); return url.origin === ORIGIN &&
+    (AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname))
     ? url.pathname : 'other'; } catch { return 'other'; }
 }
 
@@ -28,11 +30,11 @@ export function safeSnapshot(text) {
 }
 
 export function networkRows(text) {
-  return text.split('\n').filter(row => /reqid=\d+/.test(row) && /\/api\/auth\//.test(row)).map(row => ({
+  return text.split('\n').filter(row => /reqid=\d+/.test(row)).map(row => ({
     request_id: Number(row.match(/reqid=(\d+)/)?.[1]),
     route: safeRoute(row.match(/https?:\/\/[^\s]+/)?.[0]),
     status: Number(row.match(/\[(\d{3})\]/)?.[1] ?? 0),
-  }));
+  })).filter(row => row.route !== 'other');
 }
 
 export function consoleSummary(text, url = '') {
@@ -171,12 +173,12 @@ async function main() {
               catch { return '[url]'; }
             }) });
           } else if (command.name === 'list_network_requests') {
-            // Return only normalized auth request lines, never headers or bodies.
+            // Return only allowlisted normalized routes, never headers or bodies.
             const rows = networkRows(text);
             inspected.network = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303],
               ['/api/auth/me', 200]].every(([route, status]) => rows.some(row => row.route === route && row.status === status));
             action.network = rows;
-            emit({ action: action.id, devtools_auth_requests: rows });
+            emit({ action: action.id, devtools_requests: rows });
           } else if (command.name === 'list_console_messages') {
             inspected.console = true;
             action.console_entries = (text.match(/msgid=/g) ?? []).length;
