@@ -97,6 +97,7 @@ paste credential contents.
   [최종 summary](evidence/issue-184/final-video-pipeline-summary.json).
 - Fresh regression: backend1888 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
   DevTools Node33, frontend lint/build, env-example Compose와 diff check PASS. Delivery19파일.
+- [일반 PR188](https://github.com/bbungjun/AI_multimodal_platform/pull/188)로 전달했다.
 
 ### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 

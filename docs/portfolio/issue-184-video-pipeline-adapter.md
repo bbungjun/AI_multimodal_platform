@@ -1,6 +1,7 @@
 # Issue184 — Agent QA Video와 Pipeline Adapter
 
 - [Issue184](https://github.com/bbungjun/AI_multimodal_platform/issues/184)
+- [일반 PR188](https://github.com/bbungjun/AI_multimodal_platform/pull/188)
 - Parent: [Issue182](https://github.com/bbungjun/AI_multimodal_platform/issues/182)
 - Status: `Mock Verified / T2V·I2V Product QA FAIL / Pipeline PASS`
 
