@@ -83,3 +83,13 @@ def test_video_job_probe_returns_state_path_without_identity():
                     '"source_present":true}')
     value = read_video_job_probe(Runtime(), "latest_i2v_summary")
     assert value["state_path"] == "pending,running,completed"
+
+
+def test_t2i_job_probe_accepts_png_without_identity():
+    class Runtime:
+        compose = []
+        def docker(self, *args, input=None):
+            return ('{"complete":true,"state":"completed",'
+                    '"state_path":"pending,running,completed","asset_mime":"image/png",'
+                    '"source_present":false}')
+    assert read_video_job_probe(Runtime(), "first_t2i_summary")["asset_mime"] == "image/png"
