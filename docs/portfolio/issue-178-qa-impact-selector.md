@@ -1,6 +1,7 @@
 # Issue178 — Agent QA 변경 영향 Selector v1
 
 - [Issue178](https://github.com/bbungjun/AI_multimodal_platform/issues/178)
+- [일반 PR179](https://github.com/bbungjun/AI_multimodal_platform/pull/179)
 - 선행 계약: [Issue176](https://github.com/bbungjun/AI_multimodal_platform/issues/176) /
   [PR177](https://github.com/bbungjun/AI_multimodal_platform/pull/177)
 

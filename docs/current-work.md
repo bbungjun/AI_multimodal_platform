@@ -95,8 +95,10 @@ paste credential contents.
   `Implemented`다.
 - Core commit `070843e`를 직전 revision과 실제 Git Adapter로 비교한 self-selection은
   changed8, selected10, excluded0, unmatched0의 `FULL_E2E`를 반환했다.
-- [구현·판단 기록](portfolio/issue-178-qa-impact-selector.md). 다음 단계는 선택 Manifest를
-  받아 격리 fixture와 Chrome DevTools evidence를 생성하는 Executor다.
+- [구현·판단 기록](portfolio/issue-178-qa-impact-selector.md)과
+  [일반 PR179](https://github.com/bbungjun/AI_multimodal_platform/pull/179)로 전달했다.
+  다음 단계는 선택 Manifest를 받아 격리 fixture와 Chrome DevTools evidence를 생성하는
+  Executor다.
 
 ### Agent QA Contract와 Scenario Registry — Issue176, 2026-09-15
 
