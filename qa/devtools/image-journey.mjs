@@ -101,11 +101,14 @@ export class ImageJourney {
     const control = this.controls.get(args.uid);
     if (!control || control.disabled) throw Error('fresh_control_required');
     if (command.name === 'fill') {
+      const empty = control.purpose === 'original' && args.fixture === 'empty'
+        && this.checkpoints.login && !this.checkpoints.empty;
       const original = control.purpose === 'original' && args.fixture === 'original' && this.checkpoints.login && !this.checkpoints.original;
       const reviewed = control.purpose === 'draft' && args.fixture === 'reviewed' && this.checkpoints.draft && !this.checkpoints.edited;
-      if (!original && !reviewed) throw Error('fixture_refused');
+      if (!empty && !original && !reviewed) throw Error('fixture_refused');
       this.controls.clear();
-      return { args: { pageId: args.pageId, uid: args.uid, value: original ? ORIGINAL : this.edited }, purpose: control.purpose };
+      return { args: { pageId: args.pageId, uid: args.uid,
+        value: empty ? '' : original ? ORIGINAL : this.edited }, purpose: control.purpose };
     }
     const prerequisites = { login: true, enhance: !!this.checkpoints.original,
       discard: !!this.checkpoints.draft_discard && !this.checkpoints.discarded,
@@ -262,6 +265,7 @@ export class ImageJourney {
 export async function fillWithKeyboard(args, call) {
   await call('click', { pageId: args.pageId, uid: args.uid });
   await call('press_key', { pageId: args.pageId, key: 'Control+A' });
-  await call('type_text', { pageId: args.pageId, text: args.value });
+  if (args.value === '') await call('press_key', { pageId: args.pageId, key: 'Backspace' });
+  else await call('type_text', { pageId: args.pageId, text: args.value });
   return '';
 }

@@ -143,6 +143,10 @@ test('text entry uses actual focus, select-all and keyboard insertion, stops aft
   await fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async (name, args) => calls.push({ name, args }));
   assert.deepEqual(calls.map(c => c.name), ['click', 'press_key', 'type_text']);
   assert.equal(calls[1].args.key, 'Control+A');
+  const cleared = [];
+  await fillWithKeyboard({ pageId: 1, uid: '1_1', value: '' }, async (name, args) => cleared.push({ name, args }));
+  assert.deepEqual(cleared.map(c => c.name), ['click', 'press_key', 'press_key']);
+  assert.equal(cleared[2].args.key, 'Backspace');
   const failed = [];
   await assert.rejects(fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async name => {
     failed.push(name); throw Error('tool_unavailable');

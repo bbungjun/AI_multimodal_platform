@@ -79,6 +79,7 @@ async function main() {
     await clickPurpose(page, 'login');
     await checkpoint(page, 'login', { retries: 3, wait: 1000 });
     stage = 'empty';
+    await fillPurpose(page, 'original', 'empty');
     const emptySnapshot = await snapshot(page);
     const emptyGenerate = emptySnapshot.controls?.find(row => row.purpose === 'generate');
     if (!emptyGenerate) throw Error('empty_generate_missing');

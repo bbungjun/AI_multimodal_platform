@@ -178,7 +178,7 @@ async function main() {
       return rows;
     };
     emit({ phase: 'ready', scenario, origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish', ...(journey ? ['checkpoint'] : [])],
-      ...(journey ? { fill_arguments: 'pageId, uid, fixture: original|reviewed (no literal prompt)',
+      ...(journey ? { fill_arguments: 'pageId, uid, fixture: empty|original|reviewed (no literal prompt)',
         phases: ['login', 'original', 'draft', 'edited', 'accepted', 'completed', 'reloaded', 'history', 'revisited'] } : {}) });
     for await (const line of input) {
       const action = { id: `A${actions.length + 1}`, at: new Date().toISOString() };
