@@ -94,8 +94,9 @@ paste credential contents.
   path failure; deselecting that host check1806 PASS. Session70/Chromium61,
   lint/build and Compose PASS. Permanent delete, live/mobile/provider/races excluded.
 - [Korean report](portfolio/issue-174-full-ui-qa.md) and
-  [sanitized summary](evidence/issue-174/full-ui-qa-summary.json). No product fix.
-  Next bounded product slice: enforce Free request-size admission and add regression.
+  [sanitized summary](evidence/issue-174/full-ui-qa-summary.json), delivered through
+  [PR175](https://github.com/bbungjun/AI_multimodal_platform/pull/175). No product
+  fix. Next bounded slice: enforce Free request-size admission and add regression.
 
 ### PR 작성 규칙 변경 — 2026-09-14
 
