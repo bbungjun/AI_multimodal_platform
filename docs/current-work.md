@@ -77,6 +77,30 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
+
+- PR177/179는 required checks 통과 후 `main`에 squash merge됐다. Branch
+  `codex/issue-180-agent-qa-executor`는 Selection-bound Executor의 첫 완전한
+  `auth_login` 수직 slice를 구현했다.
+- clean current HEAD와 base/head SHA를 검증하고, Impact Selector에서 선택된 경우에만
+  fresh mock Postgres/Redis/backend/worker, Vite, Chrome, DevTools MCP를 시작한다. 실제
+  accessibility control로 로그인·계정 메뉴·로그아웃을 조작하고 contract assertion7개를
+  생성한다. 제외된 scenario는 runtime 미시작 `NOT_APPLICABLE`이다.
+- Core `0e1f48c`에서 동일 revision2회가 assertion7/7, 정제 Network6행,
+  external request0, 예상 밖 Console0, browser-response cross-check true,
+  browser/MCP/Vite/runtime cleanup0으로 PASS했다. 실행 시간은31.422/29.875s다.
+- Registry/Selector/Executor focused56와 DevTools Node22, 기존 Windows/Bash host-path
+  검사1개를 제외한 backend1862, frontend lint/build, env-example Compose가 PASS했다.
+- 첫 실패들은 cleanup 순서, initial about:blank, route probe와 Docker Engine socket/runtime
+  장애로 분리해 보존했다. Docker data/factory reset 없이 socket directory2개를 timestamp
+  backup으로 이동한 뒤 Engine29.2.1을 복구했다.
+- Unit fake report는 repository output이 아닌 pytest temp로 격리했다. 이번 작업이 만든
+  local `agent-qa-auth-*` raw artifact19개는 정제 summary 후 repo-relative tmp backup으로
+  이동했고 committed evidence에는 raw identity/request 값이 없다.
+- [정제 evidence](evidence/issue-180/executor-summary.json)와
+  [구현·장애 기록](portfolio/issue-180-agent-qa-executor.md). 나머지9개 scenario Adapter와
+  aggregate Receipt/CI/merge decision은 다음 단계다.
+
 ### Agent QA 변경 영향 Selector — Issue178, 2026-09-15
 
 - Branch `codex/issue-178-qa-impact-selector`는 Issue176/PR177의 Registry를 입력으로,

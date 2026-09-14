@@ -225,7 +225,7 @@ def test_selected_execution_uses_owned_runtime_and_writes_sanitized_report(
         "1" * 40,
         head,
         "auth_login",
-        repository_root=ROOT,
+        repository_root=tmp_path,
         runtime_factory=Runtime,
         process_runner=process,
     )
@@ -233,7 +233,7 @@ def test_selected_execution_uses_owned_runtime_and_writes_sanitized_report(
     assert result["complete"] is True
     assert result["scenario_result"]["verdict"] == "PASS"
     assert result["cleanup"] == {"browser": 0, "mcp": 0, "vite": 0, "runtime": 0}
-    report = json.loads((ROOT / result["report_path"]).read_text(encoding="utf-8"))
+    report = json.loads((tmp_path / result["report_path"]).read_text(encoding="utf-8"))
     assert "email" not in json.dumps(report).lower()
 
 
