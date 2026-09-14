@@ -96,6 +96,11 @@ async function main() {
     stage = 'usage'; await click(page, 'usage'); await checkpoint(page, 'usage', { retries: 5, wait: 750 });
     await call('navigate_page', { pageId: page, type: 'reload' });
     await checkpoint(page, 'usage_reloaded', { retries: 10, wait: 1000 });
+    stage = 'user_role'; await checkpoint(page, 'user_nav');
+    await click(page, 'ops'); await checkpoint(page, 'user_ops', { retries: 5, wait: 750 });
+    await call('navigate_page', { pageId: page, type: 'url',
+      url: 'http://127.0.0.1:18156/api/master/overview' });
+    await checkpoint(page, 'user_master', { retries: 5, wait: 750 });
     await call('list_network_requests', { pageId: page, includePreservedRequests: true });
     await call('list_console_messages', { pageId: page, types: ['error', 'warn'], includePreservedMessages: true });
     await send({ op: 'verify' }); await send({ op: 'finish' });
