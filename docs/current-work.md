@@ -77,6 +77,44 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
+
+- Parent Issue182를 prompt/T2I, video/pipeline, history/usage/retry/role, aggregate Receipt의
+  4개 bounded child로 분리했다. 현재 branch는 `codex/issue-183-prompt-t2i-adapter`다.
+- `compile_prompt_t2i_results` Interface가 정제 DevTools/browser evidence와 DB/runtime
+  probe를 prompt6개/T2I8개 contract assertion으로 변환한다. 완전하지 않은 tool evidence는
+  `BLOCKED`, 제품 기대 위반은 `FAIL`이며 allow-failure가 없다.
+- Free over-limit이201이고 job/outbox/reservation이 각각1인 기존 결함 입력은 T2I의
+  policy refusal 및 side-effect0 assertion4개를 FAIL로 판정한다. owned backend stdin
+  DB probe는 count delta와 정상 Job의 state/PNG/outbox/reservation만 반환하며 foreign/
+  non-mock target을 거부한다. focused15 PASS.
+- 기존 image DevTools protocol을 자동 조작하는 controller를 추가했다. Core `d071e85`의
+  실제 owned Chrome 실행은 action33, journey check14, enhancement1/generation1,
+  PNG556940B, external0, Console0, browser/runtime cleanup0으로82.063s에 PASS했다. 정제
+  Adapter 결과도 compiler check8/8이다.
+- Issue183은 아직 완료가 아니다. 이 실행은 edited accept와 정상 PNG만 증명한다. 다음은
+  discard/original choice, empty disabled, Free over-limit와 DB delta를 별도 phase로 연결한다.
+- Core `b38d597` 경계 실행은 기술적으로 완료/cleanup0: checkpoint15, enhancement3,
+  discard·원본유지·edited accept와 정상 generation을 수행했다. 제품 결과는
+  `empty_submission_disabled=false` 한 건 때문에 FAIL이며 나머지 check failure0이다.
+  다음 실행에서 DOM property와 accessibility disabled를 교차검증한 후 over-limit DB
+  delta를 연결한다.
+- Probe를 실제 submit control로 좁힌 뒤 초기 예시 prompt가 원인이었음을 확인했다. Core
+  `463f537`에서 DevTools keyboard로 prompt를 비우자 DOM/accessibility disabled가 모두
+  true였고 checkpoint15, enhancement3, discard/keep/edit-accept, generation1,
+  external0/Console0/cleanup0이87.812s에 전체 PASS했다. 이전 false 관측은 QA 절차 실패로
+  보존한다. Issue183의 남은 범위는 Free2장 refusal과 DB delta뿐이다.
+- Core `501f9be` 최종 실행은 prompt review PASS/T2I FAIL을 산출했다. 정상 Job state는
+  pending→running→completed, Free2장 요청은201이고 정상 요청을 제외한 DB delta가
+  jobs1/outbox1/reservations1이다. Adapter는 contract14개를 모두 판정했고 external0,
+  Console0, cleanup0, source unchanged다. [정제 실패 증거](evidence/issue-183/t2i-policy-failure-summary.json).
+- Issue183 구현은 완료됐고 제품 F01을 정직하게 FAIL로 보존한다. 다음 child184는
+  T2V/I2V/Pipeline Adapter이며, Free video length도 같은 admission 결함을 판정한다.
+- Fresh regression: backend1879 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
+  DevTools Node24, frontend lint/build, env-example Compose와 diff check PASS.
+- [일반 PR187](https://github.com/bbungjun/AI_multimodal_platform/pull/187)로 전달했다.
+- [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
+
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15
 
 - PR177/179는 required checks 통과 후 `main`에 squash merge됐다. Branch

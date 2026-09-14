@@ -12,7 +12,8 @@ const response = (path, method, body, sent = {}, status = 200) => ({
   json: async () => body, buffer: async () => PNG, headers: () => ({ 'content-type': 'image/png' }),
 });
 const probeCall = value => async () => '```json\n' + JSON.stringify(value) + '\n```';
-const phaseCommand = phase => ({ op: 'checkpoint', phase });
+const phaseCommand = phase => ({ op: 'checkpoint', phase,
+  ...(phase === 'empty' ? { accessibility_disabled: true } : {}) });
 async function phase(journey, name, probe) {
   journey.prepare(phaseCommand(name));
   return journey.checkpoint(name, 1, probeCall(probe));
@@ -29,6 +30,11 @@ async function prepareJob(journey, wrongPrompt = false) {
     assets: [{ id: ASSET, kind: 'image', mime: 'image/png', url: `/files/${JOB}/output.png` }],
   }));
   await journey.observe(response(`/files/${JOB}/output.png`, 'GET', null));
+}
+async function observeEnhancement(journey) {
+  await journey.observe(response('/api/prompts/enhance', 'POST',
+    { id: ENH, original: ORIGINAL, enhanced: 'draft', target_mode: 't2i' },
+    { prompt: ORIGINAL }, 201));
 }
 
 test('snapshot drops prompt/identity and retains only usable scenario controls', () => {
@@ -87,7 +93,17 @@ test('missing decode, wrong image, wrong job and unobserved response cannot pass
 test('full ordered proof needs new job reads on reload/revisit and no duplicate POST', async () => {
   const journey = new ImageJourney();
   await phase(journey, 'login', { workspace: true });
+  await phase(journey, 'empty', { workspace: true, empty_disabled: true,
+    empty_prompt: true, empty_submit_found: true });
   await phase(journey, 'original', { workspace: true, original: true });
+  await observeEnhancement(journey);
+  await phase(journey, 'draft_discard', { original: true, draft: true });
+  journey.clickCounts.discard = 1;
+  await phase(journey, 'discarded', { original: true, review_closed: true });
+  await observeEnhancement(journey);
+  await phase(journey, 'draft_keep', { original: true, draft: true });
+  journey.clickCounts.keep = 1;
+  await phase(journey, 'kept', { original: true, review_closed: true });
   await prepareJob(journey);
   await phase(journey, 'draft', { original: true, draft: true });
   await phase(journey, 'edited', { original: true, edited: true });
@@ -106,6 +122,8 @@ test('full ordered proof needs new job reads on reload/revisit and no duplicate 
   assert.equal((await phase(journey, 'revisited', image)).passed, false);
   journey.jobReads++;
   await phase(journey, 'revisited', image);
+  journey.overLimitStatus = 403;
+  journey.postCounts.generation++;
   assert.equal(journey.result().passed, true);
   assert.doesNotMatch(JSON.stringify(journey.result()), /11111111|22222222|33333333|small blue|soft light/);
   journey.postCounts.generation++;
@@ -127,6 +145,10 @@ test('text entry uses actual focus, select-all and keyboard insertion, stops aft
   await fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async (name, args) => calls.push({ name, args }));
   assert.deepEqual(calls.map(c => c.name), ['click', 'press_key', 'type_text']);
   assert.equal(calls[1].args.key, 'Control+A');
+  const cleared = [];
+  await fillWithKeyboard({ pageId: 1, uid: '1_1', value: '' }, async (name, args) => cleared.push({ name, args }));
+  assert.deepEqual(cleared.map(c => c.name), ['click', 'press_key', 'press_key']);
+  assert.equal(cleared[2].args.key, 'Backspace');
   const failed = [];
   await assert.rejects(fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async name => {
     failed.push(name); throw Error('tool_unavailable');

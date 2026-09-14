@@ -12,6 +12,17 @@ from uuid import uuid4
 
 from mock_auth_support import ROOT
 from verify_mock_oauth_browser import MockOAuthRuntime
+sys.path.insert(0, str(ROOT / "qa" / "executor"))
+from prompt_t2i_adapter import read_owned_db_probe
+
+
+def refusal_deltas(before, after):
+    if (set(before) != {"complete", "jobs", "outbox", "reservations"}
+            or set(after) != set(before)):
+        raise ValueError("probe_counts_invalid")
+    expected = {"jobs": 1, "outbox": 1, "reservations": 4}
+    return {key: after[key] - before[key] - expected[key]
+            for key in ("jobs", "outbox", "reservations")}
 
 
 def revision():
@@ -41,10 +52,11 @@ def source_digest():
 
 def main():
     args = sys.argv[1:]
-    if args not in ([], ["--scenario", "image"]):
+    if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = "image" if args else "login"
+    automatic = args == ["--scenario", "image", "--auto"]
     run_id = "devtools-" + scenario + "-" + uuid4().hex[:12]
     output = ROOT / "output" / "playwright" / run_id
     output.mkdir(parents=True, exist_ok=False)
@@ -61,12 +73,23 @@ def main():
                 runtime.preflight()
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
+                probe_before = read_owned_db_probe(runtime, "counts") if automatic else None
                 result = subprocess.run(
-                    ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
-                     str(output), str(Path(temporary) / "chrome-profile"), scenario],
+                    (["node", str(ROOT / "qa/devtools/image-controller.mjs"), runtime.base_url,
+                      str(output), str(Path(temporary) / "chrome-profile")]
+                     if automatic else
+                     ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
+                      str(output), str(Path(temporary) / "chrome-profile"), scenario]),
                     cwd=ROOT, env=runtime.env, timeout=720,
                 )
                 report["driver_exit_code"] = result.returncode
+                if automatic:
+                    probe_after = read_owned_db_probe(runtime, "counts")
+                    report["prompt_t2i_probe"] = {
+                        "before": probe_before,
+                        "after": probe_after,
+                        "refusal_deltas": refusal_deltas(probe_before, probe_after),
+                    }
                 browser_report = output / "browser.json"
                 if browser_report.is_file():
                     report["browser"] = json.loads(browser_report.read_text(encoding="utf-8"))
