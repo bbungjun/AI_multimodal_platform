@@ -15,6 +15,43 @@ class WorkspaceEvidence:
     user_nav_hidden: bool; user_ops_status: int; user_master_status: int; user_admin_polls: int
     master_nav: bool; master_overview: bool; master_users: bool; master_audit: bool; master_ops: bool
 
+def _microcredits(value: int) -> str:
+    if type(value) is not int or value < 0:
+        raise ValueError("workspace_usage_invalid")
+    if value == 0:return "0"
+    if value < 1_000_000:return "0."+str(value).zfill(6).rstrip("0")
+    thousandths=(value+500)//1_000;whole,fraction=divmod(thousandths,1_000)
+    return f"{whole:,}"+(f".{fraction:03d}".rstrip("0")if fraction else"")
+
+def evidence_from_workspace_receipt(r:dict[str,Any])->WorkspaceEvidence:
+    try:
+        user=r["browser"];workspace=user["workspace"];master_report=r["master_browser"];master=master_report["master"];db=r["workspace_inspect"]
+        phases=workspace["phases"];master_phases=master["phases"];values=workspace["usage_values"]
+        expected={"available":_microcredits(db["usage_available"]),"held":_microcredits(db["usage_held"]),"charged":_microcredits(db["usage_charged"])}
+        before=values["before"];after=values["after"]
+        statuses=master["statuses"]
+        technical=(r["driver_exit_code"]==0 and r["master_driver_exit_code"]==0 and r["runtime_cleanup"]==0
+            and r["source_unchanged"]is True and user["cleanup"]==0 and master_report["cleanup"]==0
+            and workspace["technical_complete"]is True and master["technical_complete"]is True)
+        return WorkspaceEvidence(
+            technical,int(user["external_page_requests"])+int(master_report["external_page_requests"]),
+            int(user["unexpected_console_errors"])+int(master_report["unexpected_console_errors"]),0,
+            phases["filtered"]is True,len(workspace["history_offsets"])>=2 and workspace["history_offsets"][1]==0,
+            phases["page2"]is True and phases["page1"]is True,workspace["detail_identity"]is True,
+            workspace["delete_calls"],workspace["history_visible_count"]==workspace["history_rows"],
+            phases["usage"]is True and db["usage_plan"]=="free",before["available"]==expected["available"],
+            before["charged"]==expected["charged"] and db["usage_charged"]==db["usage_meter_charged"],db["usage_held"],
+            200 if 200 in workspace["usage_statuses"] else 0,phases["usage_reloaded"]is True and before==after,
+            db["original_failed_clean"]is True,workspace["retry_error_readable"]is True and db["original_error_present"]is True,
+            db["retry_distinct"]is True,db["retry_link"]is True,tuple(db["retry_state_path"].split(",")),db["retry_charge_once"]is True,
+            workspace["user_ops_nav_visible"]is False,403 if 403 in workspace["ops_statuses"]else 0,
+            403 if 403 in workspace["master_statuses"]else 0,workspace["user_admin_polls"],
+            master_phases["navigation"]is True,master_phases["overview"]is True and 200 in statuses["overview"],
+            master_phases["users"]is True and 200 in statuses["users"],master_phases["audit"]is True and 200 in statuses["audit"],
+            master_phases["ops"]is True and 200 in statuses["ops"])
+    except(KeyError,TypeError,ValueError):
+        raise ValueError("workspace_receipt_invalid")from None
+
 def _a(i:str,p:bool,e:list[str])->dict[str,Any]:return{"id":i,"passed":p,"evidence":e}
 def _r(i:str,a:list[dict[str,Any]])->dict[str,Any]:return{"scenario_id":i,"selected":True,"verdict":"FAIL"if any(not x["passed"]for x in a)else"PASS","assertions":a,"blocked_reasons":[]}
 

@@ -21,6 +21,7 @@ test('only allowlisted auth and role refusal errors are expected', () => {
   assert.equal(isExpectedConsoleError('Failed 401', 'http://127.0.0.1:18156/api/auth/me'), true);
   assert.equal(isExpectedConsoleError('Failed 403', 'http://127.0.0.1:18156/api/ops/health'), true);
   assert.equal(isExpectedConsoleError('Failed 500', 'http://127.0.0.1:18156/api/ops/health'), false);
+  assert.equal(isExpectedConsoleError('Failed 404', 'http://127.0.0.1:18156/favicon.ico'), true);
 });
 
 test('agent can only click the observed login control once', () => {
@@ -81,4 +82,8 @@ test('multi-navigation proof requires preserved login plus image network evidenc
   assert.equal(hasNetworkEvidence(login, true), false);
   assert.equal(hasNetworkEvidence(image, true), false);
   assert.equal(hasNetworkEvidence([...login, ...image], true), true);
+  const master = [['/api/master/overview', 200], ['/api/master/users', 503],
+    ['/api/master/audit', 200], ['/api/ops/health', 200]]
+    .map(([route, status]) => ({ route, status }));
+  assert.equal(hasNetworkEvidence([...login, ...master], 'master'), true);
 });

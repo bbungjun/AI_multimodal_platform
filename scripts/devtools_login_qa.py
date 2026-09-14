@@ -15,6 +15,7 @@ from verify_mock_oauth_browser import MockOAuthRuntime
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from prompt_t2i_adapter import read_owned_db_probe
 from video_pipeline_adapter import read_latest_image_source, read_pipeline_probe, read_video_job_probe
+from workspace_adapter import compile_workspace_results, evidence_from_workspace_receipt
 
 
 def refusal_deltas(before, after):
@@ -184,9 +185,19 @@ def main():
         report["error_type"] = type(exc).__name__
     report["seconds"] = round(time.monotonic() - started, 3)
     browser = report.get("browser", {})
-    report["complete"] = (report.get("driver_exit_code") == 0 and browser.get("passed") is True
-                          and browser.get("cleanup") == 0 and report["runtime_cleanup"] == 0
-                          and report.get("source_unchanged") is True and "error" not in report)
+    if automatic and scenario == "workspace" and "error" not in report:
+        try:
+            evidence = evidence_from_workspace_receipt(report)
+            report["scenario_results"] = compile_workspace_results(evidence)
+            report["complete"] = evidence.technical_complete and all(
+                row["verdict"] != "BLOCKED" for row in report["scenario_results"])
+        except ValueError:
+            report["error"] = "workspace_receipt_invalid"
+            report["complete"] = False
+    else:
+        report["complete"] = (report.get("driver_exit_code") == 0 and browser.get("passed") is True
+                              and browser.get("cleanup") == 0 and report["runtime_cleanup"] == 0
+                              and report.get("source_unchanged") is True and "error" not in report)
     (output / "receipt.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"complete": report["complete"], "receipt": str(output.relative_to(ROOT) / "receipt.json"),
                       "runtime_cleanup": report["runtime_cleanup"]}), flush=True)

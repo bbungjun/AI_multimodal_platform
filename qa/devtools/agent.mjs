@@ -62,7 +62,9 @@ export function hasNetworkEvidence(rows, media = null) {
     ['/api/generations/{job}', 200], ['/files/{job}/output.mp4', 200]);
   if (media === 'pipeline') required.push(['/api/pipelines', 201], ['/api/pipelines/{parent}', 200]);
   if (media === 'workspace') required.push(['/api/generations', 200], ['/api/generations/{job}/retry', 201], ['/api/usage/me', 200]);
-  if (media === 'master') required.push(['/api/master/overview', 200], ['/api/master/users', 200], ['/api/master/audit', 200], ['/api/ops/health', 200]);
+  if (media === 'master') return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status))
+    && ['/api/master/overview', '/api/master/users', '/api/master/audit', '/api/ops/health']
+      .every(route => rows.some(row => row.route === route));
   return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
 }
 
@@ -77,6 +79,7 @@ export function consoleSummary(text, url = '') {
 export function isExpectedConsoleError(text, url = '') {
   const route = safeRoute(url);
   return route === '/api/auth/me' && /401/.test(text)
+    || PUBLIC_DIAGNOSTIC_PATHS.has(route) && /404/.test(text)
     || ['/api/ops/health', '/api/master/overview'].includes(route) && /403/.test(text);
 }
 
@@ -172,7 +175,7 @@ async function main() {
         pending.add(task);
       }
       if (route === '/api/auth/me' && response.status() === 200) {
-        const task = response.json().then(value => { profile = value.role === 'user' && value.status === 'active'; })
+        const task = response.json().then(value => { profile = ['user', 'master'].includes(value.role) && value.status === 'active'; })
           .catch(() => {}).finally(() => pending.delete(task));
         pending.add(task);
       }
@@ -184,9 +187,12 @@ async function main() {
         type: message.type(), ...consoleSummary(message.text(), message.location().url) });
       const journeyRoleRefusal = scenario === 'workspace' && /403/.test(message.text())
         && (journey?.opsStatuses?.includes(403) || journey?.masterStatuses?.includes(403));
+      const journeyProductHttp = scenario === 'master' && /(?:4|5)\d\d/.test(message.text())
+        && ['/api/master/overview', '/api/master/users', '/api/master/audit', '/api/ops/health']
+          .includes(safeRoute(message.location().url));
       if (message.type() === 'error'
           && !isExpectedConsoleError(message.text(), message.location().url)
-          && !journeyRoleRefusal) consoleErrors++;
+          && !journeyRoleRefusal && !journeyProductHttp) consoleErrors++;
     });
     const ws = new URL(browser.wsEndpoint());
     transport = new StdioClientTransport({ command: process.execPath,
