@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeRoute, safeSnapshot, validateCommand, checksFor, networkRows, consoleSummary } from './agent.mjs';
+import { safeRoute, safeSnapshot, validateCommand, checksFor, networkRows, consoleSummary, hasNetworkEvidence } from './agent.mjs';
 
 test('evidence drops OAuth query, foreign origins and identity text', () => {
   assert.equal(safeRoute('http://127.0.0.1:18156/api/auth/google/callback?code=secret&state=secret'), '/api/auth/google/callback');
@@ -47,4 +47,15 @@ test('pinned DevTools network format is parsed without exposing OAuth values', (
     [{ request_id: 6, route: '/favicon.svg', status: 200 }]);
   assert.deepEqual(consoleSummary('Failed to load resource: the server responded with a status of 401 (Unauthorized)'),
     { route: 'other', kind: 'resource_load', http_status: 401 });
+});
+
+test('multi-navigation proof requires preserved login plus image network evidence', () => {
+  const login = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303], ['/api/auth/me', 200]]
+    .map(([route, status]) => ({ route, status }));
+  const image = [['/api/prompts/enhance', 201], ['/api/generations', 201], ['/api/generations/{job}', 200], ['/files/{job}/output.png', 200]]
+    .map(([route, status]) => ({ route, status }));
+  assert.equal(hasNetworkEvidence(login), true);
+  assert.equal(hasNetworkEvidence(login, true), false);
+  assert.equal(hasNetworkEvidence(image, true), false);
+  assert.equal(hasNetworkEvidence([...login, ...image], true), true);
 });

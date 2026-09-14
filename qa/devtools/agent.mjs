@@ -41,6 +41,13 @@ export function networkRows(text) {
   })).filter(row => row.route !== 'other');
 }
 
+export function hasNetworkEvidence(rows, image = false) {
+  const required = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303], ['/api/auth/me', 200]];
+  if (image) required.push(['/api/prompts/enhance', 201], ['/api/generations', 201],
+    ['/api/generations/{job}', 200], ['/files/{job}/output.png', 200]);
+  return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
+}
+
 export function consoleSummary(text, url = '') {
   return { route: safeRoute(url),
     kind: /Failed to load resource/.test(text) ? 'resource_load' :
@@ -94,10 +101,11 @@ async function main() {
   const frontendRequire = createRequire(resolve(ROOT, 'frontend/package.json'));
   const { createServer } = await import(pathToFileURL(resolve(dirname(frontendRequire.resolve('vite')), 'dist/node/index.js')).href);
   const react = (await import(pathToFileURL(frontendRequire.resolve('@vitejs/plugin-react')).href)).default;
-  const events = [], actions = [], consoleRows = [], inspected = { network: false, console: false };
+  const events = [], actions = [], consoleRows = [], devtoolsRequests = [], inspected = { network: false, console: false };
   let external = 0, consoleErrors = 0, profile = false, clicked = false, loginUid = null;
   let browser, vite, client, transport, chromeProcess, mcpPid, finished = false;
-  const report = { scenario, passed: false, cleanup: 'pending', events, actions, console: consoleRows };
+  const report = { scenario, passed: false, cleanup: 'pending', events, actions, console: consoleRows,
+    devtools_requests: devtoolsRequests };
   const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const timeout = setTimeout(() => input.close(), 600_000);
   const pending = new Set();
@@ -160,6 +168,15 @@ async function main() {
       if (result.isError) throw Error('mcp_tool_failed');
       return (result.content ?? []).filter(item => item.type === 'text').map(item => item.text).join('\n');
     };
+    const recordNetwork = text => {
+      const rows = networkRows(text);
+      for (const row of rows) {
+        if (!devtoolsRequests.some(old => old.request_id === row.request_id && old.status === row.status && old.route === row.route))
+          devtoolsRequests.push(row);
+      }
+      inspected.network = hasNetworkEvidence(devtoolsRequests, !!journey);
+      return rows;
+    };
     emit({ phase: 'ready', scenario, origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish', ...(journey ? ['checkpoint'] : [])],
       ...(journey ? { fill_arguments: 'pageId, uid, fixture: original|reviewed (no literal prompt)',
         phases: ['login', 'original', 'draft', 'edited', 'accepted', 'completed', 'reloaded', 'history', 'revisited'] } : {}) });
@@ -177,6 +194,8 @@ async function main() {
           const pageId = Number(pages.match(/(?:^|\n)(\d+):/)?.[1]);
           if (!Number.isInteger(pageId)) throw Error('page_id_missing');
           action.checkpoint = await journey.checkpoint(prepared.phase, pageId, call);
+          // DevTools retains only a few navigations; capture evidence before it is evicted.
+          action.network = recordNetwork(await call('list_network_requests', { pageId, includePreservedRequests: true }));
           emit({ action: action.id, checkpoint: action.checkpoint });
         } else if (command.op === 'tools') {
           emit(inventory.tools.filter(tool => TOOLS.has(tool.name) || (journey && tool.name === 'fill'))
@@ -201,9 +220,7 @@ async function main() {
             }) });
           } else if (command.name === 'list_network_requests') {
             // Return only allowlisted normalized routes, never headers or bodies.
-            const rows = networkRows(text);
-            inspected.network = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303],
-              ['/api/auth/me', 200]].every(([route, status]) => rows.some(row => row.route === route && row.status === status));
+            const rows = recordNetwork(text);
             action.network = rows;
             emit({ action: action.id, devtools_requests: rows });
           } else if (command.name === 'list_console_messages') {
