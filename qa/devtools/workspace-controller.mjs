@@ -68,7 +68,13 @@ async function main() {
       await delay(1000);
       const settled = await call('list_pages', {});
       entry = await snapshot(page);
-      if (!(settled.pages?.includes('/generate')
+      if (settled.pages?.includes('/login')) {
+        await call('wait_for', { pageId: page, text: ['Google로 계속하기'], timeout: 15000 });
+        entry = await snapshot(page);
+        const settledLoginUid = controlUid(entry, 'login');
+        if (!settledLoginUid) throw Error('settled_login_control_missing');
+        await call('click', { pageId: page, uid: settledLoginUid });
+      } else if (!(settled.pages?.includes('/generate')
         && (entry.controls ?? []).some(control => control.purpose === 'history'))) {
       const route = settled.pages?.includes('/login') ? 'login'
         : settled.pages?.includes('/generate') ? 'generate' : 'other';
