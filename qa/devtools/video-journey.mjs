@@ -31,7 +31,7 @@ export class VideoJourney {
       if (!match) continue;
       const [, uid, role, name] = match;
       let purpose = name === 'Google로 계속하기' ? 'login'
-        : name === '텍스트 → 영상' ? 't2v_mode'
+        : name === 'T2V' ? 't2v_mode'
         : name === '프롬프트' ? 'prompt'
         : name === '생성' ? 'generate' : null;
       if (role === 'combobox' && /value="4s"/.test(line)) purpose = 'duration';
