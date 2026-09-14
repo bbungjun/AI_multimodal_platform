@@ -77,6 +77,17 @@ paste credential contents.
 
 ## Active Work
 
+### Agent-operated Chrome DevTools login QA — Issue168 in progress
+
+- Branch `codex/issue-168-devtools-login-qa`; bounded first proof: owned Chrome,
+  real mock OAuth login button, sanitized Network/Console, exact owned cleanup.
+- Reuses the existing mock OAuth runtime; no product/migration/Hook changes.
+  DevTools MCP is accessed by a local interactive MCP client, not a global
+  agent configuration change. First checks: `npm test --prefix qa/devtools`
+  and `AI_PROVIDER=mock python -m pytest tests/test_devtools_login_qa.py -q`.
+- Execution evidence and completion remain pending. Existing developer data
+  and unrelated working-tree changes are preserved.
+
 ### AI button QA and E2E coverage audit — 2026-09-13
 
 - Issue164 / `codex/issue-164-ai-ui-qa`: AI-operated browser exploration of the
