@@ -45,6 +45,25 @@ def read_pipeline_probe(runtime: Any) -> dict[str, Any]:
     return value
 
 
+def read_video_job_probe(runtime: Any, operation: str) -> dict[str, Any]:
+    if operation not in {"first_t2v_summary", "latest_i2v_summary"}:
+        raise ValueError("video_job_probe_operation_invalid")
+    try:
+        raw = runtime.docker(*runtime.compose, "exec", "-T", "backend", "python",
+                             "tests/prompt_t2i_probe.py",
+                             input=json.dumps({"operation": operation}, separators=(",", ":")))
+        value = json.loads(raw)
+    except Exception as error:
+        raise ValueError("video_job_probe_failed") from error
+    if (type(value) is not dict or set(value) != {"complete", "state", "state_path", "asset_mime", "source_present"}
+            or value.get("complete") is not True or value["state"] not in {"completed", "failed", "cancelled"}
+            or value["state_path"] not in {"pending,running,completed", "pending,running,failed"}
+            or value["asset_mime"] not in {"video/mp4", "missing"}
+            or type(value["source_present"]) is not bool):
+        raise ValueError("video_job_probe_invalid")
+    return value
+
+
 @dataclass(frozen=True)
 class VideoPipelineEvidence:
     technical_complete: bool

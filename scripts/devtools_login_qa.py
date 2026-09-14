@@ -14,7 +14,7 @@ from mock_auth_support import ROOT
 from verify_mock_oauth_browser import MockOAuthRuntime
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from prompt_t2i_adapter import read_owned_db_probe
-from video_pipeline_adapter import read_latest_image_source, read_pipeline_probe
+from video_pipeline_adapter import read_latest_image_source, read_pipeline_probe, read_video_job_probe
 
 
 def refusal_deltas(before, after):
@@ -131,6 +131,9 @@ def main():
                         "after": probe_after,
                         "refusal_deltas": video_refusal_deltas(probe_before, probe_after),
                     }
+                    report["video_job_probe"] = read_video_job_probe(runtime, "first_t2v_summary")
+                elif automatic and scenario == "i2v":
+                    report["i2v_job_probe"] = read_video_job_probe(runtime, "latest_i2v_summary")
                 elif automatic and scenario == "pipeline":
                     report["pipeline_probe"] = read_pipeline_probe(runtime)
                 if browser_report.is_file():

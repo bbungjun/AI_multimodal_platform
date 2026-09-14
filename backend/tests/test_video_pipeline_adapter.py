@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from video_pipeline_adapter import (VideoPipelineEvidence, compile_video_pipeline_results,
                                     read_latest_image_source)  # noqa: E402
 from video_pipeline_adapter import read_pipeline_probe  # noqa: E402
+from video_pipeline_adapter import read_video_job_probe  # noqa: E402
 
 
 def evidence():
@@ -71,3 +72,14 @@ def test_pipeline_probe_accepts_only_aggregate_fields():
                     '"child_path":"blocked,pending,running,completed",'
                     '"reservations":1,"held":0}')
     assert read_pipeline_probe(Runtime())["held"] == 0
+
+
+def test_video_job_probe_returns_state_path_without_identity():
+    class Runtime:
+        compose = []
+        def docker(self, *args, input=None):
+            return ('{"complete":true,"state":"completed",'
+                    '"state_path":"pending,running,completed","asset_mime":"video/mp4",'
+                    '"source_present":true}')
+    value = read_video_job_probe(Runtime(), "latest_i2v_summary")
+    assert value["state_path"] == "pending,running,completed"

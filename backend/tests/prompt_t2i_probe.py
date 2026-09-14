@@ -34,9 +34,9 @@ def normalized_path(job: Job, *, blocked: bool = False) -> str:
 
 
 def validate_request(payload, *, database_url: str, provider: str, app_env: str) -> tuple[str, UUID | None]:
-    if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source", "latest_pipeline"}:
+    if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source", "latest_pipeline", "first_t2v_summary", "latest_i2v_summary"}:
         raise ValueError("prompt_t2i_probe_refused")
-    required = {"operation"} if payload["operation"] in {"counts", "latest_image_source", "latest_pipeline"} else {"operation", "job_id"}
+    required = {"operation"} if payload["operation"] != "job" else {"operation", "job_id"}
     if set(payload) != required:
         raise ValueError("prompt_t2i_probe_refused")
     url = make_url(database_url)
@@ -102,6 +102,15 @@ async def inspect(payload) -> dict:
                 "reservations": 1 if reservation is not None else 0,
                 "held": 1 if reservation is not None and reservation.status == "held" else 0,
             }
+        if operation in {"first_t2v_summary", "latest_i2v_summary"}:
+            mode = GenerationMode.T2V if operation == "first_t2v_summary" else GenerationMode.I2V
+            ordering = Job.created_at.asc() if mode == GenerationMode.T2V else Job.created_at.desc()
+            video_job = await session.scalar(select(Job).where(Job.mode == mode).order_by(ordering).limit(1))
+            if video_job is None:
+                raise ValueError("prompt_t2i_probe_video_missing")
+            mime = await session.scalar(select(Asset.mime).where(Asset.job_id == video_job.id).limit(1))
+            return {"state": video_job.state.value, "state_path": normalized_path(video_job),
+                    "asset_mime": mime or "missing", "source_present": video_job.source_asset_id is not None}
         job = await session.get(Job, job_id)
         if job is None:
             raise ValueError("prompt_t2i_probe_job_missing")
