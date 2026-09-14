@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { once } from 'node:events';
 import { controlUid, pageId } from './image-controller.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -80,7 +81,8 @@ async function main() {
     process.stdout.write(JSON.stringify({ complete: true, product_passed: closed.passed === true, cleanup: 0 }) + '\n');
   } catch (error) {
     child.stdin.end();
-    try { let closed = await next(15_000); while (closed.phase !== 'browser_closed') closed = await next(15_000); }
+    try { await Promise.race([once(child, 'exit'),
+      new Promise((_, reject) => setTimeout(() => reject(Error('exit_timeout')), 20_000))]); }
     catch { child.kill(); }
     process.stdout.write(JSON.stringify({ complete: false, error: `${stage}_${error.message}` }) + '\n');
     process.exitCode = 1;
