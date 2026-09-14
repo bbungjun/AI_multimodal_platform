@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { safeRoute, safeSnapshot, validateCommand, checksFor, networkRows, consoleSummary,
-  hasNetworkEvidence, isExternalPageRequest } from './agent.mjs';
+  hasNetworkEvidence, isExternalPageRequest, isExpectedConsoleError } from './agent.mjs';
 
 test('evidence drops OAuth query, foreign origins and identity text', () => {
   assert.equal(safeRoute('http://127.0.0.1:18156/api/auth/google/callback?code=secret&state=secret'), '/api/auth/google/callback');
@@ -15,6 +15,12 @@ test('only foreign HTTP origins count as external page requests', () => {
   assert.equal(isExternalPageRequest('blob:http://127.0.0.1:18156/value'), false);
   assert.equal(isExternalPageRequest('http://127.0.0.1:18156/files/value'), false);
   assert.equal(isExternalPageRequest('https://foreign.test/value'), true);
+});
+
+test('only allowlisted auth and role refusal errors are expected', () => {
+  assert.equal(isExpectedConsoleError('Failed 401', 'http://127.0.0.1:18156/api/auth/me'), true);
+  assert.equal(isExpectedConsoleError('Failed 403', 'http://127.0.0.1:18156/api/ops/health'), true);
+  assert.equal(isExpectedConsoleError('Failed 500', 'http://127.0.0.1:18156/api/ops/health'), false);
 });
 
 test('agent can only click the observed login control once', () => {

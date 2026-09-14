@@ -72,6 +72,12 @@ export function consoleSummary(text, url = '') {
     http_status: Number(text.match(/(?:status of |\[)(\d{3})/)?.[1] ?? 0) };
 }
 
+export function isExpectedConsoleError(text, url = '') {
+  const route = safeRoute(url);
+  return route === '/api/auth/me' && /401/.test(text)
+    || ['/api/ops/health', '/api/master/overview'].includes(route) && /403/.test(text);
+}
+
 export function validateCommand(command, loginUid, clicked) {
   if (!command || typeof command !== 'object' || Array.isArray(command)) throw Error('command_refused');
   if (['tools', 'verify', 'finish'].includes(command.op) && Object.keys(command).length === 1) return;
@@ -173,8 +179,8 @@ async function main() {
     page.on('console', message => {
       if (['error', 'warn'].includes(message.type())) consoleRows.push({
         type: message.type(), ...consoleSummary(message.text(), message.location().url) });
-      if (message.type() === 'error' && !(safeRoute(message.location().url) === '/api/auth/me'
-          && /401/.test(message.text()))) consoleErrors++;
+      if (message.type() === 'error'
+          && !isExpectedConsoleError(message.text(), message.location().url)) consoleErrors++;
     });
     const ws = new URL(browser.wsEndpoint());
     transport = new StdioClientTransport({ command: process.execPath,
