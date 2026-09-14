@@ -30,12 +30,15 @@ async function main() {
   const call = (name, args) => send({ op: 'call', name, arguments: args });
   const snapshot = page => call('take_snapshot', { pageId: page });
   const click = async (page, purpose, retries = 1) => {
+    const seen = new Set();
     for (let attempt = 0; attempt < retries; attempt++) {
-      const uid = controlUid(await snapshot(page), purpose);
+      const value = await snapshot(page);
+      for (const control of value.controls ?? []) seen.add(control.purpose);
+      const uid = controlUid(value, purpose);
       if (uid) { await call('click', { pageId: page, uid }); return; }
       await delay(750);
     }
-    throw Error(`control_${purpose}`);
+    throw Error(`control_${purpose}_seen_${[...seen].sort().join('_') || 'none'}`);
   };
   const fill = async (page, purpose, fixture) => {
     const uid = controlUid(await snapshot(page), purpose); if (!uid) throw Error(`control_${purpose}`);
