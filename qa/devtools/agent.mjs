@@ -68,7 +68,7 @@ async function main() {
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');
   const frontendRequire = createRequire(resolve(ROOT, 'frontend/package.json'));
-  const { createServer } = await import(pathToFileURL(frontendRequire.resolve('vite')).href);
+  const { createServer } = await import(pathToFileURL(resolve(dirname(frontendRequire.resolve('vite')), 'dist/node/index.js')).href);
   const react = (await import(pathToFileURL(frontendRequire.resolve('@vitejs/plugin-react'))).href).default;
   const events = [], actions = [], inspected = { network: false, console: false };
   let external = 0, consoleErrors = 0, profile = false, clicked = false, loginUid = null;
@@ -189,7 +189,7 @@ async function main() {
       Object.values(report.checks).every(value => value === true);
     report.external_page_requests = external;
     report.unexpected_console_errors = consoleErrors;
-  } catch { report.error = 'driver_failed'; }
+  } catch (error) { report.error = 'driver_failed'; report.error_type = error.name; }
   finally {
     clearTimeout(timeout);
     input.close();
@@ -210,5 +210,6 @@ async function main() {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await main().catch(() => { emit({ error: 'startup_failed' }); process.exitCode = 1; });
+  await main().catch(error => { emit({ error: 'startup_failed', error_type: error.name,
+    error_code: /^[A-Z_]+$/.test(error.code ?? '') ? error.code : null }); process.exitCode = 1; });
 }
