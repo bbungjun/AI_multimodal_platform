@@ -45,11 +45,15 @@ async function main() {
     await call('fill', { pageId: page, uid, fixture });
   };
   const checkpoint = async (page, phase, options = {}) => {
+    let last = null;
     for (let attempt = 0; attempt < (options.retries ?? 1); attempt++) {
       await delay(options.wait ?? 500); const response = await send({ op: 'checkpoint', phase });
+      last = response.checkpoint;
       if (response.checkpoint?.passed) return;
     }
-    throw Error(`checkpoint_${phase}`);
+    const route = last?.history ? 'history' : last?.detail ? 'detail' : last?.usage ? 'usage'
+      : last?.generate ? 'generate' : 'other';
+    throw Error(`checkpoint_${phase}_${route}_rows${last?.rows ?? -1}_page${last?.page ?? -1}_filters${last?.filters ?? -1}`);
   };
   let stage = 'ready';
   try {
