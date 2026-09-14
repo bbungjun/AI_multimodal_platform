@@ -41,10 +41,11 @@ def source_digest():
 
 def main():
     args = sys.argv[1:]
-    if args not in ([], ["--scenario", "image"]):
+    if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = "image" if args else "login"
+    automatic = args == ["--scenario", "image", "--auto"]
     run_id = "devtools-" + scenario + "-" + uuid4().hex[:12]
     output = ROOT / "output" / "playwright" / run_id
     output.mkdir(parents=True, exist_ok=False)
@@ -62,8 +63,11 @@ def main():
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
                 result = subprocess.run(
-                    ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
-                     str(output), str(Path(temporary) / "chrome-profile"), scenario],
+                    (["node", str(ROOT / "qa/devtools/image-controller.mjs"), runtime.base_url,
+                      str(output), str(Path(temporary) / "chrome-profile")]
+                     if automatic else
+                     ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
+                      str(output), str(Path(temporary) / "chrome-profile"), scenario]),
                     cwd=ROOT, env=runtime.env, timeout=720,
                 )
                 report["driver_exit_code"] = result.returncode
