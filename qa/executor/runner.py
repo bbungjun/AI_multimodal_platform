@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "backend" / "tests"))
 from registry import ContractError, derive_scenario_verdict, load_registry  # noqa: E402
 from select_impact import changes_between  # noqa: E402
 from selector import ImpactError, REVISION, load_policy, select_impact  # noqa: E402
+from browser_acceptance_support import HarnessError  # noqa: E402
 from verify_mock_oauth_browser import MockOAuthRuntime  # noqa: E402
 
 
@@ -207,6 +208,7 @@ def _browser_result(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         "unexpected_console_errors": value.get("unexpected_console_errors")
         if type(value.get("unexpected_console_errors")) is int else -1,
         "network_cross_check": value.get("network_cross_check") is True,
+        "cleanup_observed": True,
         "failure_phase": value.get("failure_phase")
         if value.get("failure_phase") in FAILURE_PHASES else None,
         "evidence": clean_evidence,
@@ -229,13 +231,19 @@ def finalize_result(
         blockers.add("devtools_execution_incomplete")
         if browser_summary.get("failure_phase"):
             blockers.add("devtools_" + browser_summary["failure_phase"] + "_failed")
-    if browser_summary.get("external_page_requests") != 0:
+    if browser_summary.get("external_page_requests", -1) < 0:
+        blockers.add("external_request_check_incomplete")
+    elif browser_summary.get("external_page_requests") != 0:
         blockers.add("external_page_request_detected")
-    if browser_summary.get("unexpected_console_errors") != 0:
+    if browser_summary.get("unexpected_console_errors", -1) < 0:
+        blockers.add("console_check_incomplete")
+    elif browser_summary.get("unexpected_console_errors") != 0:
         blockers.add("unexpected_console_error_detected")
     if not browser_summary.get("network_cross_check"):
         blockers.add("network_cross_check_incomplete")
     cleanup = browser_summary.get("cleanup", {})
+    if not browser_summary.get("cleanup_observed"):
+        blockers.add("cleanup_evidence_incomplete")
     if runtime_cleanup != 0 or any(cleanup.get(name) != 0 for name in ("browser", "mcp", "vite")):
         blockers.add("runtime_cleanup_incomplete")
     if not source_unchanged:
@@ -281,24 +289,30 @@ def run_execution(
     runtime = runtime_factory(repository_root / ".env.example")
     runtime.deadline = time.monotonic() + 900
     runtime_cleanup = 1
+    runtime_started = False
     browser_result = _empty_result("devtools_execution_incomplete")
     browser_summary: dict[str, Any] = {
         "technical_complete": False,
         "external_page_requests": -1,
         "unexpected_console_errors": -1,
         "network_cross_check": False,
+        "cleanup_observed": False,
         "failure_phase": None,
         "evidence": {},
-        "cleanup": {"browser": 1, "mcp": 1, "vite": 1},
+        "cleanup": {"browser": 0, "mcp": 0, "vite": 0},
     }
     process_exit_code = None
     error_code = None
     started = time.monotonic()
+    execution_phase = "runtime_preflight"
     temporary = tempfile.TemporaryDirectory(prefix="creativeops-agent-qa-")
     try:
         try:
             runtime.preflight()
+            execution_phase = "runtime_start"
             runtime.start(temporary.name)
+            runtime_started = True
+            execution_phase = "devtools_process"
             result = process_runner(
                 ["node", str(repository_root / "qa" / "devtools" / "auth-contract.mjs"),
                  runtime.base_url, str(output), str(Path(temporary.name) / "chrome-profile")],
@@ -310,9 +324,15 @@ def run_execution(
                 check=False,
             )
             process_exit_code = result.returncode
+            execution_phase = "browser_report"
             browser_result, browser_summary = _browser_result(output / "browser.json")
         except (Exception, KeyboardInterrupt) as error:
-            error_code = "executor_interrupted" if isinstance(error, KeyboardInterrupt) else "executor_execution_failed"
+            if isinstance(error, KeyboardInterrupt):
+                error_code = "executor_interrupted"
+            elif isinstance(error, HarnessError) and re.fullmatch(r"[a-z][a-z0-9_]{2,63}", str(error)):
+                error_code = str(error)
+            else:
+                error_code = "executor_" + execution_phase + "_failed"
         finally:
             try:
                 runtime.cleanup()
@@ -352,7 +372,7 @@ def run_execution(
         "selection_rule_ids": decision["rule_ids"],
         "provider": "mock",
         "source_unchanged": source_unchanged,
-        "runtime_started": True,
+        "runtime_started": runtime_started,
         "process_exit_code": process_exit_code,
         "browser": browser_summary,
         "scenario_result": final_result,

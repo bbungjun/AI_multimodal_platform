@@ -98,6 +98,7 @@ def test_finalize_pass_adds_runtime_receipt_evidence() -> None:
         "external_page_requests": 0,
         "unexpected_console_errors": 0,
         "network_cross_check": True,
+        "cleanup_observed": True,
         "cleanup": {"browser": 0, "mcp": 0, "vite": 0},
     }
 
@@ -123,6 +124,7 @@ def test_product_failure_remains_fail() -> None:
         "external_page_requests": 0,
         "unexpected_console_errors": 0,
         "network_cross_check": True,
+        "cleanup_observed": True,
         "cleanup": {"browser": 0, "mcp": 0, "vite": 0},
     }
 
@@ -150,6 +152,7 @@ def test_environment_guard_produces_blocked(field: str, value, reason: str) -> N
         "external_page_requests": 0,
         "unexpected_console_errors": 0,
         "network_cross_check": True,
+        "cleanup_observed": True,
         "cleanup": {"browser": 0, "mcp": 0, "vite": 0},
     }
     summary[field] = value
