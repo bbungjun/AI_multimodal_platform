@@ -2,7 +2,7 @@
 from __future__ import annotations
 import asyncio,json,re,sys
 from datetime import timedelta
-from uuid import UUID
+from uuid import UUID,uuid4
 from sqlalchemy import func,select
 from sqlalchemy.engine import make_url
 from app.config import get_settings
@@ -10,6 +10,7 @@ from app.credit_models import CreditUsageRecord
 from app.db import AsyncSessionLocal
 from app.generation_credit import CREDIT_PARAMETER_KEY
 from app.identity_models import User,UserOrigin,UserRole,UserStatus
+from app.master_admin import MasterCommand,administer
 from app.models import Asset,GenerationMode,Job,JobState,utc_now
 from app.personal_usage import read_personal_usage
 
@@ -46,7 +47,9 @@ async def execute(payload):
     db.add(job);await db.flush()
     if i==0:retry_id=job.id
    await db.commit();return{'jobs':22,'retry_job_id':str(retry_id)}
-  if op=='promote':user.role=UserRole.MASTER;await db.commit();return{'promoted':True}
+  if op=='promote':
+   receipt=await administer(db,actor_id=user.id,command=MasterCommand(target_id=user.id,request_id=uuid4(),action='promote',reason_code='operator_bootstrap'),now=now,source='operator_cli')
+   await db.commit();return{'promoted':receipt.after.get('role')=='master','plan':receipt.after.get('plan')}
   original=await db.scalar(select(Job).where(Job.owner_user_id==user.id,Job.prompt=='A recoverable studio image.').order_by(Job.created_at.asc()).limit(1))
   retry=await db.scalar(select(Job).where(Job.retry_of_job_id==original.id).order_by(Job.created_at.desc()).limit(1))if original else None
   usage=await read_personal_usage(db,user_id=user.id,now=now)
