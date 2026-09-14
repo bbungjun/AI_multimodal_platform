@@ -24,6 +24,7 @@ def source_digest():
     paths = set(filter(None, tracked)) | {
         "scripts/devtools_login_qa.py", "qa/devtools/agent.mjs", "qa/devtools/package.json",
         "qa/devtools/package-lock.json",
+        "qa/devtools/image-journey.mjs",
     }
     digest = hashlib.sha256()
     for name in sorted(paths):
@@ -39,13 +40,15 @@ def source_digest():
 
 
 def main():
-    if len(sys.argv) != 1:
+    args = sys.argv[1:]
+    if args not in ([], ["--scenario", "image"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
-    run_id = "devtools-login-" + uuid4().hex[:12]
+    scenario = "image" if args else "login"
+    run_id = "devtools-" + scenario + "-" + uuid4().hex[:12]
     output = ROOT / "output" / "playwright" / run_id
     output.mkdir(parents=True, exist_ok=False)
-    report = {"schema_version": 1, "run_id": run_id, "revision": revision(),
+    report = {"schema_version": 1, "run_id": run_id, "scenario": scenario, "revision": revision(),
               "source_sha256": source_digest(), "provider": "mock", "complete": False,
               "runtime_cleanup": "not_started"}
     runtime = MockOAuthRuntime(ROOT / ".env.example")
@@ -60,7 +63,7 @@ def main():
                 runtime.start(temporary)
                 result = subprocess.run(
                     ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
-                     str(output), str(Path(temporary) / "chrome-profile")],
+                     str(output), str(Path(temporary) / "chrome-profile"), scenario],
                     cwd=ROOT, env=runtime.env, timeout=720,
                 )
                 report["driver_exit_code"] = result.returncode

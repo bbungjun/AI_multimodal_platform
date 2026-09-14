@@ -7,6 +7,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
+import { ImageJourney, imageRoute } from './image-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
@@ -17,9 +18,12 @@ const TOOLS = new Set(['list_pages', 'navigate_page', 'take_snapshot', 'click',
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
 
 export function safeRoute(value) {
-  try { const url = new URL(value); return url.origin === ORIGIN &&
-    (AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname))
-    ? url.pathname : 'other'; } catch { return 'other'; }
+  try {
+    const url = new URL(value);
+    if (url.origin !== ORIGIN) return 'other';
+    return AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname)
+      ? url.pathname : imageRoute(url.pathname) ?? 'other';
+  } catch { return 'other'; }
 }
 
 export function safeSnapshot(text) {
@@ -81,7 +85,9 @@ export function checksFor({ events, profile, workspace, clicked, external, conso
 }
 
 async function main() {
-  const [backend, output, profileDir] = process.argv.slice(2);
+  const [backend, output, profileDir, scenario = 'login'] = process.argv.slice(2);
+  if (!['login', 'image'].includes(scenario)) throw Error('scenario_refused');
+  const journey = scenario === 'image' ? new ImageJourney() : null;
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(backend ?? '') ||
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');
@@ -91,7 +97,7 @@ async function main() {
   const events = [], actions = [], consoleRows = [], inspected = { network: false, console: false };
   let external = 0, consoleErrors = 0, profile = false, clicked = false, loginUid = null;
   let browser, vite, client, transport, chromeProcess, mcpPid, finished = false;
-  const report = { passed: false, cleanup: 'pending', events, actions, console: consoleRows };
+  const report = { scenario, passed: false, cleanup: 'pending', events, actions, console: consoleRows };
   const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
   const timeout = setTimeout(() => input.close(), 600_000);
   const pending = new Set();
@@ -118,6 +124,11 @@ async function main() {
       const route = safeRoute(response.url());
       if (route === 'other') return;
       events.push({ at: new Date().toISOString(), method: response.request().method(), route, status: response.status() });
+      if (journey) {
+        const task = journey.observe(response).catch(() => journey.failures.push('response_observation_failed'))
+          .finally(() => pending.delete(task));
+        pending.add(task);
+      }
       if (route === '/api/auth/me' && response.status() === 200) {
         const task = response.json().then(value => { profile = value.role === 'user' && value.status === 'active'; })
           .catch(() => {}).finally(() => pending.delete(task));
@@ -149,27 +160,40 @@ async function main() {
       if (result.isError) throw Error('mcp_tool_failed');
       return (result.content ?? []).filter(item => item.type === 'text').map(item => item.text).join('\n');
     };
-    emit({ phase: 'ready', origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish'] });
+    emit({ phase: 'ready', scenario, origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish', ...(journey ? ['checkpoint'] : [])],
+      ...(journey ? { fill_arguments: 'pageId, uid, fixture: original|reviewed (no literal prompt)',
+        phases: ['login', 'original', 'draft', 'edited', 'accepted', 'completed', 'reloaded', 'history', 'revisited'] } : {}) });
     for await (const line of input) {
       const action = { id: `A${actions.length + 1}`, at: new Date().toISOString() };
       try {
-        if (line.length > 4096 || actions.length >= 40) throw Error('command_limit');
+        if (line.length > 4096 || actions.length >= (journey ? 80 : 40)) throw Error('command_limit');
         const command = JSON.parse(line);
-        validateCommand(command, loginUid, clicked);
+        const prepared = journey?.prepare(command);
+        if (!prepared) validateCommand(command, loginUid, clicked);
         action.op = command.op;
-        if (command.op === 'tools') {
-          emit(inventory.tools.filter(tool => TOOLS.has(tool.name)).map(({ name, inputSchema }) => ({ name, inputSchema })));
+        if (command.op === 'checkpoint') {
+          await Promise.all([...pending]);
+          const pages = await call('list_pages', {});
+          const pageId = Number(pages.match(/(?:^|\n)(\d+):/)?.[1]);
+          if (!Number.isInteger(pageId)) throw Error('page_id_missing');
+          action.checkpoint = await journey.checkpoint(prepared.phase, pageId, call);
+          emit({ action: action.id, checkpoint: action.checkpoint });
+        } else if (command.op === 'tools') {
+          emit(inventory.tools.filter(tool => TOOLS.has(tool.name) || (journey && tool.name === 'fill'))
+            .map(({ name, inputSchema }) => ({ name, inputSchema })));
         } else if (command.op === 'call') {
           action.tool = command.name;
           action.arguments = command.arguments;
-          const text = await call(command.name, command.arguments);
+          if (prepared?.purpose) action.purpose = prepared.purpose;
+          const text = await call(command.name, prepared?.args ?? command.arguments);
           if (command.name === 'take_snapshot') {
-            const controls = safeSnapshot(text);
-            loginUid = controls.find(row => row.includes('Google로 계속하기'))?.match(/uid=([\d_]+)/)?.[1] ?? null;
+            const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
+            if (!journey) loginUid = controls.find(row => row.includes('Google로 계속하기'))?.match(/uid=([\d_]+)/)?.[1] ?? null;
+            action.controls = controls;
             emit({ action: action.id, controls });
           } else if (command.name === 'list_pages') {
             emit({ action: action.id, pages: text.replace(/https?:\/\/[^\s]+/g, value => {
-              try { const u = new URL(value); return u.origin === ORIGIN ? ORIGIN + u.pathname : '[other-url]'; }
+              try { const u = new URL(value); return u.origin === ORIGIN ? ORIGIN + u.pathname.replace(/[0-9a-f-]{36}/gi, '{job}') : '[other-url]'; }
               catch { return '[url]'; }
             }) });
           } else if (command.name === 'list_network_requests') {
@@ -186,7 +210,7 @@ async function main() {
             emit({ action: action.id, console_entries: action.console_entries, unexpected_errors: consoleErrors,
               devtools_console: action.console, browser_console: consoleRows });
           } else {
-            if (command.name === 'click') clicked = true;
+            if (command.name === 'click' && (!journey || prepared?.purpose === 'login')) clicked = true;
             emit({ action: action.id, tool: command.name, ok: true });
           }
         } else {
@@ -196,9 +220,10 @@ async function main() {
           const pageId = Number(pageList.match(/(?:^|\n)(\d+):/)?.[1]);
           if (!Number.isInteger(pageId)) throw Error('page_id_missing');
           const probe = await call('evaluate_script', { pageId, function: '() => { const e = document.querySelector(".creative-generate"); const r = e?.getBoundingClientRect(); return { workspace: location.pathname === "/generate" && !!r && r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden" }; }' });
-          const workspace = /"workspace"\s*:\s*true/.test(probe);
+          const workspace = journey ? journey.loginWorkspace : /"workspace"\s*:\s*true/.test(probe);
           report.checks = checksFor({ events, profile, workspace, clicked, external, consoleErrors, inspected });
-          emit({ action: action.id, checks: report.checks });
+          if (journey) report.image = journey.result();
+          emit({ action: action.id, checks: report.checks, ...(journey ? { image: report.image } : {}) });
           if (command.op === 'finish') { finished = true; action.ok = true; actions.push(action); break; }
         }
         action.ok = true;
@@ -206,7 +231,7 @@ async function main() {
       actions.push(action);
     }
     report.passed = finished && Object.values(report.checks ?? {}).length === 9 &&
-      Object.values(report.checks).every(value => value === true);
+      Object.values(report.checks).every(value => value === true) && (!journey || report.image?.passed === true);
     report.external_page_requests = external;
     report.unexpected_console_errors = consoleErrors;
   } catch (error) { report.error = 'driver_failed'; report.error_type = error.name; }

@@ -77,6 +77,15 @@ paste credential contents.
 
 ## Active Work
 
+### Agent-operated reviewed-prompt image journey — Issue172 in progress
+
+- Branch `codex/issue-172-image-journey-qa` builds on draft PR171/169.
+  Extend the interactive DevTools scenario to enhancement/edit/accept, one image
+  generation, decode, reload and History revisit. All writes originate in UI.
+- Prompts/IDs are compared in memory; receipts keep normalized routes and boolean
+  comparisons. First check: `npm test --prefix qa/devtools`, then
+  `python scripts/devtools_login_qa.py --scenario image`. No product change planned.
+
 ### Favicon repair and agent QA rerun — Issue170 Mock Verified
 
 - Branch `codex/issue-170-favicon-qa` depends on draft PR169. Verified core `f06dfd7`
