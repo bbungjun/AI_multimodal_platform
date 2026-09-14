@@ -179,8 +179,11 @@ async function main() {
     page.on('console', message => {
       if (['error', 'warn'].includes(message.type())) consoleRows.push({
         type: message.type(), ...consoleSummary(message.text(), message.location().url) });
+      const journeyRoleRefusal = scenario === 'workspace' && /403/.test(message.text())
+        && (journey?.opsStatuses?.includes(403) || journey?.masterStatuses?.includes(403));
       if (message.type() === 'error'
-          && !isExpectedConsoleError(message.text(), message.location().url)) consoleErrors++;
+          && !isExpectedConsoleError(message.text(), message.location().url)
+          && !journeyRoleRefusal) consoleErrors++;
     });
     const ws = new URL(browser.wsEndpoint());
     transport = new StdioClientTransport({ command: process.execPath,
