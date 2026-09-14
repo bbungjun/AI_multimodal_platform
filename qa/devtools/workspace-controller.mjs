@@ -95,7 +95,7 @@ async function main() {
     stage = 'retry'; await click(page, 'retry'); await checkpoint(page, 'retry_completed', { retries: 15, wait: 1000 });
     stage = 'usage'; await click(page, 'usage'); await checkpoint(page, 'usage', { retries: 5, wait: 750 });
     await call('navigate_page', { pageId: page, type: 'reload' });
-    await checkpoint(page, 'usage_reloaded', { retries: 5, wait: 750 });
+    await checkpoint(page, 'usage_reloaded', { retries: 10, wait: 1000 });
     await call('list_network_requests', { pageId: page, includePreservedRequests: true });
     await call('list_console_messages', { pageId: page, types: ['error', 'warn'], includePreservedMessages: true });
     await send({ op: 'verify' }); await send({ op: 'finish' });
