@@ -90,8 +90,7 @@ async function main() {
     await fill(page, 'state', 'failed'); await checkpoint(page, 'filtered', { retries: 5, wait: 750 });
     await click(page, 'next'); await checkpoint(page, 'page2', { retries: 5, wait: 750 });
     await click(page, 'previous'); await checkpoint(page, 'page1', { retries: 5, wait: 750 });
-    stage = 'delete_click'; await click(page, 'delete');
-    stage = 'delete_dialog'; await call('handle_dialog', { action: 'dismiss' });
+    stage = 'delete_cancel'; await click(page, 'delete');
     stage = 'detail'; await click(page, 'retry_row'); await checkpoint(page, 'detail', { retries: 4, wait: 750 });
     stage = 'retry'; await click(page, 'retry'); await checkpoint(page, 'retry_completed', { retries: 15, wait: 1000 });
     stage = 'usage'; await click(page, 'usage'); await checkpoint(page, 'usage', { retries: 5, wait: 750 });

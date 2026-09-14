@@ -232,9 +232,17 @@ async function main() {
           const nativeSelect = ['image_count', 'duration', 'state'].includes(prepared?.purpose);
           if (journey && command.name === 'fill') action.mcp_tools = nativeSelect
             ? ['fill'] : ['click', 'press_key', 'type_text'];
-          const text = journey && command.name === 'fill' && !nativeSelect
-            ? await fillWithKeyboard(prepared.args, call)
-            : await call(command.name, prepared?.args ?? command.arguments);
+          let text;
+          if (prepared?.purpose === 'delete') {
+            action.mcp_tools = ['click', 'handle_dialog'];
+            const dismiss = new Promise(resolveDismiss => setTimeout(resolveDismiss, 100))
+              .then(() => call('handle_dialog', { pageId: prepared.args.pageId, action: 'dismiss' }));
+            try { text = await call('click', prepared.args); } finally { await dismiss; }
+          } else {
+            text = journey && command.name === 'fill' && !nativeSelect
+              ? await fillWithKeyboard(prepared.args, call)
+              : await call(command.name, prepared?.args ?? command.arguments);
+          }
           if (command.name === 'take_snapshot') {
             const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
             if (!journey) loginUid = controls.find(row => row.includes('Google로 계속하기'))?.match(/uid=([\d_]+)/)?.[1] ?? null;
