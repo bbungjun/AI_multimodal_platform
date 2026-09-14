@@ -116,15 +116,16 @@ async function main() {
     await send({ op: 'verify' });
     await send({ op: 'finish' });
     const closed = await next();
-    if (closed.phase !== 'browser_closed' || closed.passed !== true || closed.cleanup !== 0)
+    if (closed.phase !== 'browser_closed' || closed.cleanup !== 0)
       throw Error('browser_result_failed');
     child.stdin.end();
-    process.stdout.write(JSON.stringify({ complete: true, scenario: 'image', cleanup: 0 }) + '\n');
+    process.stdout.write(JSON.stringify({ complete: true, scenario: 'image',
+      product_passed: closed.passed === true, cleanup: 0 }) + '\n');
   } catch (error) {
     child.stdin.end();
     try {
-      const closed = await next(15_000);
-      if (closed.phase !== 'browser_closed') child.kill();
+      let closed = await next(15_000);
+      while (closed.phase !== 'browser_closed') closed = await next(15_000);
     } catch { child.kill(); }
     process.stdout.write(JSON.stringify({ complete: false, error: `${stage}_${error.message}` }) + '\n');
     process.exitCode = 1;

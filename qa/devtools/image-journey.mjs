@@ -206,7 +206,7 @@ export class ImageJourney {
     const imageOK = probe.same_job && probe.image_decoded && probe.same_image && this.jobCompleted && fileMatches;
     const predicates = {
       login: probe.workspace,
-      empty: probe.workspace && probe.empty_disabled,
+      empty: probe.workspace,
       original: probe.workspace && probe.original,
       draft_discard: probe.original && probe.draft && this.enhancementMatches,
       discarded: probe.original && probe.review_closed && this.clickCounts.discard === 1,
@@ -238,8 +238,11 @@ export class ImageJourney {
     const checks = { ...phases, enhancement_payload_matches: this.enhancementMatches,
       accepted_generation_payload_matches: this.payloadMatches,
       three_enhancements: this.postCounts.enhancement === 3, one_generation: this.postCounts.generation === 1,
-      no_observation_failures: this.failures.length === 0 };
-    return { scenario: 'reviewed_prompt_image', passed: Object.values(checks).every(value => value === true),
+      no_observation_failures: this.failures.length === 0,
+      empty_submission_disabled: this.checkpoints.empty?.empty_disabled === true };
+    const technicalComplete = Object.values(phases).every(value => value === true) && this.failures.length === 0;
+    return { scenario: 'reviewed_prompt_image', technical_complete: technicalComplete,
+      passed: Object.values(checks).every(value => value === true),
       checks, steps: this.steps, post_counts: this.postCounts, job_reads: this.jobReads,
       file_reads: this.fileReads, file: this.file ? { bytes: this.file.bytes, mime: this.file.mime, sha256: this.file.sha256 } : null,
       failures: this.failures };

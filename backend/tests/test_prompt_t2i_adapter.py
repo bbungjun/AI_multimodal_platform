@@ -114,7 +114,7 @@ def test_image_journey_report_is_reduced_to_closed_compiler_shape():
         "unexpected_console_errors": 0,
         "checks": {"devtools_network_inspected": True, "devtools_console_inspected": True},
         "image": {
-            "passed": True,
+            "passed": True, "technical_complete": True,
             "checks": {"original": True, "draft": True, "edited": True, "accepted": True,
                        "completed": True, "accepted_generation_payload_matches": True,
                        "no_observation_failures": True},

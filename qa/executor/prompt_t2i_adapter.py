@@ -87,8 +87,8 @@ def sanitize_image_journey_report(browser_report: dict[str, Any]) -> dict[str, A
         failures = image["failures"]
         cleaned = {
             "technical_complete": (
-                browser_report["passed"] is True and browser_report["cleanup"] == 0
-                and image["passed"] is True and browser_checks["devtools_network_inspected"] is True
+                browser_report["cleanup"] == 0 and image["technical_complete"] is True
+                and browser_checks["devtools_network_inspected"] is True
                 and browser_checks["devtools_console_inspected"] is True
             ),
             "external_page_requests": browser_report["external_page_requests"],
