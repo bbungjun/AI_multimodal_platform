@@ -14,6 +14,7 @@ from mock_auth_support import ROOT
 from verify_mock_oauth_browser import MockOAuthRuntime
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 from prompt_t2i_adapter import read_owned_db_probe
+from video_pipeline_adapter import read_latest_image_source
 
 
 def refusal_deltas(before, after):
@@ -60,7 +61,7 @@ def source_digest():
 def main():
     args = sys.argv[1:]
     if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"],
-                    ["--scenario", "video", "--auto"]):
+                    ["--scenario", "video", "--auto"], ["--scenario", "i2v", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = args[1] if args else "login"
@@ -81,16 +82,37 @@ def main():
                 runtime.preflight()
                 print(json.dumps({"phase": "starting_owned_mock", "run_id": run_id}), flush=True)
                 runtime.start(temporary)
-                probe_before = read_owned_db_probe(runtime, "counts") if automatic else None
-                result = subprocess.run(
-                    (["node", str(ROOT / "qa/devtools" /
+                probe_before = read_owned_db_probe(runtime, "counts") if automatic and scenario in {"image", "video"} else None
+                if automatic and scenario == "i2v":
+                    source_output, i2v_output = output / "source", output / "i2v"
+                    source_output.mkdir(); i2v_output.mkdir()
+                    source_result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/image-controller.mjs"), runtime.base_url,
+                         str(source_output), str(Path(temporary) / "source-profile")],
+                        cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    if source_result.returncode != 0:
+                        raise RuntimeError("source_setup_failed")
+                    source = read_latest_image_source(runtime)
+                    result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/i2v-controller.mjs"), runtime.base_url,
+                         str(i2v_output), str(Path(temporary) / "i2v-profile"),
+                         source["job_id"], source["asset_id"]],
+                        cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    report["source_setup"] = {"complete": True}
+                    browser_report = i2v_output / "browser.json"
+                else:
+                    result = subprocess.run(
+                        (["node", str(ROOT / "qa/devtools" /
                                   ("image-controller.mjs" if scenario == "image" else "video-controller.mjs")), runtime.base_url,
-                      str(output), str(Path(temporary) / "chrome-profile")]
-                     if automatic else
-                     ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
-                      str(output), str(Path(temporary) / "chrome-profile"), scenario]),
-                    cwd=ROOT, env=runtime.env, timeout=720,
-                )
+                          str(output), str(Path(temporary) / "chrome-profile")]
+                         if automatic else
+                         ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
+                          str(output), str(Path(temporary) / "chrome-profile"), scenario]),
+                        cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    browser_report = output / "browser.json"
                 report["driver_exit_code"] = result.returncode
                 if automatic and scenario == "image":
                     probe_after = read_owned_db_probe(runtime, "counts")
@@ -106,7 +128,6 @@ def main():
                         "after": probe_after,
                         "refusal_deltas": video_refusal_deltas(probe_before, probe_after),
                     }
-                browser_report = output / "browser.json"
                 if browser_report.is_file():
                     report["browser"] = json.loads(browser_report.read_text(encoding="utf-8"))
                 report["source_unchanged"] = (

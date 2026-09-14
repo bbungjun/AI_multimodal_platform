@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 import { ImageJourney, imageRoute, fillWithKeyboard } from './image-journey.mjs';
 import { VideoJourney, videoRoute } from './video-journey.mjs';
+import { I2VJourney } from './i2v-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
@@ -103,10 +104,11 @@ export function checksFor({ events, profile, workspace, clicked, external, conso
 }
 
 async function main() {
-  const [backend, output, profileDir, scenario = 'login'] = process.argv.slice(2);
-  if (!['login', 'image', 'video'].includes(scenario)) throw Error('scenario_refused');
-  const journey = scenario === 'image' ? new ImageJourney() : scenario === 'video' ? new VideoJourney() : null;
-  const journeyKey = scenario === 'video' ? 'video' : 'image';
+  const [backend, output, profileDir, scenario = 'login', ...scenarioArgs] = process.argv.slice(2);
+  if (!['login', 'image', 'video', 'i2v'].includes(scenario)) throw Error('scenario_refused');
+  const journey = scenario === 'image' ? new ImageJourney() : scenario === 'video' ? new VideoJourney()
+    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : null;
+  const journeyKey = scenario === 'video' ? 'video' : scenario === 'i2v' ? 'i2v' : 'image';
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(backend ?? '') ||
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');
@@ -188,7 +190,7 @@ async function main() {
         if (!devtoolsRequests.some(old => old.request_id === row.request_id && old.status === row.status && old.route === row.route))
           devtoolsRequests.push(row);
       }
-      inspected.network = hasNetworkEvidence(devtoolsRequests, journey ? scenario : null);
+      inspected.network = hasNetworkEvidence(devtoolsRequests, journey ? (scenario === 'i2v' ? 'video' : scenario) : null);
       return rows;
     };
     emit({ phase: 'ready', scenario, origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish', ...(journey ? ['checkpoint'] : [])],

@@ -1,0 +1,21 @@
+import {spawn} from 'node:child_process';import {createInterface} from 'node:readline';import {once} from 'node:events';
+import {dirname,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {controlUid,pageId} from './image-controller.mjs';
+const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../..'),delay=ms=>new Promise(d=>setTimeout(d,ms));
+async function main(){const [backend,output,profile,sourceJob,sourceAsset]=process.argv.slice(2);
+ const child=spawn(process.execPath,[resolve(ROOT,'qa/devtools/agent.mjs'),backend,output,profile,'i2v',sourceJob,sourceAsset],{cwd:ROOT,stdio:['pipe','pipe','ignore']});
+ const reader=createInterface({input:child.stdout,crlfDelay:Infinity}),queue=[],waiters=[];reader.on('line',line=>{let v;try{v=JSON.parse(line)}catch{v={error:'protocol'}}const w=waiters.shift();w?w(v):queue.push(v)});
+ const next=(t=35000)=>queue.length?Promise.resolve(queue.shift()):Promise.race([new Promise(d=>waiters.push(d)),new Promise((_,r)=>setTimeout(()=>r(Error('timeout')),t))]);
+ const send=async c=>{child.stdin.write(JSON.stringify(c)+'\n');const r=await next();if(r.error||r.ok===false)throw Error('action');return r};
+ const call=(name,args)=>send({op:'call',name,arguments:args}),snap=p=>call('take_snapshot',{pageId:p});
+ const click=async(p,purpose)=>{const u=controlUid(await snap(p),purpose);if(!u)throw Error('control');await call('click',{pageId:p,uid:u})};
+ const fill=async(p,purpose,fixture)=>{const u=controlUid(await snap(p),purpose);if(!u)throw Error('control');await call('fill',{pageId:p,uid:u,fixture})};
+ const check=async(p,phase,opt={})=>{for(let i=0;i<(opt.retries??1);i++){await delay(opt.wait??500);const r=await send({op:'checkpoint',phase,...(phase==='no_source'?{accessibility_disabled:opt.disabled}: {})});if(r.checkpoint?.passed)return}throw Error('checkpoint')};
+ let stage='ready';try{const ready=await next();if(ready.phase!=='ready')throw Error('ready');const p=pageId(await call('list_pages',{}));
+  await call('navigate_page',{pageId:p,type:'url',url:'http://127.0.0.1:18156/login'});await delay(750);stage='login';await click(p,'login');await check(p,'login',{retries:4,wait:1000});
+  stage='mode';await click(p,'i2v_mode');await check(p,'mode');const empty=await snap(p);const generate=empty.controls?.find(x=>x.purpose==='generate');await check(p,'no_source',{disabled:generate?.disabled===true});
+  stage='source';await call('navigate_page',{pageId:p,type:'url',url:`http://127.0.0.1:18156/jobs/${sourceJob}`});await delay(750);await click(p,'start_i2v');await check(p,'source_selected',{retries:4,wait:750});
+  await fill(p,'prompt','motion');stage='generation';await click(p,'generate');await check(p,'completed',{retries:15,wait:1000});
+  await call('list_network_requests',{pageId:p,includePreservedRequests:true});await call('list_console_messages',{pageId:p,types:['error','warn'],includePreservedMessages:true});await send({op:'verify'});await send({op:'finish'});
+  let closed=await next();while(closed.phase!=='browser_closed')closed=await next();if(closed.cleanup!==0)throw Error('cleanup');child.stdin.end();process.stdout.write(JSON.stringify({complete:true,product_passed:closed.passed===true,cleanup:0})+'\n');
+ }catch(e){child.stdin.end();try{await Promise.race([once(child,'exit'),delay(60000)])}catch{}process.stdout.write(JSON.stringify({complete:false,error:`${stage}_${e.message}`})+'\n');process.exitCode=1}finally{reader.close()}}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await main();

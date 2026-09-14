@@ -6,7 +6,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "qa" / "executor"))
 
-from video_pipeline_adapter import VideoPipelineEvidence, compile_video_pipeline_results  # noqa: E402
+from video_pipeline_adapter import (VideoPipelineEvidence, compile_video_pipeline_results,
+                                    read_latest_image_source)  # noqa: E402
 
 
 def evidence():
@@ -47,3 +48,13 @@ def test_incomplete_tooling_blocks_without_assertions():
 def test_video_placeholder_must_be_usable_or_explicit():
     results = compile_video_pipeline_results(replace(evidence(), t2v_usable=False, i2v_usable=False))
     assert results[0]["verdict"] == results[1]["verdict"] == "FAIL"
+
+
+def test_source_probe_returns_ids_only():
+    class Runtime:
+        compose = []
+        def docker(self, *args, input=None):
+            assert input == '{"operation":"latest_image_source"}'
+            return ('{"complete":true,"job_id":"11111111-1111-4111-8111-111111111111",'
+                    '"asset_id":"22222222-2222-4222-8222-222222222222"}')
+    assert set(read_latest_image_source(Runtime())) == {"job_id", "asset_id"}

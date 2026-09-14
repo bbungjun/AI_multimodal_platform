@@ -12,6 +12,9 @@ def test_counts_request_accepts_only_owned_mock_test_target():
     assert prompt_t2i_probe.validate_request(
         {"operation": "counts"}, database_url=URL, provider="mock", app_env="test"
     ) == ("counts", None)
+    assert prompt_t2i_probe.validate_request(
+        {"operation": "latest_image_source"}, database_url=URL, provider="mock", app_env="test"
+    ) == ("latest_image_source", None)
 
 
 @pytest.mark.parametrize(

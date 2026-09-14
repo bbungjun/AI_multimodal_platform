@@ -14,16 +14,16 @@ from app.config import get_settings
 from app.credit_models import CreditReservation
 from app.db import AsyncSessionLocal
 from app.generation_credit import CREDIT_PARAMETER_KEY
-from app.models import Asset, Job, OutboxEvent
+from app.models import Asset, GenerationMode, Job, JobState, OutboxEvent
 
 
 PROJECT = re.compile(r"^ownership-verify-[0-9a-f]{12}$")
 
 
 def validate_request(payload, *, database_url: str, provider: str, app_env: str) -> tuple[str, UUID | None]:
-    if type(payload) is not dict or payload.get("operation") not in {"counts", "job"}:
+    if type(payload) is not dict or payload.get("operation") not in {"counts", "job", "latest_image_source"}:
         raise ValueError("prompt_t2i_probe_refused")
-    required = {"operation"} if payload["operation"] == "counts" else {"operation", "job_id"}
+    required = {"operation"} if payload["operation"] in {"counts", "latest_image_source"} else {"operation", "job_id"}
     if set(payload) != required:
         raise ValueError("prompt_t2i_probe_refused")
     url = make_url(database_url)
@@ -54,6 +54,15 @@ async def inspect(payload) -> dict:
                 "outbox": await session.scalar(select(func.count()).select_from(OutboxEvent)),
                 "reservations": await session.scalar(select(func.count()).select_from(CreditReservation)),
             }
+        if operation == "latest_image_source":
+            row = (await session.execute(
+                select(Job.id, Asset.id).join(Asset, Asset.job_id == Job.id).where(
+                    Job.mode == GenerationMode.T2I, Job.state == JobState.COMPLETED,
+                    Asset.mime == "image/png").order_by(Job.created_at.desc(), Asset.id).limit(1)
+            )).first()
+            if row is None:
+                raise ValueError("prompt_t2i_probe_source_missing")
+            return {"job_id": str(row[0]), "asset_id": str(row[1])}
         job = await session.get(Job, job_id)
         if job is None:
             raise ValueError("prompt_t2i_probe_job_missing")

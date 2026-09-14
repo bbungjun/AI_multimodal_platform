@@ -2,7 +2,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import re
 from typing import Any
+
+
+UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)
+
+
+def read_latest_image_source(runtime: Any) -> dict[str, str]:
+    try:
+        raw = runtime.docker(*runtime.compose, "exec", "-T", "backend", "python",
+                             "tests/prompt_t2i_probe.py",
+                             input='{"operation":"latest_image_source"}')
+        value = json.loads(raw)
+    except Exception as error:
+        raise ValueError("video_source_probe_failed") from error
+    if (type(value) is not dict or set(value) != {"complete", "job_id", "asset_id"}
+            or value.get("complete") is not True or not UUID.fullmatch(value.get("job_id", ""))
+            or not UUID.fullmatch(value.get("asset_id", ""))):
+        raise ValueError("video_source_probe_invalid")
+    return {"job_id": value["job_id"], "asset_id": value["asset_id"]}
 
 
 @dataclass(frozen=True)
