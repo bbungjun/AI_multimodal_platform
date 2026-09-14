@@ -25,7 +25,6 @@ from registry import ContractError, derive_scenario_verdict, load_registry  # no
 from select_impact import changes_between  # noqa: E402
 from selector import ImpactError, REVISION, load_policy, select_impact  # noqa: E402
 from browser_acceptance_support import HarnessError  # noqa: E402
-from mock_auth_support import command as owned_command  # noqa: E402
 from verify_mock_oauth_browser import MockOAuthRuntime  # noqa: E402
 
 
@@ -54,18 +53,44 @@ class ExecutorError(RuntimeError):
     pass
 
 
-def executor_command(args: list[str], **kwargs) -> str:
+def executor_command(
+    args: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    input: str | None = None,
+    timeout: float = 180,
+) -> str:
     try:
-        return owned_command(args, **kwargs)
-    except HarnessError as error:
-        if error.args != ("command_failed",):
-            raise
-        operation = "docker_command"
-        for candidate in ("config", "up", "ps", "exec", "down", "inspect", "show", "ls"):
-            if candidate in args:
-                operation = "docker_" + candidate
-                break
-        raise HarnessError(operation + "_failed") from None
+        result = subprocess.run(
+            args,
+            cwd=ROOT,
+            env=env,
+            input=input,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise HarnessError("docker_command_unavailable") from None
+    if result.returncode == 0:
+        return result.stdout.strip()
+    operation = "command"
+    for candidate in ("config", "up", "ps", "exec", "down", "inspect", "show", "ls"):
+        if candidate in args:
+            operation = candidate
+            break
+    error = (result.stderr or "").lower()
+    reason = (
+        "daemon_unavailable" if any(token in error for token in ("cannot connect", "error during connect"))
+        else "port_conflict" if "port is already allocated" in error
+        else "path_missing" if any(token in error for token in ("no such file", "cannot find the path"))
+        else "resource_missing" if any(token in error for token in ("no such container", "no container found"))
+        else "permission_refused" if any(token in error for token in ("permission denied", "access is denied"))
+        else "failed"
+    )
+    raise HarnessError("docker_" + operation + "_" + reason) from None
 
 
 def _git(repository_root: Path, arguments: list[str]) -> bytes:

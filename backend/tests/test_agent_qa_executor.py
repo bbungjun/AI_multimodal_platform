@@ -90,12 +90,11 @@ def test_browser_report_rejects_extra_identity_field(tmp_path: Path) -> None:
 
 
 def test_owned_command_failure_keeps_only_safe_operation(monkeypatch) -> None:
-    def fail(*args, **kwargs):
-        raise runner.HarnessError("command_failed")
-
-    monkeypatch.setattr(runner, "owned_command", fail)
-    with pytest.raises(runner.HarnessError, match="docker_up_failed"):
-        runner.executor_command(["docker", "compose", "up", "-d"])
+    monkeypatch.setattr(runner.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(
+        returncode=1, stdout="", stderr="Error: no such container: private-name"
+    ))
+    with pytest.raises(runner.HarnessError, match="docker_ps_resource_missing"):
+        runner.executor_command(["docker", "compose", "ps", "-q"])
 
 
 def test_finalize_pass_adds_runtime_receipt_evidence() -> None:
