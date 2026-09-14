@@ -77,7 +77,7 @@ paste credential contents.
 
 ## Active Work
 
-### Agent QA Video + Pipeline Adapter — Issue184 In Progress, 2026-09-15
+### Agent QA Video + Pipeline Adapter — Issue184 Mock Verified, 2026-09-15
 
 - PR187 merge 후 branch `codex/issue-184-video-pipeline-adapter`를 최신 main에서 시작했다.
 - compiler Interface가 T2V6, I2V6, Pipeline8 assertion을 정확히 생성한다. 완전한 evidence는
@@ -95,6 +95,8 @@ paste credential contents.
   no-source accessibility/usable2 FAIL, Pipeline은 same owner/source, full parent/child path,
   reservation1/held0/reload 포함8/8 PASS다. 모든 run external0/Console0/cleanup0.
   [최종 summary](evidence/issue-184/final-video-pipeline-summary.json).
+- Fresh regression: backend1888 PASS/3 guarded skips/기존 Windows Bash path1 deselected,
+  DevTools Node33, frontend lint/build, env-example Compose와 diff check PASS. Delivery19파일.
 
 ### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 

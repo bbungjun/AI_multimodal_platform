@@ -2,7 +2,7 @@
 
 - [Issue184](https://github.com/bbungjun/AI_multimodal_platform/issues/184)
 - Parent: [Issue182](https://github.com/bbungjun/AI_multimodal_platform/issues/182)
-- Status: `In Progress`
+- Status: `Mock Verified / T2V·I2V Product QA FAIL / Pipeline PASS`
 
 ## 첫 체크포인트
 
@@ -46,3 +46,10 @@ DB history를 T2V/I2V에도 적용한 최종 compiler 결과는 T2V3 FAIL(policy
 side-effect0, usable), I2V2 FAIL(no-source accessibility disabled, usable), Pipeline PASS다.
 모든 run은 external0, 예상 밖 Console0, cleanup0이다.
 [최종 정제 summary](../evidence/issue-184/final-video-pipeline-summary.json)에 근거를 모았다.
+
+## 최종 회귀
+
+- backend:1888 PASS,3 guarded SKIP, 기존 Windows/Bash path1 deselected.
+- DevTools Node:33 PASS.
+- frontend lint/build, env-example Compose, diff check: PASS.
+- delivery file19로 child20-file limit 충족.
