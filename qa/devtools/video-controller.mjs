@@ -82,7 +82,7 @@ async function main() {
   } catch (error) {
     child.stdin.end();
     try { await Promise.race([once(child, 'exit'),
-      new Promise((_, reject) => setTimeout(() => reject(Error('exit_timeout')), 20_000))]); }
+      new Promise((_, reject) => setTimeout(() => reject(Error('exit_timeout')), 60_000))]); }
     catch { child.kill(); }
     process.stdout.write(JSON.stringify({ complete: false, error: `${stage}_${error.message}` }) + '\n');
     process.exitCode = 1;
