@@ -18,7 +18,7 @@ const ORIGIN = 'http://127.0.0.1:18156';
 const AUTH_PATHS = new Set(['/api/auth/me', '/api/auth/google/start', '/api/auth/google/callback']);
 const PUBLIC_DIAGNOSTIC_PATHS = new Set(['/favicon.ico', '/favicon.svg', '/vite.svg']);
 const TOOLS = new Set(['list_pages', 'navigate_page', 'take_snapshot', 'click',
-  'list_network_requests', 'list_console_messages']);
+  'list_network_requests', 'list_console_messages', 'wait_for']);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
 
 export function safeRoute(value) {
@@ -83,6 +83,7 @@ export function validateCommand(command, loginUid, clicked) {
     list_pages: [], navigate_page: ['pageId', 'type', 'url'], take_snapshot: ['pageId'],
     click: ['pageId', 'uid'], list_network_requests: ['pageId', 'includePreservedRequests'],
     list_console_messages: ['pageId', 'types', 'includePreservedMessages'],
+    wait_for: ['pageId', 'text', 'timeout'],
   }[command.name];
   if (Object.keys(args).some(key => !allowed.includes(key))) throw Error('arguments_refused');
   if (command.name !== 'list_pages' && (!Number.isInteger(args.pageId) || args.pageId < 0))
@@ -90,6 +91,8 @@ export function validateCommand(command, loginUid, clicked) {
   if (command.name === 'navigate_page' && (args.url !== ORIGIN + '/login' || args.type !== 'url'))
     throw Error('origin_refused');
   if (command.name === 'click' && (!loginUid || args.uid !== loginUid || clicked)) throw Error('click_refused');
+  if (command.name === 'wait_for' && (JSON.stringify(args.text) !== '["Google로 계속하기"]'
+      || !Number.isInteger(args.timeout) || args.timeout < 1 || args.timeout > 15000)) throw Error('wait_refused');
 }
 
 export function checksFor({ events, profile, workspace, clicked, external, consoleErrors, inspected }) {

@@ -33,6 +33,15 @@ test('arbitrary scripts, foreign navigation and file outputs are refused', () =>
   ]) assert.throws(() => validateCommand(command, null, false));
 });
 
+test('wait is restricted to the login control and bounded timeout', () => {
+  assert.doesNotThrow(() => validateCommand({ op:'call', name:'wait_for', arguments:{
+    pageId:1, text:['Google로 계속하기'], timeout:15000
+  } }, null, false));
+  assert.throws(() => validateCommand({ op:'call', name:'wait_for', arguments:{
+    pageId:1, text:['private'], timeout:15000
+  } }, null, false));
+});
+
 test('login is not passed from UI alone or incomplete observation', () => {
   const base = { events: [], profile: true, workspace: true, clicked: true,
     external: 0, consoleErrors: 0, inspected: { network: true, console: true } };
