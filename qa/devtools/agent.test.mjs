@@ -43,6 +43,8 @@ test('pinned DevTools network format is parsed without exposing OAuth values', (
   assert.equal(networkRows('reqid=4 GET http://127.0.0.1:18156/api/auth/me [pending]')[0].status, 0);
   assert.deepEqual(networkRows('reqid=5 GET http://127.0.0.1:18156/favicon.ico [404]'),
     [{ request_id: 5, route: '/favicon.ico', status: 404 }]);
+  assert.deepEqual(networkRows('reqid=6 GET http://127.0.0.1:18156/favicon.svg [200]'),
+    [{ request_id: 6, route: '/favicon.svg', status: 200 }]);
   assert.deepEqual(consoleSummary('Failed to load resource: the server responded with a status of 401 (Unauthorized)'),
     { route: 'other', kind: 'resource_load', http_status: 401 });
 });

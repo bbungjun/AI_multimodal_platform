@@ -77,6 +77,14 @@ paste credential contents.
 
 ## Active Work
 
+### Favicon repair and agent QA rerun — Issue170 in progress
+
+- Branch `codex/issue-170-favicon-qa` builds on draft PR169's verified MCP harness.
+  Add a local brand SVG favicon and explicit HTML link; repeat the same login QA
+  without relaxing Console-error checks. Preserve Issue168's failing evidence.
+- First checks: frontend lint/build and favicon output, followed by the interactive
+  `python scripts/devtools_login_qa.py` proof. Product fix and rerun are pending.
+
 ### Agent-operated Chrome DevTools login QA — Issue168 connection proof executed
 
 - Branch `codex/issue-168-devtools-login-qa`, executed core `8558113` with Chrome153

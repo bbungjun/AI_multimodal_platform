@@ -11,7 +11,7 @@ import { once } from 'node:events';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
 const AUTH_PATHS = new Set(['/api/auth/me', '/api/auth/google/start', '/api/auth/google/callback']);
-const PUBLIC_DIAGNOSTIC_PATHS = new Set(['/favicon.ico', '/vite.svg']);
+const PUBLIC_DIAGNOSTIC_PATHS = new Set(['/favicon.ico', '/favicon.svg', '/vite.svg']);
 const TOOLS = new Set(['list_pages', 'navigate_page', 'take_snapshot', 'click',
   'list_network_requests', 'list_console_messages']);
 const emit = value => process.stdout.write(JSON.stringify(value) + '\n');
