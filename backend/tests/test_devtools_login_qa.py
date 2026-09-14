@@ -33,3 +33,11 @@ def test_refusal_delta_excludes_one_allowed_generation():
     assert devtools_login_qa.refusal_deltas(before, admitted) == {
         "jobs": 1, "outbox": 1, "reservations": 1
     }
+
+
+def test_video_refusal_delta_excludes_one_allowed_generation():
+    before = {"complete": True, "jobs": 0, "outbox": 0, "reservations": 0}
+    after = {"complete": True, "jobs": 2, "outbox": 2, "reservations": 2}
+    assert devtools_login_qa.video_refusal_deltas(before, after) == {
+        "jobs": 1, "outbox": 1, "reservations": 1
+    }

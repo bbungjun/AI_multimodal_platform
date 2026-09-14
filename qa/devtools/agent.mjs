@@ -8,6 +8,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 import { ImageJourney, imageRoute, fillWithKeyboard } from './image-journey.mjs';
+import { VideoJourney, videoRoute } from './video-journey.mjs';
+import { I2VJourney } from './i2v-journey.mjs';
+import { PipelineJourney, pipelineRoute } from './pipeline-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
@@ -22,8 +25,15 @@ export function safeRoute(value) {
     const url = new URL(value);
     if (url.origin !== ORIGIN) return 'other';
     return AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname)
-      ? url.pathname : imageRoute(url.pathname) ?? 'other';
+      ? url.pathname : imageRoute(url.pathname) ?? videoRoute(url.pathname) ?? pipelineRoute(url.pathname) ?? 'other';
   } catch { return 'other'; }
+}
+
+export function isExternalPageRequest(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && url.origin !== ORIGIN;
+  } catch { return true; }
 }
 
 export function safeSnapshot(text) {
@@ -41,10 +51,14 @@ export function networkRows(text) {
   })).filter(row => row.route !== 'other');
 }
 
-export function hasNetworkEvidence(rows, image = false) {
+export function hasNetworkEvidence(rows, media = null) {
+  if (media === true) media = 'image';
   const required = [['/api/auth/google/start', 307], ['/api/auth/google/callback', 303], ['/api/auth/me', 200]];
-  if (image) required.push(['/api/prompts/enhance', 201], ['/api/generations', 201],
+  if (media === 'image') required.push(['/api/prompts/enhance', 201], ['/api/generations', 201],
     ['/api/generations/{job}', 200], ['/files/{job}/output.png', 200]);
+  if (media === 'video') required.push(['/api/generations', 201],
+    ['/api/generations/{job}', 200], ['/files/{job}/output.mp4', 200]);
+  if (media === 'pipeline') required.push(['/api/pipelines', 201], ['/api/pipelines/{parent}', 200]);
   return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
 }
 
@@ -92,9 +106,12 @@ export function checksFor({ events, profile, workspace, clicked, external, conso
 }
 
 async function main() {
-  const [backend, output, profileDir, scenario = 'login'] = process.argv.slice(2);
-  if (!['login', 'image'].includes(scenario)) throw Error('scenario_refused');
-  const journey = scenario === 'image' ? new ImageJourney() : null;
+  const [backend, output, profileDir, scenario = 'login', ...scenarioArgs] = process.argv.slice(2);
+  if (!['login', 'image', 'video', 'i2v', 'pipeline'].includes(scenario)) throw Error('scenario_refused');
+  const journey = scenario === 'image' ? new ImageJourney() : scenario === 'video' ? new VideoJourney()
+    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : scenario === 'pipeline' ? new PipelineJourney() : null;
+  const journeyKey = scenario === 'video' ? 'video' : scenario === 'i2v' ? 'i2v'
+    : scenario === 'pipeline' ? 'pipeline' : 'image';
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(backend ?? '') ||
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');
@@ -125,7 +142,9 @@ async function main() {
     await page.setRequestInterception(true);
     page.on('request', request => {
       const url = new URL(request.url());
-      if (url.origin !== ORIGIN) { external++; void request.abort().catch(() => {}); }
+      if (isExternalPageRequest(url.href)) {
+        external++; void request.abort().catch(() => {});
+      }
       else void request.continue().catch(() => {});
     });
     page.on('response', response => {
@@ -174,7 +193,7 @@ async function main() {
         if (!devtoolsRequests.some(old => old.request_id === row.request_id && old.status === row.status && old.route === row.route))
           devtoolsRequests.push(row);
       }
-      inspected.network = hasNetworkEvidence(devtoolsRequests, !!journey);
+      inspected.network = hasNetworkEvidence(devtoolsRequests, journey ? (scenario === 'i2v' ? 'video' : scenario) : null);
       return rows;
     };
     emit({ phase: 'ready', scenario, origin: ORIGIN, commands: ['tools', 'call', 'verify', 'finish', ...(journey ? ['checkpoint'] : [])],
@@ -204,9 +223,10 @@ async function main() {
           action.tool = command.name;
           action.arguments = command.arguments;
           if (prepared?.purpose) action.purpose = prepared.purpose;
-          if (journey && command.name === 'fill') action.mcp_tools = prepared?.purpose === 'image_count'
+          const nativeSelect = ['image_count', 'duration'].includes(prepared?.purpose);
+          if (journey && command.name === 'fill') action.mcp_tools = nativeSelect
             ? ['fill'] : ['click', 'press_key', 'type_text'];
-          const text = journey && command.name === 'fill' && prepared?.purpose !== 'image_count'
+          const text = journey && command.name === 'fill' && !nativeSelect
             ? await fillWithKeyboard(prepared.args, call)
             : await call(command.name, prepared?.args ?? command.arguments);
           if (command.name === 'take_snapshot') {
@@ -243,8 +263,9 @@ async function main() {
           const probe = await call('evaluate_script', { pageId, function: '() => { const e = document.querySelector(".creative-generate"); const r = e?.getBoundingClientRect(); return { workspace: location.pathname === "/generate" && !!r && r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden" }; }' });
           const workspace = journey ? journey.loginWorkspace : /"workspace"\s*:\s*true/.test(probe);
           report.checks = checksFor({ events, profile, workspace, clicked, external, consoleErrors, inspected });
-          if (journey) report.image = journey.result();
-          emit({ action: action.id, checks: report.checks, ...(journey ? { image: report.image } : {}) });
+          if (journey) report[journeyKey] = journey.result();
+          emit({ action: action.id, checks: report.checks,
+            ...(journey ? { [journeyKey]: report[journeyKey] } : {}) });
           if (command.op === 'finish') { finished = true; action.ok = true; actions.push(action); break; }
         }
         action.ok = true;
@@ -252,7 +273,8 @@ async function main() {
       actions.push(action);
     }
     report.passed = finished && Object.values(report.checks ?? {}).length === 9 &&
-      Object.values(report.checks).every(value => value === true) && (!journey || report.image?.passed === true);
+      Object.values(report.checks).every(value => value === true)
+      && (!journey || report[journeyKey]?.passed === true);
     report.external_page_requests = external;
     report.unexpected_console_errors = consoleErrors;
   } catch (error) { report.error = 'driver_failed'; report.error_type = error.name; }

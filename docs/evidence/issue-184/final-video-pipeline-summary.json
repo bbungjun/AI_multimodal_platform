@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "issue": 184,
+  "evidence_level": "Mock Verified",
+  "provider": "mock",
+  "verdicts": {"t2v_generation": "FAIL", "i2v_generation": "FAIL", "pipeline_generation": "PASS"},
+  "t2v": {
+    "revision": "3918c6b53f0fef476cce374f5ccea86000e4e34b",
+    "state_path": ["pending", "running", "completed"],
+    "asset_mime": "video/mp4",
+    "over_limit_status": 201,
+    "over_limit_side_effects": {"jobs": 1, "outbox": 1, "reservations": 1},
+    "usable": false,
+    "failed_assertions": ["t2v.free_duration_refused", "t2v.refusal_has_zero_side_effects", "t2v.outcome_is_usable"]
+  },
+  "i2v": {
+    "revision": "09c323e8dc6071b4feec66de75b4c2e4e2100306",
+    "source_identity": true,
+    "state_path": ["pending", "running", "completed"],
+    "asset_mime": "video/mp4",
+    "no_source_accessibility_disabled": false,
+    "usable": false,
+    "failed_assertions": ["i2v.no_source_disabled", "i2v.outcome_is_usable"]
+  },
+  "pipeline": {
+    "revision": "1ab86336822f558312225f0e4ae1b1dd6557acc7",
+    "same_owner": true,
+    "source_linked": true,
+    "parent_path": ["pending", "running", "completed"],
+    "child_path": ["blocked", "pending", "running", "completed"],
+    "parent_state": "completed",
+    "child_state": "completed",
+    "reservations": 1,
+    "held_after_terminal": 0,
+    "reload": true,
+    "assertions": 8,
+    "passed_assertions": 8
+  },
+  "guards": {"external_page_requests": 0, "unexpected_console_errors": 0, "cleanup_total": 0}
+}

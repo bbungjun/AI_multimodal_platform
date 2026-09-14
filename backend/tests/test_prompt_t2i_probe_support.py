@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,6 +13,9 @@ def test_counts_request_accepts_only_owned_mock_test_target():
     assert prompt_t2i_probe.validate_request(
         {"operation": "counts"}, database_url=URL, provider="mock", app_env="test"
     ) == ("counts", None)
+    assert prompt_t2i_probe.validate_request(
+        {"operation": "latest_image_source"}, database_url=URL, provider="mock", app_env="test"
+    ) == ("latest_image_source", None)
 
 
 @pytest.mark.parametrize(
@@ -49,3 +53,12 @@ def test_cli_failure_is_bounded(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out) == {
         "complete": False, "error": "prompt_t2i_probe_refused"
     }
+
+
+def test_state_history_is_normalized_without_timing_dependence():
+    job = SimpleNamespace(state_history=[
+        {"state": "queued"}, {"state": "generating"}, {"state": "downloading"},
+        {"state": "completed"}
+    ])
+    assert prompt_t2i_probe.normalized_path(job) == "pending,running,completed"
+    assert prompt_t2i_probe.normalized_path(job, blocked=True) == "blocked,pending,running,completed"
