@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "issue": 185,
+  "run_id": "devtools-workspace-d3254b9b8b3b",
+  "revision": "ed296fe86a1619b98220588955e170d149206a61",
+  "source_sha256": "e1451e2e0105d9cde5c2836868cffbffee4d1f09bcd18def9c0feb3cd4c518f4",
+  "provider": "mock",
+  "execution_complete": true,
+  "seconds": 131.312,
+  "technical": {
+    "workspace_phases": 12,
+    "master_phases": 6,
+    "external_page_requests": 0,
+    "unexpected_console_errors": 0,
+    "browser_cleanup": 0,
+    "runtime_cleanup": 0,
+    "source_unchanged": true
+  },
+  "scenario_results": [
+    {"id": "history_navigation", "verdict": "PASS", "passed": 6, "failed": []},
+    {"id": "usage_credits", "verdict": "PASS", "passed": 6, "failed": []},
+    {"id": "failure_retry", "verdict": "PASS", "passed": 6, "failed": []},
+    {"id": "role_ops_master", "verdict": "FAIL", "passed": 8, "failed": ["role.user_admin_navigation_hidden"]}
+  ],
+  "facts": {
+    "history_offsets": [0, 0, 20, 0],
+    "usage_ui_before_after_equal": true,
+    "usage_available_microcredits": 950000000,
+    "usage_held_microcredits": 0,
+    "usage_charged_microcredits": 50000000,
+    "usage_meter_charged_microcredits": 50000000,
+    "retry_state_path": ["pending", "running", "completed"],
+    "retry_assets": 1,
+    "retry_charge_once": true,
+    "user_ops_status": 403,
+    "user_master_status": 403,
+    "master_overview_status": 200,
+    "master_users_status": 200,
+    "master_audit_status": 200,
+    "master_ops_status": 200
+  }
+}
