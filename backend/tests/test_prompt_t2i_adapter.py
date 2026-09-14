@@ -26,7 +26,7 @@ def browser():
         "checks": {"original": True, "draft": True, "edited": True, "accepted": True,
                    "completed": True, "payload_matches": True, "persisted_matches": True,
                    "image_visible": True},
-        "post_counts": {"enhancement": 2, "generation": 1},
+        "post_counts": {"enhancement": 3, "generation": 1},
         "file": {"decoded": True, "mime": "image/png"},
     }
 

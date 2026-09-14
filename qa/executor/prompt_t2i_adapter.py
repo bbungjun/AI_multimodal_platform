@@ -137,7 +137,7 @@ def compile_prompt_t2i_results(
                 {"scenario_id": "t2i_generation", **empty})
 
     prompt_assertions = [
-        _observation("review.request_created", browser["post_counts"]["enhancement"] >= 2, ["network"]),
+        _observation("review.request_created", browser["post_counts"]["enhancement"] == 3, ["network"]),
         _observation("review.original_retained_before_accept",
                      checks["original"] and checks["draft"] and checks["edited"], ["ui_snapshot"]),
         _observation("review.discard_restores_original", probes.discard_restores_original, ["ui_snapshot"]),

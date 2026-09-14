@@ -3,10 +3,12 @@ import { createHash } from 'node:crypto';
 export const ORIGINAL = 'A small blue ceramic cup on a wooden studio desk.';
 const EDIT_SUFFIX = ' Keep one cup, with soft light from the left.';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const PHASES = ['login', 'original', 'draft', 'edited', 'accepted', 'completed', 'reloaded', 'history', 'revisited'];
+const PHASES = ['login', 'empty', 'original', 'draft_discard', 'discarded', 'draft_keep', 'kept',
+  'draft', 'edited', 'accepted', 'completed', 'reloaded', 'history', 'revisited'];
 const LABELS = new Map([
   ['Google로 계속하기', 'login'], ['계정 정보', 'account'], ['프롬프트', 'original'],
   ['편집 가능한 향상 프롬프트 초안', 'draft'], ['향상', 'enhance'], ['초안 수락', 'accept'],
+  ['버리기', 'discard'], ['원본 유지', 'keep'],
   ['생성', 'generate'], ['기록', 'history'],
 ]);
 
@@ -29,6 +31,7 @@ export class ImageJourney {
   constructor() {
     this.controls = new Map();
     this.attempts = new Set();
+    this.clickCounts = {};
     this.postCounts = { enhancement: 0, generation: 0 };
     this.enhancement = null;
     this.jobId = null;
@@ -99,11 +102,17 @@ export class ImageJourney {
       this.controls.clear();
       return { args: { pageId: args.pageId, uid: args.uid, value: original ? ORIGINAL : this.edited }, purpose: control.purpose };
     }
-    const prerequisites = { login: true, enhance: !!this.checkpoints.original, accept: !!this.checkpoints.edited,
-      generate: !!this.checkpoints.accepted, history: !!this.checkpoints.reloaded, job: !!this.checkpoints.history };
-    if (!prerequisites[control.purpose] || this.attempts.has(control.purpose)) throw Error('click_refused');
+    const prerequisites = { login: true, enhance: !!this.checkpoints.original,
+      discard: !!this.checkpoints.draft_discard && !this.checkpoints.discarded,
+      keep: !!this.checkpoints.draft_keep && !this.checkpoints.kept,
+      accept: !!this.checkpoints.edited, generate: !!this.checkpoints.accepted,
+      history: !!this.checkpoints.reloaded, job: !!this.checkpoints.history };
+    const limits = { login: 1, enhance: 3, discard: 1, keep: 1, accept: 1, generate: 1, history: 1, job: 1 };
+    const count = this.clickCounts[control.purpose] ?? 0;
+    if (!prerequisites[control.purpose] || count >= (limits[control.purpose] ?? 0)) throw Error('click_refused');
     // Reserve before calling MCP: a timeout is not permission to create a second job.
     this.attempts.add(control.purpose);
+    this.clickCounts[control.purpose] = count + 1;
     if (control.purpose === 'job') this.revisitReads = this.jobReads;
     this.controls.clear();
     return { args, purpose: control.purpose };
@@ -187,7 +196,9 @@ export class ImageJourney {
         image_decoded: decoded && visible(image) && image.naturalWidth > 0 && image.naturalHeight > 0,
         same_image: !!image && x.assetPath !== null && new URL(image.currentSrc).pathname === x.assetPath,
         width: image?.naturalWidth ?? 0, height: image?.naturalHeight ?? 0,
-        history_row: location.pathname === '/history' && rows.some(r => visible(r) && r.querySelector('small[title]')?.getAttribute('title') === x.jobId)
+        history_row: location.pathname === '/history' && rows.some(r => visible(r) && r.querySelector('small[title]')?.getAttribute('title') === x.jobId),
+        empty_disabled: location.pathname === '/generate' && [...document.querySelectorAll('button')]
+          .some(b => b.textContent?.trim().startsWith('생성') && b.disabled)
       };
     }`;
     const probe = parseProbe(await call('evaluate_script', { pageId, function: script }));
@@ -195,7 +206,12 @@ export class ImageJourney {
     const imageOK = probe.same_job && probe.image_decoded && probe.same_image && this.jobCompleted && fileMatches;
     const predicates = {
       login: probe.workspace,
+      empty: probe.workspace && probe.empty_disabled,
       original: probe.workspace && probe.original,
+      draft_discard: probe.original && probe.draft && this.enhancementMatches,
+      discarded: probe.original && probe.review_closed && this.clickCounts.discard === 1,
+      draft_keep: probe.original && probe.draft && this.enhancementMatches,
+      kept: probe.original && probe.review_closed && this.clickCounts.keep === 1,
       draft: probe.original && probe.draft && this.enhancementMatches,
       edited: probe.original && probe.edited,
       accepted: probe.accepted,
@@ -221,7 +237,7 @@ export class ImageJourney {
     const phases = Object.fromEntries(PHASES.map(phase => [phase, !!this.checkpoints[phase]]));
     const checks = { ...phases, enhancement_payload_matches: this.enhancementMatches,
       accepted_generation_payload_matches: this.payloadMatches,
-      one_enhancement: this.postCounts.enhancement === 1, one_generation: this.postCounts.generation === 1,
+      three_enhancements: this.postCounts.enhancement === 3, one_generation: this.postCounts.generation === 1,
       no_observation_failures: this.failures.length === 0 };
     return { scenario: 'reviewed_prompt_image', passed: Object.values(checks).every(value => value === true),
       checks, steps: this.steps, post_counts: this.postCounts, job_reads: this.jobReads,

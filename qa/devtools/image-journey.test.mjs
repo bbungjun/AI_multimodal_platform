@@ -30,6 +30,11 @@ async function prepareJob(journey, wrongPrompt = false) {
   }));
   await journey.observe(response(`/files/${JOB}/output.png`, 'GET', null));
 }
+async function observeEnhancement(journey) {
+  await journey.observe(response('/api/prompts/enhance', 'POST',
+    { id: ENH, original: ORIGINAL, enhanced: 'draft', target_mode: 't2i' },
+    { prompt: ORIGINAL }, 201));
+}
 
 test('snapshot drops prompt/identity and retains only usable scenario controls', () => {
   const journey = new ImageJourney();
@@ -87,7 +92,16 @@ test('missing decode, wrong image, wrong job and unobserved response cannot pass
 test('full ordered proof needs new job reads on reload/revisit and no duplicate POST', async () => {
   const journey = new ImageJourney();
   await phase(journey, 'login', { workspace: true });
+  await phase(journey, 'empty', { workspace: true, empty_disabled: true });
   await phase(journey, 'original', { workspace: true, original: true });
+  await observeEnhancement(journey);
+  await phase(journey, 'draft_discard', { original: true, draft: true });
+  journey.clickCounts.discard = 1;
+  await phase(journey, 'discarded', { original: true, review_closed: true });
+  await observeEnhancement(journey);
+  await phase(journey, 'draft_keep', { original: true, draft: true });
+  journey.clickCounts.keep = 1;
+  await phase(journey, 'kept', { original: true, review_closed: true });
   await prepareJob(journey);
   await phase(journey, 'draft', { original: true, draft: true });
   await phase(journey, 'edited', { original: true, edited: true });

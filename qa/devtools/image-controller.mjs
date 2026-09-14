@@ -75,8 +75,17 @@ async function main() {
     await delay(750);
     await clickPurpose(page, 'login');
     await checkpoint(page, 'login', { retries: 3, wait: 1000 });
+    await checkpoint(page, 'empty');
     await fillPurpose(page, 'original', 'original');
     await checkpoint(page, 'original');
+    await clickPurpose(page, 'enhance');
+    await checkpoint(page, 'draft_discard', { retries: 5, wait: 1000 });
+    await clickPurpose(page, 'discard');
+    await checkpoint(page, 'discarded');
+    await clickPurpose(page, 'enhance');
+    await checkpoint(page, 'draft_keep', { retries: 5, wait: 1000 });
+    await clickPurpose(page, 'keep');
+    await checkpoint(page, 'kept');
     await clickPurpose(page, 'enhance');
     await checkpoint(page, 'draft', { retries: 5, wait: 1000 });
     await fillPurpose(page, 'draft', 'reviewed');
