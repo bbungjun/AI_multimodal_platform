@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "t2i_generation",
+  "title_ko": "Text-to-Image 생성과 크레딧 정책",
+  "personas": ["free_user"],
+  "goal": "입력 검증, 무료 플랜 요청 제한, 생성 상태 전이, 이미지 파일 제공을 하나의 흐름으로 검증한다.",
+  "related_paths": ["frontend/src/pages/GeneratePage.tsx", "backend/app/api/generations.py", "backend/app/generation_credit.py", "backend/app/services/storage.py"],
+  "setup": {"provider": "mock", "fixture": "free_credit_user", "destructive": false},
+  "steps": [
+    {"id": "observe_empty", "intent": "필수 입력이 비어 있을 때 제출 상태를 확인한다.", "action": "observe"},
+    {"id": "request_over_limit", "intent": "무료 플랜 허용량을 넘는 이미지 수를 요청한다.", "action": "select"},
+    {"id": "request_allowed", "intent": "허용된 이미지 한 장 생성을 요청한다.", "action": "click"},
+    {"id": "open_result", "intent": "완료된 결과 이미지와 파일 응답을 연다.", "action": "click"}
+  ],
+  "assertions": [
+    {"id": "t2i.empty_submission_disabled", "source": "ui_snapshot", "operator": "disabled", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "t2i.free_limit_refused", "source": "network", "operator": "policy_refusal", "expected": true, "evidence": ["network"]},
+    {"id": "t2i.refusal_has_zero_jobs", "source": "database", "operator": "zero", "expected": true, "evidence": ["database"]},
+    {"id": "t2i.refusal_has_zero_outbox", "source": "database", "operator": "zero", "expected": true, "evidence": ["database"]},
+    {"id": "t2i.refusal_has_zero_reservations", "source": "database", "operator": "zero", "expected": true, "evidence": ["database"]},
+    {"id": "t2i.allowed_job_completed", "source": "database", "operator": "state_transition", "expected": ["pending", "running", "completed"], "evidence": ["database", "runtime_receipt"]},
+    {"id": "t2i.asset_decodes", "source": "asset_probe", "operator": "decoded", "expected": "image/png", "evidence": ["asset_probe"]},
+    {"id": "t2i.result_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]}
+  ],
+  "required_evidence": ["ui_snapshot", "network", "database", "asset_probe", "runtime_receipt"],
+  "exclusions": ["실제 Imagen 결과의 미학적 품질 평가는 별도 live 평가로 수행"]
+}

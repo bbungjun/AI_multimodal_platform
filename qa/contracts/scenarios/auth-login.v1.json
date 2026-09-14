@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "auth_login",
+  "title_ko": "로그인·콜백·로그아웃 세션 수명주기",
+  "personas": ["anonymous", "free_user"],
+  "goal": "익명 사용자가 mock OAuth로 로그인하고 보호된 작업 공간을 사용한 뒤 로그아웃하면 세션이 폐기되는지 검증한다.",
+  "related_paths": ["frontend/src/auth/AuthViews.tsx", "backend/app/api/auth.py", "backend/app/auth/service.py"],
+  "setup": {"provider": "mock", "fixture": "mock_oauth_user", "destructive": false},
+  "steps": [
+    {"id": "open_login", "intent": "익명 상태의 로그인 화면을 연다.", "action": "navigate"},
+    {"id": "start_login", "intent": "Google 로그인 진입 버튼을 선택한다.", "action": "click"},
+    {"id": "finish_callback", "intent": "mock 콜백을 완료하고 작업 공간으로 이동한다.", "action": "observe"},
+    {"id": "logout_user", "intent": "현재 세션을 로그아웃한다.", "action": "click"}
+  ],
+  "assertions": [
+    {"id": "auth.login_control_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "auth.start_redirect", "source": "network", "operator": "equals", "expected": 307, "evidence": ["network"]},
+    {"id": "auth.callback_redirect", "source": "network", "operator": "equals", "expected": 303, "evidence": ["network"]},
+    {"id": "auth.session_resolves", "source": "network", "operator": "equals", "expected": 200, "evidence": ["network"]},
+    {"id": "auth.workspace_route", "source": "url", "operator": "contains", "expected": "/generate", "evidence": ["url"]},
+    {"id": "auth.logout_invalidates", "source": "network", "operator": "equals", "expected": 401, "evidence": ["network", "runtime_receipt"]},
+    {"id": "auth.login_route_restored", "source": "url", "operator": "contains", "expected": "/login", "evidence": ["url"]}
+  ],
+  "required_evidence": ["ui_snapshot", "url", "network", "runtime_receipt"],
+  "exclusions": ["실제 Google 동의 화면과 외부 네트워크 TLS 검증"]
+}

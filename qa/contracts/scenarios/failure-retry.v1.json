@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "failure_retry",
+  "title_ko": "실패 표시와 안전한 재시도",
+  "personas": ["free_user"],
+  "goal": "제어된 생성 실패가 사용자에게 이해 가능하게 표시되고, 재시도가 새 작업으로 추적되며 중복 과금하지 않는지 검증한다.",
+  "related_paths": ["frontend/src/pages/JobDetailPage.tsx", "frontend/src/utils/repair.ts", "backend/app/services/jobs/repair.py", "backend/app/credit_lifecycle.py"],
+  "setup": {"provider": "mock", "fixture": "mock_failure_user", "destructive": false},
+  "steps": [
+    {"id": "create_failure", "intent": "제어된 mock 실패 작업을 만든다.", "action": "fixture"},
+    {"id": "open_failed_job", "intent": "실패한 작업의 상세 화면을 연다.", "action": "navigate"},
+    {"id": "retry_job", "intent": "상세 화면에서 재시도를 요청한다.", "action": "click"},
+    {"id": "observe_retry", "intent": "새 작업의 완료와 원본 연결을 확인한다.", "action": "observe"}
+  ],
+  "assertions": [
+    {"id": "retry.original_failed_without_asset", "source": "database", "operator": "equals", "expected": true, "evidence": ["database"]},
+    {"id": "retry.error_is_user_readable", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "retry.creates_distinct_job", "source": "database", "operator": "equals", "expected": true, "evidence": ["database", "network"]},
+    {"id": "retry.link_preserves_origin", "source": "database", "operator": "same_identity", "expected": true, "evidence": ["database"]},
+    {"id": "retry.new_job_completed", "source": "database", "operator": "state_transition", "expected": ["pending", "running", "completed"], "evidence": ["database", "runtime_receipt"]},
+    {"id": "retry.no_duplicate_charge", "source": "usage_read_model", "operator": "equals", "expected": true, "evidence": ["usage_read_model", "database"]}
+  ],
+  "required_evidence": ["ui_snapshot", "network", "database", "runtime_receipt", "usage_read_model"],
+  "exclusions": ["실제 provider 장애 주입은 live failure 시나리오로 분리"]
+}

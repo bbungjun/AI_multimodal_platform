@@ -77,6 +77,25 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA Contract와 Scenario Registry — Issue176, 2026-09-15
+
+- Branch `codex/issue-176-qa-contract-registry`에서 Agent가 임의 체크리스트가 아니라
+  versioned contract를 입력으로 QA하도록 Registry v1을 구현했다. 인증, 프롬프트 검토,
+  T2I/T2V/I2V/Pipeline, History, Usage, 실패·재시도, User/Master 역할까지 10개
+  scenario와 68개 assertion을 정의했다.
+- 단일 검증 명령 `python qa/contracts/verify_registry.py`은 contract/schema/scenario
+  전체의 SHA-256을 출력한다. Receipt는 실행 revision과 Registry SHA를 고정하며,
+  assertion/evidence 누락, 미실행 전체, source 변경, cleanup 잔존은 `BLOCKED`, 제품
+  기대 위반은 `FAIL`로 판정한다. 알려진 결함 allow-fail은 없다.
+- Contract/Receipt는 prompt 원문, cookie, OAuth 값, 계정 식별자, absolute path를
+  거부한다. focused contract test18개, Windows host-path 검사 1개를 제외한 backend
+  1824개, frontend lint/build, env-example Compose가 PASS했다. 전체 backend의 유일한
+  실패는 기존 Windows→Bash absolute-path 해석 문제이며 default Compose는 로컬 `.env`의
+  `POSTGRES_USER` 부재로 막혔다. 이 단계는 QA 실행 엔진이나 merge 권한을 구현하지
+  않았으며 evidence level은 `Implemented`다.
+- [구현·판단 기록](portfolio/issue-176-qa-contract-registry.md). 다음 단계는 변경 파일을
+  Registry scenario에 매핑하고 영향 없는 scenario의 제외 근거를 남기는 impact selector다.
+
 ### PR 작성 규칙 변경 — 2026-09-14
 
 - 사용자 요청에 따라 `AGENTS.md`에 PR 제목·본문 한국어 작성과 일반 PR 생성

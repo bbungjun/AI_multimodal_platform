@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "registry_id": "creativeops-agent-qa",
+  "verdicts": ["PASS", "FAIL", "BLOCKED", "NOT_APPLICABLE"],
+  "personas": ["anonymous", "free_user", "max_master"],
+  "providers": ["mock"],
+  "evidence_sources": [
+    "ui_snapshot",
+    "url",
+    "network",
+    "console",
+    "database",
+    "asset_probe",
+    "runtime_receipt",
+    "usage_read_model",
+    "access_log"
+  ],
+  "assertion_operators": [
+    "equals",
+    "contains",
+    "disabled",
+    "visible",
+    "decoded",
+    "same_identity",
+    "state_transition",
+    "policy_refusal",
+    "zero"
+  ],
+  "scenarios": [
+    "scenarios/auth-login.v1.json",
+    "scenarios/prompt-review.v1.json",
+    "scenarios/t2i-generation.v1.json",
+    "scenarios/t2v-generation.v1.json",
+    "scenarios/i2v-generation.v1.json",
+    "scenarios/pipeline.v1.json",
+    "scenarios/history.v1.json",
+    "scenarios/usage.v1.json",
+    "scenarios/failure-retry.v1.json",
+    "scenarios/role-ops-master.v1.json"
+  ]
+}

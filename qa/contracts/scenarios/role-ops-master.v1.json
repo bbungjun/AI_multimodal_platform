@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "role_ops_master",
+  "title_ko": "일반 사용자·Master 역할별 운영 화면",
+  "personas": ["free_user", "max_master"],
+  "goal": "일반 사용자와 Master의 탐색 메뉴, 직접 접근, 운영 데이터 요청이 동일한 역할 정책을 따르는지 검증한다.",
+  "related_paths": ["frontend/src/App.tsx", "frontend/src/pages/OpsPage.tsx", "frontend/src/pages/MasterPage.tsx", "backend/app/api/ops.py", "backend/app/api/master.py"],
+  "setup": {"provider": "mock", "fixture": "master_role_pair", "destructive": false},
+  "steps": [
+    {"id": "open_as_user", "intent": "일반 사용자로 로그인해 탐색 메뉴와 직접 운영 경로를 확인한다.", "action": "navigate"},
+    {"id": "probe_user_access", "intent": "일반 사용자의 Ops와 Master API 접근 결과를 확인한다.", "action": "observe"},
+    {"id": "open_as_master", "intent": "Master fixture로 전환해 운영 탐색 메뉴를 연다.", "action": "fixture"},
+    {"id": "inspect_master_views", "intent": "개요, 사용자, 감사, 운영 화면을 순서대로 확인한다.", "action": "click"}
+  ],
+  "assertions": [
+    {"id": "role.user_admin_navigation_hidden", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "role.user_ops_access_refused", "source": "network", "operator": "policy_refusal", "expected": 403, "evidence": ["network", "access_log"]},
+    {"id": "role.user_master_access_refused", "source": "network", "operator": "policy_refusal", "expected": 403, "evidence": ["network", "access_log"]},
+    {"id": "role.user_has_zero_admin_polling", "source": "network", "operator": "zero", "expected": true, "evidence": ["network"]},
+    {"id": "role.master_navigation_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "role.master_overview_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot", "network"]},
+    {"id": "role.master_users_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot", "network"]},
+    {"id": "role.master_audit_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot", "network"]},
+    {"id": "role.master_ops_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot", "network"]}
+  ],
+  "required_evidence": ["ui_snapshot", "network", "access_log"],
+  "exclusions": ["사용자 플랜 변경과 emergency session revocation 같은 파괴적 운영 명령"]
+}

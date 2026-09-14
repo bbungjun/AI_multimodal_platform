@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "i2v_generation",
+  "title_ko": "Image-to-Video 원본 연결과 생성",
+  "personas": ["free_user"],
+  "goal": "사용자가 고른 원본 이미지가 동일한 생성 작업에 연결되고 영상 결과까지 추적되는지 검증한다.",
+  "related_paths": ["frontend/src/pages/GeneratePage.tsx", "backend/app/services/jobs/i2v_guard.py", "backend/app/api/generations.py", "backend/app/api/assets.py"],
+  "setup": {"provider": "mock", "fixture": "source_image_user", "destructive": false},
+  "steps": [
+    {"id": "observe_no_source", "intent": "원본 이미지가 없을 때 제출 상태를 확인한다.", "action": "observe"},
+    {"id": "select_source", "intent": "사용자 소유 원본 이미지를 선택한다.", "action": "select"},
+    {"id": "submit_i2v", "intent": "허용 길이의 image-to-video 작업을 제출한다.", "action": "click"},
+    {"id": "inspect_result", "intent": "작업 연결 정보와 영상 결과를 확인한다.", "action": "observe"}
+  ],
+  "assertions": [
+    {"id": "i2v.no_source_disabled", "source": "ui_snapshot", "operator": "disabled", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "i2v.selected_asset_retained", "source": "ui_snapshot", "operator": "same_identity", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "i2v.job_uses_selected_asset", "source": "database", "operator": "same_identity", "expected": true, "evidence": ["database"]},
+    {"id": "i2v.job_completed", "source": "database", "operator": "state_transition", "expected": ["pending", "running", "completed"], "evidence": ["database", "runtime_receipt"]},
+    {"id": "i2v.asset_mime", "source": "asset_probe", "operator": "equals", "expected": "video/mp4", "evidence": ["asset_probe"]},
+    {"id": "i2v.outcome_is_usable", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot", "asset_probe"]}
+  ],
+  "required_evidence": ["ui_snapshot", "database", "asset_probe", "runtime_receipt"],
+  "exclusions": ["다른 사용자 소유 asset 접근은 API 보안 테스트에서 별도로 검증"]
+}

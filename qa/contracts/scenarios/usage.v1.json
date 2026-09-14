@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "usage_credits",
+  "title_ko": "개인 사용량과 크레딧 정합성",
+  "personas": ["free_user"],
+  "goal": "플랜·잔액·사용 내역이 생성 작업의 실제 크레딧 원장과 일치하고 새로고침 후에도 최신 상태인지 검증한다.",
+  "related_paths": ["frontend/src/pages/UsagePage.tsx", "frontend/src/ui/usage.ts", "backend/app/api/usage.py", "backend/app/personal_usage.py"],
+  "setup": {"provider": "mock", "fixture": "usage_credit_user", "destructive": false},
+  "steps": [
+    {"id": "open_usage", "intent": "개인 사용량 화면을 연다.", "action": "navigate"},
+    {"id": "observe_summary", "intent": "현재 플랜, 가용 크레딧, 사용 내역을 확인한다.", "action": "observe"},
+    {"id": "reload_usage", "intent": "화면을 새로고침해 서버의 최신 값을 다시 읽는다.", "action": "reload"}
+  ],
+  "assertions": [
+    {"id": "usage.plan_visible", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "usage.balance_matches_ledger", "source": "usage_read_model", "operator": "equals", "expected": true, "evidence": ["usage_read_model", "database"]},
+    {"id": "usage.job_charges_match_ledger", "source": "usage_read_model", "operator": "equals", "expected": true, "evidence": ["usage_read_model", "database"]},
+    {"id": "usage.held_is_zero_after_terminal", "source": "usage_read_model", "operator": "zero", "expected": true, "evidence": ["usage_read_model"]},
+    {"id": "usage.reload_fetches_current_state", "source": "network", "operator": "equals", "expected": 200, "evidence": ["network", "usage_read_model"]},
+    {"id": "usage.values_survive_reload", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot", "usage_read_model"]}
+  ],
+  "required_evidence": ["ui_snapshot", "network", "database", "usage_read_model"],
+  "exclusions": ["실제 결제 수단과 외부 청구 시스템 검증"]
+}
