@@ -1,6 +1,7 @@
 # Issue180 — Agent QA Chrome DevTools Executor 첫 수직 slice
 
 - [Issue180](https://github.com/bbungjun/AI_multimodal_platform/issues/180)
+- [일반 PR181](https://github.com/bbungjun/AI_multimodal_platform/pull/181)
 - [정제 evidence](../evidence/issue-180/executor-summary.json)
 - 선행 merge: [PR177](https://github.com/bbungjun/AI_multimodal_platform/pull/177),
   [PR179](https://github.com/bbungjun/AI_multimodal_platform/pull/179)

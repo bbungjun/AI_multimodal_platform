@@ -98,8 +98,9 @@ paste credential contents.
   local `agent-qa-auth-*` raw artifact19개는 정제 summary 후 repo-relative tmp backup으로
   이동했고 committed evidence에는 raw identity/request 값이 없다.
 - [정제 evidence](evidence/issue-180/executor-summary.json)와
-  [구현·장애 기록](portfolio/issue-180-agent-qa-executor.md). 나머지9개 scenario Adapter와
-  aggregate Receipt/CI/merge decision은 다음 단계다.
+  [구현·장애 기록](portfolio/issue-180-agent-qa-executor.md),
+  [일반 PR181](https://github.com/bbungjun/AI_multimodal_platform/pull/181)로 전달했다.
+  나머지9개 scenario Adapter와 aggregate Receipt/CI/merge decision은 다음 단계다.
 
 ### Agent QA 변경 영향 Selector — Issue178, 2026-09-15
 
