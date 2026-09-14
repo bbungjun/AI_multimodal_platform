@@ -7,7 +7,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
-import { ImageJourney, imageRoute } from './image-journey.mjs';
+import { ImageJourney, imageRoute, fillWithKeyboard } from './image-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
@@ -185,7 +185,10 @@ async function main() {
           action.tool = command.name;
           action.arguments = command.arguments;
           if (prepared?.purpose) action.purpose = prepared.purpose;
-          const text = await call(command.name, prepared?.args ?? command.arguments);
+          if (journey && command.name === 'fill') action.mcp_tools = ['click', 'press_key', 'type_text'];
+          const text = journey && command.name === 'fill'
+            ? await fillWithKeyboard(prepared.args, call)
+            : await call(command.name, prepared?.args ?? command.arguments);
           if (command.name === 'take_snapshot') {
             const controls = journey ? journey.snapshot(text) : safeSnapshot(text);
             if (!journey) loginUid = controls.find(row => row.includes('Google로 계속하기'))?.match(/uid=([\d_]+)/)?.[1] ?? null;

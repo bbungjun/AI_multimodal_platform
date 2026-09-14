@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ImageJourney, ORIGINAL, imageRoute } from './image-journey.mjs';
+import { ImageJourney, ORIGINAL, imageRoute, fillWithKeyboard } from './image-journey.mjs';
 
 const JOB = '11111111-1111-4111-8111-111111111111';
 const ENH = '22222222-2222-4222-8222-222222222222';
@@ -120,4 +120,16 @@ test('normalized routes and failed HTTP remain distinct from successful jobs', a
   await journey.observe(response('/api/generations', 'POST', {}, {}, 402));
   assert.deepEqual(journey.result().failures, ['generation_http_failure']);
   assert.equal(journey.result().passed, false);
+});
+
+test('text entry uses actual focus, select-all and keyboard insertion, stops after tool failure', async () => {
+  const calls = [];
+  await fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async (name, args) => calls.push({ name, args }));
+  assert.deepEqual(calls.map(c => c.name), ['click', 'press_key', 'type_text']);
+  assert.equal(calls[1].args.key, 'Control+A');
+  const failed = [];
+  await assert.rejects(fillWithKeyboard({ pageId: 1, uid: '1_1', value: 'fixture' }, async name => {
+    failed.push(name); throw Error('tool_unavailable');
+  }));
+  assert.deepEqual(failed, ['click']);
 });

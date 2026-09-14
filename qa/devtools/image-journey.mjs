@@ -181,6 +181,8 @@ export class ImageJourney {
         draft: x.draft !== null && draft?.value === x.draft && visible(draft),
         edited: x.edited !== null && draft?.value === x.edited && visible(draft),
         accepted: x.edited !== null && main?.value === x.edited && !draft,
+        accepted_unedited_draft: x.draft !== null && main?.value === x.draft && !draft,
+        review_closed: !draft,
         same_job: x.jobPath !== null && location.pathname === x.jobPath,
         image_decoded: decoded && visible(image) && image.naturalWidth > 0 && image.naturalHeight > 0,
         same_image: !!image && x.assetPath !== null && new URL(image.currentSrc).pathname === x.assetPath,
@@ -226,4 +228,11 @@ export class ImageJourney {
       file_reads: this.fileReads, file: this.file ? { bytes: this.file.bytes, mime: this.file.mime, sha256: this.file.sha256 } : null,
       failures: this.failures };
   }
+}
+
+export async function fillWithKeyboard(args, call) {
+  await call('click', { pageId: args.pageId, uid: args.uid });
+  await call('press_key', { pageId: args.pageId, key: 'Control+A' });
+  await call('type_text', { pageId: args.pageId, text: args.value });
+  return '';
 }
