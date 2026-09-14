@@ -82,7 +82,10 @@ paste credential contents.
 - PR188 merge 후 `codex/issue-185-ops-surface-adapter`를 최신 main에서 시작했다.
 - History6/Usage6/Retry6/Role9 총27 assertion compiler Interface를 구현했다. 완전 evidence
   PASS, 제품 불일치 FAIL, tool/source/cleanup 누락은 전체 BLOCKED다. focused4 PASS.
-- 다음은 owned fixture와 실제 DevTools History/Usage/retry/User-Master action이다.
+- owned fixture는 fresh OAuth user에 pagination용 failed Job12개를 만들고 첫 Job만 정상
+  prompt의 retryable failure로 둔다. promote/inspect operation은 target mock/test DB만
+  허용하고 retry identity/path/asset count만 반환한다. compiler+fixture9 PASS.
+- 다음은 실제 DevTools History/Usage/retry/User-Master action이다.
 
 ### Agent QA Video + Pipeline Adapter — Issue184 Mock Verified, 2026-09-15
 
