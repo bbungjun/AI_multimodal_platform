@@ -93,7 +93,8 @@ test('missing decode, wrong image, wrong job and unobserved response cannot pass
 test('full ordered proof needs new job reads on reload/revisit and no duplicate POST', async () => {
   const journey = new ImageJourney();
   await phase(journey, 'login', { workspace: true });
-  await phase(journey, 'empty', { workspace: true, empty_disabled: true });
+  await phase(journey, 'empty', { workspace: true, empty_disabled: true,
+    empty_prompt: true, empty_submit_found: true });
   await phase(journey, 'original', { workspace: true, original: true });
   await observeEnhancement(journey);
   await phase(journey, 'draft_discard', { original: true, draft: true });
