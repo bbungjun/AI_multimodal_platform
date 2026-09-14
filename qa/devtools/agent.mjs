@@ -60,7 +60,7 @@ export function hasNetworkEvidence(rows, media = null) {
   if (media === 'video') required.push(['/api/generations', 201],
     ['/api/generations/{job}', 200], ['/files/{job}/output.mp4', 200]);
   if (media === 'pipeline') required.push(['/api/pipelines', 201], ['/api/pipelines/{parent}', 200]);
-  if (media === 'workspace') required.push(['/api/generations', 200], ['/api/generations/{job}/retry', 201], ['/api/usage', 200]);
+  if (media === 'workspace') required.push(['/api/generations', 200], ['/api/generations/{job}/retry', 201], ['/api/usage/me', 200]);
   return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
 }
 
