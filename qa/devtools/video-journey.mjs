@@ -56,6 +56,7 @@ export class VideoJourney {
     const args = command.arguments;
     if (!args || !Number.isInteger(args.pageId)) throw Error('arguments_refused');
     if (command.name === 'navigate_page') {
+      if (args.type === 'url' && args.url === 'http://127.0.0.1:18156/login') return null;
       if (Object.keys(args).sort().join(',') !== 'pageId,type,url' || args.type !== 'url'
           || args.url !== 'http://127.0.0.1:18156/generate?mode=t2v'
           || !this.checkpoints.allowed_completed) throw Error('navigation_refused');

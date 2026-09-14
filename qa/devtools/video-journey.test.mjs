@@ -28,3 +28,10 @@ test('incomplete phases cannot pass and policy status remains strict', () => {
   journey.overLimitStatus = 403;
   assert.equal(journey.result().passed, true);
 });
+
+test('initial login navigation stays on the common auth seam', () => {
+  const journey = new VideoJourney();
+  assert.equal(journey.prepare({ op: 'call', name: 'navigate_page', arguments: {
+    pageId: 0, type: 'url', url: 'http://127.0.0.1:18156/login'
+  } }), null);
+});
