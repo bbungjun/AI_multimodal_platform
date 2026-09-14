@@ -28,6 +28,7 @@ def browser():
                    "image_visible": True, "empty_disabled": True},
         "post_counts": {"enhancement": 3, "generation": 1},
         "file": {"decoded": True, "mime": "image/png"},
+        "state_path": ["pending", "running", "completed"],
     }
 
 
@@ -123,6 +124,7 @@ def test_image_journey_report_is_reduced_to_closed_compiler_shape():
             "post_counts": {"enhancement": 1, "generation": 1},
             "file": {"mime": "image/png", "bytes": 100, "sha256": "a" * 64},
             "failures": [],
+            "state_path": ["pending", "running", "completed"],
         },
         "actions": [{"private": "ignored"}],
     }
@@ -131,6 +133,6 @@ def test_image_journey_report_is_reduced_to_closed_compiler_shape():
 
     assert set(cleaned) == {"technical_complete", "external_page_requests",
                             "unexpected_console_errors", "network_cross_check", "checks",
-                            "post_counts", "file"}
+                            "post_counts", "file", "state_path"}
     assert "private" not in json.dumps(cleaned)
     assert cleaned["file"] == {"decoded": True, "mime": "image/png"}

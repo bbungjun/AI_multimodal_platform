@@ -20,7 +20,9 @@ def refusal_deltas(before, after):
     if (set(before) != {"complete", "jobs", "outbox", "reservations"}
             or set(after) != set(before)):
         raise ValueError("probe_counts_invalid")
-    return {key: after[key] - before[key] - 1 for key in ("jobs", "outbox", "reservations")}
+    expected = {"jobs": 1, "outbox": 1, "reservations": 4}
+    return {key: after[key] - before[key] - expected[key]
+            for key in ("jobs", "outbox", "reservations")}
 
 
 def revision():

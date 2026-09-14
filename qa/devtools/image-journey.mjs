@@ -54,6 +54,7 @@ export class ImageJourney {
     this.emptyAccessibilityDisabled = null;
     this.overLimitSelected = false;
     this.overLimitStatus = 0;
+    this.statePath = [];
   }
 
   get edited() { return this.enhancement ? this.enhancement.enhanced + EDIT_SUFFIX : null; }
@@ -168,6 +169,10 @@ export class ImageJourney {
     } else if (this.jobId && path === `/api/generations/${this.jobId}` && method === 'GET' && status === 200) {
       const body = await response.json();
       this.jobReads++;
+      const normalizedState = body.state === 'pending' ? 'pending'
+        : body.state === 'completed' ? 'completed'
+        : ['enhancing', 'queued', 'generating', 'polling', 'downloading'].includes(body.state) ? 'running' : null;
+      if (normalizedState && this.statePath.at(-1) !== normalizedState) this.statePath.push(normalizedState);
       if (body.id !== this.jobId || body.prompt !== this.edited || body.mode !== 't2i') {
         this.failures.push('persisted_job_mismatch'); return;
       }
@@ -277,7 +282,7 @@ export class ImageJourney {
       passed: Object.values(checks).every(value => value === true) && this.overLimitStatus === 403,
       checks, steps: this.steps, post_counts: this.postCounts, job_reads: this.jobReads,
       file_reads: this.fileReads, file: this.file ? { bytes: this.file.bytes, mime: this.file.mime, sha256: this.file.sha256 } : null,
-      failures: this.failures, over_limit_status: this.overLimitStatus };
+      failures: this.failures, over_limit_status: this.overLimitStatus, state_path: this.statePath };
   }
 }
 

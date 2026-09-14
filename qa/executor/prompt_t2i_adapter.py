@@ -60,7 +60,7 @@ class PromptT2IProbes:
 def _check_map(browser: dict[str, Any]) -> dict[str, bool]:
     if type(browser) is not dict or set(browser) != {
         "technical_complete", "external_page_requests", "unexpected_console_errors",
-        "network_cross_check", "checks", "post_counts", "file",
+        "network_cross_check", "checks", "post_counts", "file", "state_path",
     }:
         raise PromptT2IAdapterError("prompt_t2i_browser_invalid")
     checks = browser["checks"]
@@ -73,7 +73,9 @@ def _check_map(browser: dict[str, Any]) -> dict[str, bool]:
             or type(posts) is not dict or set(posts) != {"enhancement", "generation"}
             or any(type(value) is not int or value < 0 for value in posts.values())
             or type(file) is not dict or set(file) != {"decoded", "mime"}
-            or type(file["decoded"]) is not bool or file["mime"] not in {None, "image/png"}):
+            or type(file["decoded"]) is not bool or file["mime"] not in {None, "image/png"}
+            or type(browser["state_path"]) is not list
+            or any(state not in {"pending", "running", "completed"} for state in browser["state_path"])):
         raise PromptT2IAdapterError("prompt_t2i_browser_invalid")
     return checks
 
@@ -110,6 +112,7 @@ def sanitize_image_journey_report(browser_report: dict[str, Any]) -> dict[str, A
             },
             "post_counts": {"enhancement": posts["enhancement"], "generation": posts["generation"]},
             "file": {"decoded": checks["completed"], "mime": file["mime"]},
+            "state_path": image["state_path"],
         }
     except (KeyError, TypeError, AttributeError):
         raise PromptT2IAdapterError("prompt_t2i_journey_report_invalid") from None
@@ -159,7 +162,8 @@ def compile_prompt_t2i_results(
         _observation("t2i.refusal_has_zero_outbox", probes.refusal_outbox == 0, ["database"]),
         _observation("t2i.refusal_has_zero_reservations", probes.refusal_reservations == 0, ["database"]),
         _observation("t2i.allowed_job_completed",
-                     probes.allowed_state_path == ("pending", "running", "completed"),
+                     tuple(browser["state_path"]) == probes.allowed_state_path
+                     == ("pending", "running", "completed"),
                      ["database", "runtime_receipt"]),
         _observation("t2i.asset_decodes", browser["file"]["decoded"]
                      and browser["file"]["mime"] == "image/png", ["asset_probe"]),

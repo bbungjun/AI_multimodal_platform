@@ -24,8 +24,8 @@ def test_source_digest_changes_with_runtime_source(monkeypatch, tmp_path):
 
 def test_refusal_delta_excludes_one_allowed_generation():
     before = {"complete": True, "jobs": 0, "outbox": 0, "reservations": 0}
-    refused = {"complete": True, "jobs": 1, "outbox": 1, "reservations": 1}
-    admitted = {"complete": True, "jobs": 2, "outbox": 2, "reservations": 2}
+    refused = {"complete": True, "jobs": 1, "outbox": 1, "reservations": 4}
+    admitted = {"complete": True, "jobs": 2, "outbox": 2, "reservations": 5}
 
     assert devtools_login_qa.refusal_deltas(before, refused) == {
         "jobs": 0, "outbox": 0, "reservations": 0
