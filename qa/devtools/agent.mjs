@@ -10,6 +10,7 @@ import { once } from 'node:events';
 import { ImageJourney, imageRoute, fillWithKeyboard } from './image-journey.mjs';
 import { VideoJourney, videoRoute } from './video-journey.mjs';
 import { I2VJourney } from './i2v-journey.mjs';
+import { PipelineJourney, pipelineRoute } from './pipeline-journey.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ORIGIN = 'http://127.0.0.1:18156';
@@ -24,7 +25,7 @@ export function safeRoute(value) {
     const url = new URL(value);
     if (url.origin !== ORIGIN) return 'other';
     return AUTH_PATHS.has(url.pathname) || PUBLIC_DIAGNOSTIC_PATHS.has(url.pathname)
-      ? url.pathname : imageRoute(url.pathname) ?? videoRoute(url.pathname) ?? 'other';
+      ? url.pathname : imageRoute(url.pathname) ?? videoRoute(url.pathname) ?? pipelineRoute(url.pathname) ?? 'other';
   } catch { return 'other'; }
 }
 
@@ -57,6 +58,7 @@ export function hasNetworkEvidence(rows, media = null) {
     ['/api/generations/{job}', 200], ['/files/{job}/output.png', 200]);
   if (media === 'video') required.push(['/api/generations', 201],
     ['/api/generations/{job}', 200], ['/files/{job}/output.mp4', 200]);
+  if (media === 'pipeline') required.push(['/api/pipelines', 201], ['/api/pipelines/{parent}', 200]);
   return required.every(([route, status]) => rows.some(row => row.route === route && row.status === status));
 }
 
@@ -105,10 +107,11 @@ export function checksFor({ events, profile, workspace, clicked, external, conso
 
 async function main() {
   const [backend, output, profileDir, scenario = 'login', ...scenarioArgs] = process.argv.slice(2);
-  if (!['login', 'image', 'video', 'i2v'].includes(scenario)) throw Error('scenario_refused');
+  if (!['login', 'image', 'video', 'i2v', 'pipeline'].includes(scenario)) throw Error('scenario_refused');
   const journey = scenario === 'image' ? new ImageJourney() : scenario === 'video' ? new VideoJourney()
-    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : null;
-  const journeyKey = scenario === 'video' ? 'video' : scenario === 'i2v' ? 'i2v' : 'image';
+    : scenario === 'i2v' ? new I2VJourney(...scenarioArgs) : scenario === 'pipeline' ? new PipelineJourney() : null;
+  const journeyKey = scenario === 'video' ? 'video' : scenario === 'i2v' ? 'i2v'
+    : scenario === 'pipeline' ? 'pipeline' : 'image';
   if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(backend ?? '') ||
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '/') &&
       !output?.startsWith(resolve(ROOT, 'output/playwright') + '\\')) throw Error('start_refused');

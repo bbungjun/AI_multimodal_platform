@@ -61,7 +61,8 @@ def source_digest():
 def main():
     args = sys.argv[1:]
     if args not in ([], ["--scenario", "image"], ["--scenario", "image", "--auto"],
-                    ["--scenario", "video", "--auto"], ["--scenario", "i2v", "--auto"]):
+                    ["--scenario", "video", "--auto"], ["--scenario", "i2v", "--auto"],
+                    ["--scenario", "pipeline", "--auto"]):
         print('{"complete":false,"error":"arguments_refused"}')
         return 2
     scenario = args[1] if args else "login"
@@ -105,7 +106,9 @@ def main():
                 else:
                     result = subprocess.run(
                         (["node", str(ROOT / "qa/devtools" /
-                                  ("image-controller.mjs" if scenario == "image" else "video-controller.mjs")), runtime.base_url,
+                                  ("image-controller.mjs" if scenario == "image" else
+                                   "video-controller.mjs" if scenario == "video" else
+                                   "pipeline-controller.mjs")), runtime.base_url,
                           str(output), str(Path(temporary) / "chrome-profile")]
                          if automatic else
                          ["node", str(ROOT / "qa/devtools/agent.mjs"), runtime.base_url,
