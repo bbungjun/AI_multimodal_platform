@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "history_navigation",
+  "title_ko": "작업 이력 필터·페이지·상세 이동",
+  "personas": ["free_user"],
+  "goal": "사용자 작업 이력의 필터, 페이지 이동, 상세 연결, 삭제 취소가 표시 상태와 서버 결과에 일치하는지 검증한다.",
+  "related_paths": ["frontend/src/pages/HistoryPage.tsx", "frontend/src/api/history.contract.ts", "backend/app/api/generations.py"],
+  "setup": {"provider": "mock", "fixture": "history_rows_user", "destructive": false},
+  "steps": [
+    {"id": "open_history", "intent": "fixture 작업이 있는 이력 화면을 연다.", "action": "navigate"},
+    {"id": "filter_history", "intent": "상태와 작업 종류 필터를 적용한다.", "action": "select"},
+    {"id": "change_page", "intent": "다음 페이지와 이전 페이지를 이동한다.", "action": "click"},
+    {"id": "open_detail", "intent": "이력 행에서 동일 작업의 상세 화면을 연다.", "action": "click"},
+    {"id": "cancel_delete", "intent": "삭제 확인창을 열고 취소한다.", "action": "click"}
+  ],
+  "assertions": [
+    {"id": "history.filters_match_rows", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot", "network"]},
+    {"id": "history.filter_resets_offset", "source": "network", "operator": "equals", "expected": 0, "evidence": ["network"]},
+    {"id": "history.page_controls_match_count", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot", "network"]},
+    {"id": "history.detail_preserves_job_identity", "source": "url", "operator": "same_identity", "expected": true, "evidence": ["url", "network"]},
+    {"id": "history.cancel_delete_has_zero_deletes", "source": "network", "operator": "zero", "expected": true, "evidence": ["network", "runtime_receipt"]},
+    {"id": "history.visible_count_matches_policy", "source": "ui_snapshot", "operator": "equals", "expected": true, "evidence": ["ui_snapshot"]}
+  ],
+  "required_evidence": ["ui_snapshot", "url", "network", "runtime_receipt"],
+  "exclusions": ["영구 삭제 확인은 destructive 시나리오 분리 전까지 실행하지 않음"]
+}

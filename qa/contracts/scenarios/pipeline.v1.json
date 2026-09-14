@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "pipeline_generation",
+  "title_ko": "이미지·영상 파이프라인 연결",
+  "personas": ["free_user"],
+  "goal": "이미지 부모 작업과 영상 자식 작업이 동일 사용자·asset·크레딧 수명주기로 연결되는지 검증한다.",
+  "related_paths": ["frontend/src/pages/PipelinePage.tsx", "backend/app/api/pipelines.py", "backend/app/services/jobs/pipeline_link.py", "backend/app/credit_lifecycle.py"],
+  "setup": {"provider": "mock", "fixture": "pipeline_credit_user", "destructive": false},
+  "steps": [
+    {"id": "observe_incomplete", "intent": "두 단계 중 필수 입력이 빠졌을 때 제출 상태를 확인한다.", "action": "observe"},
+    {"id": "submit_pipeline", "intent": "이미지와 영상 입력을 모두 확인한 뒤 파이프라인을 제출한다.", "action": "click"},
+    {"id": "observe_parent", "intent": "부모 이미지 작업의 완료와 asset 생성을 기다린다.", "action": "observe"},
+    {"id": "observe_child", "intent": "자식 영상 작업이 부모 asset으로 실행되는지 확인한다.", "action": "observe"},
+    {"id": "reload_pipeline", "intent": "페이지를 새로고침해 결과가 유지되는지 확인한다.", "action": "reload"}
+  ],
+  "assertions": [
+    {"id": "pipeline.incomplete_submission_disabled", "source": "ui_snapshot", "operator": "disabled", "expected": true, "evidence": ["ui_snapshot"]},
+    {"id": "pipeline.jobs_share_owner", "source": "database", "operator": "same_identity", "expected": true, "evidence": ["database"]},
+    {"id": "pipeline.child_waits_for_parent_asset", "source": "database", "operator": "state_transition", "expected": ["blocked", "pending", "running", "completed"], "evidence": ["database", "runtime_receipt"]},
+    {"id": "pipeline.child_uses_parent_asset", "source": "database", "operator": "same_identity", "expected": true, "evidence": ["database"]},
+    {"id": "pipeline.parent_completed", "source": "database", "operator": "equals", "expected": "completed", "evidence": ["database"]},
+    {"id": "pipeline.child_completed", "source": "database", "operator": "equals", "expected": "completed", "evidence": ["database"]},
+    {"id": "pipeline.single_reservation_settled", "source": "database", "operator": "equals", "expected": {"top_level_reservations": 1, "held_after_terminal": 0}, "evidence": ["database", "usage_read_model"]},
+    {"id": "pipeline.results_survive_reload", "source": "ui_snapshot", "operator": "visible", "expected": true, "evidence": ["ui_snapshot"]}
+  ],
+  "required_evidence": ["ui_snapshot", "database", "runtime_receipt", "usage_read_model"],
+  "exclusions": ["실제 Vertex provider의 장시간 영상 polling은 live QA 범위"]
+}
