@@ -11,6 +11,14 @@
       "reason": "qa_contract_requires_full_e2e"
     },
     {
+      "id": "qa_executor_changed",
+      "effect": "all",
+      "scenarios": [],
+      "paths": ["scripts/agent_qa_executor.py", "scripts/devtools_login_qa.py"],
+      "prefixes": ["qa/devtools/", "qa/executor/"],
+      "reason": "qa_executor_requires_full_e2e"
+    },
+    {
       "id": "shared_runtime_changed",
       "effect": "all",
       "scenarios": [],

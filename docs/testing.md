@@ -2,6 +2,35 @@
 
 Tests should prove the app flow without making real AI calls.
 
+## Agent QA Chrome DevTools Executor
+
+Impact Selector와 현재 clean HEAD를 결합한 첫 실행 Adapter는 `auth_login`이다.
+
+```powershell
+python scripts/agent_qa_executor.py `
+  --base <40자리-base-commit-SHA> `
+  --head <현재-HEAD-40자리-SHA> `
+  --scenario auth_login
+```
+
+선택된 실행은 fresh mock OAuth Postgres/Redis/backend/worker runtime, Vite, Chrome과
+Chrome DevTools MCP를 소유한다. 실제 accessibility control click으로 로그인·로그아웃하고
+start307/callback303/me200, workspace `/generate`, logout204 이후 me401과 `/login`을
+검사한다. DevTools Network와 browser response를 정제 route/status/method로 cross-check하며,
+외부 page request와 예상 밖 Console error가 각각0이어야 한다.
+
+head가 현재 HEAD와 다르거나 tracked source가 dirty하면 실행하지 않는다. Selector가
+`auth_login`을 제외하면 runtime을 시작하지 않고 `NOT_APPLICABLE`을 반환한다. 선택됐지만
+도구/evidence/source/cleanup guard가 불완전하면 `BLOCKED`, 제품 assertion이 false면
+`FAIL`이다. output은 ignored `output/playwright/`에 있으며 prompt, identity, cookie,
+OAuth query, header/body를 저장하지 않는다.
+
+Issue180 core에서 동일 revision 2회가 각각7/7 assertion, external0, Console0,
+Network cross-check true, cleanup0으로 PASS했다. 이는 `auth_login` 한 scenario의 local
+Mock Verified 결과이며 나머지9개 Adapter, 전체 Receipt, CI gate, 실제 Google/Vertex를
+증명하지 않는다. 정제 결과는
+[Issue180 evidence](evidence/issue-180/executor-summary.json)에 있다.
+
 ## Default Test Mode
 
 Use `AI_PROVIDER=mock` or fake provider clients for automated tests. Tests must
