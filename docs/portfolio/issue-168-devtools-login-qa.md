@@ -1,5 +1,8 @@
 # Issue168 — Agent-operated Chrome DevTools login QA
 
+후속 상태: [Issue170](issue-170-favicon-qa.md)에서 favicon을 수정하고 같은 검사를9/9로
+재검증했다. 아래 내용과 receipt는 수정 전 Issue168의 실패 증거를 그대로 보존한다.
+
 ## 결과와 범위
 
 2026-09-14에 에이전트가 Chrome DevTools MCP로 QA 전용 Chrome을 조작하여
@@ -140,7 +143,7 @@ python scripts/devtools_login_qa.py
 ```
 
 실행별 `output/playwright/devtools-login-*/receipt.json`과 `browser.json`을 확인한다.
-현재 favicon 결함이 남은 환경에서는 exit 1이 예상된다. `complete=false`는 엄격한 QA
+Issue168의 favicon 결함이 남은 revision에서는 exit 1이 예상된다. `complete=false`는 엄격한 QA
 gate 실패이며, `runtime_cleanup=0`과 `browser.cleanup=0`은 별도로 확인한다.
 `finish` 또는 stdin EOF로 종료한다. 10분 대화형 제한과 40개 명령 제한이 있다.
 
