@@ -65,7 +65,12 @@ async function main() {
     const loginUid = controlUid(entry, 'login');
     if (loginUid) await call('click', { pageId: page, uid: loginUid });
     else if (!(pages.pages?.includes('/generate')
-      && (entry.controls ?? []).some(control => control.purpose === 'history'))) throw Error('entry_unavailable');
+      && (entry.controls ?? []).some(control => control.purpose === 'history'))) {
+      const route = pages.pages?.includes('/login') ? 'login'
+        : pages.pages?.includes('/generate') ? 'generate' : 'other';
+      const purposes = [...new Set((entry.controls ?? []).map(control => control.purpose))].sort().join('_') || 'none';
+      throw Error(`entry_${route}_${purposes}`);
+    }
     await checkpoint(page, 'login', { retries: 4, wait: 1000 });
     stage = 'history'; await click(page, 'history'); await checkpoint(page, 'history', { retries: 5, wait: 750 });
     await fill(page, 'state', 'failed'); await checkpoint(page, 'filtered', { retries: 5, wait: 750 });
