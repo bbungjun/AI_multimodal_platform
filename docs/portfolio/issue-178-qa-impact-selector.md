@@ -96,6 +96,7 @@ Validator는 field와 vocabulary만 확인하지 않는다. Manifest의 변경 �
 | docs-only 변경 | scenario0 `NO_E2E_REQUIRED` | PASS |
 | rename/delete Git Adapter | 이전·새 경로 보존 및 영향 유지 | PASS |
 | 조작 후 SHA 재계산 Manifest | mapping 재계산으로 거부 | PASS |
+| core `070843e` vs 직전 revision 실제 CLI | changed8, selected10, excluded0, unmatched0, `FULL_E2E` | PASS |
 | backend `python -m pytest` | 1851 passed, 3 guarded skipped, 기존 Windows/Bash path 검사 1 failed | 기존 환경 예외 재현 |
 | backend 동일 실행에서 기존 path 검사만 제외 | 1851 passed, 3 skipped, 1 deselected | PASS |
 | frontend `npm run lint`, `npm run build` | TypeScript 검사와 production build 완료 | PASS |

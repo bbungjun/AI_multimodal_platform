@@ -93,6 +93,8 @@ paste credential contents.
   제외한 backend1851개, frontend lint/build, env-example Compose도 PASS했다. Chrome
   executor/fixture/CI gate/merge 권한은 아직 구현하지 않았으며 evidence level은
   `Implemented`다.
+- Core commit `070843e`를 직전 revision과 실제 Git Adapter로 비교한 self-selection은
+  changed8, selected10, excluded0, unmatched0의 `FULL_E2E`를 반환했다.
 - [구현·판단 기록](portfolio/issue-178-qa-impact-selector.md). 다음 단계는 선택 Manifest를
   받아 격리 fixture와 Chrome DevTools evidence를 생성하는 Executor다.
 
