@@ -88,6 +88,7 @@ def test_shared_generate_page_selects_all_related_modes(registry, policy) -> Non
         "frontend/src/api/client.ts",
         "qa/contracts/registry.v1.json",
         "qa/impact/policy.v1.json",
+        "qa/executor/runner.py",
     ],
 )
 def test_shared_or_contract_change_requires_full_e2e(registry, policy, path: str) -> None:
