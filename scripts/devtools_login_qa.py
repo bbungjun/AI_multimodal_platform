@@ -106,6 +106,18 @@ def main():
                     report["workspace_fixture"] = {"jobs": fixture["jobs"]}
                     report["workspace_inspect"] = workspace_fixture(runtime, "inspect")
                     browser_report = workspace_output / "browser.json"
+                    workspace_fixture(runtime, "promote")
+                    master_output = output / "master"
+                    master_output.mkdir()
+                    master_result = subprocess.run(
+                        ["node", str(ROOT / "qa/devtools/master-controller.mjs"), runtime.base_url,
+                         str(master_output), str(Path(temporary) / "master-profile")],
+                        cwd=ROOT, env=runtime.env, timeout=720,
+                    )
+                    report["master_driver_exit_code"] = master_result.returncode
+                    master_report = master_output / "browser.json"
+                    if master_report.is_file():
+                        report["master_browser"] = json.loads(master_report.read_text(encoding="utf-8"))
                 elif automatic and scenario == "i2v":
                     source_output, i2v_output = output / "source", output / "i2v"
                     source_output.mkdir(); i2v_output.mkdir()
