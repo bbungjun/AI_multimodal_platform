@@ -2,11 +2,37 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any
 
 
 class PromptT2IAdapterError(ValueError):
     pass
+
+
+def read_owned_db_probe(runtime: Any, operation: str, *, job_id: str | None = None) -> dict[str, Any]:
+    if operation not in {"counts", "job"} or (operation == "counts") != (job_id is None):
+        raise PromptT2IAdapterError("prompt_t2i_probe_request_invalid")
+    payload = {"operation": operation, **({} if job_id is None else {"job_id": job_id})}
+    try:
+        raw = runtime.docker(
+            *runtime.compose,
+            "exec", "-T", "backend", "python", "tests/prompt_t2i_probe.py",
+            input=json.dumps(payload, separators=(",", ":")),
+        )
+        value = json.loads(raw)
+    except Exception as error:
+        raise PromptT2IAdapterError("prompt_t2i_probe_execution_failed") from error
+    fields = ({"complete", "jobs", "outbox", "reservations"} if operation == "counts"
+              else {"complete", "state", "assets", "png_assets", "outbox", "reservations"})
+    if (type(value) is not dict or set(value) != fields or value.get("complete") is not True
+            or any(type(item) is not int or item < 0
+                   for key, item in value.items() if key not in {"complete", "state"})
+            or (operation == "job" and value["state"] not in {
+                "pending", "enhancing", "queued", "generating", "polling", "downloading",
+                "completed", "failed", "cancelled"})):
+        raise PromptT2IAdapterError("prompt_t2i_probe_result_invalid")
+    return value
 
 
 @dataclass(frozen=True)

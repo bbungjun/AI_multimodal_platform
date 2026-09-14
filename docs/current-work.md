@@ -85,7 +85,9 @@ paste credential contents.
   probe를 prompt6개/T2I8개 contract assertion으로 변환한다. 완전하지 않은 tool evidence는
   `BLOCKED`, 제품 기대 위반은 `FAIL`이며 allow-failure가 없다.
 - Free over-limit이201이고 job/outbox/reservation이 각각1인 기존 결함 입력은 T2I의
-  policy refusal 및 side-effect0 assertion4개를 FAIL로 판정한다. focused6 PASS.
+  policy refusal 및 side-effect0 assertion4개를 FAIL로 판정한다. owned backend stdin
+  DB probe는 count delta와 정상 Job의 state/PNG/outbox/reservation만 반환하며 foreign/
+  non-mock target을 거부한다. focused15 PASS.
 - 아직 실제 Chrome action driver와 DB probe Adapter가 연결되지 않았으므로 Issue183은
   완료가 아니다. 다음 구현은 discard/keep/edited accept, empty disabled, over-limit 요청,
   allowed PNG journey와 DB delta를 한 owned runtime에서 수집하는 것이다.

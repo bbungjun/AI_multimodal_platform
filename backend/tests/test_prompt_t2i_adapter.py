@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import sys
 
 import pytest
@@ -11,6 +12,7 @@ from prompt_t2i_adapter import (  # noqa: E402
     PromptT2IAdapterError,
     PromptT2IProbes,
     compile_prompt_t2i_results,
+    read_owned_db_probe,
 )
 
 
@@ -78,3 +80,28 @@ def test_closed_browser_shape_refuses_identity_fields():
     value["identity"] = "not-allowed"
     with pytest.raises(PromptT2IAdapterError, match="prompt_t2i_browser_invalid"):
         compile_prompt_t2i_results(value, probes(), runtime_receipt_ready=True)
+
+
+def test_owned_db_probe_accepts_count_only_protocol():
+    class Runtime:
+        compose = ["compose", "-p", "owned"]
+
+        def docker(self, *args, input=None):
+            assert args[-5:] == ("exec", "-T", "backend", "python", "tests/prompt_t2i_probe.py")
+            assert json.loads(input) == {"operation": "counts"}
+            return '{"complete":true,"jobs":0,"outbox":0,"reservations":0}'
+
+    assert read_owned_db_probe(Runtime(), "counts") == {
+        "complete": True, "jobs": 0, "outbox": 0, "reservations": 0
+    }
+
+
+def test_owned_db_probe_rejects_extra_fields():
+    class Runtime:
+        compose = []
+
+        def docker(self, *args, input=None):
+            return '{"complete":true,"jobs":0,"outbox":0,"reservations":0,"identity":"bad"}'
+
+    with pytest.raises(PromptT2IAdapterError, match="prompt_t2i_probe_result_invalid"):
+        read_owned_db_probe(Runtime(), "counts")

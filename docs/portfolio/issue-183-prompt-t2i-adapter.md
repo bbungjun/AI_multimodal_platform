@@ -26,13 +26,20 @@ prompt6개와 T2I8개 assertion ID를 정확히 포함하는 scenario result 두
   allow-failure로 바꾸지 않는다.
 - closed browser shape에 identity 같은 extra field가 있으면 compiler가 거부한다.
 
+두 번째 체크포인트는 owned backend 내부의 read-only DB probe다. stdin으로 `counts` 또는
+`job` operation만 받고 fresh `ownership-verify-*` DB, mock, test mode를 모두 확인한다.
+출력은 global job/outbox/reservation count 또는 정상 Job의 state와 asset/PNG/outbox/
+reservation count뿐이다. reservation은 Job의 내부 credit metadata ID로 연결해 세며 ID
+자체는 출력하지 않는다.
+
 Focused test:
 
 ```powershell
-python -m pytest backend/tests/test_prompt_t2i_adapter.py -q
+python -m pytest backend/tests/test_prompt_t2i_adapter.py backend/tests/test_prompt_t2i_probe_support.py -q
 ```
 
-결과는6 PASS다. 이는 compiler 구현 증거이지 실제 Chrome/DB 실행 증거가 아니다.
+결과는15 PASS다. compiler와 DB probe contract의 구현 증거이며 아직 실제 Chrome/DB
+통합 실행 증거는 아니다.
 
 ## 남은 구현
 
