@@ -86,11 +86,15 @@ paste credential contents.
 - T2V 실제 owned run은 technical complete/external0/Console0/cleanup0이다. empty guard는
   PASS했지만 Free6초가201, 초과 side effect jobs1/outbox1/reservations1, state는
   pending→completed, video file/usable false여서 contract6개 중5개 FAIL이다.
-  [정제 T2V 증거](evidence/issue-184/t2v-failure-summary.json). 다음은 I2V source와 Pipeline이다.
+  최종 근거는 아래 통합 summary에 보존한다.
 - I2V 실제 owned run은 source T2I setup 후 Job detail의 I2V control을 사용했다. source
   identity와 video/mp4는 PASS, no-source DOM disabled true/accessibility false,
   pending→completed, usable false로 scenario FAIL이다. external0/Console0/cleanup0,
-  source ID 비저장. [정제 I2V 증거](evidence/issue-184/i2v-failure-summary.json).
+  source ID 비저장. 최종 근거는 아래 통합 summary에 보존한다.
+- DB state_history 최종 교차검증 후 T2V는 policy/side-effect/usable3 FAIL, I2V는
+  no-source accessibility/usable2 FAIL, Pipeline은 same owner/source, full parent/child path,
+  reservation1/held0/reload 포함8/8 PASS다. 모든 run external0/Console0/cleanup0.
+  [최종 summary](evidence/issue-184/final-video-pipeline-summary.json).
 
 ### Agent QA prompt review + T2I Adapter — Issue183 Mock Verified, 2026-09-15
 

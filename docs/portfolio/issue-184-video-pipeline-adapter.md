@@ -25,7 +25,7 @@ Core `3bbc8e0`에서 T2V4초 정상 요청과 Free6초 초과 요청을 실제 C
 Free6초는 HTTP201이고 정상 요청을 제외한 DB delta가 jobs1/outbox1/reservations1이었다.
 mock video file은 browser에서 관측되지 않아 MIME/usable이 false였고 빠른 mock 상태는
 pending→completed로 관측됐다. 따라서 contract6개 중 policy, side effect, state path,
-asset MIME, usable 총5개가 FAIL이다. [정제 증거](../evidence/issue-184/t2v-failure-summary.json).
+asset MIME, usable 총5개가 FAIL이었다. 최종 DB history 교차검증 결과는 아래 통합 summary가 대체한다.
 
 ## I2V 실제 실행
 
@@ -34,4 +34,15 @@ Core `a3792f2`에서 같은 owned runtime에 자동 T2I source를 만든 후, so
 저장하지 않았다. source selection과 persisted Job identity, video/mp4 asset은 PASS했다.
 no-source DOM disabled는 true였지만 accessibility disabled가 false였고, state는
 pending→completed, mock video usable은 false여서 scenario FAIL이다. external0/Console0/
-cleanup0이다. [정제 증거](../evidence/issue-184/i2v-failure-summary.json).
+cleanup0이다. 최종 DB history 교차검증 결과는 아래 통합 summary가 대체한다.
+
+## Pipeline 및 최종 판정
+
+Pipeline actual run은 incomplete disabled, POST201, parent/child 완료, source 연결과 reload를
+통과했다. DB state_history는 parent pending→running→completed, child blocked→pending→
+running→completed였고 same owner/source true, reservation1, held0이다. Pipeline8/8 PASS다.
+
+DB history를 T2V/I2V에도 적용한 최종 compiler 결과는 T2V3 FAIL(policy refusal,
+side-effect0, usable), I2V2 FAIL(no-source accessibility disabled, usable), Pipeline PASS다.
+모든 run은 external0, 예상 밖 Console0, cleanup0이다.
+[최종 정제 summary](../evidence/issue-184/final-video-pipeline-summary.json)에 근거를 모았다.
