@@ -102,6 +102,7 @@ async function main() {
     cleanup: { browser: 1, mcp: 1, vite: 1 } };
   let browser, vite, client, transport, chromeProcess, mcpPid;
   let technicalComplete = false;
+  let phase = 'vite_start';
   const runtimeRows = [];
   try {
     vite = await createServer({ root: resolve(ROOT, 'frontend'), configFile: false,
@@ -110,6 +111,7 @@ async function main() {
         proxy: { '/api': { target: backend }, '/files': { target: backend } } },
       define: { 'import.meta.env.VITE_API_BASE': JSON.stringify('') } });
     await vite.listen();
+    phase = 'chrome_start';
     browser = await puppeteer.launch({ channel: 'chrome', headless: true, userDataDir: profileDir,
       debuggingPort: 0, defaultViewport: { width: 1440, height: 1000 },
       args: ['--disable-background-networking', '--disable-component-update'] });
@@ -131,6 +133,7 @@ async function main() {
     });
 
     const ws = new URL(browser.wsEndpoint());
+    phase = 'mcp_connect';
     transport = new StdioClientTransport({ command: process.execPath,
       args: [resolve(ROOT, 'qa/devtools/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'),
         '--browserUrl', `http://127.0.0.1:${ws.port}`, '--no-usage-statistics', '--no-performance-crux',
@@ -147,37 +150,48 @@ async function main() {
       if (result.isError) throw Error('mcp_tool_failed');
       return (result.content ?? []).filter(item => item.type === 'text').map(item => item.text).join('\n');
     };
+    phase = 'login_navigation';
     let current = selectedPage(await call('list_pages', {}));
     await call('navigate_page', { pageId: current.pageId, type: 'url', url: ORIGIN + '/login' });
     await call('wait_for', { pageId: current.pageId, text: ['Google로 계속하기'], timeout: 10_000 });
+    phase = 'login_snapshot';
     let snapshot = await call('take_snapshot', { pageId: current.pageId });
     const loginUid = controlUid(snapshot, 'Google로 계속하기');
     evidence.loginControlVisible = loginUid !== null;
     if (!loginUid) throw Error('login_control_missing');
+    phase = 'login_click';
     await call('click', { pageId: current.pageId, uid: loginUid });
     await call('wait_for', { pageId: current.pageId, text: ['계정 정보'], timeout: 15_000 });
     current = selectedPage(await call('list_pages', {}));
     evidence.workspacePath = current.path;
+    phase = 'login_network';
     evidence.network.push(...networkRows(await call('list_network_requests', {
       pageId: current.pageId, includePreservedRequests: true })));
 
+    phase = 'account_snapshot';
     snapshot = await call('take_snapshot', { pageId: current.pageId });
     const accountUid = controlUid(snapshot, '계정 정보');
     if (!accountUid) throw Error('account_control_missing');
+    phase = 'account_click';
     await call('click', { pageId: current.pageId, uid: accountUid });
     await call('wait_for', { pageId: current.pageId, text: ['로그아웃'], timeout: 10_000 });
+    phase = 'logout_snapshot';
     snapshot = await call('take_snapshot', { pageId: current.pageId });
     const logoutUid = controlUid(snapshot, '로그아웃');
     if (!logoutUid) throw Error('logout_control_missing');
+    phase = 'logout_click';
     await call('click', { pageId: current.pageId, uid: logoutUid });
     await call('wait_for', { pageId: current.pageId, text: ['Google로 계속하기'], timeout: 10_000 });
     current = selectedPage(await call('list_pages', {}));
     evidence.finalPath = current.path;
+    phase = 'logout_probe';
     const probe = parseProbe(await call('evaluate_script', { pageId: current.pageId,
       function: 'async () => ({ status: (await fetch("/api/auth/me", { credentials: "include" })).status })' }));
     evidence.logoutProbeStatus = probe.status;
+    phase = 'logout_network';
     evidence.network.push(...networkRows(await call('list_network_requests', {
       pageId: current.pageId, includePreservedRequests: true })));
+    phase = 'console_inspection';
     const consoleText = await call('list_console_messages', {
       pageId: current.pageId, types: ['error', 'warn'], includePreservedMessages: true });
     report.unexpected_console_errors = unexpectedConsoleCount(consoleText);
@@ -185,6 +199,7 @@ async function main() {
   } catch (error) {
     report.error = 'devtools_execution_failed';
     report.error_type = error?.name ?? 'Error';
+    report.failure_phase = phase;
   } finally {
     const cleanup = { browser: 0, mcp: 0, vite: 0 };
     for (const [name, close] of [['mcp', () => client?.close()], ['browser', () => browser?.close()],

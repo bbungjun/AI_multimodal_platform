@@ -40,6 +40,11 @@ SAFE_ROUTES = {
     "/api/auth/me", "/api/auth/google/start", "/api/auth/google/callback", "/api/auth/logout",
     "/favicon.ico", "/favicon.svg", "/vite.svg",
 }
+FAILURE_PHASES = {
+    "vite_start", "chrome_start", "mcp_connect", "login_navigation", "login_snapshot",
+    "login_click", "login_network", "account_snapshot", "account_click", "logout_snapshot",
+    "logout_click", "logout_probe", "logout_network", "console_inspection",
+}
 
 
 class ExecutorError(RuntimeError):
@@ -201,6 +206,8 @@ def _browser_result(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         "unexpected_console_errors": value.get("unexpected_console_errors")
         if type(value.get("unexpected_console_errors")) is int else -1,
         "network_cross_check": value.get("network_cross_check") is True,
+        "failure_phase": value.get("failure_phase")
+        if value.get("failure_phase") in FAILURE_PHASES else None,
         "evidence": clean_evidence,
         "cleanup": cleanup,
     }
@@ -219,6 +226,8 @@ def finalize_result(
     blockers = set(result.get("blocked_reasons", []))
     if not browser_summary.get("technical_complete"):
         blockers.add("devtools_execution_incomplete")
+        if browser_summary.get("failure_phase"):
+            blockers.add("devtools_" + browser_summary["failure_phase"] + "_failed")
     if browser_summary.get("external_page_requests") != 0:
         blockers.add("external_page_request_detected")
     if browser_summary.get("unexpected_console_errors") != 0:
@@ -277,19 +286,21 @@ def run_execution(
         "external_page_requests": -1,
         "unexpected_console_errors": -1,
         "network_cross_check": False,
+        "failure_phase": None,
         "evidence": {},
         "cleanup": {"browser": 1, "mcp": 1, "vite": 1},
     }
     process_exit_code = None
     error_code = None
     started = time.monotonic()
+    temporary = tempfile.TemporaryDirectory(prefix="creativeops-agent-qa-")
     try:
-        with tempfile.TemporaryDirectory(prefix="creativeops-agent-qa-") as temporary:
+        try:
             runtime.preflight()
-            runtime.start(temporary)
+            runtime.start(temporary.name)
             result = process_runner(
                 ["node", str(repository_root / "qa" / "devtools" / "auth-contract.mjs"),
-                 runtime.base_url, str(output), str(Path(temporary) / "chrome-profile")],
+                 runtime.base_url, str(output), str(Path(temporary.name) / "chrome-profile")],
                 cwd=repository_root,
                 env=runtime.env,
                 timeout=360,
@@ -299,14 +310,16 @@ def run_execution(
             )
             process_exit_code = result.returncode
             browser_result, browser_summary = _browser_result(output / "browser.json")
-    except (Exception, KeyboardInterrupt) as error:
-        error_code = "executor_interrupted" if isinstance(error, KeyboardInterrupt) else "executor_execution_failed"
+        except (Exception, KeyboardInterrupt) as error:
+            error_code = "executor_interrupted" if isinstance(error, KeyboardInterrupt) else "executor_execution_failed"
+        finally:
+            try:
+                runtime.cleanup()
+                runtime_cleanup = 0
+            except Exception:
+                error_code = error_code or "executor_runtime_cleanup_failed"
     finally:
-        try:
-            runtime.cleanup()
-            runtime_cleanup = 0
-        except Exception:
-            error_code = error_code or "executor_runtime_cleanup_failed"
+        temporary.cleanup()
     after_revision = current_revision(repository_root)
     after_digest = source_digest(repository_root)
     source_unchanged = (before_digest == after_digest and head_revision == after_revision)
