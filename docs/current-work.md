@@ -77,14 +77,20 @@ paste credential contents.
 
 ## Active Work
 
-### Agent-operated reviewed-prompt image journey — Issue172 in progress
+### Agent-operated reviewed-prompt image journey — Issue172 Mock Verified
 
-- Branch `codex/issue-172-image-journey-qa` builds on draft PR171/169.
-  Extend the interactive DevTools scenario to enhancement/edit/accept, one image
-  generation, decode, reload and History revisit. All writes originate in UI.
-- Prompts/IDs are compared in memory; receipts keep normalized routes and boolean
-  comparisons. First check: `npm test --prefix qa/devtools`, then
-  `python scripts/devtools_login_qa.py --scenario image`. No product change planned.
+- Branch `codex/issue-172-image-journey-qa` depends on draft PR171/169. Executed
+  core `e262d6b`: one complete user journey,9 ordered checkpoints; enhancement1,
+  generation1; accepted payload matches;640x360 PNG556940B; reload/history revisit
+  retain same Job/asset/hash. No product changes. Console unexpected0/page external0.
+- `python scripts/devtools_login_qa.py --scenario image` exit0, source unchanged,
+  browser/runtime cleanup0. Node14/Python6, frontend lint/build, Compose/diff PASS.
+- [Record/reproduction](portfolio/issue-172-image-journey-qa.md) and
+  [final receipt](evidence/issue-172/image-journey-receipt.json). Initial direct-fill
+  and intermediate Network-retention failures are preserved. Keyboard input and
+  per-checkpoint DevTools capture resolved the harness gaps without relaxing expectations.
+- Delivery tracked by Issue172 and its linked draft PR. Next: reusable QA Skill;
+  video, credit/ownership and unattended CI/merge automation remain separate work.
 
 ### Favicon repair and agent QA rerun — Issue170 Mock Verified
 

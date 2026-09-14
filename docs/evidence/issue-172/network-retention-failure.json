@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "description": "Selected sanitized fields from the intermediate receipt; not a complete recording.",
+  "run_id": "devtools-image-3223f57ebf25",
+  "revision": "d3c8c77be45c15dcc58b7de70e894d06937818c7",
+  "complete": false,
+  "source_unchanged": true,
+  "runtime_cleanup": 0,
+  "browser_cleanup": 0,
+  "checks": {
+    "actual_login_click": true,
+    "login_start_307": true,
+    "callback_303": true,
+    "authenticated_me_200": true,
+    "workspace_visible": true,
+    "no_external_page_requests": true,
+    "no_unexpected_console_errors": true,
+    "devtools_network_inspected": false,
+    "devtools_console_inspected": true
+  },
+  "image_checks": {
+    "login": true,
+    "original": true,
+    "draft": true,
+    "edited": true,
+    "accepted": true,
+    "completed": true,
+    "reloaded": true,
+    "history": true,
+    "revisited": true,
+    "enhancement_payload_matches": true,
+    "accepted_generation_payload_matches": true,
+    "one_enhancement": true,
+    "one_generation": true,
+    "no_observation_failures": true
+  },
+  "final_network_query": [
+    {
+      "request_id": 136,
+      "route": "/api/auth/me",
+      "status": 200
+    },
+    {
+      "request_id": 138,
+      "route": "/favicon.svg",
+      "status": 304
+    },
+    {
+      "request_id": 140,
+      "route": "/api/generations/{job}",
+      "status": 200
+    },
+    {
+      "request_id": 141,
+      "route": "/files/{job}/output.png",
+      "status": 200
+    },
+    {
+      "request_id": 142,
+      "route": "/api/generations",
+      "status": 200
+    },
+    {
+      "request_id": 145,
+      "route": "/api/generations/{job}",
+      "status": 200
+    }
+  ]
+}

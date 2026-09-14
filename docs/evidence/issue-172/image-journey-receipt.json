@@ -1,0 +1,1529 @@
+{
+  "schema_version": 1,
+  "run_id": "devtools-image-a8bdc2767f34",
+  "scenario": "image",
+  "revision": "e262d6b78e0d1c6604f12019d8cd94dc8f9e246a",
+  "source_sha256": "673afa6e8b2d6444c3658246b9805b908c017fdb882c15f1d23c0035afaf4dd0",
+  "provider": "mock",
+  "complete": true,
+  "runtime_cleanup": 0,
+  "driver_exit_code": 0,
+  "browser": {
+    "scenario": "image",
+    "passed": true,
+    "cleanup": 0,
+    "events": [
+      {
+        "at": "2026-09-14T10:57:20.558Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 401
+      },
+      {
+        "at": "2026-09-14T10:57:20.577Z",
+        "method": "GET",
+        "route": "/favicon.svg",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:57:43.423Z",
+        "method": "GET",
+        "route": "/api/auth/google/start",
+        "status": 307
+      },
+      {
+        "at": "2026-09-14T10:57:43.480Z",
+        "method": "GET",
+        "route": "/api/auth/google/callback",
+        "status": 303
+      },
+      {
+        "at": "2026-09-14T10:57:43.630Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:58:21.346Z",
+        "method": "POST",
+        "route": "/api/prompts/enhance",
+        "status": 201
+      },
+      {
+        "at": "2026-09-14T10:59:00.677Z",
+        "method": "POST",
+        "route": "/api/generations",
+        "status": 201
+      },
+      {
+        "at": "2026-09-14T10:59:00.715Z",
+        "method": "GET",
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:02.752Z",
+        "method": "GET",
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:02.792Z",
+        "method": "GET",
+        "route": "/files/{job}/output.png",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:12.793Z",
+        "method": "GET",
+        "route": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:12.800Z",
+        "method": "GET",
+        "route": "/favicon.svg",
+        "status": 304
+      },
+      {
+        "at": "2026-09-14T10:59:12.857Z",
+        "method": "GET",
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:12.888Z",
+        "method": "GET",
+        "route": "/files/{job}/output.png",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:19.194Z",
+        "method": "GET",
+        "route": "/api/generations",
+        "status": 200
+      },
+      {
+        "at": "2026-09-14T10:59:27.069Z",
+        "method": "GET",
+        "route": "/api/generations/{job}",
+        "status": 200
+      }
+    ],
+    "actions": [
+      {
+        "id": "A1",
+        "at": "2026-09-14T10:57:14.720Z",
+        "op": "call",
+        "tool": "list_pages",
+        "arguments": {},
+        "ok": true
+      },
+      {
+        "id": "A2",
+        "at": "2026-09-14T10:57:19.252Z",
+        "op": "call",
+        "tool": "navigate_page",
+        "arguments": {
+          "pageId": 1,
+          "type": "url",
+          "url": "http://127.0.0.1:18156/login"
+        },
+        "ok": true
+      },
+      {
+        "id": "A3",
+        "at": "2026-09-14T10:57:20.690Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "1_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "1_34",
+            "role": "button",
+            "purpose": "login",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A4",
+        "at": "2026-09-14T10:57:43.373Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "1_34"
+        },
+        "purpose": "login",
+        "ok": true
+      },
+      {
+        "id": "A5",
+        "at": "2026-09-14T10:57:48.185Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "login",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 45,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A6",
+        "at": "2026-09-14T10:57:48.416Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A7",
+        "at": "2026-09-14T10:57:52.595Z",
+        "op": "call",
+        "tool": "fill",
+        "arguments": {
+          "pageId": 1,
+          "uid": "2_51",
+          "fixture": "original"
+        },
+        "purpose": "original",
+        "mcp_tools": [
+          "click",
+          "press_key",
+          "type_text"
+        ],
+        "ok": true
+      },
+      {
+        "id": "A8",
+        "at": "2026-09-14T10:57:53.722Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "original",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 45,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A9",
+        "at": "2026-09-14T10:57:53.949Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A10",
+        "at": "2026-09-14T10:58:21.223Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "2_72"
+        },
+        "purpose": "enhance",
+        "ok": true
+      },
+      {
+        "id": "A11",
+        "at": "2026-09-14T10:58:25.294Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "draft",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": true,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 45,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A12",
+        "at": "2026-09-14T10:58:25.527Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          },
+          {
+            "uid": "4_5",
+            "role": "button",
+            "purpose": "accept",
+            "disabled": false
+          },
+          {
+            "uid": "4_18",
+            "role": "textbox",
+            "purpose": "draft",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A13",
+        "at": "2026-09-14T10:58:29.669Z",
+        "op": "call",
+        "tool": "fill",
+        "arguments": {
+          "pageId": 1,
+          "uid": "4_18",
+          "fixture": "reviewed"
+        },
+        "purpose": "draft",
+        "mcp_tools": [
+          "click",
+          "press_key",
+          "type_text"
+        ],
+        "ok": true
+      },
+      {
+        "id": "A14",
+        "at": "2026-09-14T10:58:31.431Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "edited",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": true,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 45,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A15",
+        "at": "2026-09-14T10:58:31.650Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          },
+          {
+            "uid": "4_5",
+            "role": "button",
+            "purpose": "accept",
+            "disabled": false
+          },
+          {
+            "uid": "4_18",
+            "role": "textbox",
+            "purpose": "draft",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A16",
+        "at": "2026-09-14T10:58:56.469Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "4_5"
+        },
+        "purpose": "accept",
+        "ok": true
+      },
+      {
+        "id": "A17",
+        "at": "2026-09-14T10:58:56.709Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "accepted",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": true,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 37,
+            "route": "/api/auth/me",
+            "status": 401
+          },
+          {
+            "request_id": 40,
+            "route": "/favicon.svg",
+            "status": 200
+          },
+          {
+            "request_id": 45,
+            "route": "/api/auth/google/start",
+            "status": 307
+          },
+          {
+            "request_id": 46,
+            "route": "/api/auth/google/callback",
+            "status": 303
+          },
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A18",
+        "at": "2026-09-14T10:58:56.940Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "2_51",
+            "role": "textbox",
+            "purpose": "original",
+            "disabled": false
+          },
+          {
+            "uid": "2_72",
+            "role": "button",
+            "purpose": "enhance",
+            "disabled": false
+          },
+          {
+            "uid": "2_73",
+            "role": "button",
+            "purpose": "generate",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A19",
+        "at": "2026-09-14T10:59:00.607Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "2_73"
+        },
+        "purpose": "generate",
+        "ok": true
+      },
+      {
+        "id": "A20",
+        "at": "2026-09-14T10:59:08.323Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "completed",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          },
+          {
+            "request_id": 102,
+            "route": "/api/generations",
+            "status": 201
+          },
+          {
+            "request_id": 103,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 104,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 105,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A21",
+        "at": "2026-09-14T10:59:08.544Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "2_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "2_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A22",
+        "at": "2026-09-14T10:59:12.684Z",
+        "op": "call",
+        "tool": "navigate_page",
+        "arguments": {
+          "pageId": 1,
+          "type": "reload"
+        },
+        "purpose": "reload",
+        "ok": true
+      },
+      {
+        "id": "A23",
+        "at": "2026-09-14T10:59:12.977Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "reloaded",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          },
+          {
+            "request_id": 102,
+            "route": "/api/generations",
+            "status": 201
+          },
+          {
+            "request_id": 103,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 104,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 105,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          },
+          {
+            "request_id": 144,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 146,
+            "route": "/favicon.svg",
+            "status": 304
+          },
+          {
+            "request_id": 148,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 149,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A24",
+        "at": "2026-09-14T10:59:13.196Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "8_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "8_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A25",
+        "at": "2026-09-14T10:59:19.127Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "8_9"
+        },
+        "purpose": "history",
+        "ok": true
+      },
+      {
+        "id": "A26",
+        "at": "2026-09-14T10:59:19.378Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "history",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": true
+        },
+        "network": [
+          {
+            "request_id": 83,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 93,
+            "route": "/api/prompts/enhance",
+            "status": 201
+          },
+          {
+            "request_id": 102,
+            "route": "/api/generations",
+            "status": 201
+          },
+          {
+            "request_id": 103,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 104,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 105,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          },
+          {
+            "request_id": 144,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 146,
+            "route": "/favicon.svg",
+            "status": 304
+          },
+          {
+            "request_id": 148,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 149,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          },
+          {
+            "request_id": 151,
+            "route": "/api/generations",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A27",
+        "at": "2026-09-14T10:59:19.596Z",
+        "op": "call",
+        "tool": "take_snapshot",
+        "arguments": {
+          "pageId": 1
+        },
+        "controls": [
+          {
+            "uid": "8_9",
+            "role": "link",
+            "purpose": "history",
+            "disabled": false
+          },
+          {
+            "uid": "8_24",
+            "role": "button",
+            "purpose": "account",
+            "disabled": false
+          },
+          {
+            "uid": "9_61",
+            "role": "button",
+            "purpose": "job",
+            "disabled": false
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A28",
+        "at": "2026-09-14T10:59:27.032Z",
+        "op": "call",
+        "tool": "click",
+        "arguments": {
+          "pageId": 1,
+          "uid": "9_61"
+        },
+        "purpose": "job",
+        "ok": true
+      },
+      {
+        "id": "A29",
+        "at": "2026-09-14T10:59:27.272Z",
+        "op": "checkpoint",
+        "checkpoint": {
+          "phase": "revisited",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        },
+        "network": [
+          {
+            "request_id": 144,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 146,
+            "route": "/favicon.svg",
+            "status": 304
+          },
+          {
+            "request_id": 148,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 149,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          },
+          {
+            "request_id": 151,
+            "route": "/api/generations",
+            "status": 200
+          },
+          {
+            "request_id": 153,
+            "route": "/api/generations/{job}",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A30",
+        "at": "2026-09-14T10:59:27.488Z",
+        "op": "call",
+        "tool": "list_network_requests",
+        "arguments": {
+          "pageId": 1,
+          "includePreservedRequests": true
+        },
+        "network": [
+          {
+            "request_id": 144,
+            "route": "/api/auth/me",
+            "status": 200
+          },
+          {
+            "request_id": 146,
+            "route": "/favicon.svg",
+            "status": 304
+          },
+          {
+            "request_id": 148,
+            "route": "/api/generations/{job}",
+            "status": 200
+          },
+          {
+            "request_id": 149,
+            "route": "/files/{job}/output.png",
+            "status": 200
+          },
+          {
+            "request_id": 151,
+            "route": "/api/generations",
+            "status": 200
+          },
+          {
+            "request_id": 153,
+            "route": "/api/generations/{job}",
+            "status": 200
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A31",
+        "at": "2026-09-14T10:59:27.490Z",
+        "op": "call",
+        "tool": "list_console_messages",
+        "arguments": {
+          "pageId": 1,
+          "types": [
+            "error",
+            "warn"
+          ],
+          "includePreservedMessages": true
+        },
+        "console_entries": 2,
+        "console": [
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          },
+          {
+            "route": "other",
+            "kind": "react_router_future",
+            "http_status": 0
+          }
+        ],
+        "ok": true
+      },
+      {
+        "id": "A32",
+        "at": "2026-09-14T10:59:27.491Z",
+        "op": "finish",
+        "ok": true
+      }
+    ],
+    "console": [
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "error",
+        "route": "/api/auth/me",
+        "kind": "resource_load",
+        "http_status": 401
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      },
+      {
+        "type": "warn",
+        "route": "other",
+        "kind": "react_router_future",
+        "http_status": 0
+      }
+    ],
+    "devtools_requests": [
+      {
+        "request_id": 37,
+        "route": "/api/auth/me",
+        "status": 401
+      },
+      {
+        "request_id": 40,
+        "route": "/favicon.svg",
+        "status": 200
+      },
+      {
+        "request_id": 45,
+        "route": "/api/auth/google/start",
+        "status": 307
+      },
+      {
+        "request_id": 46,
+        "route": "/api/auth/google/callback",
+        "status": 303
+      },
+      {
+        "request_id": 83,
+        "route": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "request_id": 93,
+        "route": "/api/prompts/enhance",
+        "status": 201
+      },
+      {
+        "request_id": 102,
+        "route": "/api/generations",
+        "status": 201
+      },
+      {
+        "request_id": 103,
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "request_id": 104,
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "request_id": 105,
+        "route": "/files/{job}/output.png",
+        "status": 200
+      },
+      {
+        "request_id": 144,
+        "route": "/api/auth/me",
+        "status": 200
+      },
+      {
+        "request_id": 146,
+        "route": "/favicon.svg",
+        "status": 304
+      },
+      {
+        "request_id": 148,
+        "route": "/api/generations/{job}",
+        "status": 200
+      },
+      {
+        "request_id": 149,
+        "route": "/files/{job}/output.png",
+        "status": 200
+      },
+      {
+        "request_id": 151,
+        "route": "/api/generations",
+        "status": 200
+      },
+      {
+        "request_id": 153,
+        "route": "/api/generations/{job}",
+        "status": 200
+      }
+    ],
+    "chrome_version": "Chrome/153.0.8010.37",
+    "mcp_version": "1.9.0",
+    "checks": {
+      "actual_login_click": true,
+      "login_start_307": true,
+      "callback_303": true,
+      "authenticated_me_200": true,
+      "workspace_visible": true,
+      "no_external_page_requests": true,
+      "no_unexpected_console_errors": true,
+      "devtools_network_inspected": true,
+      "devtools_console_inspected": true
+    },
+    "image": {
+      "scenario": "reviewed_prompt_image",
+      "passed": true,
+      "checks": {
+        "login": true,
+        "original": true,
+        "draft": true,
+        "edited": true,
+        "accepted": true,
+        "completed": true,
+        "reloaded": true,
+        "history": true,
+        "revisited": true,
+        "enhancement_payload_matches": true,
+        "accepted_generation_payload_matches": true,
+        "one_enhancement": true,
+        "one_generation": true,
+        "no_observation_failures": true
+      },
+      "steps": [
+        {
+          "phase": "login",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "original",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "draft",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": true,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "edited",
+          "passed": true,
+          "workspace": true,
+          "original": true,
+          "draft": false,
+          "edited": true,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": false,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "accepted",
+          "passed": true,
+          "workspace": true,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": true,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": false
+        },
+        {
+          "phase": "completed",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        },
+        {
+          "phase": "reloaded",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        },
+        {
+          "phase": "history",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": false,
+          "image_decoded": false,
+          "same_image": false,
+          "width": 0,
+          "height": 0,
+          "history_row": true
+        },
+        {
+          "phase": "revisited",
+          "passed": true,
+          "workspace": false,
+          "original": false,
+          "draft": false,
+          "edited": false,
+          "accepted": false,
+          "accepted_unedited_draft": false,
+          "review_closed": true,
+          "same_job": true,
+          "image_decoded": true,
+          "same_image": true,
+          "width": 640,
+          "height": 360,
+          "history_row": false
+        }
+      ],
+      "post_counts": {
+        "enhancement": 1,
+        "generation": 1
+      },
+      "job_reads": 4,
+      "file_reads": 2,
+      "file": {
+        "bytes": 556940,
+        "mime": "image/png",
+        "sha256": "358c7c3fcc49ea615d437b4cc16db586dfd62d3c625d368a42778d1a00fb19dd"
+      },
+      "failures": []
+    },
+    "external_page_requests": 0,
+    "unexpected_console_errors": 0
+  },
+  "source_unchanged": true,
+  "seconds": 174.297
+}
