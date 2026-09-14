@@ -42,8 +42,9 @@ SAFE_ROUTES = {
 }
 FAILURE_PHASES = {
     "vite_start", "chrome_start", "mcp_connect", "login_navigation", "login_snapshot",
-    "login_click", "login_network", "account_snapshot", "account_click", "logout_snapshot",
-    "logout_click", "logout_probe", "logout_network", "console_inspection",
+    "login_click", "authenticated_wait", "authenticated_page", "login_network", "account_snapshot",
+    "account_click", "logout_control_wait", "logout_snapshot", "logout_click", "logged_out_wait",
+    "logged_out_page", "logout_probe", "logout_network", "console_inspection",
 }
 
 

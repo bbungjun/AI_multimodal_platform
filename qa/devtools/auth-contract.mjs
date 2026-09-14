@@ -167,7 +167,9 @@ async function main() {
     if (!loginUid) throw Error('login_control_missing');
     phase = 'login_click';
     await call('click', { pageId: current.pageId, uid: loginUid });
+    phase = 'authenticated_wait';
     await call('wait_for', { pageId: current.pageId, text: ['계정 정보'], timeout: 15_000 });
+    phase = 'authenticated_page';
     current = selectedPage(await call('list_pages', {}));
     evidence.workspacePath = current.path;
     phase = 'login_network';
@@ -180,6 +182,7 @@ async function main() {
     if (!accountUid) throw Error('account_control_missing');
     phase = 'account_click';
     await call('click', { pageId: current.pageId, uid: accountUid });
+    phase = 'logout_control_wait';
     await call('wait_for', { pageId: current.pageId, text: ['로그아웃'], timeout: 10_000 });
     phase = 'logout_snapshot';
     snapshot = await call('take_snapshot', { pageId: current.pageId });
@@ -187,7 +190,9 @@ async function main() {
     if (!logoutUid) throw Error('logout_control_missing');
     phase = 'logout_click';
     await call('click', { pageId: current.pageId, uid: logoutUid });
+    phase = 'logged_out_wait';
     await call('wait_for', { pageId: current.pageId, text: ['Google로 계속하기'], timeout: 10_000 });
+    phase = 'logged_out_page';
     current = selectedPage(await call('list_pages', {}));
     evidence.finalPath = current.path;
     phase = 'logout_probe';
