@@ -99,6 +99,11 @@ paste credential contents.
   `empty_submission_disabled=false` 한 건 때문에 FAIL이며 나머지 check failure0이다.
   다음 실행에서 DOM property와 accessibility disabled를 교차검증한 후 over-limit DB
   delta를 연결한다.
+- Probe를 실제 submit control로 좁힌 뒤 초기 예시 prompt가 원인이었음을 확인했다. Core
+  `463f537`에서 DevTools keyboard로 prompt를 비우자 DOM/accessibility disabled가 모두
+  true였고 checkpoint15, enhancement3, discard/keep/edit-accept, generation1,
+  external0/Console0/cleanup0이87.812s에 전체 PASS했다. 이전 false 관측은 QA 절차 실패로
+  보존한다. Issue183의 남은 범위는 Free2장 refusal과 DB delta뿐이다.
 - [진행 기록](portfolio/issue-183-prompt-t2i-adapter.md).
 
 ### Agent QA Chrome DevTools Executor — Issue180, 2026-09-15

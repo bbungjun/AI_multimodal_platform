@@ -72,6 +72,14 @@ Core `b38d597`에서는 상태 머신을 empty→discard→keep→edit/accept로
 정제 결과를 남겼다. 이 신호는 다음 실행에서 DOM `disabled` property와 accessibility
 snapshot을 교차검증하기 전까지 확정 결함으로 과장하지 않는다.
 
+후속 교차검증에서 GeneratePage가 빈 값이 아니라 기본 예시 prompt로 시작함을 확인했다.
+실제 textarea에 `Control+A`와 `Backspace`를 보낸 뒤 다시 검사한 Core `463f537`은
+`empty_prompt_confirmed`, submit DOM disabled, accessibility disabled가 모두 true였다.
+동일 실행에서 checkpoint15, enhancement3, discard/keep/edit-accept, generation1과
+external0/Console0/browser·runtime cleanup0이87.812s에 PASS했다.
+[성공 summary](../evidence/issue-183/prompt-boundary-pass-summary.json)를 별도로 남기고,
+이전 false는 제품 결함이 아니라 QA procedure defect로 분류한다.
+
 ## 남은 구현
 
 1. Chrome DevTools MCP action driver에서 empty/discard/keep/edit/accept/over-limit/allowed
