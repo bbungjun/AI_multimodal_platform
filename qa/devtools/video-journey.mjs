@@ -130,7 +130,7 @@ export class VideoJourney {
       login: probe.workspace,
       mode: probe.workspace && probe.mode,
       empty: probe.workspace && probe.empty,
-      allowed_completed: probe.detail && this.statePath.at(-1) === 'completed' && this.file?.mime === 'video/mp4',
+      allowed_completed: probe.detail && this.statePath.at(-1) === 'completed',
       over_limit: [201, 403].includes(this.overLimitStatus),
     };
     const passed = predicates[phase] === true;
@@ -140,12 +140,14 @@ export class VideoJourney {
 
   result() {
     const phases = Object.fromEntries(PHASES.map(phase => [phase, !!this.checkpoints[phase]]));
-    return { scenario: 't2v_generation', technical_complete: Object.values(phases).every(Boolean)
-        && this.failures.length === 0,
+    const product = { empty_disabled: this.emptyAccessibilityDisabled === true,
+      asset_mime: this.file?.mime === 'video/mp4',
+      outcome_usable: this.checkpoints.allowed_completed?.video_visible === true && this.file?.bytes > 0 };
+    return { scenario: 't2v_generation', technical_complete: Object.values(phases).every(Boolean),
       passed: Object.values(phases).every(Boolean) && this.overLimitStatus === 403
-        && this.emptyAccessibilityDisabled === true && this.failures.length === 0,
+        && Object.values(product).every(Boolean) && this.failures.length === 0,
       phases, post_count: this.postCount, state_path: this.statePath,
       over_limit_status: this.overLimitStatus, empty_accessibility_disabled: this.emptyAccessibilityDisabled,
-      file: this.file, failures: this.failures };
+      product, file: this.file, failures: this.failures };
   }
 }

@@ -20,8 +20,10 @@ test('snapshot keeps only scenario controls and fresh disabled state', () => {
 test('incomplete phases cannot pass and policy status remains strict', () => {
   const journey = new VideoJourney();
   assert.equal(journey.result().passed, false);
-  journey.checkpoints = { login: {}, mode: {}, empty: {}, allowed_completed: {}, over_limit: {} };
+  journey.checkpoints = { login: {}, mode: {}, empty: {},
+    allowed_completed: { video_visible: true }, over_limit: {} };
   journey.emptyAccessibilityDisabled = true;
+  journey.file = { mime: 'video/mp4', bytes: 1 };
   journey.overLimitStatus = 201;
   assert.equal(journey.result().technical_complete, true);
   assert.equal(journey.result().passed, false);
