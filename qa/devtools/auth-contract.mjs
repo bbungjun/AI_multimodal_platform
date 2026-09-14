@@ -46,6 +46,12 @@ export function selectedPage(text) {
   throw Error('page_missing');
 }
 
+export function firstPageId(text) {
+  const value = Number(text.match(/(?:^|\n)(\d+):/)?.[1]);
+  if (!Number.isInteger(value) || value < 0) throw Error('page_missing');
+  return value;
+}
+
 export function controlUid(text, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return text.match(new RegExp(`uid=([\\d_]+) button "${escaped}"`))?.[1] ?? null;
@@ -151,7 +157,7 @@ async function main() {
       return (result.content ?? []).filter(item => item.type === 'text').map(item => item.text).join('\n');
     };
     phase = 'login_navigation';
-    let current = selectedPage(await call('list_pages', {}));
+    let current = { pageId: firstPageId(await call('list_pages', {})), path: null };
     await call('navigate_page', { pageId: current.pageId, type: 'url', url: ORIGIN + '/login' });
     await call('wait_for', { pageId: current.pageId, text: ['Google로 계속하기'], timeout: 10_000 });
     phase = 'login_snapshot';

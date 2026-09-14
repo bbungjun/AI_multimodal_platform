@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { controlUid, networkRows, parseProbe, safeRoute, scenarioResult,
+import { controlUid, firstPageId, networkRows, parseProbe, safeRoute, scenarioResult,
   selectedPage, unexpectedConsoleCount } from './auth-contract.mjs';
 
 test('routes and network evidence remove query values and foreign origins', () => {
@@ -24,6 +24,7 @@ test('snapshot parser returns only the requested control uid', () => {
 });
 
 test('selected page accepts only the owned origin', () => {
+  assert.equal(firstPageId('0: about:blank [selected]'), 0);
   assert.deepEqual(selectedPage('0: http://127.0.0.1:18156/generate [selected]'),
     { pageId: 0, path: '/generate' });
   assert.throws(() => selectedPage('0: https://foreign.test/generate [selected]'));
