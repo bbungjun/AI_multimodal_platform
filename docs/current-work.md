@@ -77,6 +77,22 @@ paste credential contents.
 
 ## Active Work
 
+### Agent QA project Skill — Issue191 Implemented, 2026-09-15
+
+- QA 실행 명령을 사람이 Agent에게 다시 설명하지 않도록 프로젝트 Skill
+  `.agents/skills/creativeops-agent-qa`를 추가했다.
+- Skill은 기존 결과 review, focused diagnosis, aggregate merge-readiness 세 mode를 구분하고
+  clean immutable HEAD, mock-only, exact-revision resume, PASS/FAIL/BLOCKED 의미와 Receipt
+  보고 형식을 지시한다. QA 판정과 실제 PR/merge 권한은 분리한다.
+- Skill Creator `quick_validate.py` PASS. `codex debug prompt-input`에서 repository skill root와
+  `creativeops-agent-qa` 자동 발견을 확인했고, 실제 runner `--help`와 명령 정합성도 확인했다.
+- QA focused54, DevTools Node38, frontend lint/build, Registry10/68, env-example Compose와
+  diff check PASS다. Skill은 새 작업에서 `$creativeops-agent-qa`로 명시 호출하거나
+  QA/E2E/Receipt/merge readiness 요청으로 자동 선택할 수 있다.
+- PR192에서 main이 항상 요구하는 두 supply-chain check와 workflow `paths` filter가
+  충돌해 Skill-only PR이 영구 BLOCKED되는 기존 CI 결함을 발견했다. 모든 PR에서 required
+  check job을 생성하도록 pull_request trigger를 정합화했다. Delivery6파일.
+
 ### Agent QA aggregate Receipt — Issue186 Mock Verified, 2026-09-15
 
 - PR189를 required CI3건 통과 후 `main`에 병합했고 branch

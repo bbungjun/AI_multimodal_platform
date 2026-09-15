@@ -284,6 +284,14 @@ Google OAuth, 사용자 소유권, Plan/Credit, 개인 사용량, Master 운영 
 
 ## 검증 체크리스트
 
+### Agent QA Skill
+
+코드 변경의 E2E 검증, QA 영향 분석, Receipt 해석 또는 merge readiness 판단을 요청받으면
+프로젝트 Skill `$creativeops-agent-qa`를 사용합니다. Skill source는
+`.agents/skills/creativeops-agent-qa/SKILL.md`이며 기존 QA Contract, Impact Selector와
+aggregate runner의 Interface를 호출합니다. Skill의 `ALLOW`는 검증 결과이지 push, PR,
+merge 권한이 아니므로 실제 외부 변경은 사용자 요청 범위를 따릅니다.
+
 좁은 검증부터 실행합니다.
 
 Backend:

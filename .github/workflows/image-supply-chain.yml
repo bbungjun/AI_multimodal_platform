@@ -1,12 +1,8 @@
 name: Image supply chain
 
 on:
-  pull_request:
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "infra/gcp/cloudbuild/**"
-      - ".github/workflows/image-supply-chain.yml"
+  # These job names are required by main protection, so every PR must create them.
+  pull_request: {}
   push:
     branches:
       - main
