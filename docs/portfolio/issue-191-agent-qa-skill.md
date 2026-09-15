@@ -41,3 +41,8 @@ baseline 측정에서 수행한다.
 않았다. Skill discovery와 기존 QA Interface 회귀를 검증했으며, 다음 실제 제품 변경에서
 Skill이 선택한 aggregate 실행의 탐색 시간, tool call 수, QA selection precision/recall을
 before/after baseline으로 측정한다.
+
+PR 전달 중 `main` protection은 backend/frontend supply-chain check 두 개를 항상 요구하지만
+workflow는 제품 경로가 바뀐 PR에서만 실행되어 Skill·문서 PR이 영구 BLOCKED되는 기존
+운영 결함을 확인했다. 관리자 merge로 우회하지 않고 `pull_request`에서 required job이
+항상 생성되도록 trigger를 수정했다. `main` push의 제품 경로 filter는 그대로 유지한다.
