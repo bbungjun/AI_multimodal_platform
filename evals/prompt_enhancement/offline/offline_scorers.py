@@ -556,6 +556,19 @@ class _BaseRealAdapter:
         except ImportError:
             pass
 
+    def score_many(
+        self,
+        evaluation_prompts: Sequence[str],
+        image_bodies: Sequence[bytes],
+    ) -> list[float]:
+        """Fallback preserves exact single-item semantics for non-batched adapters."""
+        if len(evaluation_prompts) != len(image_bodies):
+            raise OfflineScorerError("Prompt and image batch lengths must match")
+        return [
+            self.score(prompt, image)
+            for prompt, image in zip(evaluation_prompts, image_bodies, strict=True)
+        ]
+
 
 class VQAScoreAdapter(_BaseRealAdapter):
     def __init__(self, profile: ScorerProfile, cache_root: Path, device: str) -> None:
@@ -563,27 +576,39 @@ class VQAScoreAdapter(_BaseRealAdapter):
         self._model = _load_vqascore_model(profile, cache_root, device)
 
     def score(self, evaluation_prompt: str, image_bytes: bytes) -> float:
+        return self.score_many([evaluation_prompt], [image_bytes])[0]
+
+    def score_many(
+        self,
+        evaluation_prompts: Sequence[str],
+        image_bodies: Sequence[bytes],
+    ) -> list[float]:
         import contextlib
 
         import torch
 
-        image_path: Path | None = None
+        if not evaluation_prompts or len(evaluation_prompts) != len(image_bodies):
+            raise OfflineScorerError("VQAScore prompt and image batch lengths must match")
+        image_paths: list[Path] = []
         try:
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
-                handle.write(image_bytes)
-                image_path = Path(handle.name)
+            for image_bytes in image_bodies:
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+                    handle.write(image_bytes)
+                    image_paths.append(Path(handle.name))
             autocast = (
                 torch.autocast(device_type="cpu", dtype=torch.bfloat16)
                 if self.device == "cpu"
                 else contextlib.nullcontext()
             )
             with autocast:
-                result = self._model.forward([str(image_path)], [evaluation_prompt])
-            score = float(result[0].detach().cpu().item())
+                result = self._model.forward(
+                    [str(path) for path in image_paths], list(evaluation_prompts)
+                )
+            scores = [float(value.detach().cpu().item()) for value in result]
         finally:
-            if image_path is not None:
-                image_path.unlink(missing_ok=True)
-        return _finite_score(self.metric, score)
+            for path in image_paths:
+                path.unlink(missing_ok=True)
+        return [_finite_score(self.metric, score) for score in scores]
 
     def close(self) -> None:
         del self._model
@@ -644,18 +669,16 @@ class TIFAAdapter(_BaseRealAdapter):
 
         results: list[int] = []
         details: list[Mapping[str, Any]] = []
-        for question in questions:
-            inputs = self._processor(
-                images=rgb_image,
-                text=question.question,
-                return_tensors="pt",
-            ).to(self.device)
-            with torch.inference_mode():
-                generated_ids = self._vqa_model.generate(**inputs, max_length=50)
-            free_form = self._processor.batch_decode(
-                generated_ids,
-                skip_special_tokens=True,
-            )[0]
+        inputs = self._processor(
+            images=[rgb_image] * len(questions),
+            text=[question.question for question in questions],
+            return_tensors="pt",
+            padding=True,
+        ).to(self.device)
+        with torch.inference_mode():
+            generated_ids = self._vqa_model.generate(**inputs, max_length=50)
+        answers = self._processor.batch_decode(generated_ids, skip_special_tokens=True)
+        for question, free_form in zip(questions, answers, strict=True):
             multiple_choice = free_form
             if free_form not in question.choices:
                 sentences = [free_form, *question.choices]

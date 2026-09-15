@@ -1,0 +1,33 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime@sha256:c8268a92a69bd500f8be0e665b2630ee006dadaf7bfbc24249141b15ff622755
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    SCORER_MODEL_CACHE=/model-cache
+
+WORKDIR /workspace/evals/prompt_enhancement
+
+COPY offline/requirements-runtime.lock.txt /tmp/requirements-runtime.lock.txt
+COPY offline/requirements-adapters.lock.txt /tmp/requirements-adapters.lock.txt
+
+# The pinned base supplies torch 2.5.1 with CUDA 12.4. Keep every other
+# runtime dependency hash-locked and never replace the base CUDA wheel with
+# the CPU wheel from the standard scorer image.
+RUN sed '/^torch @ /,/^    #   torchvision$/d; /^torchvision @ /,/^    #   timm$/d' \
+        /tmp/requirements-runtime.lock.txt > /tmp/requirements-runtime.cuda.lock.txt \
+    && python -m pip install --require-hashes -r /tmp/requirements-runtime.cuda.lock.txt \
+    && python -m pip download --no-deps --require-hashes \
+        -r /tmp/requirements-adapters.lock.txt -d /tmp/adapter-wheels \
+    && python -m pip install --no-deps /tmp/adapter-wheels/*.whl \
+    && rm -rf /tmp/adapter-wheels
+
+COPY . /workspace/evals/prompt_enhancement
+
+RUN useradd --create-home --uid 10001 scorer \
+    && mkdir -p /model-cache /runs \
+    && chown -R scorer:scorer /model-cache /runs /workspace
+
+USER scorer
+
+CMD ["python", "-m", "offline.run_smoke", "--help"]

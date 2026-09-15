@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from finalize_vertex_pilot import finalize_vertex_pilot
 from generate_pairs import RunnerConfig, run_pairs
 from offline.offline_scorers import load_scorer_profile, metric_adapter_configs
@@ -30,6 +32,7 @@ class FakeRealAdapter:
         self.adapter = adapter
         self.model_revision = revision
         self.closed = False
+        self.batch_sizes: list[int] = []
 
     def score(self, evaluation_prompt: str, image_bytes: bytes) -> float:
         assert evaluation_prompt
@@ -39,6 +42,17 @@ class FakeRealAdapter:
             MetricName.IMAGE_REWARD: 0.1,
             MetricName.TIFA: 0.75,
         }[self.metric]
+
+    def score_many(
+        self,
+        evaluation_prompts: list[str],
+        image_bodies: list[bytes],
+    ) -> list[float]:
+        self.batch_sizes.append(len(evaluation_prompts))
+        return [
+            self.score(prompt, image)
+            for prompt, image in zip(evaluation_prompts, image_bodies, strict=True)
+        ]
 
     def close(self) -> None:
         self.closed = True
@@ -100,11 +114,14 @@ def test_real_pair_scoring_is_resumable_and_summarizes_real_evidence(
         requested_device="cpu",
         environ={"AI_PROVIDER": "vertex"},
         adapter_factory=factory,
+        batch_size=7,
         now=IncrementingClock(),
     )
 
     assert len(scores) == 240
     assert all(adapter.closed for adapter in adapters)
+    assert all(adapter.batch_sizes for adapter in adapters)
+    assert all(max(adapter.batch_sizes) == 7 for adapter in adapters)
     manifest = load_run_manifest(runs_dir / run_id / "manifest.json")
     assert manifest.lifecycle == RunLifecycle.SUMMARIZING
 
@@ -186,3 +203,74 @@ def test_real_pair_scoring_is_resumable_and_summarizes_real_evidence(
     finalized = load_run_manifest(run_dir / "manifest.json")
     assert "pilot_decision.json" in finalized.artifact_hashes
     assert "pilot_result.md" in finalized.artifact_hashes
+
+
+def test_real_pair_scoring_rejects_mixing_single_and_batched_checkpoints(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    policy = load_pilot_policy()
+    profile = load_scorer_profile(policy.scorer_profile_path)
+    configs = tuple(metric_adapter_configs(profile))
+    run_id = "vertex-pilot-batch-safety"
+    runs_dir = tmp_path / "runs"
+    run_pairs(
+        RunnerConfig(
+            base_url="http://fake.test",
+            benchmark_path=policy.benchmark_path,
+            runs_dir=runs_dir,
+            run_id=run_id,
+            keep_artifacts=True,
+            poll_timeout_sec=1,
+            poll_interval_sec=0,
+            expected_enhancer_model=policy.model.models.enhancer,
+            expected_template_version="v1",
+            git_sha="4c93a5c",
+            dirty_worktree=False,
+            provider_mode=ProviderMode.VERTEX,
+            evidence_kind=EvidenceKind.REAL,
+            metric_adapters=configs,
+            statistics=StatisticsConfig(
+                bootstrap_seed=policy.model.statistics.bootstrap_seed,
+                bootstrap_resamples=policy.model.statistics.bootstrap_resamples,
+                tie_thresholds=policy.model.statistics.tie_thresholds,
+            ),
+        ),
+        client=FakeEvaluationClient(provider_status="ready"),
+        environ={"AI_PROVIDER": "vertex"},
+        now=IncrementingClock(),
+    )
+    config_by_metric = {config.metric: config for config in configs}
+
+    def factory(metric: MetricName, **_: object) -> FakeRealAdapter:
+        config = config_by_metric[metric]
+        return FakeRealAdapter(metric, config.adapter, config.model_revision)
+
+    monkeypatch.setattr("score_real_pairs.verify_model_cache", lambda *_: None)
+    monkeypatch.setattr("score_real_pairs.resolve_device", lambda _: "cpu")
+    monkeypatch.setattr("score_real_pairs.validate_resources", lambda *_: None)
+    score_real_run(
+        runs_dir / run_id,
+        profile_path=policy.scorer_profile_path,
+        cache_root=tmp_path / "cache",
+        requested_device="cpu",
+        environ={"AI_PROVIDER": "vertex"},
+        metrics=(MetricName.VQA_SCORE,),
+        adapter_factory=factory,
+        now=IncrementingClock(),
+    )
+
+    from score_real_pairs import RealScoringError
+
+    with pytest.raises(RealScoringError, match="cannot be mixed"):
+        score_real_run(
+            runs_dir / run_id,
+            profile_path=policy.scorer_profile_path,
+            cache_root=tmp_path / "cache",
+            requested_device="cpu",
+            environ={"AI_PROVIDER": "vertex"},
+            metrics=(MetricName.VQA_SCORE,),
+            batch_size=4,
+            adapter_factory=factory,
+            now=IncrementingClock(),
+        )

@@ -60,6 +60,12 @@ class RealAdapter(Protocol):
 
     def score(self, evaluation_prompt: str, image_bytes: bytes) -> float: ...
 
+    def score_many(
+        self,
+        evaluation_prompts: Sequence[str],
+        image_bodies: Sequence[bytes],
+    ) -> list[float]: ...
+
     def close(self) -> None: ...
 
 
@@ -74,6 +80,8 @@ def score_real_run(
     requested_device: str,
     environ: Mapping[str, str],
     metrics: Sequence[MetricName] = tuple(MetricName),
+    batch_size: int = 1,
+    reset_existing_scores: bool = False,
     skip_resource_check: bool = False,
     adapter_factory: AdapterFactory = build_real_adapter,
     now: Callable[[], datetime] | None = None,
@@ -83,6 +91,8 @@ def score_real_run(
             "AI_PROVIDER=vertex is required for a real pilot manifest. "
             "The current value is not printed."
         )
+    if batch_size < 1:
+        raise RealScoringError("batch_size must be at least 1")
     directory = Path(run_dir).resolve()
     manifest_path = directory / "manifest.json"
     manifest = load_run_manifest(manifest_path)
@@ -115,7 +125,14 @@ def score_real_run(
         raise RealScoringError("Scorer profile and paired run case ids differ")
 
     scores_path = directory / "scores.jsonl"
+    if reset_existing_scores and scores_path.is_file():
+        scores_path.unlink()
     scores = load_score_records(scores_path) if scores_path.is_file() else []
+    if scores and batch_size != 1:
+        raise RealScoringError(
+            "Existing single-item checkpoints cannot be mixed with batched scoring; "
+            "rerun with reset_existing_scores=True"
+        )
     existing = _validate_existing_scores(scores, manifest)
     expected_keys = _expected_score_keys(pairs, selected_metrics)
     all_expected = _expected_score_keys(pairs, tuple(MetricName))
@@ -144,6 +161,7 @@ def score_real_run(
         try:
             if adapter.evidence_kind != EvidenceKind.REAL or adapter.metric != metric:
                 raise RealScoringError(f"Adapter provenance is invalid for {metric.value}")
+            pending: list[tuple[Any, Any, Any, str, str, bytes]] = []
             for pair in sorted(pairs, key=lambda item: item.case_id):
                 case = case_map[pair.case_id]
                 evaluation_prompt = canonical_evaluation_prompt(case)
@@ -161,31 +179,55 @@ def score_real_run(
                         key = (pair.case_id, arm.arm.value, asset.sha256, metric.value)
                         if key in existing:
                             continue
-                        image_bytes = _verified_asset_bytes(directory, asset)
-                        try:
-                            value = adapter.score(evaluation_prompt, image_bytes)
-                        except Exception as exc:
-                            raise RealScoringError(
-                                f"{metric.value} failed for {pair.case_id}/"
-                                f"{arm.arm.value}/{asset.sample_index}: "
-                                f"{type(exc).__name__}: {exc}"
-                            ) from exc
-                        record = ScoreRecord(
-                            schema_version=CURRENT_SCHEMA_VERSION,
-                            run_id=manifest.run_id,
-                            case_id=pair.case_id,
-                            arm=arm.arm,
-                            asset_sha256=asset.sha256,
-                            evaluation_prompt_sha256=evaluation_hash,
-                            metric=metric,
-                            score=value,
-                            adapter=adapter.adapter,
-                            model_revision=adapter.model_revision,
-                            evidence_kind=EvidenceKind.REAL,
+                        pending.append(
+                            (
+                                pair,
+                                arm,
+                                asset,
+                                evaluation_prompt,
+                                evaluation_hash,
+                                _verified_asset_bytes(directory, asset),
+                            )
                         )
-                        scores.append(record)
-                        existing[key] = record
-                        write_score_records(scores_path, scores)
+            for offset in range(0, len(pending), batch_size):
+                chunk = pending[offset : offset + batch_size]
+                try:
+                    scorer = getattr(adapter, "score_many", None)
+                    values = (
+                        scorer(
+                            [item[3] for item in chunk], [item[5] for item in chunk]
+                        )
+                        if scorer is not None
+                        else [adapter.score(item[3], item[5]) for item in chunk]
+                    )
+                except Exception as exc:
+                    first_pair, first_arm, first_asset, *_ = chunk[0]
+                    raise RealScoringError(
+                        f"{metric.value} failed for {first_pair.case_id}/"
+                        f"{first_arm.arm.value}/{first_asset.sample_index}: "
+                        f"{type(exc).__name__}: {exc}"
+                    ) from exc
+                if len(values) != len(chunk):
+                    raise RealScoringError(f"{metric.value} batch returned an unexpected score count")
+                for (pair, arm, asset, _, evaluation_hash, _), value in zip(
+                    chunk, values, strict=True
+                ):
+                    record = ScoreRecord(
+                        schema_version=CURRENT_SCHEMA_VERSION,
+                        run_id=manifest.run_id,
+                        case_id=pair.case_id,
+                        arm=arm.arm,
+                        asset_sha256=asset.sha256,
+                        evaluation_prompt_sha256=evaluation_hash,
+                        metric=metric,
+                        score=float(value),
+                        adapter=adapter.adapter,
+                        model_revision=adapter.model_revision,
+                        evidence_kind=EvidenceKind.REAL,
+                    )
+                    scores.append(record)
+                    existing[(pair.case_id, arm.arm.value, asset.sha256, metric.value)] = record
+                write_score_records(scores_path, scores)
         finally:
             adapter.close()
 
@@ -308,6 +350,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         dest="metrics",
     )
     parser.add_argument("--skip-resource-check", action="store_true")
+    parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--reset-existing-scores", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -329,6 +373,8 @@ def main(argv: list[str] | None = None) -> int:
             environ=os.environ,
             metrics=metrics,
             skip_resource_check=arguments.skip_resource_check,
+            batch_size=arguments.batch_size,
+            reset_existing_scores=arguments.reset_existing_scores,
         )
     except (OSError, ValueError, RealScoringError) as exc:
         print(f"REAL SCORING FAILED: {exc}", file=sys.stderr)
