@@ -1,0 +1,8 @@
+interface:
+  display_name: "CreativeOps Agent QA"
+  short_description: "변경 분석부터 E2E Receipt 판정까지 실행"
+  default_prompt: "Use $creativeops-agent-qa to verify this change and report its merge readiness."
+
+policy:
+  allow_implicit_invocation: true
+
