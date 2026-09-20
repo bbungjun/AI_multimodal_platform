@@ -77,6 +77,20 @@ paste credential contents.
 
 ## Active Work
 
+### Portfolio case-study narrative — Issue193 Implemented, 2026-09-21
+
+- README 대표 사례를 `문제 → 선택 이유 → 직접 구현 → 검증` 구조로 재작성했다.
+- transactional outbox, owner/credit invariants, GKE rollback, Agent QA Receipt의 네 사례를
+  현재 코드와 보존된 mock/live evidence에 대조했다.
+- Portfolio matrix의 stale Planned 표기는 G10/G11 evidence와 일치하게 Per-User와
+  Master capability 두 행의 `Mock Verified`로 바로잡았다. live Google·결제·provider
+  청구 대사는 검증하지 않았다는 경계를 유지했다.
+- Markdown local link 검사와 `git diff --check`, Compose config, frontend lint/build가
+  PASS했다. Backend는 기존 Windows→WSL Bash path 1건만 실패하고1903 PASS/3 guarded
+  skips였으며, 해당 테스트 제외 재실행은1903 PASS/3 skips/1 deselected다. 제품 E2E나
+  유료 provider/cloud 호출은 문서 변경 범위에서 반복하지 않았다.
+- 구현 commit은 `6ef56d2`, 전달은 [PR194](https://github.com/bbungjun/AI_multimodal_platform/pull/194)다.
+
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 
 - QA 실행 명령을 사람이 Agent에게 다시 설명하지 않도록 프로젝트 Skill

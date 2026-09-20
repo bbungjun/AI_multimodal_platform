@@ -103,43 +103,90 @@ Audit에서 관리 작업의 수행자·대상·변경 전후를 추적합니다
 
 ## 주요 문제와 해결 과정
 
-### 생성 요청 접수와 실제 실행 사이의 누락 위험 줄이기
+각 사례는 **어떤 문제가 있었는지 → 왜 그 방법을 선택했는지 → 무엇을 직접
+구현했는지 → 어떻게 검증했는지** 순서로 정리했습니다. 통과한 결과뿐 아니라 실제로
+발견한 결함과 아직 검증하지 않은 범위도 함께 기록합니다.
 
-이미지·영상 생성은 요청을 접수한 시점과 결과가 준비되는 시점이 다릅니다.
-DB에 작업을 저장하는 단계와 큐에 실행 요청을 보내는 단계 사이에서 실패하면,
-사용자에게 접수된 작업이 실행되지 않을 수 있습니다.
+### 1. 접수된 생성 작업이 큐 전달 실패로 사라지지 않게 만들기
 
-이를 다루기 위해 작업과 발행할 이벤트를 PostgreSQL의 같은 트랜잭션에 저장했습니다.
-별도의 dispatcher가 이벤트를 Redis/Celery로 보내고, worker는 DB에서 최신 작업을
-읽어 처리합니다. 사용자에게 보이는 상태도 DB에 보존하고, 정해진 상태 전이 규칙으로 변경합니다.
-프로세스가 하나 더 필요해지는 대신, 발행 대기와 실패를 데이터로 확인할 수 있는 구조를 선택했습니다.
-[작업 처리와 복구 설계](docs/job-lifecycle.md)
+- **문제:** 이미지·영상 생성은 API 응답 뒤에도 계속되는 비동기 작업입니다. DB에
+  작업을 저장한 직후 큐 발행이 실패하면 사용자는 접수된 작업을 보지만 worker는 그
+  작업을 받지 못할 수 있습니다.
+- **선택 이유:** API가 DB 저장과 Redis 발행을 직접 연속 수행하는 대신 transactional
+  outbox를 선택했습니다. 작업과 발행 의도를 한 트랜잭션에 남기면 장애가 발생해도
+  미발행 이벤트를 조회하고 재전송할 수 있고, 사용자에게 보이는 상태의 source of
+  truth를 PostgreSQL 하나로 유지할 수 있기 때문입니다.
+- **직접 구현:** FastAPI가 Job과 outbox event를 함께 저장하고, 별도 dispatcher가
+  `job_id`만 Celery에 전달하도록 구성했습니다. worker는 DB에서 최신 Job을 다시 읽고,
+  모든 상태 변경은 공통 state machine을 통과합니다. 중복 task는 no-op 처리하고,
+  발행 실패와 중단된 polling 작업을 운영 화면과 복구 명령에서 확인할 수 있게 했습니다.
+- **검증:** mock 통합 QA에서 Pipeline 8/8, History 6/6, Retry 6/6 assertion이
+  통과했습니다. outbox 재시도·중복 task·pending repair는 backend 회귀 테스트에
+  포함했습니다. 이는 로컬 mock 검증이며 실제 Vertex 장애의 최신 재검증은 아닙니다.
 
-### 사용자별 접근 권한과 크레딧을 작업 처리에 연결하기
+[작업 처리와 복구 설계](docs/job-lifecycle.md) ·
+[통합 QA Receipt](docs/portfolio/issue-186-aggregate-receipt.md)
 
-여러 사용자가 요청하는 서비스에서는 작업 목록뿐 아니라 결과 파일과 후속 작업의
-소스 이미지까지 소유권을 확인해야 합니다. 동시에 요청되거나 재처리되는 작업에서도
-사용량과 크레딧이 일관되게 반영되어야 합니다.
+### 2. 사용자 소유권과 크레딧을 동시 요청에서도 일관되게 지키기
 
-작업·파일·소스 참조에 사용자 소유권 검사를 적용하고, 생성 요청 시 크레딧을 예약한 뒤
-결과에 따라 정산하거나 해제하도록 구성했습니다. 중복 처리와 동시성은 DB 트랜잭션과
-잠금, 재호출을 구분하는 키로 다룹니다. 격리 검증에서는 사용자 간 접근 차단과
-파일 스트리밍, 동시 요청, 크레딧 처리를 확인했습니다.
+- **문제:** 작업 목록만 사용자별로 나누어도 파일 URL이나 후속 영상의 소스 참조에서
+  권한을 다시 확인하지 않으면 다른 사용자의 결과에 접근할 수 있습니다. 또한 동시
+  요청·재시도에서 크레딧 예약과 정산이 분리되면 초과 사용이나 이중 차감이 생깁니다.
+- **선택 이유:** 애플리케이션 메모리나 worker 상태가 아니라 DB 트랜잭션과 row lock을
+  경계로 선택했습니다. API admission과 비동기 완료가 서로 다른 프로세스에서 실행돼도
+  같은 불변식을 적용하고, 거부된 요청은 큐와 provider까지 가지 않게 하기 위해서입니다.
+- **직접 구현:** Job·Asset·pipeline source에 owner를 저장하고 metadata 조회, 파일
+  streaming/Range, 삭제, 운영 API까지 owner/Master 정책을 적용했습니다. 생성 전에는
+  크레딧을 원자적으로 예약하고 성공·실패·재시도 결과에 따라 settle/release하며,
+  idempotency key와 잠금으로 중복 처리를 막았습니다.
+- **검증:** 소유권·파일 검증은 실제 PostgreSQL/Redis mock runtime 네 cycle에서
+  998.187초 동안 metadata 348개와 file-ops 310개 검사를 포함해 통과했습니다. 생성
+  크레딧은 두 독립 cycle에서 각각 8개 그룹, 2개 race, 120개 검사를 통과했고 cleanup
+  잔존 리소스는 0개였습니다. 실제 결제나 provider 청구 대사는 범위에 포함하지 않았습니다.
+
 [접근 제어 검증](docs/portfolio/issue-112-file-ops-access.md) ·
 [생성 크레딧 검증](docs/portfolio/issue-127-generation-credit-integration.md)
 
-### 배포 성공 여부를 확인하고 실패 시 복구하기
+### 3. 배포 성공을 선언하기 전에 상태를 확인하고 자동 복구하기
 
-컨테이너가 시작되더라도 API와 worker가 정상적으로 요청을 처리할 수 있는지는
-별도로 확인해야 합니다. 배포 과정에서 이 확인과 복구가 반복 가능하도록 만들었습니다.
+- **문제:** 컨테이너 rollout이 끝났다는 사실만으로 API·worker·dispatcher·frontend가
+  정상 요청을 처리한다고 볼 수 없습니다. 새 이미지가 readiness나 외부 health gate를
+  통과하지 못하면 일부 workload만 바뀐 채 서비스가 남을 수 있습니다.
+- **선택 이유:** 수동 `kubectl` 복구 대신 Terraform plan과 immutable image digest를
+  배포 계약으로 선택했습니다. 변경 범위를 사전에 검토하고, 실패 시 같은 IaC 경계로
+  이전 네 workload digest를 재적용해야 복구 절차를 반복할 수 있기 때문입니다.
+- **직접 구현:** 컨테이너 scan/SBOM gate, digest 전용 release 입력, rollout 대기,
+  bounded external health check, 이전 digest 캡처와 Terraform 자동 rollback을 연결했습니다.
+  GKE resource/probe/HPA 설정과 운영 runbook도 같은 변수 계약에 맞췄습니다.
+- **검증:** 과거 실제 GKE 환경에서 의도적으로 candidate health gate를 실패시켰고,
+  네 workload가 이전 digest와 readiness를 회복한 뒤 mock health가 정상화되는 것을
+  확인했습니다. 별도 HPA 검증은 590 iterations·1,770 HTTP requests에서 checks 100%,
+  HTTP failure 0%, p95 53ms였습니다. 현재 GKE workload와 node pool은 비용 관리를 위해
+  중지되어 있으며 이 수치는 현재 운영 트래픽이 아닙니다.
 
-Terraform으로 GKE 인프라와 workload를 관리하고, 이미지 digest를 기준으로 배포하도록
-구성했습니다. 배포 후 상태 검사를 통과하지 못하면 이전 이미지로 되돌리는 절차를
-자동화했습니다. 과거 GKE mock 검증에서는 의도적으로 배포 상태 검사를 실패시킨 뒤
-API·worker·dispatcher·frontend 네 workload가 이전 digest와 readiness를 회복하는 것을 확인했습니다.
-현재 GKE workload는 비용 관리를 위해 중지한 상태입니다.
 [배포·복구 스크립트](scripts/deploy_gcp_release.sh) ·
+[GKE 운영 runbook](docs/runbooks/gcp-gke.md) ·
 [운영 검증 기록](docs/portfolio/README.md#supply-chain-and-rollback)
+
+### 4. “테스트 실행 완료”와 “제품 품질 통과”를 구분하기
+
+- **문제:** 기능별 테스트가 흩어져 있으면 Agent나 사람이 일부 성공 결과만 모아 전체
+  사용자 흐름이 안전하다고 판단할 수 있습니다. 빠른 mock 상태 전이를 브라우저 polling이
+  놓치거나, 실행은 완료됐지만 제품 assertion은 실패한 결과를 PASS로 오해할 수도 있습니다.
+- **선택 이유:** 임의 체크리스트 대신 versioned QA Contract와 immutable revision 기반
+  Receipt를 선택했습니다. 도구·evidence·cleanup 누락은 `BLOCKED`, 제품 기대 위반은
+  `FAIL`로 분리하고, 알려진 결함을 allow-fail로 숨기지 않기 위해서입니다.
+- **직접 구현:** 변경 경로를 10개 사용자 시나리오에 매핑하는 Impact Selector, 실제
+  Chrome DevTools와 owned mock runtime을 구동하는 Executor/Adapter, 68개 assertion을
+  집계하는 Receipt gate를 만들었습니다. 서로 다른 revision, source 변경, cleanup 잔존,
+  scenario 누락은 결과 재사용 단계에서 거부합니다.
+- **검증:** revision `f6ca646`에서 10개 시나리오와 68개 assertion을 550.656초에
+  실행했습니다. 결과는 58 PASS, 10 FAIL, 0 BLOCKED였고 gate는 `REJECT`를 반환했습니다.
+  Free plan 정책 side effect, 재생 불가능한 mock video, 접근 불가능한 Ops 메뉴 노출 등
+  실제 제품 결함을 성공으로 포장하지 않고 후속 수정 대상으로 남겼습니다.
+
+[QA Contract와 Registry](docs/portfolio/issue-176-qa-contract-registry.md) ·
+[Aggregate Receipt 결과](docs/portfolio/issue-186-aggregate-receipt.md)
 
 ## 아키텍처와 기술 스택
 
