@@ -89,6 +89,7 @@ paste credential contents.
   PASS했다. Backend는 기존 Windows→WSL Bash path 1건만 실패하고1903 PASS/3 guarded
   skips였으며, 해당 테스트 제외 재실행은1903 PASS/3 skips/1 deselected다. 제품 E2E나
   유료 provider/cloud 호출은 문서 변경 범위에서 반복하지 않았다.
+- 구현 commit은 `6ef56d2`, 전달은 [PR194](https://github.com/bbungjun/AI_multimodal_platform/pull/194)다.
 
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 
