@@ -77,6 +77,16 @@ paste credential contents.
 
 ## Active Work
 
+### Image generation 10,000-request capacity — Issue195 In Progress, 2026-09-23
+
+- Issue #195, branch `codex/issue-195-image-load-10k`, baseline main `45a7826`.
+- 독립 internal Docker network에서 10,000개 사용자 Session과 실제 HTTP generation,
+  Postgres/outbox/Redis/Celery/storage/credit 경로를 측정한다. 외부 provider 호출은 금지한다.
+- `python scripts/image_load.py --count 10000 --profile baseline --drain-seconds 120`
+  으로 수정 전 실패와 backlog를 보존한 후 같은 burst를 수정 후 재검증한다.
+- 부하 runner는 barrier 동시 시작, peak in-flight, launch spread, p95/p99, 접수와 완료,
+  asset/credit 정합성을 별도 기록한다. 아직 10,000건 처리 가능 상태로 판정하지 않았다.
+
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 
 - QA 실행 명령을 사람이 Agent에게 다시 설명하지 않도록 프로젝트 Skill
