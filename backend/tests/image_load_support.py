@@ -107,7 +107,7 @@ async def run(args):
         emit({'seeded_users': args.count})
         gate = asyncio.Event()
         active = peak = 0
-        starts, sent, durations, codes, errors, accepted = [], [], [], Counter(), Counter(), {}
+        starts, sent, durations, codes, errors, details, accepted = [], [], [], Counter(), Counter(), Counter(), {}
         started = time.monotonic()
 
         async def submit(index):
@@ -126,6 +126,14 @@ async def run(args):
                 codes[str(code)] += 1
                 if code == 201:
                     accepted[json.loads(body)['id']] = index
+                else:
+                    try:
+                        detail = json.loads(body).get('detail')
+                    except (ValueError, AttributeError):
+                        detail = None
+                    allowed = {'request_capacity_exceeded', 'oauth_provider_unavailable',
+                               'credit_busy', 'user_concurrency_limit'}
+                    details[detail if isinstance(detail, str) and detail in allowed else 'unclassified'] += 1
             except Exception as error:
                 errors[type(error).__name__] += 1
             finally:
@@ -146,7 +154,8 @@ async def run(args):
             emit({'sample': sample})
         await all_requests
         submit_seconds = time.monotonic()-started
-        emit({'submission': dict(statuses=codes, errors=errors, peak=peak, launch_spread=max(starts)-min(starts))})
+        emit({'submission': dict(statuses=codes, errors=errors, error_details=details,
+                                 peak=peak, launch_spread=max(starts)-min(starts))})
         deadline = time.monotonic()+args.drain_seconds
         while True:
             state = await snapshot(db)
@@ -196,6 +205,7 @@ async def run(args):
                   and final['held_reservations'] == checks['reserved_microcredits'] == checks['completed_without_one_asset'] == 0
                   and file_checks == min(args.count,20))
         emit({'result': dict(complete=True, passed=passed, statuses=dict(codes), errors=dict(errors),
+              error_details=dict(details),
               accepted=len(accepted), peak_inflight=peak, launch_spread_seconds=round(max(starts)-min(starts),3),
               sent_requests=len(sent), send_spread_seconds=round(max(sent)-min(sent),3) if sent else None,
               submission_seconds=round(submit_seconds,3), request_latency_seconds=percentiles(durations),

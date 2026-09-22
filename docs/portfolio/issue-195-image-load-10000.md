@@ -112,3 +112,24 @@ selector+admission 31 PASS, 기존 Bash 경로 테스트를 제외한 재실행�
 다음은 같은10,000 요청/HTTP timeout180초로 재측정하되 생성 drain1800초를
 별도 명시한다. 첫 접수 상태, 실제 PNG 파일 전수 검사, outbox/credit 정합성,
 CPU/DB/worker 신호를 보고 결정한다. 아직10,000건 처리를 지원한다고 주장할 수 없다.
+
+### 첫 10,000 capacity 재측정: 대기 슬롯 편중
+
+[실패 receipt](../evidence/issue-195/capacity-10000-first.json),
+[시간별 상태](../evidence/issue-195/capacity-10000-first-progress.jsonl).
+
+첫 요청10,000개/실제 송신 분포0.215초, peak in-flight10,000에서201은5,447건,
+503은4,553건이었다. 56.254초에 모든 HTTP 응답이 왔고 p95/p99는
+47.272/53.853초다. 접수된5,447건은137.462초까지 모두 완료됐고,
+asset5,447, 디스크 파일 유효5,447, usage5,447, held0, outbox published5,447,
+sample HTTP PNG20/20이었다. client retry0, cleanup0이다.
+
+DB 연결 최대 관측55, pool timeout0, DB connection exhaustion0, Celery task failure0이다.
+API process8개의 CPU snapshot이 고르지 않았다. 진입 제어 `max_waiters=2500`이
+process별 한도라 OS의 connection accept 편중 시 일부 process의 한도에 먼저 도달한다.
+503의 상세 code는 첫 실행에서 수집하지 않았으므로 이 원인은 관측값과 코드에 근거한
+**추론**이다. 다음 반복은 허용된 public `detail` code만 aggregate하여 확인한다.
+10,000건까지 접수하려면 각 process가 최악의 불균등 분배에도 burst를 보관할 수 있도록
+capacity profile의 waiter 한도를 process당10,000으로 상향한다. 기본 운영 값256은
+유지한다. 160초 deadline과4GiB API memory limit은 그대로 둬 무한 대기를 막는다.
+요청 지연·메모리·실제 완료 수를 같은 부하로 다시 확인한다.

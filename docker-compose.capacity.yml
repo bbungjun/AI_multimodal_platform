@@ -10,7 +10,7 @@ services:
       DATABASE_POOL_SIZE: "5"
       DATABASE_MAX_OVERFLOW: "0"
       API_REQUEST_CONCURRENCY: "4"
-      API_REQUEST_MAX_WAITERS: "2500"
+      API_REQUEST_MAX_WAITERS: "10000"
       API_REQUEST_WAIT_TIMEOUT_SEC: "160"
   worker:
     command: ["celery", "-A", "app.celery_app", "worker", "--hostname=worker@%h", "--loglevel=warning", "--queues=generation", "--concurrency=16"]
