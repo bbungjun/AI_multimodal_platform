@@ -100,7 +100,11 @@ paste credential contents.
   held/reserved=0, pool timeout/worker error=0**, cleanup0이었다. 실제 송신은
   0.226초에 끝났고 전체 완료241.656초, 접수 p95/p99는119.449/126.538초다.
   evidence 및 해석 경계는 `docs/portfolio/issue-195-image-load-10000.md`에 있다.
-  다음은 fresh QA, runbook/doc 정합성, 일반 PR 전달이다.
+  Fresh backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1 deselected,
+  frontend build/Compose PASS. Agent QA 전체10 scenario/68 assertion은58 PASS/10 FAIL,
+  cleanup0, verdict FAIL/merge REJECT다. 실패 ID10개는 기존 Issue186 Receipt와
+  같으며 새 FAIL은0이다. 다음은 문서 정합성과 일반 PR 전달; 병합은 QA REJECT가
+  해소될 때까지 하지 않는다.
 
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 

@@ -195,3 +195,27 @@ rollback은 `docker-compose.capacity.yml`을 적용하지 않는 것이다. defa
 admission은 pool15개 중 active12개까지만 실행하고 waiter256/30초로 제한한다.
 이 기본값 자체의 10,000건 수용력은 검증하지 않았으며 capacity 수치는 해당
 override가 적용된 환경에만 붙인다.
+
+## Fresh regression 및 Agent QA
+
+- Final product revision `1d400d9`: `AI_PROVIDER=mock python -m pytest -q -k
+  'not test_release_script_guards_plan_scope_and_uses_terraform_rollback'` 결과
+  1906 PASS, 3 guarded SKIP, 1 deselected. 제외한 1건은 기존 Windows checkout
+  absolute path를 WSL `bash -n`에 넘겨 발생하는 테스트 호스트 경로 오류다.
+- `npm run build`, 기본/override Compose config, `git diff --check` PASS.
+- Agent QA base `45a7826`, head `1d400d9`: 568.828초에10 scenario/68 assertion을
+  모두 실행했다. 58 PASS/10 FAIL/0 BLOCKED, `source_unchanged=true`,
+  Browser/MCP/Vite/runtime cleanup0. 제품 verdict `FAIL`, merge decision
+  `REJECT`이며 실제 merge는 수행하지 않는다.
+- [현재 Receipt](../evidence/issue-195/agent-qa-aggregate.json)의 실패는
+  T2I4, T2V3, I2V2, Role1개다. [기존 Issue186 Receipt](../evidence/issue-186/aggregate-receipt.json)의
+  같은10개 assertion ID와 정확히 일치한다. 현재 revision에 새 FAIL은0이지만
+  이미 존재하던 UI·사용성 결함이 남아 있으므로 QA merge gate는 통과하지 못했다.
+- 첫 aggregate 시도는 DevTools 의존성이 없는 새 worktree에서 `BLOCKED`되어
+  `aggregate_slice_incomplete`였다. `qa/devtools`의 잠긴 의존성을 `npm ci`로
+  설치한 뒤 같은 base/head로 다시 실행해 위 전체 Receipt를 얻었다.
+
+이 section은 `1d400d9` 제품 code revision의 QA 결과다. 증거와 handoff를 추가하는
+후속 문서 commit은 제품 code나 QA contract를 바꾸지 않았으며 QA 재시도로
+기존 제품 FAIL을 통과한 것처럼 처리하지 않는다. PR 검토 시 full gate의
+`REJECT`를 그대로 취급한다.

@@ -1,0 +1,599 @@
+{
+  "schema_version": 1,
+  "run_id": "agent-qa-aggregate-06846191c10e",
+  "revision": "1d400d90fc94a16c9d44b2fef45c031d91271c48",
+  "registry_sha256": "ab3594393db578008e4153fd780f21ef5e0e718f79e8c4e785b71648261d5798",
+  "provider": "mock",
+  "source_unchanged": true,
+  "scenario_results": [
+    {
+      "scenario_id": "auth_login",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "auth.login_control_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "auth.start_redirect",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "auth.callback_redirect",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "auth.session_resolves",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "auth.workspace_route",
+          "passed": true,
+          "evidence": [
+            "url"
+          ]
+        },
+        {
+          "id": "auth.logout_invalidates",
+          "passed": true,
+          "evidence": [
+            "network",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "auth.login_route_restored",
+          "passed": true,
+          "evidence": [
+            "url"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "prompt_review",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "review.request_created",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "review.original_retained_before_accept",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "review.discard_restores_original",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "review.accept_applies_edited_draft",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "review.submission_matches_reviewed_input",
+          "passed": true,
+          "evidence": [
+            "network",
+            "database"
+          ]
+        },
+        {
+          "id": "review.no_automatic_replacement",
+          "passed": true,
+          "evidence": [
+            "runtime_receipt"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "t2i_generation",
+      "selected": true,
+      "verdict": "FAIL",
+      "assertions": [
+        {
+          "id": "t2i.empty_submission_disabled",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "t2i.free_limit_refused",
+          "passed": false,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "t2i.refusal_has_zero_jobs",
+          "passed": false,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "t2i.refusal_has_zero_outbox",
+          "passed": false,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "t2i.refusal_has_zero_reservations",
+          "passed": false,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "t2i.allowed_job_completed",
+          "passed": true,
+          "evidence": [
+            "database",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "t2i.asset_decodes",
+          "passed": true,
+          "evidence": [
+            "asset_probe"
+          ]
+        },
+        {
+          "id": "t2i.result_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "t2v_generation",
+      "selected": true,
+      "verdict": "FAIL",
+      "assertions": [
+        {
+          "id": "t2v.empty_submission_disabled",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "t2v.free_duration_refused",
+          "passed": false,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "t2v.refusal_has_zero_side_effects",
+          "passed": false,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "t2v.allowed_job_completed",
+          "passed": true,
+          "evidence": [
+            "database",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "t2v.asset_mime",
+          "passed": true,
+          "evidence": [
+            "asset_probe"
+          ]
+        },
+        {
+          "id": "t2v.outcome_is_usable",
+          "passed": false,
+          "evidence": [
+            "ui_snapshot",
+            "asset_probe"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "i2v_generation",
+      "selected": true,
+      "verdict": "FAIL",
+      "assertions": [
+        {
+          "id": "i2v.no_source_disabled",
+          "passed": false,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "i2v.selected_asset_retained",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "i2v.job_uses_selected_asset",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "i2v.job_completed",
+          "passed": true,
+          "evidence": [
+            "database",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "i2v.asset_mime",
+          "passed": true,
+          "evidence": [
+            "asset_probe"
+          ]
+        },
+        {
+          "id": "i2v.outcome_is_usable",
+          "passed": false,
+          "evidence": [
+            "ui_snapshot",
+            "asset_probe"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "pipeline_generation",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "pipeline.incomplete_submission_disabled",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "pipeline.jobs_share_owner",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "pipeline.child_waits_for_parent_asset",
+          "passed": true,
+          "evidence": [
+            "database",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "pipeline.child_uses_parent_asset",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "pipeline.parent_completed",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "pipeline.child_completed",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "pipeline.single_reservation_settled",
+          "passed": true,
+          "evidence": [
+            "database",
+            "usage_read_model"
+          ]
+        },
+        {
+          "id": "pipeline.results_survive_reload",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "history_navigation",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "history.filters_match_rows",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        },
+        {
+          "id": "history.filter_resets_offset",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "history.page_controls_match_count",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        },
+        {
+          "id": "history.detail_preserves_job_identity",
+          "passed": true,
+          "evidence": [
+            "url",
+            "network"
+          ]
+        },
+        {
+          "id": "history.cancel_delete_has_zero_deletes",
+          "passed": true,
+          "evidence": [
+            "network",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "history.visible_count_matches_policy",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "usage_credits",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "usage.plan_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "usage.balance_matches_ledger",
+          "passed": true,
+          "evidence": [
+            "usage_read_model",
+            "database"
+          ]
+        },
+        {
+          "id": "usage.job_charges_match_ledger",
+          "passed": true,
+          "evidence": [
+            "usage_read_model",
+            "database"
+          ]
+        },
+        {
+          "id": "usage.held_is_zero_after_terminal",
+          "passed": true,
+          "evidence": [
+            "usage_read_model"
+          ]
+        },
+        {
+          "id": "usage.reload_fetches_current_state",
+          "passed": true,
+          "evidence": [
+            "network",
+            "usage_read_model"
+          ]
+        },
+        {
+          "id": "usage.values_survive_reload",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "usage_read_model"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "failure_retry",
+      "selected": true,
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "id": "retry.original_failed_without_asset",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "retry.error_is_user_readable",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "retry.creates_distinct_job",
+          "passed": true,
+          "evidence": [
+            "database",
+            "network"
+          ]
+        },
+        {
+          "id": "retry.link_preserves_origin",
+          "passed": true,
+          "evidence": [
+            "database"
+          ]
+        },
+        {
+          "id": "retry.new_job_completed",
+          "passed": true,
+          "evidence": [
+            "database",
+            "runtime_receipt"
+          ]
+        },
+        {
+          "id": "retry.no_duplicate_charge",
+          "passed": true,
+          "evidence": [
+            "usage_read_model",
+            "database"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    },
+    {
+      "scenario_id": "role_ops_master",
+      "selected": true,
+      "verdict": "FAIL",
+      "assertions": [
+        {
+          "id": "role.user_admin_navigation_hidden",
+          "passed": false,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "role.user_ops_access_refused",
+          "passed": true,
+          "evidence": [
+            "network",
+            "access_log"
+          ]
+        },
+        {
+          "id": "role.user_master_access_refused",
+          "passed": true,
+          "evidence": [
+            "network",
+            "access_log"
+          ]
+        },
+        {
+          "id": "role.user_has_zero_admin_polling",
+          "passed": true,
+          "evidence": [
+            "network"
+          ]
+        },
+        {
+          "id": "role.master_navigation_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot"
+          ]
+        },
+        {
+          "id": "role.master_overview_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        },
+        {
+          "id": "role.master_users_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        },
+        {
+          "id": "role.master_audit_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        },
+        {
+          "id": "role.master_ops_visible",
+          "passed": true,
+          "evidence": [
+            "ui_snapshot",
+            "network"
+          ]
+        }
+      ],
+      "blocked_reasons": []
+    }
+  ],
+  "cleanup": {
+    "browser": 0,
+    "mcp": 0,
+    "vite": 0,
+    "runtime": 0
+  },
+  "verdict": "FAIL"
+}
