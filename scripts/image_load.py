@@ -32,6 +32,8 @@ class LoadRuntime(OwnedRuntime):
         override.write_text(self.override_text(), encoding='utf-8')
         self.compose = ['compose', '--project-directory', str(ROOT), '--env-file', str(ROOT / '.env.example'),
                         '--project-name', self.project, '-f', str(ROOT / 'docker-compose.yml'), '-f', str(override)]
+        if self.profile == 'capacity':
+            self.compose += ['-f', str(ROOT / 'docker-compose.capacity.yml')]
         self.docker(*self.compose, 'config', '--quiet')
         self.started = True
         self.docker(*self.compose, 'up', '-d', '--build', 'db', 'redis', 'backend', 'dispatcher', 'worker')

@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     app_name: str = "AI Multimodal Content Platform"
     app_env: str = "local"
     database_url: str = "postgresql+asyncpg://app:changeme@localhost:5432/multimodal"
+    database_pool_size: int = Field(default=5, ge=1, le=100)
+    database_max_overflow: int = Field(default=10, ge=0, le=100)
+    database_pool_timeout_sec: float = Field(default=30, gt=0, le=600)
+    api_request_concurrency: int = Field(default=12, ge=1, le=1000)
+    api_request_max_waiters: int = Field(default=256, ge=0, le=10000)
+    api_request_wait_timeout_sec: float = Field(default=30, gt=0, le=600)
     data_dir: Path = Path("/data/assets")
     job_runner_concurrency: int = 10
     job_runner_auto_start: bool = False
