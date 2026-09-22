@@ -9,6 +9,7 @@ import math
 import os
 import re
 import secrets
+import socket
 import time
 import traceback
 from uuid import uuid4
@@ -27,11 +28,14 @@ def percentiles(values):
             for name, q in [('p50', .5), ('p95', .95), ('p99', .99), ('max', 1)]} if ordered else {}
 
 
-async def request(path, token=None, payload=None, timeout=180):
+TARGET = 'backend'
+
+
+async def request(path, token=None, payload=None, timeout=180, on_sent=None):
     writer = None
     try:
         async with asyncio.timeout(timeout):
-            reader, writer = await asyncio.open_connection('backend', 8000)
+            reader, writer = await asyncio.open_connection(TARGET, 8000)
             data = json.dumps(payload).encode() if payload is not None else b''
             headers = [f'{"POST" if payload is not None else "GET"} {path} HTTP/1.1',
                        'Host: backend:8000', 'Connection: close', 'Origin: http://localhost:5173',
@@ -40,6 +44,8 @@ async def request(path, token=None, payload=None, timeout=180):
                 headers.append('Cookie: creativeops_session=' + token)
             writer.write(('\r\n'.join(headers) + '\r\n\r\n').encode() + data)
             await writer.drain()
+            if on_sent:
+                on_sent()
             raw = await reader.readuntil(b'\r\n\r\n')
             code = int(raw.split(b' ', 2)[1])
             body = await reader.read()
@@ -70,6 +76,8 @@ async def snapshot(db):
 
 
 async def run(args):
+    global TARGET
+    TARGET = socket.gethostbyname('backend')
     from app.config import get_settings
     settings = get_settings()
     url = make_url(settings.database_url)
@@ -98,7 +106,7 @@ async def run(args):
         emit({'seeded_users': args.count})
         gate = asyncio.Event()
         active = peak = 0
-        starts, durations, codes, errors, accepted = [], [], Counter(), Counter(), {}
+        starts, sent, durations, codes, errors, accepted = [], [], [], Counter(), Counter(), {}
         started = time.monotonic()
 
         async def submit(index):
@@ -112,7 +120,8 @@ async def run(args):
                 code, body = await request('/api/generations', tokens[index], {
                     'mode': 't2i', 'model': 'imagen-4.0-fast-generate-001',
                     'prompt': 'mock load fixture '+str(index), 'number_of_images': 1,
-                    'aspect_ratio': '1:1'}, timeout=args.request_timeout)
+                    'aspect_ratio': '1:1'}, timeout=args.request_timeout,
+                    on_sent=lambda: sent.append(time.monotonic()-started))
                 codes[str(code)] += 1
                 if code == 201:
                     accepted[json.loads(body)['id']] = index
@@ -176,6 +185,7 @@ async def run(args):
                   and file_checks == min(args.count,20))
         emit({'result': dict(complete=True, passed=passed, statuses=dict(codes), errors=dict(errors),
               accepted=len(accepted), peak_inflight=peak, launch_spread_seconds=round(max(starts)-min(starts),3),
+              sent_requests=len(sent), send_spread_seconds=round(max(sent)-min(sent),3) if sent else None,
               submission_seconds=round(submit_seconds,3), request_latency_seconds=percentiles(durations),
               completion_latency_seconds=percentiles(completion), total_seconds=round(time.monotonic()-started,3),
               final=final, checks=checks, file_samples_passed=file_checks, file_sample_bytes=file_bytes,
