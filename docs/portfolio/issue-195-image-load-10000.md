@@ -76,16 +76,21 @@ credit account/cycle 생성 비용도 포함한다. API는 Docker 내부에서 �
    첫10건 완료 후 대기하고 약60초 간격으로10건씩 증가했다. 실제로20→30건 증가와
    queued2가 관측됐다. outbox969건은 모두 publish되어 dispatch 유실 증거는 없다.
 
-## 개선 방안과 판단 근거 (구현 전)
+## 개선 구현과 판단 근거
 
-- API 요청을 인증/DB 진입 전에 제한된 수만 실행시키고, 유한한 대기 수와 deadline을
-  둔다. 초과 시503/Retry-After로 명확히 거절한다. 인증·credit 검사를 생략하지 않는다.
-- DB pool을 process별 설정으로 명시하고 API/worker/dispatcher 전체 연결 예산을
-  계산한다. pool timeout만 크게 늘려 모든 요청이 DB를 붙잡게 하는 방식은 피한다.
-- mock-only capacity profile에서 API process와 worker concurrency를 늘리고 Imagen
-  제한을 높인다. Vertex 기본5/min과 cloud 구성은 바꾸지 않는다.
-- 같은10,000 요청/timeout 조건으로 재검증하며, 생성 backlog의 drain deadline은
-  별도 명시한다. 고정 PNG를 반환하거나 credit 경로를 우회해서 성능을 꾸미지 않는다.
+- `RequestAdmission`은 인증/DB 앞에서 process별 active4, waiting2500을 유한하게
+  관리한다. 한도 초과 또는160초 대기 초과는503/Retry-After로 명확히 반환한다.
+  health와 metrics는 차단하지 않는다. 기본 운영 값 active12/wait256/30초는
+  기본 DB pool5+overflow10에서 여유 연결을 남긴다.
+- DB pool size/overflow/timeout을 명시적으로 설정할 수 있게 했다. capacity profile은
+  API8 process×5=40, worker16 process×1=16, dispatcher1, observer1로 약58개를
+  예산화했다. Postgres100 연결 중 internal/autovacuum/관리 여유를 남긴다.
+- mock-only capacity profile은 API8 process, worker concurrency16,
+  Imagen limiter60000/min과 dispatcher batch200/poll0.1s를 사용한다. 이 limiter는
+  process-local이므로 실제 Vertex 글로벌 quota 보장으로 재사용할 수 없다.
+- API ingress와 queue/asset/credit 흐름은 유지한다. credential, production Vertex,
+  GKE, 기존 Compose 기본값은 변경하지 않았다. rollback은 capacity override를
+  사용하지 않고 API admission 설정을 이전 값으로 되돌리는 것이다.
 
 ## 검증과 남은 일
 
@@ -94,6 +99,16 @@ internal Docker network에서 host port binding을 기대해 실행을 거부했
 컨테이너 내부로 옮겼다. PostgreSQL numeric 집계값의 JSON 직렬화 오류도 수정했다.
 이 두 실행은 제품 부하 실패로 계산하지 않았다.
 
-다음은 admission/pool/config 개선, 단위 regression, 같은 burst 재측정, 전체 asset와
-credit 정합성 증거, focused QA와 최종 runbook/PR 전달이다. 아직10,000건 처리를
-지원한다고 주장할 수 없다.
+수정 후100건 pilot은 100/100 접수, 100/100 완료, asset100, usage100, held0,
+PNG HTTP 표본20/20이었다. 접수 p95 0.883s, 완료 p95 2.939s, 로그 pool timeout0,
+owned cleanup0이다. 이 결과는10,000건 합격 근거가 아니라 변경 검증이다.
+
+`python -m pytest tests/test_request_admission.py -q` 3 PASS, `npm run build` PASS,
+Compose 기본/override config PASS. Windows host full pytest는 QA impact policy에 새
+module 경로를 넣기 전1건, 기존 WSL Bash 경로1건 실패했다. policy 수정 후 해당
+selector+admission 31 PASS, 기존 Bash 경로 테스트를 제외한 재실행은1906 PASS,
+3 guarded SKIP, 1 deselected다. 수정 전 실패를 지우거나 합격으로 표현하지 않는다.
+
+다음은 같은10,000 요청/HTTP timeout180초로 재측정하되 생성 drain1800초를
+별도 명시한다. 첫 접수 상태, 실제 PNG 파일 전수 검사, outbox/credit 정합성,
+CPU/DB/worker 신호를 보고 결정한다. 아직10,000건 처리를 지원한다고 주장할 수 없다.

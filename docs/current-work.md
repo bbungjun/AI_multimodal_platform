@@ -86,6 +86,12 @@ paste credential contents.
   으로 수정 전 실패와 backlog를 보존한 후 같은 burst를 수정 후 재검증한다.
 - 부하 runner는 barrier 동시 시작, peak in-flight, launch spread, p95/p99, 접수와 완료,
   asset/credit 정합성을 별도 기록한다. 아직 10,000건 처리 가능 상태로 판정하지 않았다.
+- 수정 전10,000건에서201=969/503=8,208/500=823, 완료30, pool timeout823을 확인했다.
+  `docs/portfolio/issue-195-image-load-10000.md`와 evidence에 원인을 보존했다.
+- API admission/DB pool 예산과 mock capacity override를 구현했고100건 pilot은
+  접수·완료·asset·usage 모두100, held0으로 통과했다. 다음은10,000건 같은 burst와
+  drain1800초 측정이다. Backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1
+  deselected, frontend build/Compose config PASS.
 
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 

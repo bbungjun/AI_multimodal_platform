@@ -30,6 +30,7 @@
         "backend/app/main.py",
         "backend/app/config.py",
         "backend/app/db.py",
+        "backend/app/request_admission.py",
         "backend/app/api/__init__.py",
         "backend/app/models.py",
         "backend/app/schema_control.py",

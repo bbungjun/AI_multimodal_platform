@@ -79,6 +79,7 @@ async def run(args):
     global TARGET
     TARGET = socket.gethostbyname('backend')
     from app.config import get_settings
+    from app.services import storage
     settings = get_settings()
     url = make_url(settings.database_url)
     if (not re.fullmatch(r'ownership-verify-[0-9a-f]{12}', args.project)
@@ -166,6 +167,16 @@ async def run(args):
             'completed_without_one_asset': await db.fetchval("SELECT count(*) FROM jobs j WHERE state='completed' AND (SELECT count(*) FROM assets a WHERE a.job_id=j.id)<>1"),
         }
         completion = [float(row['seconds']) for row in await db.fetch("SELECT extract(epoch FROM updated_at-created_at) seconds FROM jobs WHERE state='completed'")]
+        file_valid = 0
+        for row in await db.fetch('SELECT local_path,size_bytes FROM assets'):
+            try:
+                path = storage.resolve_asset_path(row['local_path'])
+                with path.open('rb') as image:
+                    signature = image.read(8)
+                if signature == b'\x89PNG\r\n\x1a\n' and path.stat().st_size == row['size_bytes']:
+                    file_valid += 1
+            except (OSError, ValueError):
+                pass
         # Read through the authenticated public file route, not a fake asset stub.
         file_checks = file_bytes = 0
         rows = await db.fetch("SELECT j.id,a.local_path FROM jobs j JOIN assets a ON a.job_id=j.id WHERE j.state='completed' ORDER BY j.id LIMIT 20")
@@ -181,6 +192,7 @@ async def run(args):
         passed = (codes == {'201': args.count} and not errors and peak == args.count
                   and final['states'] == {'completed': args.count}
                   and checks['jobs'] == checks['distinct_owners'] == checks['assets'] == checks['usage_records'] == args.count
+                  and file_valid == args.count
                   and final['held_reservations'] == checks['reserved_microcredits'] == checks['completed_without_one_asset'] == 0
                   and file_checks == min(args.count,20))
         emit({'result': dict(complete=True, passed=passed, statuses=dict(codes), errors=dict(errors),
@@ -188,7 +200,8 @@ async def run(args):
               sent_requests=len(sent), send_spread_seconds=round(max(sent)-min(sent),3) if sent else None,
               submission_seconds=round(submit_seconds,3), request_latency_seconds=percentiles(durations),
               completion_latency_seconds=percentiles(completion), total_seconds=round(time.monotonic()-started,3),
-              final=final, checks=checks, file_samples_passed=file_checks, file_sample_bytes=file_bytes,
+              final=final, checks=checks, file_valid=file_valid,
+              file_samples_passed=file_checks, file_sample_bytes=file_bytes,
               retries=0, peak_db_connections=max(s['db_connections'] for s in samples))})
     finally:
         await db.close()
