@@ -77,6 +77,36 @@ paste credential contents.
 
 ## Active Work
 
+### Image generation 10,000-request capacity — Issue195 In Progress, 2026-09-23
+
+- Issue #195, branch `codex/issue-195-image-load-10k`, baseline main `45a7826`.
+- 독립 internal Docker network에서 10,000개 사용자 Session과 실제 HTTP generation,
+  Postgres/outbox/Redis/Celery/storage/credit 경로를 측정한다. 외부 provider 호출은 금지한다.
+- `python scripts/image_load.py --count 10000 --profile baseline --drain-seconds 120`
+  으로 수정 전 실패와 backlog를 보존한 후 같은 burst를 수정 후 재검증한다.
+- 부하 runner는 barrier 동시 시작, peak in-flight, launch spread, p95/p99, 접수와 완료,
+  asset/credit 정합성을 별도 기록한다. 아직 10,000건 처리 가능 상태로 판정하지 않았다.
+- 수정 전10,000건에서201=969/503=8,208/500=823, 완료30, pool timeout823을 확인했다.
+  `docs/portfolio/issue-195-image-load-10000.md`와 evidence에 원인을 보존했다.
+- API admission/DB pool 예산과 mock capacity override를 구현했고100건 pilot은
+  접수·완료·asset·usage 모두100, held0으로 통과했다. 다음은10,000건 같은 burst와
+  drain1800초 측정이다. Backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1
+  deselected, frontend build/Compose config PASS.
+- 첫 capacity 10,000건은201=5,447/503=4,553이었다. 접수된5,447건은 모두 완료,
+  asset/usage/file5,447, held0, pool timeout0. API worker별 waiter2500에 도달한
+  것으로 추론했고 실패 evidence를 별도 보존했다.
+- waiter를 capacity profile에서 worker별10,000으로 높인 동일 burst는
+  **201=10,000/오류0, completed=10,000, published=10,000, asset/usage/file=10,000,
+  held/reserved=0, pool timeout/worker error=0**, cleanup0이었다. 실제 송신은
+  0.226초에 끝났고 전체 완료241.656초, 접수 p95/p99는119.449/126.538초다.
+  evidence 및 해석 경계는 `docs/portfolio/issue-195-image-load-10000.md`에 있다.
+  Fresh backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1 deselected,
+  frontend build/Compose PASS. Agent QA 전체10 scenario/68 assertion은58 PASS/10 FAIL,
+  cleanup0, verdict FAIL/merge REJECT다. 실패 ID10개는 기존 Issue186 Receipt와
+  같으며 새 FAIL은0이다. 코드와 근거는 [PR #196](https://github.com/bbungjun/AI_multimodal_platform/pull/196)에
+  일반 PR로 전달했다. 다음은 기존 UI assertion10건과 HTTP 접수 지연에 대한 별도
+  개선이다. 이 PR은 QA REJECT 상태에서 병합하지 않았다.
+
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 
 - QA 실행 명령을 사람이 Agent에게 다시 설명하지 않도록 프로젝트 Skill

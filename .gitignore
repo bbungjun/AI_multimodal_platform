@@ -53,6 +53,7 @@ override.tf.json
 backend.hcl
 
 # OS / editor
+output/image-load/
 .DS_Store
 Thumbs.db
 .idea/

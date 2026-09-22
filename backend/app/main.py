@@ -24,6 +24,7 @@ from app.db import close_db_connection
 from app.schema_control import require_current_schema
 from app.services.jobs.runner import job_runner
 from app.services.ops.runtime import runtime_metrics
+from app.request_admission import RequestAdmission
 
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,13 @@ class ContentApplication(FastAPI):
 
 
 app = ContentApplication(title=settings.app_name, lifespan=lifespan)
+
+app.add_middleware(
+    RequestAdmission,
+    concurrency=settings.api_request_concurrency,
+    max_waiters=settings.api_request_max_waiters,
+    wait_seconds=settings.api_request_wait_timeout_sec,
+)
 
 app.add_middleware(
     CORSMiddleware,

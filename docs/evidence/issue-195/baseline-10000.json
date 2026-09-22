@@ -1,0 +1,74 @@
+{
+  "profile": "baseline",
+  "requested": 10000,
+  "complete": true,
+  "revision": "1d2d5cfdb0f053520b0739642adfa08dc09d9708",
+  "tracked_diff": "",
+  "provider": "mock",
+  "network": "internal",
+  "request_timeout_seconds": 180,
+  "drain_deadline_seconds": 120,
+  "docker": {
+    "cpus": 20,
+    "memory_bytes": 16677773312
+  },
+  "diagnostics": {
+    "pool_timeouts": 823,
+    "connection_exhaustion": 0,
+    "lock_timeouts": 0,
+    "task_failures": 0
+  },
+  "passed": false,
+  "statuses": {
+    "201": 969,
+    "503": 8208,
+    "500": 823
+  },
+  "errors": {},
+  "accepted": 969,
+  "peak_inflight": 10000,
+  "launch_spread_seconds": 1.779,
+  "sent_requests": 10000,
+  "send_spread_seconds": 0.217,
+  "submission_seconds": 67.837,
+  "request_latency_seconds": {
+    "p50": 49.843,
+    "p95": 60.057,
+    "p99": 65.141,
+    "max": 67.388
+  },
+  "completion_latency_seconds": {
+    "p50": 66.591,
+    "p95": 129.667,
+    "p99": 129.672,
+    "max": 129.672
+  },
+  "total_seconds": 189.039,
+  "final": {
+    "states": {
+      "pending": 937,
+      "queued": 2,
+      "completed": 30
+    },
+    "outbox": {
+      "published": 969
+    },
+    "db_connections": 14,
+    "held_reservations": 939
+  },
+  "checks": {
+    "jobs": 969,
+    "distinct_owners": 969,
+    "assets": 30,
+    "usage_records": 30,
+    "reserved_microcredits": 46950000000,
+    "completed_without_one_asset": 0
+  },
+  "file_samples_passed": 20,
+  "file_sample_bytes": 15744940,
+  "retries": 0,
+  "peak_db_connections": 24,
+  "process_exit": 0,
+  "cleanup_remaining": 0,
+  "elapsed_seconds": 331.031
+}

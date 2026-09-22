@@ -1,0 +1,72 @@
+{
+  "profile": "capacity",
+  "requested": 10000,
+  "complete": true,
+  "revision": "e855baedc3ce1b50d4ef985c9ad1178d3acc71bc",
+  "tracked_diff": "",
+  "provider": "mock",
+  "network": "internal",
+  "request_timeout_seconds": 180,
+  "drain_deadline_seconds": 1800,
+  "docker": {
+    "cpus": 20,
+    "memory_bytes": 16677773312
+  },
+  "diagnostics": {
+    "pool_timeouts": 0,
+    "connection_exhaustion": 0,
+    "lock_timeouts": 0,
+    "task_failures": 0
+  },
+  "passed": false,
+  "statuses": {
+    "201": 5447,
+    "503": 4553
+  },
+  "errors": {},
+  "accepted": 5447,
+  "peak_inflight": 10000,
+  "launch_spread_seconds": 1.589,
+  "sent_requests": 10000,
+  "send_spread_seconds": 0.215,
+  "submission_seconds": 56.254,
+  "request_latency_seconds": {
+    "p50": 4.527,
+    "p95": 47.272,
+    "p99": 53.853,
+    "max": 55.564
+  },
+  "completion_latency_seconds": {
+    "p50": 47.366,
+    "p95": 78.055,
+    "p99": 78.798,
+    "max": 78.959
+  },
+  "total_seconds": 137.462,
+  "final": {
+    "states": {
+      "completed": 5447
+    },
+    "outbox": {
+      "published": 5447
+    },
+    "db_connections": 39,
+    "held_reservations": 0
+  },
+  "checks": {
+    "jobs": 5447,
+    "distinct_owners": 5447,
+    "assets": 5447,
+    "usage_records": 5447,
+    "reserved_microcredits": 0,
+    "completed_without_one_asset": 0
+  },
+  "file_valid": 5447,
+  "file_samples_passed": 20,
+  "file_sample_bytes": 15744940,
+  "retries": 0,
+  "peak_db_connections": 55,
+  "process_exit": 0,
+  "cleanup_remaining": 0,
+  "elapsed_seconds": 228.406
+}
