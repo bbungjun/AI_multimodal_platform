@@ -1,0 +1,29 @@
+{"seeded_users": 10000}
+{"sample": {"elapsed": 5.02, "active_http": 10000, "responses": 0, "states": {}, "outbox": {}, "db_connections": 8, "held_reservations": 0}}
+{"sample": {"elapsed": 10.032, "active_http": 10000, "responses": 0, "states": {}, "outbox": {}, "db_connections": 8, "held_reservations": 0}}
+{"sample": {"elapsed": 15.036, "active_http": 10000, "responses": 0, "states": {}, "outbox": {}, "db_connections": 8, "held_reservations": 0}}
+{"sample": {"elapsed": 20.038, "active_http": 9913, "responses": 87, "states": {"downloading": 1, "generating": 1, "pending": 86}, "outbox": {"pending": 75, "published": 13}, "db_connections": 24, "held_reservations": 88}}
+{"sample": {"elapsed": 25.041, "active_http": 9802, "responses": 198, "states": {"completed": 10, "queued": 2, "pending": 186}, "outbox": {"pending": 1, "published": 197}, "db_connections": 24, "held_reservations": 188}}
+{"sample": {"elapsed": 30.044, "active_http": 9648, "responses": 352, "states": {"completed": 10, "queued": 2, "pending": 340}, "outbox": {"pending": 33, "published": 319}, "db_connections": 24, "held_reservations": 342}}
+{"sample": {"elapsed": 35.047, "active_http": 9490, "responses": 510, "states": {"completed": 10, "queued": 2, "pending": 499}, "outbox": {"pending": 32, "published": 479}, "db_connections": 24, "held_reservations": 501}}
+{"sample": {"elapsed": 40.05, "active_http": 9007, "responses": 993, "states": {"completed": 10, "queued": 2, "pending": 564}, "outbox": {"pending": 3, "published": 573}, "db_connections": 24, "held_reservations": 566}}
+{"sample": {"elapsed": 45.054, "active_http": 7221, "responses": 2779, "states": {"completed": 10, "queued": 2, "pending": 578}, "outbox": {"published": 590}, "db_connections": 22, "held_reservations": 580}}
+{"sample": {"elapsed": 50.132, "active_http": 5605, "responses": 4395, "states": {"completed": 10, "queued": 2, "pending": 582}, "outbox": {"published": 594}, "db_connections": 22, "held_reservations": 584}}
+{"sample": {"elapsed": 55.154, "active_http": 2209, "responses": 7791, "states": {"completed": 10, "queued": 2, "pending": 584}, "outbox": {"published": 596}, "db_connections": 19, "held_reservations": 586}}
+{"sample": {"elapsed": 60.157, "active_http": 560, "responses": 9440, "states": {"completed": 10, "queued": 2, "pending": 584}, "outbox": {"published": 596}, "db_connections": 24, "held_reservations": 586}}
+{"sample": {"elapsed": 65.16, "active_http": 128, "responses": 9872, "states": {"pending": 830, "completed": 10, "queued": 2}, "outbox": {"pending": 50, "published": 792}, "db_connections": 24, "held_reservations": 832}}
+{"sample": {"elapsed": 67.835, "active_http": 0, "responses": 10000, "states": {"pending": 957, "completed": 10, "queued": 2}, "outbox": {"pending": 77, "published": 892}, "db_connections": 14, "held_reservations": 959}}
+{"submission": {"statuses": {"201": 969, "503": 8208, "500": 823}, "errors": {}, "peak": 10000, "launch_spread": 1.7792011400015326}}
+{"sample": {"elapsed": 77.844, "states": {"pending": 957, "completed": 10, "queued": 2}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 959}}
+{"sample": {"elapsed": 87.857, "states": {"pending": 947, "completed": 20, "queued": 2}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 97.871, "states": {"pending": 947, "completed": 20, "queued": 2}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 107.883, "states": {"pending": 947, "completed": 20, "queued": 2}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 117.897, "states": {"pending": 947, "completed": 20, "queued": 2}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 127.907, "states": {"pending": 947, "queued": 2, "completed": 20}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 137.92, "states": {"pending": 947, "queued": 2, "completed": 20}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 949}}
+{"sample": {"elapsed": 147.933, "states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}}
+{"sample": {"elapsed": 157.945, "states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}}
+{"sample": {"elapsed": 167.949, "states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}}
+{"sample": {"elapsed": 177.961, "states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}}
+{"sample": {"elapsed": 187.846, "states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}}
+{"result": {"complete": true, "passed": false, "statuses": {"201": 969, "503": 8208, "500": 823}, "errors": {}, "accepted": 969, "peak_inflight": 10000, "launch_spread_seconds": 1.779, "sent_requests": 10000, "send_spread_seconds": 0.217, "submission_seconds": 67.837, "request_latency_seconds": {"p50": 49.843, "p95": 60.057, "p99": 65.141, "max": 67.388}, "completion_latency_seconds": {"p50": 66.591, "p95": 129.667, "p99": 129.672, "max": 129.672}, "total_seconds": 189.039, "final": {"states": {"pending": 937, "queued": 2, "completed": 30}, "outbox": {"published": 969}, "db_connections": 14, "held_reservations": 939}, "checks": {"jobs": 969, "distinct_owners": 969, "assets": 30, "usage_records": 30, "reserved_microcredits": 46950000000, "completed_without_one_asset": 0}, "file_samples_passed": 20, "file_sample_bytes": 15744940, "retries": 0, "peak_db_connections": 24}}
