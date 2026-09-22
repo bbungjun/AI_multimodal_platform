@@ -92,6 +92,15 @@ paste credential contents.
   접수·완료·asset·usage 모두100, held0으로 통과했다. 다음은10,000건 같은 burst와
   drain1800초 측정이다. Backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1
   deselected, frontend build/Compose config PASS.
+- 첫 capacity 10,000건은201=5,447/503=4,553이었다. 접수된5,447건은 모두 완료,
+  asset/usage/file5,447, held0, pool timeout0. API worker별 waiter2500에 도달한
+  것으로 추론했고 실패 evidence를 별도 보존했다.
+- waiter를 capacity profile에서 worker별10,000으로 높인 동일 burst는
+  **201=10,000/오류0, completed=10,000, published=10,000, asset/usage/file=10,000,
+  held/reserved=0, pool timeout/worker error=0**, cleanup0이었다. 실제 송신은
+  0.226초에 끝났고 전체 완료241.656초, 접수 p95/p99는119.449/126.538초다.
+  evidence 및 해석 경계는 `docs/portfolio/issue-195-image-load-10000.md`에 있다.
+  다음은 fresh QA, runbook/doc 정합성, 일반 PR 전달이다.
 
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 

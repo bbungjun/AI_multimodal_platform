@@ -2,7 +2,7 @@
 
 - Issue: [#195](https://github.com/bbungjun/AI_multimodal_platform/issues/195)
 - 기준 코드: main `45a7826`, 측정 harness revision `1d2d5cf`
-- 상태: 기준 측정 완료, 개선 및 재검증 진행 중
+- 상태: 로컬 mock 10,000 동시 요청 접수·생성 완료 검증 (`Mock Verified`)
 - 범위: local Docker, 실제 HTTP/auth/credit/Postgres/outbox/Redis/Celery/storage,
   `AI_PROVIDER=mock`. Vertex 처리량·Google OAuth·클라우드 성능의 증거가 아니다.
 
@@ -133,3 +133,65 @@ process별 한도라 OS의 connection accept 편중 시 일부 process의 한도
 capacity profile의 waiter 한도를 process당10,000으로 상향한다. 기본 운영 값256은
 유지한다. 160초 deadline과4GiB API memory limit은 그대로 둬 무한 대기를 막는다.
 요청 지연·메모리·실제 완료 수를 같은 부하로 다시 확인한다.
+
+### 최종 10,000 capacity 재측정
+
+- 측정 revision: `81b9b6a` (추적 파일 변경 없음)
+- 명령: `python scripts/image_load.py --count 10000 --profile capacity --drain-seconds 1800`
+- 근거: [통과 receipt](../evidence/issue-195/capacity-10000-pass.json),
+  [시간별 상태](../evidence/issue-195/capacity-10000-pass-progress.jsonl).
+- 조건: 앞선 capacity 실패와 동일한10,000명, HTTP timeout180초, mock provider,
+  Docker20 CPU/16.7GB, internal network, API8 process/worker16. 변경은 process별
+  waiter2500→10000과 public 오류 detail 집계다. 생성 drain deadline은1800초로 동일하다.
+
+| 지표 | 수정 전 baseline | 첫 capacity | 최종 capacity |
+|---|---:|---:|---:|
+|201 접수 |969|5,447|**10,000**|
+|503/500 |8,208/823|4,553/0|**0/0**|
+|실제 송신 분포 |0.217s|0.215s|0.226s|
+|HTTP 응답 수집 완료 |67.837s|56.254s|129.523s|
+|HTTP p95/p99 |60.057/65.141s|47.272/53.853s|119.449/126.538s|
+|전체 이미지 완료 |30/969 접수분|5,447/5,447 접수분|**10,000/10,000**|
+|수집 종료 시각 |189.039s|137.462s|241.656s|
+|완료 시간 p95/p99 |측정한30건 기준129.667/129.672s|78.055/78.798s|109.647/110.980s|
+|outbox published |969|5,447|**10,000**|
+|asset/usage/유효 디스크 파일 |30/30/표본20|5,447/5,447/5,447|**10,000/10,000/10,000**|
+|held/reserved credit 잔여 |939/46,950,000,000|0/0|**0/0**|
+|DB 연결 최대 관측 |24|55|51|
+|pool timeout / task failure |823/0|0/0|**0/0**|
+|client retry / transport error |0/0|0/0|**0/0**|
+|owned cleanup 잔여 |0|0|**0**|
+
+최종 실행은 API에서10,000개 HTTP 응답이 모두201이며 public 오류 detail은 비어
+있었다. 최초 진입 한도 때문에 실패한 첫 capacity 결과와 달리 Postgres의 job 및
+outbox가 각각10,000건으로 수렴했고, 모두 completed/published다. 서로 다른 owner
+10,000명과 image asset·usage record10,000건을 확인했다. storage helper로10,000개
+디스크 파일의 PNG signature와 DB 크기를 확인하고, 사용자 세션을 통과하는 HTTP
+file route 표본20건도 모두 성공했다. `complete=true`, `passed=true`이며
+test project의 container/network/volume cleanup 잔여는0이다.
+
+첫 실패의503 상세 code는 수집하지 않았으므로 정확한 내부 경로는 미확정이다.
+프로세스별 waiter 한도를 올린 뒤 동일한 burst에서503이0으로 바뀌고 DB pool
+timeout도0인 점은 요청 분배 편중에 따른 admission 한도가 주원인이라는 설명을
+강하게 뒷받침한다. 불확실성을 지우고 확정 원인으로 쓰지 않는다.
+
+## 결과의 운영상 의미와 남은 위험
+
+이 revision과 이 머신/설정에서는 1만 건의 **동시 요청 접수와 비동기 이미지
+완료**가 mock mode로 검증됐다. 이 수치로 Vertex live 처리량, GKE HPA, 외부 ingress,
+브라우저 polling 1만 명, 장애 중 recovery, 다중 노드 성능을 주장하지 않는다.
+특히 HTTP 접수 p95가119.449초이므로 일반적인 ingress/client timeout 앞에서는
+사용자가 실패로 볼 수 있다. API가 durable admission과 credit reservation을
+완료해야201을 반환하는 현 contract의 비용이다. 실제 운영의 목표 대기시간을
+정하고 DB/credit admission throughput을 별도로 개선하거나 명시적인202 접수
+contract를 설계해야 한다. 동시 접수 숫자만으로 interactive UX를 인수하지 않는다.
+
+capacity profile의 mock Imagen60,000/min은 실제 Vertex quota와 무관하며 기존
+in-memory limiter는 여러 worker의 글로벌 호출량을 통제하지 못한다. 실제 provider
+확장 전에는 공유 quota control, 비용/할당량, 429 처리 검증이 필요하다. 10,000개
+실제 PNG는 이 머신에서 CPU·스토리지·DB가 제공한 결과이지 GKE 배포 결과가 아니다.
+
+rollback은 `docker-compose.capacity.yml`을 적용하지 않는 것이다. default
+admission은 pool15개 중 active12개까지만 실행하고 waiter256/30초로 제한한다.
+이 기본값 자체의 10,000건 수용력은 검증하지 않았으며 capacity 수치는 해당
+override가 적용된 환경에만 붙인다.
