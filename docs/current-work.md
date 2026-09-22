@@ -103,8 +103,9 @@ paste credential contents.
   Fresh backend1906 PASS/3 guarded SKIP/기존 Windows Bash path1 deselected,
   frontend build/Compose PASS. Agent QA 전체10 scenario/68 assertion은58 PASS/10 FAIL,
   cleanup0, verdict FAIL/merge REJECT다. 실패 ID10개는 기존 Issue186 Receipt와
-  같으며 새 FAIL은0이다. 다음은 문서 정합성과 일반 PR 전달; 병합은 QA REJECT가
-  해소될 때까지 하지 않는다.
+  같으며 새 FAIL은0이다. 코드와 근거는 [PR #196](https://github.com/bbungjun/AI_multimodal_platform/pull/196)에
+  일반 PR로 전달했다. 다음은 기존 UI assertion10건과 HTTP 접수 지연에 대한 별도
+  개선이다. 이 PR은 QA REJECT 상태에서 병합하지 않았다.
 
 ### Agent QA project Skill — Issue191 Implemented, 2026-09-15
 

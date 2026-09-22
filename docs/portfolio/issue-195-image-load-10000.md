@@ -1,6 +1,7 @@
 # 이미지 생성 10,000 동시 요청: 문제·원인·개선 보고서
 
 - Issue: [#195](https://github.com/bbungjun/AI_multimodal_platform/issues/195)
+- Delivery: [PR #196](https://github.com/bbungjun/AI_multimodal_platform/pull/196)
 - 기준 코드: main `45a7826`, 측정 harness revision `1d2d5cf`
 - 상태: 로컬 mock 10,000 동시 요청 접수·생성 완료 검증 (`Mock Verified`)
 - 범위: local Docker, 실제 HTTP/auth/credit/Postgres/outbox/Redis/Celery/storage,
